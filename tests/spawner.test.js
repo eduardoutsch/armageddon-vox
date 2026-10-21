@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getBracketInfo, calculateRollDown } = require('../js/spawner.js');
+const { getBracketInfo, calculateRollDown, pickSyncedUnitFromBracket } = require('../js/spawner.js');
+const { mulberry32 } = require('../js/rng.js');
 
 test('getBracketInfo: unmod 2 always results in No Spawn', () => {
   // Even if modified roll is high (e.g., +12 bonus), unmod 2 is No Spawn
@@ -45,4 +46,23 @@ test('calculateRollDown: cascades down correctly from 10+ down to 3-4', () => {
 
   const noneStep = calculateRollDown('NONE');
   assert.equal(noneStep, null, 'NONE must not be able to roll down');
+});
+
+test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully', () => {
+  const mockPool = {
+    '3-4': 'Hormagaunts, Termagants, Cultists',
+    '5-6': '',
+    '7-9': 'Carnifex',
+    '10+': 'Hive Tyrant'
+  };
+
+  const rng = mulberry32(100);
+  const picked34 = pickSyncedUnitFromBracket('3-4', rng, mockPool);
+  assert.ok(['Hormagaunts', 'Termagants', 'Cultists'].includes(picked34));
+
+  const fallback = pickSyncedUnitFromBracket('5-6', rng, mockPool);
+  assert.equal(fallback, 'Unit from Bracket [5-6]');
+
+  const picked79 = pickSyncedUnitFromBracket('7-9', rng, mockPool);
+  assert.equal(picked79, 'Carnifex');
 });
