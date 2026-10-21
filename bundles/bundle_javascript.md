@@ -1,0 +1,1380 @@
+# 📦 Fires of Armageddon // Bundle: JavaScript Game Engine & Audio
+
+Core logic, RNG algorithms, spawner mechanics, state management, faction/mission datasets, and Vox-Caster Web Audio synth (`js/*.js`).
+
+## 📑 Table of Contents
+- [js/data.js](#file-jsdatajs)
+- [js/rng.js](#file-jsrngjs)
+- [js/spawner.js](#file-jsspawnerjs)
+- [js/app.js](#file-jsappjs)
+- [js/vox-audio.js](#file-jsvoxaudiojs)
+
+---
+
+## File: `js/data.js` <a id="file-jsdatajs"></a>
+
+````javascript
+// 1. ALL 23 OFFICIAL SECTION 7.5 HORDE PRIMARY FACTION RULES
+const HORDE_FACTIONS = [
+  { name: "Space Marines", group: "Imperium", ruleTitle: "Transhuman Skills", desc: "Horde ADEPTUS ASTARTES units can re-roll hit rolls of 1." },
+  { name: "Adepta Sororitas", group: "Imperium", ruleTitle: "Martyrs and Miracles", desc: "Starting in the fourth battle round, treat the first Horde Spawn Roll each round as an unmodified 12 instead of rolling 2D6." },
+  { name: "Adeptus Custodes", group: "Imperium", ruleTitle: "Best of the Best of the Best", desc: "Horde ADEPTUS CUSTODES units’ melee attacks have [LETHAL HITS]." },
+  { name: "Adeptus Mechanicus", group: "Imperium", ruleTitle: "Third Try’s the Charm", desc: "Horde ADEPTUS MECHANICUS units’ ranged attacks have +1 BS and [ASSAULT]." },
+  { name: "Astra Militarum", group: "Imperium", ruleTitle: "Unanimous Orders", desc: "Horde ASTRA MILITARUM units’ ranged attacks have +1 BS while within 6\" of a friendly ASTRA MILITARUM OFFICER model." },
+  { name: "Grey Knights", group: "Imperium", ruleTitle: "Poor Hammers", desc: "Horde GREY KNIGHTS units’ melee attacks against enemy VEHICLE or MONSTER units have -1 to hit rolls and +4 S." },
+  { name: "Imperial Agents", group: "Imperium", ruleTitle: "Fine, I’ll Do It Myself", desc: "Horde IMPERIAL AGENTS attacks have +1 to hit vs CHAOS, re-roll hit/wound rolls of 1 vs IMPERIUM, and +1 to wound vs targets with neither keyword." },
+  { name: "Imperial Knights", group: "Imperium", ruleTitle: "Passive Ion Shields", desc: "Horde IMPERIAL KNIGHTS models have Feel No Pain 6+." },
+  { name: "Chaos Space Marines", group: "Chaos", ruleTitle: "Wonton Slaughter", desc: "Horde CHAOS SPACE MARINES units’ melee attacks have +1 A on turns that they charge." },
+  { name: "Chaos Daemons", group: "Chaos", ruleTitle: "Shadow Forms", desc: "Ranged attacks against Horde LEGIONES DAEMONICA units have -1 to hit rolls unless the attacking model is within 12\"." },
+  { name: "Chaos Knights", group: "Chaos", ruleTitle: "God I Wish We Had A Different Theme", desc: "Horde CHAOS KNIGHTS units’ attacks have +1 to hit rolls and +1 to wound rolls if the target is battle-shocked." },
+  { name: "Death Guard", group: "Chaos", ruleTitle: "Don’t You Miss DR?", desc: "Enemy units within 6\" of Horde DEATH GUARD units have -1 T, and their attacks have -1 BS and -1 WS." },
+  { name: "Emperor's Children", group: "Chaos", ruleTitle: "Elegant Violence", desc: "Each Horde EMPEROR’S CHILDREN unit is eligible to shoot and declare a charge in a turn in which it made an advance or fall-back move." },
+  { name: "Thousand Sons", group: "Chaos", ruleTitle: "Psychic Storms", desc: "At the beginning of the Horde Shooting phase, each Player unit within 12\" of a Horde THOUSAND SONS unit suffers D3 mortal wounds." },
+  { name: "World Eaters", group: "Chaos", ruleTitle: "Bloodthirsty", desc: "Horde WORLD EATERS units have +2\" M." },
+  { name: "Aeldari", group: "Xenos", ruleTitle: "Monomolecular Ammunition", desc: "Horde AELDARI units’ ranged attacks have +1 AP." },
+  { name: "Drukhari", group: "Xenos", ruleTitle: "Monomolecular Edges", desc: "Horde DRUKHARI units’ melee attacks have +1 AP." },
+  { name: "Necrons", group: "Xenos", ruleTitle: "We’re So Back", desc: "Horde NECRON non-CHARACTER INFANTRY, BEAST, and SWARM models have Feel No Pain 5+." },
+  { name: "T'au Empire", group: "Xenos", ruleTitle: "Glasses", desc: "When a Horde T’AU EMPIRE unit is selected to shoot, roll one D6: on a 4+, the unit's attacks have +1 BS." },
+  { name: "Orks", group: "Xenos", ruleTitle: "High (Green) Tide", desc: "On the third battle round reveal one additional Misery card, add 1 to Spawn Rolls, and Horde ORKS models have +3\" M." },
+  { name: "Leagues of Votann", group: "Xenos", ruleTitle: "Grudge Game", desc: "Whenever an unmarked unit destroys a Horde LEAGUES OF VOTANN unit, mark it. Horde VOTANN attacks against marked units have +1 to hit and +1 to wound." },
+  { name: "Tyranids", group: "Xenos", ruleTitle: "Neurons Activated", desc: "Each time a Horde TYRANIDS unit makes a battle-shock roll, roll 3D6 instead of 2D6. Horde TYRANIDS units’ melee attacks have +1 S." },
+  { name: "Genestealer Cults", group: "Xenos", ruleTitle: "Should Have Just Been A 5+ FNP", desc: "Whenever a Horde GSC INFANTRY or MOUNTED unit is destroyed, roll 1D6: on a 5+ set it aside and respawn an identical unit in any Spawn Zone at the start of the next battle round!" }
+];
+
+// 2. SECRET OBJECTIVES (1-34)
+const OBJECTIVES = [
+  { id: 1, code: "A9F", name: "1 - Forward Extraction", tags: "End of Game", desc: "End the game with at least one unit wholly within a Horde Spawn Zone." },
+  { id: 2, code: "B4K", name: "2 - A Noble Sacrifice", tags: "Early Reveal", desc: "Reveal and complete at the end of your turn if there is at least one CHARACTER unit from your army within range of the Attacker’s Home Objective." },
+  { id: 3, code: "C8M", name: "3 - Cleanse Sacred Ground", tags: "End of Game", desc: "End the game controlling at least one objective in No Man’s Land with no other players or Horde units within range of the objective." },
+  { id: 4, code: "D2P", name: "4 - Take Research Subjects", tags: "Early Reveal", desc: "Reveal and complete after destroying an enemy unit in the Fight phase that was within the Defender’s deployment zone." },
+  { id: 5, code: "E7Q", name: "5 - Recover the Lost Relic", tags: "Action, Early Reveal, Survival Required", desc: "Reveal in Shooting phase (Round 3+). Action: 1 CHARACTER wholly within 6\" of center; completes end of your Command phase. Must survive." },
+  { id: 6, code: "F3R", name: "6 - Two Birds, One Stone", tags: "End of Game, Multiplayer, Traitor", desc: "End the game with at least one other player not surviving." },
+  { id: 7, code: "G6T", name: "7 - Team Player", tags: "End of Game, Multiplayer", desc: "End the game with all players surviving." },
+  { id: 8, code: "H1V", name: "8 - Majority Rules", tags: "End of Game, Multiplayer, Traitor", desc: "End the game with the most units of any player on the battlefield." },
+  { id: 9, code: "J5W", name: "9 - VIP", tags: "End of Game", desc: "End the game with your Warlord’s unit wholly within No Man’s Land at starting strength." },
+  { id: 10, code: "K9X", name: "10 - Rear Extraction", tags: "End of Game", desc: "End the game with all of your units wholly within the Defender’s deployment zone." },
+  { id: 11, code: "L2Y", name: "11 - Show Off", tags: "Early Reveal / End of Game", desc: "Reveal and complete when you spend 15 or more Supply Points during a single Resupply Step." },
+  { id: 12, code: "M8Z", name: "12 - Kill Confirmed", tags: "Early Reveal", desc: "Reveal and complete after a Horde CHARACTER model is destroyed while engaged with one of your CHARACTER units." },
+  { id: 13, code: "N4B", name: "13 - Master Sculptor", tags: "Secret Tally, Early Reveal, Survival Required", desc: "Tally uses of Air Strike and Defensive Positions. Reveal and complete after 5th total tally. Must survive." },
+  { id: 14, code: "P7C", name: "14 - Hand of Fate", tags: "End of Game", desc: "Succeed in at least 7 Secondary Missions by the end of the game." },
+  { id: 15, code: "Q3D", name: "15 - Saboteur", tags: "Early Reveal, Multiplayer, Traitor, Survival Required", desc: "At end of Round 5, before resolving active Secondary Missions, reveal if at least one Secondary Mission failed this game. Must survive." },
+  { id: 16, code: "R6F", name: "16 - Hold the Line", tags: "End of Game", desc: "End the game with no Horde units within the Defender’s deployment zone." },
+  { id: 17, code: "S1G", name: "17 - Pure Spite", tags: "Early Reveal, Multiplayer, Traitor", desc: "Reveal and complete after another player’s Warlord is destroyed." },
+  { id: 18, code: "T5H", name: "18 - Aspect of Change", tags: "End of Game", desc: "End the game with 2 units you spawned via Field Promotion on the battlefield." },
+  { id: 19, code: "U9J", name: "19 - Benevolence", tags: "Secret Tally, Early Reveal, Multiplayer", desc: "Tally uses of Share Supplies you purchase. Reveal and complete after 5th tally." },
+  { id: 20, code: "V2K", name: "20 - Tacticool", tags: "Secret Tally, Early Reveal, Survival Required", desc: "Tally times you use at least 1 CP on a stratagem. Reveal after 8th tally. Must survive." },
+  { id: 21, code: "W8L", name: "21 - Camp Counselor", tags: "Secret Tally, Early Reveal, Multiplayer, Survival Required", desc: "Tally times you remove battle-shock from another player’s unit via Pizza Party. Reveal after 2nd tally. Must survive." },
+  { id: 22, code: "X4M", name: "22 - Adornable", tags: "Secret Tally, Early Reveal, Survival Required", desc: "Tally objectives you fortify. Reveal after 3rd tally. Must survive." },
+  { id: 23, code: "Y7N", name: "23 - Acceptable Collateral", tags: "Early Reveal, Multiplayer, Traitor, Survival Required", desc: "Reveal after destroying >=1 Horde model and >=1 other player's model with a single Artillery Strike. Must survive." },
+  { id: 24, code: "Z3P", name: "24 - Action Hero", tags: "Action, Early Reveal", desc: "Reveal & complete after a CHARACTER you own completes any Secondary Mission action. OR reveal at start of Shooting phase (Round 3+) for Put on Sunglasses Action (1 CHARACTER wholly within 6\" of center; completes end of turn if no Horde within 8\")." },
+  { id: 25, code: "A6Q", name: "25 - Triangulate Signal", tags: "Action, Early Reveal", desc: "Reveal in Shooting phase (Round 3+). Action: 3 units within range of 3 different objectives with no Horde in range. Completes end of turn if controlled." },
+  { id: 26, code: "B1R", name: "26 - Destroy the Evidence", tags: "Action, Early Reveal, Multiplayer, Traitor", desc: "Reveal in Shooting phase (Round 3+). Action: 1 unit within range of an objective. Completes end of turn if controlled: Destroy unit & all units in range; units within 9\" (6\" terrain) take D6 MW; remove objective; next round add Debris Storm." },
+  { id: 27, code: "C5S", name: "27 - Lancelot", tags: "Secret Tally, Early Reveal", desc: "Tally Horde MONSTER, VEHICLE, and CHARACTER models you destroy (10+ W = 2; TITANIC = 3). Reveal and complete after 4th tally." },
+  { id: 28, code: "D9T", name: "28 - Chaos Incarnate", tags: "Secret Tally, Early Reveal, Multiplayer, Traitor", desc: "Tally Misery cards activated over the game. Reveal after 9th tally, even if removed. Complete if >=1 other player survives and you did not." },
+  { id: 29, code: "E2U", name: "29 - Deus Ex Machina", tags: "Early Reveal, Multiplayer", desc: "Reveal after you are removed from the game. Spend saved Secondary Reward Cards, SP, and CP as though you were any surviving player. Complete after 13th tally of SP/CP spent while removed." },
+  { id: 30, code: "F8V", name: "30 - Supervisor", tags: "Secret Tally, Early Reveal, Multiplayer, Traitor, Survival Required", desc: "Tally Horde units destroyed by yourself vs. all other players combined. Reveal when your tally is at least 4 less than other players. Must survive." },
+  { id: 31, code: "G4W", name: "31 - All For One", tags: "Secret Tally, Early Reveal, Multiplayer, Traitor, Survival Required", desc: "Tally times another Player uses Share Supplies targeting you. Reveal after 5th tally. Must survive." },
+  { id: 32, code: "H7X", name: "32 - Meatball Surgeon", tags: "Secret Tally, Early Reveal, Multiplayer", desc: "Tally wounds other players’ units heal from your uses of Patched Up. Reveal and complete after 12th tally." },
+  { id: 33, code: "J3Y", name: "33 - Traffic Jam", tags: "Early Reveal, Traitor, Survival Required", desc: "Reveal and complete when a Horde unit is destroyed by the Horde Spawn Zone during Spawn The Horde step. Must survive." },
+  { id: 34, code: "K6Z", name: "34 - Vainglorious", tags: "Secret Tally, Multiplayer, End of Game", desc: "Tally Horde units destroyed by yourself vs. each other player. End the game with 2 more marks on your tally than any other player’s." }
+];
+
+// 3. MISERY DECK (1-36)
+const MISERIES = [
+  { id: 1, name: "1 - Unnatural Stamina", desc: "Horde units are eligible to shoot and declare a charge in a turn in which they made an advance move." },
+  { id: 2, name: "2 - Grudge Match", desc: "Horde unit attacks have +1 to hit rolls and +1 to wound rolls." },
+  { id: 3, name: "3 - Rip and Tear", desc: "Horde unit attacks have +1 AP." },
+  { id: 4, name: "4 - Blistering Speed", desc: "Do not roll advance or charge rolls for the Horde. Advance rolls are automatically 6 and charge rolls are automatically 12." },
+  { id: 5, name: "5 - Untouchable", desc: "Horde models have a 4+ invulnerable save (or improve existing 4+ invulnerable save by 1)." },
+  { id: 6, name: "6 - Stray Orbital Bombardment", desc: "Split battlefield into a 2x3 grid (1–6). Roll 1D6: each unit within the rolled area suffers 2D3 mortal wounds." },
+  { id: 7, name: "7 - Unlucky Night", desc: "When making Spawn Rolls for the Horde, roll 3D6 and discard the lowest." },
+  { id: 8, name: "8 - Death Denied", desc: "Each Horde unit heals 13 wounds." },
+  { id: 9, name: "9 - Terrifying Shockwave", desc: "All Player battle-shock rolls automatically fail." },
+  { id: 10, name: "10 - Planetquake", desc: "Select one terrain area wholly outside Attacker’s deployment zone at random. Air Strike (2D3 MW & remove terrain) activates on it." },
+  { id: 11, name: "11 - Errant Explosion", desc: "Randomly select one objective in No Man’s Land and destroy it." },
+  { id: 12, name: "12 - Nowhere is Safe", desc: "Destroy all objectives in the Defender’s deployment zone." },
+  { id: 13, name: "13 - Pincer Maneuver", desc: "Spawn an extra Horde unit into strategic reserves with Deep Strike. Next Horde Movement phase it ingresses >3\" from Player units (in Player DZ if able, else NML)." },
+  { id: 14, name: "14 - No Hard Feelings", desc: "Randomly select a player and set their SP to 0 (in Single Player, reveal 2 more Misery Cards instead)." },
+  { id: 15, name: "15 - Bad Investment", desc: "Remove 5 SP from all players (minimum 0)." },
+  { id: 16, name: "16 - Fair and Balanced", desc: "Horde unit attacks have [DEVASTATING WOUNDS]." },
+  { id: 17, name: "17 - Unfettered Fury", desc: "Horde unit attacks have [SUSTAINED HITS 1] and [LETHAL HITS 1]." },
+  { id: 18, name: "18 - A Worthless Sacrifice", desc: "Players discuss and secretly vote for a Player unit to be destroyed. If not unanimous, randomly select from units with >=1 vote." },
+  { id: 19, name: "19 - Fog of War", desc: "Horde models have Stealth and are Hidden." },
+  { id: 20, name: "20 - Lamentable Luck", desc: "Reveal 2 more Misery cards!" },
+  { id: 21, name: "21 - Bunkers Busted", desc: "Remove all fortified markers from all objectives. Players cannot make Fortify purchases." },
+  { id: 22, name: "22 - Comms Jammed", desc: "Players cannot use stratagems or spend CP. Players cannot make Supply, Spawn, or Strike purchases." },
+  { id: 23, name: "23 - The Mind Killer", desc: "Player units must each make a battle-shock roll, then remove all Enhancements/Upgrades from battle-shocked units. No Tactics purchases." },
+  { id: 24, name: "24 - Seller’s Market", desc: "The SP cost of all purchases is doubled." },
+  { id: 25, name: "25 - Hotter Shots", desc: "Horde unit ranged attacks have [MELTA 1]." },
+  { id: 26, name: "26 - Sinking Showboats", desc: "Horde unit ranged attacks have [PRECISION] and [IGNORE COVER]." },
+  { id: 27, name: "27 - Chitinous Growths", desc: "Attacks that target Horde units have -1 S and -1 AP." },
+  { id: 28, name: "28 - They Fly Now", desc: "Horde units have FLY and TOWERING. Ignore all terrain for visibility on Horde ranged attacks." },
+  { id: 29, name: "29 - Fate’s Fetters", desc: "Remove 4 SP from player with most SP. Reveal 3 extra Secondary Missions (ignore limit this round). No Secondary purchases." },
+  { id: 30, name: "30 - Aim for the Heads", desc: "When a Horde model is destroyed, roll D6: on 4+, after attacking unit finishes, it fights (in Fight phase) or shoots before being removed." },
+  { id: 31, name: "31 - Debris Storm", desc: "Player units must re-roll unmodified hit rolls of 6." },
+  { id: 32, name: "32 - Glowing Eyes", desc: "Each time a Horde model makes an attack, they may re-roll the hit roll." },
+  { id: 33, name: "33 - Danger Close", desc: "Horde ranged attacks have [BLAST 1]. Horde melee attacks have [CLEAVE 1]." },
+  { id: 34, name: "34 - Surging Power", desc: "Horde unit attacks have +1 S and [PSYCHIC]." },
+  { id: 35, name: "35 - Experimental Ammunition", desc: "Player unit ranged attacks have +1 S, +1 AP, and [HAZARDOUS]." },
+  { id: 36, name: "36 - Flash Flood", desc: "Player units have -2\" M (min 4\") and -2 to advance and charge rolls (min 1)." }
+];
+
+// 4. SECONDARY MISSIONS (1-24)
+const SECONDARIES = [
+  { id: 1, r1Skip: false, name: "1 - Secure Drop Zones", cond: "Randomly select 2 objectives in NML. Control them at end of round.", rew: "3 SP. 1 random player saves card (free Tactics purchase).", pun: "+1 Misery card." },
+  { id: 2, r1Skip: false, name: "2 - Back To Basics", cond: "Tally X Horde units destroyed this round after reveal (X > 0).", rew: "(X + 1) SP.", pun: "+2 Misery cards." },
+  { id: 3, r1Skip: false, name: "3 - Show No Fear", cond: "No Player units battle-shocked at end of battle round.", rew: "3 SP.", pun: "+2 Misery cards, +1 to Spawn Rolls." },
+  { id: 4, r1Skip: false, name: "4 - Establish Orbital Comms", cond: "Action (Shooting): 1 INFANTRY/CHARACTER wholly within 6\" of center (Completes end of turn).", rew: "Unrevealed players use A Change of Plans.", pun: "Unrevealed players use A Change of Plans at random!" },
+  { id: 5, r1Skip: false, name: "5 - Search for Supplies", cond: "Action (Shooting): 1 unit on non-home objective. End of turn if controlled, roll 4+ on D6.", rew: "3 SP. 1 random player saves card (free Supply purchase).", pun: "+2 Misery cards." },
+  { id: 6, r1Skip: false, name: "6 - Clear the Evac Zone", cond: "No Horde units within Defender’s DZ at end of battle round.", rew: "3 SP.", pun: "Reinforcements Arrive is removed from Resupply Table." },
+  { id: 7, r1Skip: false, name: "7 - Decapitation Strike", cond: "Destroy a Horde CHARACTER model, or have none exist at end of round.", rew: "2 SP, 2 CP.", pun: "+2 Misery cards." },
+  { id: 8, r1Skip: false, name: "8 - Dragon Slayer", cond: "Destroy a Horde VEHICLE/MONSTER model or have none exist at end of round.", rew: "1 free Field Promotion to triggering player (or 2 SP).", pun: "+6 to first Spawn Roll." },
+  { id: 9, r1Skip: false, name: "9 - Paint Targets", cond: "This round: No Player Fall Back moves, and no moves leaving range of objectives started in range of.", rew: "1 free Air Strike & 1 free Defensive Positions (random players).", pun: "Search & resolve Stray Orbital Bombardment immediately!" },
+  { id: 10, r1Skip: false, name: "10 - Study Behaviors", cond: "Start of Player Movement: pick random Horde unit; it must not lose any wounds this round.", rew: "2 SP. 1 random player saves card (discard to nullify a Misery card).", pun: "+3 to Spawn Rolls." },
+  { id: 11, r1Skip: true, name: "11 - Use It Or Lose It", cond: "Tally X SP spent this round after reveal; X must be >= 7.", rew: "Roll D6: 4+ gives X SP to random player; else 3 SP.", pun: "-3 SP, +1 Misery card." },
+  { id: 12, r1Skip: false, name: "12 - Control the Battlefield", cond: "End of round: >=1 Player unit wholly in each table quarter and >6\" from center.", rew: "-1 to Spawn Rolls. 1 random player saves card (free Secondary purchase).", pun: "+1 Misery card, +1 to Spawn Rolls." },
+  { id: 13, r1Skip: true, name: "13 - The Smell of Napalm", cond: "Make 2 Strike purchases this battle round.", rew: "2 SP, -1 to Spawn Rolls.", pun: "+1 Misery card, +1 to Spawn Rolls." },
+  { id: 14, r1Skip: true, name: "14 - Marching on Stomachs", cond: "Make 2 Supply purchases this battle round.", rew: "1 SP. 1 random player saves card (-5 SP cost to Reinforcements Arrive).", pun: "+1 Misery card, each Horde unit heals 3 wounds." },
+  { id: 15, r1Skip: false, name: "15 - Baiting the Trap", cond: "Action (Shooting): 1 unit wholly within 6\" of center (Completes end of turn).", rew: "2 SP, +12 first Spawn Roll, 1 free Deploy Minefield.", pun: "+2 Misery cards, +2 to Spawn Rolls." },
+  { id: 16, r1Skip: false, name: "16 - Lead From the Front", cond: "Tally damage X (max 4) dealt to Horde by Player CHARACTERS (X > 0) and no fewer Player CHARACTERS alive at end of round.", rew: "X SP.", pun: "+1 Misery card, -1 to Player Battle-shock tests." },
+  { id: 17, r1Skip: true, name: "17 - Spruce This Place Up", cond: "End of round: have at least 2 objectives fortified.", rew: "1 SP. 1 random player saves card (discard to nullify a Misery card).", pun: "+1 Misery card, Remove all Fortified Markers." },
+  { id: 18, r1Skip: false, name: "18 - Calling Shots", cond: "End of Horde Movement: mark X (>=1) Horde units. Destroy all X marked units this round.", rew: "(X * 2) SP.", pun: "+X Misery cards, +X to Spawn Rolls." },
+  { id: 19, r1Skip: true, name: "19 - Tactical Withdrawal", cond: "Action (Shooting): 1 unit wholly in NML and within 4\" of board edge -> enters reserves.", rew: "1 SP. Saving player gets up to 2 free Teleporters.", pun: "Next round add Pincer Maneuver to active Misery cards." },
+  { id: 20, r1Skip: false, name: "20 - Insane Gambit", cond: "Scuttle Objective Action (Shooting): 1 unit on controlled objective -> remove objective.", rew: "4 SP. 1 random player saves card (free Fortify purchase).", pun: "+2 Misery cards." },
+  { id: 21, r1Skip: true, name: "21 - Stabilize Warp Beacons", cond: "Action (Shooting): 3–4 units in different quarters >6\" from center. Roll D6 (+1 if 4) per unit: 1–2 destroys unit!", rew: "1 SP, 1 free Reinforcements Arrive to a completing player.", pun: "+2 Misery cards." },
+  { id: 22, r1Skip: false, name: "22 - Confirm Kills", cond: "Mark all Horde units that lose wounds. No marked Horde units alive at end of round.", rew: "3 SP, -1 to Spawn Rolls.", pun: "+2 to Spawn Rolls." },
+  { id: 23, r1Skip: false, name: "23 - Secure the LZ", cond: "Action (Shooting): 3 units wholly in Defender DZ and >6\" apart.", rew: "Next Resupply: first purchase for each player costs -3 SP.", pun: "+1 Misery card & add Comms Jammed next round." },
+  { id: 24, r1Skip: true, name: "24 - VIP Delivery", cond: "Action (Shooting): 1 VEHICLE/MONSTER within 6\" of center.", rew: "3 SP.", pun: "+1 Misery card." }
+];
+
+// 5. RESUPPLY TABLE (7.1)
+const RESUPPLIES = [
+  { cost: 1, name: "A Name Earned", tags: "Tactics", desc: "Add an Enhancement to a Character or Upgrade to a unit." },
+  { cost: 2, name: "Basic Tactics", tags: "Tactics", desc: "Gain 1 CP.", autoCP: 1 },
+  { cost: 3, name: "Air Strike", tags: "Strike", desc: "Select terrain area: units inside take 2D3 MW, remove terrain." },
+  { cost: 3, name: "Short Range Teleporter", tags: "Supply", desc: "Place 40mm Teleporter wholly within 3\" of unengaged unit (max 3)." },
+  { cost: 3, name: "Forward Operating Base", tags: "Fortify", desc: "Fortify objective: gain +1 extra SP when controlling objectives." },
+  { cost: 3, name: "Pizza Party", tags: "Tactics, Supply", desc: "Remove battle-shock from any player's unit." },
+  { cost: 3, name: "Share Supplies", tags: "Tactics", desc: "Grant 2 SP to another player." },
+  { cost: 3, name: "Supply Drop", tags: "Supply", desc: "Add new objective to NML >=6\" from edges/objs (max 6 objs)." },
+  { cost: 4, name: "Experimental Defenses", tags: "Fortify", desc: "Fortify (Warp-Relic): Start of Player Fight phase, Horde within 6\" take 3 MW (engaged Players 1 MW)." },
+  { cost: 4, name: "Defensive Positions", tags: "Supply, Fortify", desc: "Set up 9\"x9\" dense ruin >=3\" from terrain (1/turn limit)." },
+  { cost: 4, name: "Deploy Razor Wire", tags: "Supply, Strike", desc: "Place 40mm marker within 3\" (max 2): D3 MW on move, -1\" M, -2 Adv/Charge." },
+  { cost: 4, name: "Emergency Shovel Stash", tags: "Fortify", desc: "Fortify (War Trench): Friendly melee has +1 S and +1 AP wholly within range." },
+  { cost: 4, name: "Field Hospital", tags: "Fortify", desc: "Fortify (MASH): End of Movement, Player units wholly within range heal 3 wounds." },
+  { cost: 4, name: "Tempt Fate", tags: "Secondary", desc: "Reveal a 2nd Secondary Mission this round (1/turn limit)." },
+  { cost: 5, name: "Activate Jamming Station", tags: "Fortify", desc: "Fortify: -1 to Horde Spawn Rolls while controlled." },
+  { cost: 5, name: "Advanced Tactics", tags: "Secondary, Tactics", desc: "Remove 1 active Secondary Mission and reveal a new one (1/turn limit)." },
+  { cost: 5, name: "Ammo Supplies", tags: "Fortify", desc: "Fortify (Ammo Dump): Friendly ranged has [SUSTAINED HITS 1] wholly within range." },
+  { cost: 5, name: "Emergency Evac", tags: "Tactics", desc: "Place unengaged unit into strategic reserves; ingress next Movement phase." },
+  { cost: 6, name: "Activate Shield Generator", tags: "Fortify", desc: "Fortify: Friendly units wholly within range get FNP 5+ vs outside ranged attacks." },
+  { cost: 6, name: "Deploy Minefield", tags: "Supply, Strike", desc: "40mm marker in NML >6\" from enemies/objs (max 1): D6 MW on move (removes at 10 dmg)." },
+  { cost: 8, name: "A Change of Plans", tags: "Tactics", desc: "Draw 2 Secret Objectives; pick 1 or keep original." },
+  { cost: 8, name: "Artillery Strike", tags: "Strike", desc: "Marker >2\" from models. End of next Fight phase, roll D6 per model within 9\": 5+ deals 1 MW (3 MW Monster/Vehicle)." },
+  { cost: 12, name: "Reinforcements Arrive", tags: "Spawn", desc: "Roll 2D6 and add a unit from your army's Spawning Table to strategic reserves." },
+  { cost: 0, varCost: true, name: "Patched Up", tags: "Tactics", desc: "Pay X SP to heal X wounds on an unengaged Player unit (1/turn)." },
+  { cost: 0, varCost: true, name: "Field Promotion", tags: "Spawn", desc: "Destroy unengaged unit, roll 1D6 + min bracket, pay X SP equal to roll to upgrade (1/turn)." },
+  { cost: 0, varCost: true, name: "Deploy Fortification", tags: "Supply, Fortify", desc: "Pay X SP equal to min bracket for a FORTIFICATION with Deep Strike (1/turn)." }
+];
+
+// 6. HARD MODE ROUND PROGRESSION
+const HARD_MODE_ROUNDS = [
+  null,
+  { misery: 1, spawnModNum: 0, spawnMod: "+0 to Spawn Rolls" },
+  { misery: 1, spawnModNum: 1, spawnMod: "+1 to Spawn Rolls" },
+  { misery: 2, spawnModNum: 2, spawnMod: "+2 to Spawn Rolls" },
+  { misery: 2, spawnModNum: 3, spawnMod: "+3 to Spawn Rolls" },
+  { misery: 3, spawnModNum: 3, spawnMod: "+3 to Spawn Rolls" },
+  { misery: 3, spawnModNum: -99, spawnMod: "NO SPAWNS • Final Horde Onslaught!" }
+];
+
+// Dual export for Node.js test runner and browser global scope
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    HORDE_FACTIONS,
+    OBJECTIVES,
+    MISERIES,
+    SECONDARIES,
+    RESUPPLIES,
+    HARD_MODE_ROUNDS
+  };
+}
+````
+
+---
+
+## File: `js/rng.js` <a id="file-jsrngjs"></a>
+
+````javascript
+// PRNG & Seed Hashing Engine
+
+/**
+ * 32-bit FNV-1a hash algorithm for deterministic string-to-integer hashing.
+ */
+function hashString(str) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Mulberry32 32-bit Pseudo-Random Number Generator.
+ * Returns a generator function yielding uniform floats in [0, 1).
+ */
+function mulberry32(a) {
+  return function() {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Seeded Fisher-Yates shuffle that immutably returns a new shuffled array.
+ */
+function seededShuffle(arr, rng) {
+  let copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+/**
+ * Generates a thematic room code like HADES-42.
+ */
+function generateRandomCode() {
+  const prefixes = ["HADES", "ASH", "GATE", "THOR", "VULK", "SKULL", "WARP", "IRON", "PYRE", "HIVE"];
+  const p = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const n = Math.floor(10 + Math.random() * 90);
+  const code = `${p}-${n}`;
+  if (typeof document !== 'undefined') {
+    const el = document.getElementById('seedInput');
+    if (el) el.value = code;
+  }
+  return code;
+}
+
+// Dual export for Node.js test runner and browser global scope
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    hashString,
+    mulberry32,
+    seededShuffle,
+    generateRandomCode
+  };
+}
+````
+
+---
+
+## File: `js/spawner.js` <a id="file-jsspawnerjs"></a>
+
+````javascript
+// Spawner and Bracket Evaluation Engine
+
+const DOWN_MAP = {
+  '10+': '7-9',
+  '7-9': '5-6',
+  '5-6': '3-4'
+};
+
+const LABEL_MAP = {
+  '7-9': { label: 'Bracket [7–9] (Rolled Down x2)', pts: '151–300 pts each' },
+  '5-6': { label: 'Bracket [5–6] (Rolled Down x2)', pts: '76–150 pts each' },
+  '3-4': { label: 'Bracket [3–4] (Rolled Down x2)', pts: '0–75 pts each' }
+};
+
+/**
+ * Evaluates the spawn bracket from the 2D6 roll and modified total.
+ * Rules: Unmodified 2 is always No Spawn. Modified <= 2 is No Spawn.
+ */
+function getBracketInfo(modRoll, unmodRoll) {
+  if (unmodRoll === 2 || modRoll <= 2) {
+    return { key: 'NONE', label: 'No Spawn (Roll of 2)', pts: '0 pts' };
+  }
+  if (modRoll <= 4) return { key: '3-4', label: 'Bracket [3–4]', pts: '0–75 pts' };
+  if (modRoll <= 6) return { key: '5-6', label: 'Bracket [5–6]', pts: '76–150 pts' };
+  if (modRoll <= 9) return { key: '7-9', label: 'Bracket [7–9]', pts: '151–300 pts' };
+  return { key: '10+', label: 'Bracket [10+]', pts: '301–550 pts' };
+}
+
+/**
+ * Calculates the next bracket down when a player triggers a Roll Down.
+ * Returns null if the bracket cannot be rolled down (NONE or 3-4).
+ */
+function calculateRollDown(bracketKey) {
+  const nextKey = DOWN_MAP[bracketKey];
+  if (!nextKey) return null;
+  return {
+    nextKey,
+    bracketLabel: LABEL_MAP[nextKey].label,
+    pts: LABEL_MAP[nextKey].pts
+  };
+}
+
+/**
+ * Picks a unit from the shelf pool for a given bracket.
+ */
+function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
+  const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10' };
+  let raw = '';
+
+  if (customPoolMap && customPoolMap[bracketKey] !== undefined) {
+    raw = customPoolMap[bracketKey];
+  } else if (typeof document !== 'undefined') {
+    const el = document.getElementById(idMap[bracketKey]);
+    raw = el ? (el.value || '') : '';
+  }
+
+  const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (list.length === 0) return "Unit from Bracket [" + bracketKey + "]";
+  return list[Math.floor(rng() * list.length)];
+}
+
+// Dual export for Node.js test runner and browser global scope
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    DOWN_MAP,
+    LABEL_MAP,
+    getBracketInfo,
+    calculateRollDown,
+    pickSyncedUnitFromBracket
+  };
+}
+````
+
+---
+
+## File: `js/app.js` <a id="file-jsappjs"></a>
+
+````javascript
+// Main UI and Session Controller for Fires of Armageddon
+
+if (typeof require !== 'undefined') {
+  if (typeof HORDE_FACTIONS === 'undefined') Object.assign(globalThis, require('./data.js'));
+  if (typeof hashString === 'undefined') Object.assign(globalThis, require('./rng.js'));
+  if (typeof getBracketInfo === 'undefined') Object.assign(globalThis, require('./spawner.js'));
+}
+
+let selectedModeVal = 'coop';
+let selectedRoleVal = '1';
+let activeHordeFaction = typeof HORDE_FACTIONS !== 'undefined' ? HORDE_FACTIONS[0] : null;
+
+let personalSecretDeck = [];
+let sharedMiseryDeck = [];
+let sharedSecondaryDeck = [];
+let activeCard = null;
+let currentChoices = [];
+let activeMiseries = [];
+let activeSecondaries = [];
+let battleRound = 0;
+let isPrivacyHidden = false;
+let isSoloMode = false;
+let currentShopFilter = 'All';
+
+let sp = 0;
+let spGainedThisRound = 0;
+let spRoundCap = 8;
+let cp = 2;
+let stratCount = 0;
+let currentZoneSpawns = [];
+
+const STORAGE_KEY_SESSION = 'foa_horde_session_v1';
+
+function saveSessionState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const gameScreen = document.getElementById('gameScreen');
+    const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
+    const seed = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
+    const setupFactionMode = document.getElementById('setupFactionMode')?.value || 'SYNC_ALL';
+
+    const data = {
+      hasActiveSession: isSessionActive,
+      seed,
+      selectedModeVal,
+      selectedRoleVal,
+      setupFactionMode,
+      activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+      battleRound,
+      sp,
+      spGainedThisRound,
+      spRoundCap,
+      cp,
+      stratCount,
+      activeCard,
+      currentChoices,
+      activeMiseries,
+      activeSecondaries,
+      personalSecretDeck,
+      sharedMiseryDeck,
+      sharedSecondaryDeck,
+      currentZoneSpawns,
+      isPrivacyHidden,
+      currentShopFilter
+    };
+    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save session state:', e);
+  }
+}
+
+function restoreSessionState() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SESSION);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data) return false;
+
+    // Restore setup inputs
+    if (data.selectedModeVal) selectMode(data.selectedModeVal);
+    if (data.selectedRoleVal) selectRole(data.selectedRoleVal);
+    if (data.seed && document.getElementById('seedInput')) {
+      document.getElementById('seedInput').value = data.seed;
+    }
+    if (data.setupFactionMode && document.getElementById('setupFactionMode')) {
+      document.getElementById('setupFactionMode').value = data.setupFactionMode;
+    }
+
+    if (!data.hasActiveSession) return false;
+
+    // Restore session variables
+    isSoloMode = (data.selectedModeVal === 'solo');
+    spRoundCap = data.spRoundCap || (isSoloMode ? 16 : 8);
+    battleRound = data.battleRound || 0;
+    sp = (typeof data.sp === 'number') ? data.sp : 0;
+    spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
+    cp = (typeof data.cp === 'number') ? data.cp : 2;
+    stratCount = data.stratCount || 0;
+
+    activeCard = data.activeCard || null;
+    currentChoices = data.currentChoices || [];
+    activeMiseries = data.activeMiseries || [];
+    activeSecondaries = data.activeSecondaries || [];
+    personalSecretDeck = data.personalSecretDeck || [];
+    sharedMiseryDeck = data.sharedMiseryDeck || [];
+    sharedSecondaryDeck = data.sharedSecondaryDeck || [];
+    currentZoneSpawns = data.currentZoneSpawns || [];
+    isPrivacyHidden = !!data.isPrivacyHidden;
+    currentShopFilter = data.currentShopFilter || 'All';
+
+    if (data.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
+      activeHordeFaction = HORDE_FACTIONS.find(f => f.name === data.activeHordeFactionName) || HORDE_FACTIONS[0];
+      const sel = document.getElementById('hordeFactionSelect');
+      if (sel) sel.value = activeHordeFaction.name;
+      renderFactionReminderBanner();
+    }
+
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    if (setupScreen) setupScreen.classList.add('hidden');
+    if (gameScreen) gameScreen.classList.remove('hidden');
+
+    const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)]) ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)] : { misery: 1, spawnMod: '2D6+0' };
+    const roundTitle = document.getElementById('roundTitle');
+    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
+    const spawnModDisplay = document.getElementById('spawnModDisplay');
+    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    const nextRoundBtn = document.getElementById('nextRoundBtn');
+    if (nextRoundBtn) {
+      nextRoundBtn.innerText = battleRound < 6
+        ? `Advance to Battle Round ${battleRound + 1}`
+        : `Battle Round 6 Active (Final Stand)`;
+    }
+
+    if (activeCard) {
+      const activeCardBox = document.getElementById('activeCardBox');
+      if (activeCardBox) {
+        activeCardBox.innerHTML = `
+          <div class="card">
+            <span class="badge">${activeCard.tags}</span>
+            <h4 class="card-title">${activeCard.name}</h4>
+            <p class="card-desc">${activeCard.desc}</p>
+          </div>
+        `;
+      }
+      const cmCodeBox = document.getElementById('cmCodeBox');
+      if (cmCodeBox) cmCodeBox.innerText = `CM Verification Code: ${activeCard.code}`;
+      const selectionArea = document.getElementById('selectionArea');
+      if (selectionArea) selectionArea.classList.add('hidden');
+      const lockedArea = document.getElementById('lockedArea');
+      if (lockedArea) lockedArea.classList.remove('hidden');
+    } else if (currentChoices && currentChoices.length > 0) {
+      renderSecretChoices("Select 1 Initial Secret Objective");
+    }
+
+    updateHUD();
+    renderSharedDecks();
+    renderResupplyTable();
+    if (currentZoneSpawns && currentZoneSpawns.length > 0) {
+      renderSpawnZones();
+    }
+    loadCustomPool();
+
+    return true;
+  } catch (e) {
+    console.error('Failed to restore session state:', e);
+    return false;
+  }
+}
+
+function clearSessionState() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEY_SESSION);
+}
+
+// Populate Spawner Faction Dropdown and restore session on load
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('hordeFactionSelect');
+    if (sel && typeof HORDE_FACTIONS !== 'undefined') {
+      sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
+    }
+    restoreSessionState();
+  });
+}
+
+function selectMode(mode) {
+  selectedModeVal = mode;
+  document.getElementById('modeCardCoop').classList.toggle('selected-red', mode === 'coop');
+  document.getElementById('modeCardSolo').classList.toggle('selected-red', mode === 'solo');
+  document.getElementById('playerRoleSection').classList.toggle('hidden', mode === 'solo');
+  saveSessionState();
+}
+
+function selectRole(role) {
+  selectedRoleVal = role;
+  document.getElementById('roleCard1').classList.toggle('selected', role === '1');
+  document.getElementById('roleCard2').classList.toggle('selected', role === '2');
+  saveSessionState();
+}
+
+function resolveRoomSyncedFaction(code) {
+  const mode = document.getElementById('setupFactionMode').value;
+  const rngFac = mulberry32(hashString(code + "_HORDE_FACTION"));
+
+  if (mode.startsWith("SYNC_")) {
+    let pool = HORDE_FACTIONS;
+    if (mode === "SYNC_CHAOS") pool = HORDE_FACTIONS.filter(f => f.group === "Chaos");
+    if (mode === "SYNC_XENOS") pool = HORDE_FACTIONS.filter(f => f.group === "Xenos");
+    if (mode === "SYNC_IMPERIUM") pool = HORDE_FACTIONS.filter(f => f.group === "Imperium");
+    const idx = Math.floor(rngFac() * pool.length);
+    activeHordeFaction = pool[idx];
+  } else {
+    activeHordeFaction = HORDE_FACTIONS.find(f => f.name === mode) || HORDE_FACTIONS[0];
+  }
+
+  document.getElementById('hordeFactionSelect').value = activeHordeFaction.name;
+  renderFactionReminderBanner();
+  saveSessionState();
+}
+
+function manualChangeFaction() {
+  const val = document.getElementById('hordeFactionSelect').value;
+  activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
+  renderFactionReminderBanner();
+  saveSessionState();
+}
+
+function renderFactionReminderBanner() {
+  document.getElementById('activeFactionBannerTitle').innerText = `HORDE FACTION: ${activeHordeFaction.name} — "${activeHordeFaction.ruleTitle}"`;
+  document.getElementById('activeFactionBannerDesc').innerText = activeHordeFaction.desc;
+}
+
+function startSession() {
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const mode = selectedModeVal;
+  const role = selectedRoleVal;
+
+  isSoloMode = (mode === 'solo');
+  spRoundCap = isSoloMode ? 16 : 8;
+
+  // 1. Resolve Room-Synced Horde Faction
+  resolveRoomSyncedFaction(code);
+
+  // 2. Resolve Room-Synced Decks
+  const rngSecret = mulberry32(hashString(code + "_SEC"));
+  const rngMisery = mulberry32(hashString(code + "_MIS"));
+  const rngSecond = mulberry32(hashString(code + "_MSN"));
+
+  const validSecrets = isSoloMode
+    ? OBJECTIVES.filter(o => !o.tags.includes("Multiplayer"))
+    : OBJECTIVES;
+
+  const shuffledSecrets = seededShuffle(validSecrets, rngSecret);
+
+  if (isSoloMode) {
+    personalSecretDeck = shuffledSecrets;
+    document.getElementById('secretPoolNotice').innerText = `Solo Deck (${personalSecretDeck.length} valid cards; Multiplayer blocked)`;
+  } else {
+    personalSecretDeck = (role === "1") ? shuffledSecrets.slice(0, 17) : shuffledSecrets.slice(17, 34);
+    document.getElementById('secretPoolNotice').innerText = `Co-op Split Pool (${personalSecretDeck.length} cards)`;
+  }
+
+  sharedMiseryDeck = seededShuffle(MISERIES, rngMisery);
+  sharedSecondaryDeck = seededShuffle(SECONDARIES, rngSecond);
+
+  battleRound = 0;
+  activeCard = null;
+  activeMiseries = [];
+  activeSecondaries = [];
+  sp = 0;
+  spGainedThisRound = 0;
+  cp = 2;
+  stratCount = 0;
+
+  loadCustomPool();
+
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+
+  currentChoices = drawSecretCards(2);
+  renderSecretChoices("Select 1 Initial Secret Objective");
+  updateHUD();
+  renderSharedDecks();
+  renderResupplyTable();
+  switchTab(2);
+  saveSessionState();
+}
+
+function switchTab(tabNum) {
+  [1, 2, 3, 4].forEach(n => {
+    document.getElementById('tab' + n).classList.toggle('hidden', n !== tabNum);
+    document.getElementById('tabBtn' + n).classList.toggle('active', n === tabNum);
+  });
+}
+
+function updateHUD() {
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  document.getElementById('hudSessionInfo').innerText = isSoloMode ? `${code} • SOLO` : `${code} • P${selectedRoleVal}`;
+  document.getElementById('hudRound').innerText = battleRound === 0 ? "Pre-Game" : `Round ${battleRound}/6`;
+  document.getElementById('hudSp').innerText = sp;
+  document.getElementById('hudSpCap').innerText = `(${spGainedThisRound}/${spRoundCap})`;
+  document.getElementById('hudCp').innerText = cp;
+  document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
+  document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
+  saveSessionState();
+}
+
+// --- SECRET OBJECTIVES ---
+function drawSecretCards(count) {
+  let drawn = [];
+  for (let i = 0; i < count; i++) {
+    if (personalSecretDeck.length === 0) break;
+    drawn.push(personalSecretDeck.shift());
+  }
+  return drawn;
+}
+
+function renderSecretChoices(promptText) {
+  document.getElementById('selectionPrompt').innerText = promptText;
+  document.getElementById('selectionArea').classList.remove('hidden');
+  document.getElementById('lockedArea').classList.add('hidden');
+
+  const list = document.getElementById('choicesList');
+  list.innerHTML = currentChoices.map((c, idx) => {
+    const isCur = (activeCard && c.id === activeCard.id);
+    return `
+      <div class="card">
+        <span class="badge ${isCur ? 'gold' : ''}">${isCur ? 'Current Objective' : c.tags}</span>
+        <h4 class="card-title">${c.name}</h4>
+        <p class="card-desc">${c.desc}</p>
+        <button onclick="pickSecretCard(${idx})" style="margin-top:14px; width:100%;">
+          ${isCur ? 'Keep Current Objective' : 'Confirm & Lock Objective'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function pickSecretCard(chosenIdx) {
+  const chosen = currentChoices[chosenIdx];
+  currentChoices.forEach((c, idx) => {
+    if (idx !== chosenIdx) personalSecretDeck.push(c);
+  });
+  activeCard = chosen;
+  currentChoices = [];
+  document.getElementById('selectionArea').classList.add('hidden');
+  document.getElementById('lockedArea').classList.remove('hidden');
+
+  document.getElementById('activeCardBox').innerHTML = `
+    <div class="card">
+      <span class="badge">${activeCard.tags}</span>
+      <h4 class="card-title">${activeCard.name}</h4>
+      <p class="card-desc">${activeCard.desc}</p>
+    </div>
+  `;
+  document.getElementById('cmCodeBox').innerText = `CM Verification Code: ${activeCard.code}`;
+  saveSessionState();
+}
+
+function triggerChangeOfPlans() {
+  const drawn = drawSecretCards(2);
+  if (drawn.length === 0) return alert("No cards remaining in your Secret Objective deck!");
+  currentChoices = activeCard ? [activeCard, ...drawn] : drawn;
+  renderSecretChoices("Change of Plans: Pick 1 or Keep Current");
+}
+
+function triggerOrbitalPunishment() {
+  if (!confirm("Failed 'Establish Orbital Comms'? This draws 2 cards and assigns one at random!")) return;
+  const drawn = drawSecretCards(2);
+  const pool = activeCard ? [activeCard, ...drawn] : drawn;
+  const randIdx = Math.floor(Math.random() * pool.length);
+  currentChoices = pool;
+  pickSecretCard(randIdx);
+  alert(`New Randomized Secret Objective: ${activeCard.name}`);
+}
+
+function togglePrivacy() {
+  isPrivacyHidden = !isPrivacyHidden;
+  document.getElementById('PrivacyWrapper').classList.toggle('hidden', isPrivacyHidden);
+  document.getElementById('privacyBtn').innerText = isPrivacyHidden ? "Show Objective" : "Hide Screen";
+}
+
+// --- BATTLE ROUND, MISERY & SECONDARIES ---
+function advanceBattleRound() {
+  if (battleRound >= 6) {
+    if (!confirm("Round 6 complete! Continue into Infinite Mode Round " + (battleRound + 1) + "?")) return;
+  }
+  battleRound++;
+  spGainedThisRound = 0;
+
+  const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)];
+  document.getElementById('roundTitle').innerText = `Battle Round ${battleRound}`;
+  document.getElementById('spawnModDisplay').innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+  document.getElementById('nextRoundBtn').innerText = battleRound < 6
+    ? `Advance to Battle Round ${battleRound + 1}`
+    : `Battle Round 6 Active (Final Stand)`;
+
+  activeMiseries = [];
+  activeSecondaries = [];
+
+  drawMisery(cfg.misery);
+  // Orks Round 3 High (Green) Tide check
+  if (battleRound === 3 && activeHordeFaction.name === 'Orks') {
+    drawMisery(1);
+  }
+
+  if (battleRound <= 5) {
+    drawSecondary(battleRound === 1);
+  }
+
+  updateHUD();
+  renderSharedDecks();
+}
+
+function drawMisery(count) {
+  for (let i = 0; i < count; i++) {
+    if (sharedMiseryDeck.length === 0) {
+      const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+      sharedMiseryDeck = seededShuffle(MISERIES, mulberry32(hashString(code + "_MIS_R" + battleRound)));
+    }
+    const card = sharedMiseryDeck.shift();
+    activeMiseries.push(card);
+    if (card.id === 20) drawMisery(2);
+    if (card.id === 14 && isSoloMode) drawMisery(2);
+  }
+  renderSharedDecks();
+}
+
+function triggerSpecificMisery() {
+  const id = parseInt(document.getElementById('specificMiserySelect').value, 10);
+  const found = MISERIES.find(m => m.id === id);
+  if (!found) return;
+  sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
+  activeMiseries.push(found);
+  renderSharedDecks();
+}
+
+function drawSecondary(isRound1) {
+  if (sharedSecondaryDeck.length === 0) {
+    const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+    sharedSecondaryDeck = seededShuffle(SECONDARIES, mulberry32(hashString(code + "_MSN_R" + battleRound)));
+  }
+  let skipped = [];
+  let chosen = null;
+  while (sharedSecondaryDeck.length > 0) {
+    let candidate = sharedSecondaryDeck.shift();
+    if (isRound1 && candidate.r1Skip) {
+      skipped.push(candidate);
+    } else {
+      chosen = candidate;
+      break;
+    }
+  }
+  sharedSecondaryDeck.push(...skipped);
+  if (chosen) activeSecondaries.push(chosen);
+  renderSharedDecks();
+}
+
+function replaceSecondary() {
+  if (activeSecondaries.length === 0) return alert("No active Secondary Mission to replace!");
+  activeSecondaries.pop();
+  drawSecondary(battleRound === 1);
+}
+
+function renderSharedDecks() {
+  document.getElementById('secDeckCount').innerText = `${sharedSecondaryDeck.length} in deck`;
+  document.getElementById('misDeckCount').innerText = `${sharedMiseryDeck.length} in deck`;
+
+  const secBox = document.getElementById('activeSecondariesBox');
+  if (activeSecondaries.length === 0) {
+    secBox.innerHTML = `<div class="card secondary" style="opacity:0.6;"><p class="card-desc">No active Secondary Mission.</p></div>`;
+  } else {
+    secBox.innerHTML = activeSecondaries.map(s => `
+      <div class="card secondary">
+        <span class="badge gold">Secondary Mission</span>
+        <h4 class="card-title">${s.name}</h4>
+        <p class="card-desc">${s.cond}</p>
+        <div class="meta-row">
+          <span class="reward-pill"><strong>Reward:</strong> ${s.rew}</span>
+          <span class="punish-pill"><strong>Failure:</strong> ${s.pun}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const misBox = document.getElementById('activeMiseriesBox');
+  if (activeMiseries.length === 0) {
+    misBox.innerHTML = `<div class="card misery" style="opacity:0.6;"><p class="card-desc">No active Misery Cards.</p></div>`;
+  } else {
+    misBox.innerHTML = activeMiseries.map(m => `
+      <div class="card misery">
+        <span class="badge red">Misery Effect</span>
+        <h4 class="card-title">${m.name}</h4>
+        <p class="card-desc">${m.desc}</p>
+      </div>
+    `).join('');
+  }
+}
+
+// --- TAB 4: ROOM-SYNCED HORDE SPAWNER ---
+function saveCustomPool() {
+  const pool = {
+    b34: document.getElementById('pool34').value,
+    b56: document.getElementById('pool56').value,
+    b79: document.getElementById('pool79').value,
+    b10: document.getElementById('pool10').value
+  };
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('armageddon_horde_pool', JSON.stringify(pool));
+  }
+  if (typeof alert === 'function') alert("Custom Shelf Pool saved!");
+}
+
+function loadCustomPool() {
+  if (typeof localStorage === 'undefined') return;
+  const saved = localStorage.getItem('armageddon_horde_pool');
+  if (!saved) return;
+  try {
+    const p = JSON.parse(saved);
+    if (p.b34) document.getElementById('pool34').value = p.b34;
+    if (p.b56) document.getElementById('pool56').value = p.b56;
+    if (p.b79) document.getElementById('pool79').value = p.b79;
+    if (p.b10) document.getElementById('pool10').value = p.b10;
+  } catch (e) {}
+}
+
+function rollAllSpawnZones() {
+  if (battleRound === 6) {
+    return alert("Battle Round 6 (Hard Mode Final Stand): Do NOT roll Spawn Rolls in Round 6!");
+  }
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const effRound = Math.max(1, battleRound);
+  const numZones = parseInt(document.getElementById('spawnZoneCountSelect').value, 10);
+  const fac = activeHordeFaction.name;
+  const extraMod = parseInt(document.getElementById('extraSpawnMod').value, 10) || 0;
+  const jammerActive = document.getElementById('jammerCheck').checked;
+  const unluckyNightActive = activeMiseries.some(m => m.id === 7);
+  const firstBonus6 = document.getElementById('firstRollBonusCheck').checked;
+  const firstBonus12 = document.getElementById('baitTrapBonusCheck').checked;
+
+  const rndIndex = Math.max(1, Math.min(effRound, 5));
+  let baseRoundMod = HARD_MODE_ROUNDS[rndIndex].spawnModNum;
+  if (effRound === 3 && fac === 'Orks') baseRoundMod += 1;
+
+  currentZoneSpawns = [];
+
+  for (let z = 1; z <= numZones; z++) {
+    // Seeded RNG per Room + Round + Zone so both phones roll identical spawns!
+    const rngZone = mulberry32(hashString(`${code}_SPAWN_R${effRound}_Z${z}`));
+    let unmod = 0;
+    let diceStr = "";
+
+    if (z === 1 && effRound >= 4 && fac === 'Adepta Sororitas') {
+      unmod = 12;
+      diceStr = "Auto-12 (Martyrs & Miracles)";
+    } else if (unluckyNightActive) {
+      const d1 = Math.floor(rngZone() * 6) + 1;
+      const d2 = Math.floor(rngZone() * 6) + 1;
+      const d3 = Math.floor(rngZone() * 6) + 1;
+      const sorted = [d1, d2, d3].sort((a,b) => b - a);
+      unmod = sorted[0] + sorted[1];
+      diceStr = `3D6 Drop Lowest (${d1},${d2},${d3} → ${unmod})`;
+    } else {
+      const d1 = Math.floor(rngZone() * 6) + 1;
+      const d2 = Math.floor(rngZone() * 6) + 1;
+      unmod = d1 + d2;
+      diceStr = `2D6 (${d1}+${d2} = ${unmod})`;
+    }
+
+    let totalMod = baseRoundMod + extraMod + (jammerActive ? -1 : 0);
+    if (z === 1 && firstBonus6) totalMod += 6;
+    if (z === 1 && firstBonus12) totalMod += 12;
+
+    const finalRoll = unmod + totalMod;
+    const bInfo = getBracketInfo(finalRoll, unmod);
+    const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, rngZone);
+
+    currentZoneSpawns.push({
+      zone: z,
+      diceStr,
+      unmod,
+      totalMod,
+      finalRoll,
+      bracketKey: bInfo.key,
+      bracketLabel: bInfo.label,
+      pts: bInfo.pts,
+      units: [unitPicked]
+    });
+  }
+
+  renderSpawnZones();
+}
+
+function rollDownZone(idx) {
+  const z = currentZoneSpawns[idx];
+  const rollDownResult = calculateRollDown(z.bracketKey);
+  if (!rollDownResult) {
+    return alert("Cannot roll down lower than Bracket [3–4]!");
+  }
+
+  const { nextKey, bracketLabel, pts } = rollDownResult;
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const rngDown = mulberry32(hashString(`${code}_ROLLDOWN_R${battleRound}_Z${z.zone}_${nextKey}`));
+
+  const newCount = z.units.length * 2;
+  let newUnits = [];
+  for (let i = 0; i < newCount; i++) {
+    newUnits.push(pickSyncedUnitFromBracket(nextKey, rngDown));
+  }
+  z.bracketKey = nextKey;
+  z.bracketLabel = bracketLabel;
+  z.pts = pts;
+  z.units = newUnits;
+  renderSpawnZones();
+}
+
+function renderSpawnZones() {
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = currentZoneSpawns.map((z, idx) => `
+    <div class="card spawn-zone">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <span class="badge green">Spawn Zone ${z.zone} • ${z.bracketLabel} (${z.pts})</span>
+        <span class="hud-sub">${z.diceStr} | Mod: ${z.totalMod >= 0 ? '+'+z.totalMod : z.totalMod} → <strong>Total: ${z.finalRoll}</strong></span>
+      </div>
+      <h4 class="card-title" style="margin-top:4px;">${z.units.join('  +  ')}</h4>
+      ${(z.bracketKey !== 'NONE' && z.bracketKey !== '3-4') ? `
+        <button class="btn-ghost btn-sm" style="margin-top:8px;" onclick="rollDownZone(${idx})">
+          ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
+        </button>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+// --- SP, CP & RESUPPLY SHOP ---
+function gainSP(amount) {
+  const remainingCap = spRoundCap - spGainedThisRound;
+  if (remainingCap <= 0) {
+    if (!confirm(`Round cap of ${spRoundCap} SP reached! Add SP anyway?`)) return;
+    sp += amount;
+  } else {
+    const actual = Math.min(amount, remainingCap);
+    sp += actual;
+    spGainedThisRound += actual;
+  }
+  updateHUD();
+}
+
+function loseSP(amount) {
+  sp = Math.max(0, sp - amount);
+  updateHUD();
+}
+
+function adjCP(delta) {
+  cp = Math.max(0, cp + delta);
+  updateHUD();
+}
+
+function spendCPForStrat() {
+  if (cp <= 0) return alert("0 CP remaining!");
+  cp--;
+  stratCount++;
+  updateHUD();
+}
+
+function adjMarker(id, delta, max) {
+  const el = document.getElementById(id);
+  let val = parseInt(el.innerText, 10) + delta;
+  el.innerText = Math.max(0, Math.min(max, val));
+}
+
+function setShopFilter(tag, btnEl) {
+  currentShopFilter = tag;
+  document.querySelectorAll('.filter-bar .chip').forEach(b => b.classList.remove('active'));
+  btnEl.classList.add('active');
+  renderResupplyTable();
+}
+
+function buyResupply(idx) {
+  const item = RESUPPLIES[idx];
+  const isDoubled = document.getElementById('doubleCostToggle').checked;
+  let finalCost = item.cost;
+
+  if (item.varCost) {
+    const input = prompt(`Enter X SP to spend on ${item.name}:`, "3");
+    if (input === null) return;
+    finalCost = parseInt(input, 10) || 0;
+  }
+  if (isDoubled) finalCost *= 2;
+
+  if (sp < finalCost) {
+    return alert(`Insufficient SP! Need ${finalCost} SP (You have ${sp} SP).`);
+  }
+  sp -= finalCost;
+  if (item.autoCP) cp += item.autoCP;
+  if (item.name === "A Change of Plans") {
+    switchTab(2);
+    triggerChangeOfPlans();
+  } else if (item.name === "Tempt Fate") {
+    drawSecondary(battleRound === 1);
+    switchTab(1);
+  } else if (item.name === "Advanced Tactics") {
+    replaceSecondary();
+    switchTab(1);
+  }
+  updateHUD();
+}
+
+function renderResupplyTable() {
+  const isDoubled = document.getElementById('doubleCostToggle').checked;
+  const container = document.getElementById('resupplyList');
+
+  const filtered = RESUPPLIES.map((r, i) => ({ ...r, origIdx: i }))
+    .filter(r => currentShopFilter === 'All' || r.tags.includes(currentShopFilter));
+
+  container.innerHTML = filtered.map(r => {
+    const dispCost = r.varCost ? (isDoubled ? "2X SP" : "X SP") : `${isDoubled ? r.cost * 2 : r.cost} SP`;
+    return `
+      <div class="card resupply">
+        <div>
+          <span class="badge blue" style="margin-bottom:4px;">${dispCost} • ${r.tags}</span>
+          <h4 class="card-title" style="font-size:1rem;">${r.name}</h4>
+          <p class="card-desc" style="font-size:0.86rem;">${r.desc}</p>
+        </div>
+        <button class="btn-blue btn-sm" onclick="buyResupply(${r.origIdx})">Buy</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function leaveSession() {
+  if (typeof confirm === 'function' && !confirm("Exit current battle terminal?")) return;
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+  saveSessionState();
+}
+
+// Dual export for Node.js test runner and browser environment
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    selectMode,
+    selectRole,
+    resolveRoomSyncedFaction,
+    manualChangeFaction,
+    renderFactionReminderBanner,
+    startSession,
+    updateHUD,
+    gainSP,
+    loseSP,
+    adjCP,
+    spendCPForStrat,
+    buyResupply,
+    leaveSession,
+    saveSessionState,
+    restoreSessionState,
+    clearSessionState
+  };
+}
+````
+
+---
+
+## File: `js/vox-audio.js` <a id="file-jsvoxaudiojs"></a>
+
+````javascript
+/**
+ * SANCTUARY OF ASH // VOX-CASTER AMBIENT PLAYLIST RANDOMIZER & TERMINAL SFX
+ * Playlist: https://www.youtube.com/playlist?list=PL1PnO3JojeSmA_jPzjhuiKycUQ8BHHjek
+ */
+(function () {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  const PLAYLIST_ID = 'PL1PnO3JojeSmA_jPzjhuiKycUQ8BHHjek';
+  const STORAGE_KEY_MUSIC = 'soa_vox_music_enabled_v1';
+
+  let ytPlayer = null;
+  let ytReady = false;
+  let isPlaying = false;
+  let wantMusic = false;
+  try {
+    wantMusic = localStorage.getItem(STORAGE_KEY_MUSIC) === 'true';
+  } catch (err) {
+    console.warn('Could not read music preference from localStorage:', err);
+  }
+
+  // =========================================================================
+  // PART 1: MECHANICAL SCI-FI BUTTON CLANK (WEB AUDIO SYNTH - ALWAYS ACTIVE)
+  // =========================================================================
+  let audioCtx = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+
+  /**
+   * Synthesizes a gritty Imperial cogitator relay click / mechanical clank.
+   * @param {boolean} heavy - True for primary launch/gate buttons
+   */
+  function playTerminalClank(heavy = false) {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // 1. Low metallic switch thud
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = heavy ? 'sawtooth' : 'triangle';
+    osc.frequency.setValueAtTime(heavy ? 145 : 190, now);
+    osc.frequency.exponentialRampToValueAtTime(38, now + (heavy ? 0.085 : 0.045));
+
+    gain.gain.setValueAtTime(heavy ? 0.22 : 0.14, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + (heavy ? 0.09 : 0.05));
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + (heavy ? 0.095 : 0.055));
+
+    // 2. High-frequency relay snap transient
+    const clickOsc = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    clickOsc.type = 'square';
+    clickOsc.frequency.setValueAtTime(heavy ? 920 : 1350, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(220, now + 0.018);
+
+    clickGain.gain.setValueAtTime(0.06, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+
+    clickOsc.connect(clickGain);
+    clickGain.connect(ctx.destination);
+    clickOsc.start(now);
+    clickOsc.stop(now + 0.022);
+  }
+
+  // Global listener for all interactive controls (independent of music toggle)
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest(
+      'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn'
+    );
+    if (target) {
+      const isHeavy = target.matches('.launch-btn, .gate-btn, .btn-red, .terminal-link-btn');
+      playTerminalClank(isHeavy);
+    }
+
+    // If user previously turned music ON, resume playback on first interaction
+    if (wantMusic && ytReady && !isPlaying && !e.target.closest('#voxMusicToggle')) {
+      startRandomTrack();
+    }
+  });
+
+  // =========================================================================
+  // PART 2: TOP-NAV YOUTUBE PLAYLIST RANDOMIZER (MUSIC ONLY)
+  // =========================================================================
+  function injectNavToggle() {
+    const nav = document.querySelector('.suite-nav');
+    if (!nav || document.getElementById('voxMusicToggle')) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'vox-caster-bar';
+    wrap.innerHTML = `
+      <button type="button" id="voxMusicToggle" class="vox-music-btn" title="Toggle 40K Ship Ambience Playlist">
+        <span id="voxMusicIcon">🔇</span>
+        <span id="voxMusicLabel">VOX-AMBIENCE: OFF</span>
+        <span class="vox-eq"><span></span><span></span><span></span></span>
+      </button>
+      <button type="button" id="voxMusicSkip" class="vox-music-btn hidden" title="Randomize Next Ambient Track">
+        ⏭️
+      </button>
+    `;
+    nav.appendChild(wrap);
+
+    // Hidden 1x1 container for the YouTube IFrame API player
+    const ytHost = document.createElement('div');
+    ytHost.id = 'soaHiddenYtPlayer';
+    ytHost.style.cssText = 'position:fixed;bottom:-10px;right:-10px;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
+    document.body.appendChild(ytHost);
+
+    document.getElementById('voxMusicToggle').addEventListener('click', toggleMusic);
+    document.getElementById('voxMusicSkip').addEventListener('click', () => {
+      if (ytReady) startRandomTrack();
+    });
+
+    updateMusicUI(false);
+    if (wantMusic) {
+      loadYouTubeAPI();
+    }
+  }
+
+  function updateMusicUI(active) {
+    const btn = document.getElementById('voxMusicToggle');
+    const icon = document.getElementById('voxMusicIcon');
+    const lbl = document.getElementById('voxMusicLabel');
+    const skip = document.getElementById('voxMusicSkip');
+    if (!btn) return;
+
+    btn.classList.toggle('playing', active);
+    if (icon) icon.textContent = active ? '🔊' : '🔇';
+    if (lbl) lbl.textContent = active ? 'VOX-AMBIENCE: ON' : 'VOX-AMBIENCE: OFF';
+    if (skip) skip.classList.toggle('hidden', !active);
+  }
+
+  function loadYouTubeAPI() {
+    if (window.YT && window.YT.Player) {
+      createPlayer();
+      return;
+    }
+    if (document.getElementById('soaYtApiScript')) return;
+
+    const tag = document.createElement('script');
+    tag.id = 'soaYtApiScript';
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+
+    const prevReady = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof prevReady === 'function') prevReady();
+      createPlayer();
+    };
+  }
+
+  function createPlayer() {
+    if (ytPlayer) return;
+    ytPlayer = new YT.Player('soaHiddenYtPlayer', {
+      height: '1',
+      width: '1',
+      playerVars: {
+        listType: 'playlist',
+        list: PLAYLIST_ID,
+        autoplay: wantMusic ? 1 : 0,
+        loop: 1,
+        controls: 0,
+        disablekb: 1,
+        modestbranding: 1,
+        playsinline: 1
+      },
+      events: {
+        onReady: (event) => {
+          ytReady = true;
+          event.target.setVolume(35); // Comfortable atmospheric background level
+          event.target.setLoop(true);
+          event.target.setShuffle(true);
+          if (wantMusic) {
+            startRandomTrack();
+          }
+        },
+        onStateChange: (event) => {
+          if (event.data === YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            updateMusicUI(true);
+          } else if (
+            event.data === YT.PlayerState.PAUSED ||
+            event.data === YT.PlayerState.ENDED
+          ) {
+            if (!wantMusic) {
+              isPlaying = false;
+              updateMusicUI(false);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function startRandomTrack() {
+    if (!ytPlayer || !ytReady) return;
+    try {
+      ytPlayer.setShuffle(true);
+      const playlist = ytPlayer.getPlaylist();
+      if (Array.isArray(playlist) && playlist.length > 0) {
+        const randIdx = Math.floor(Math.random() * playlist.length);
+        ytPlayer.playVideoAt(randIdx);
+      } else {
+        // Fallback random index across the playlist if array isn't populated yet
+        const fallbackIdx = Math.floor(Math.random() * 20);
+        ytPlayer.playVideoAt(fallbackIdx);
+      }
+      ytPlayer.setVolume(35);
+      isPlaying = true;
+      updateMusicUI(true);
+    } catch (err) {
+      console.warn('Vox-Caster playlist start warning:', err);
+    }
+  }
+
+  function toggleMusic() {
+    wantMusic = !wantMusic;
+    try {
+      localStorage.setItem(STORAGE_KEY_MUSIC, String(wantMusic));
+    } catch (err) {
+      console.warn('Could not save music preference to localStorage:', err);
+    }
+
+    if (wantMusic) {
+      if (!ytReady) {
+        updateMusicUI(true);
+        loadYouTubeAPI();
+      } else {
+        startRandomTrack();
+      }
+    } else {
+      isPlaying = false;
+      updateMusicUI(false);
+      if (ytPlayer && ytReady && typeof ytPlayer.pauseVideo === 'function') {
+        ytPlayer.pauseVideo();
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectNavToggle);
+  } else {
+    injectNavToggle();
+  }
+})();
+````

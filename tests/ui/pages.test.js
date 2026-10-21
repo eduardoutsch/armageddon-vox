@@ -205,17 +205,20 @@ test('UI Boundary: pages integrate localStorage persistence so users can navigat
   assert.ok(appJs.includes('restoreSessionState'), 'app.js must define restoreSessionState');
 });
 
-test('Documentation Boundary: breakdown bundle markdown files exist for each page and css/packages', () => {
+test('Documentation Boundary: breakdown bundle markdown files exist for each page, module, and package', () => {
   const bundlesDir = path.join(ROOT_DIR, 'bundles');
   assert.ok(fs.existsSync(bundlesDir), 'bundles/ directory must exist');
 
   const requiredBundles = [
     { file: 'bundle_index.md', check: 'index.html' },
+    { file: 'bundle_javascript.md', check: 'js/vox-audio.js' },
+    { file: 'bundle_tests.md', check: 'tests/ui/pages.test.js' },
     { file: 'bundle_briefing.md', check: 'pages/briefing.html' },
     { file: 'bundle_pvp.md', check: 'pages/pvp.html' },
     { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
     { file: 'bundle_roster.md', check: 'pages/roster.html' },
-    { file: 'bundle_css_packages.md', check: 'css/style.css' }
+    { file: 'bundle_css.md', check: 'css/style.css' },
+    { file: 'bundle_packages.md', check: 'package.json' }
   ];
 
   for (const b of requiredBundles) {
@@ -227,10 +230,14 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     assert.equal(content.includes('\0'), false, `${b.file} must not contain null bytes`);
   }
 
-  // Legacy monolithic codebase_bundle.md is deprecated in favor of /bundles directory
-  const rootBundlePath = path.join(ROOT_DIR, 'codebase_bundle.md');
+  // Deprecated bundle files must not exist
   assert.equal(
-    fs.existsSync(rootBundlePath),
+    fs.existsSync(path.join(bundlesDir, 'bundle_css_packages.md')),
+    false,
+    'bundle_css_packages.md is deprecated in favor of bundle_css.md and bundle_packages.md'
+  );
+  assert.equal(
+    fs.existsSync(path.join(ROOT_DIR, 'codebase_bundle.md')),
     false,
     'codebase_bundle.md is deprecated; project exclusively uses modular bundles in /bundles/'
   );

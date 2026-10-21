@@ -61,16 +61,38 @@ function compileBundle(title, description, fileList, targetPath) {
   console.log(`Bundle generated: ${path.relative(ROOT_DIR, targetPath)} (${out.length} characters)`);
 }
 
-// Modular bundles compiled to /bundles directory
+// Clean up deprecated bundle_css_packages.md if present
+const deprecatedCssPackages = path.join(BUNDLES_DIR, 'bundle_css_packages.md');
+if (fs.existsSync(deprecatedCssPackages)) {
+  fs.unlinkSync(deprecatedCssPackages);
+}
 
-// 2. PAGE 1: Mode 1 Spawner & Tactical Terminal (index.html + JS core + test suites)
-const INDEX_FILES = [
-  'index.html',
+// 1. PAGE 1: Mode 1 Spawner & Tactical Terminal (index.html)
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Mode 1 - Tactical Terminal & Spawner',
+  'Complete source code for the primary Mode 1 Horde Command tactical terminal and spawner (`index.html`).',
+  ['index.html'],
+  path.join(BUNDLES_DIR, 'bundle_index.md')
+);
+
+// 2. JAVASCRIPT GAME ENGINE & AUDIO
+const JS_FILES = [
   'js/data.js',
   'js/rng.js',
   'js/spawner.js',
   'js/app.js',
-  'js/vox-audio.js',
+  'js/vox-audio.js'
+];
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: JavaScript Game Engine & Audio',
+  'Core logic, RNG algorithms, spawner mechanics, state management, faction/mission datasets, and Vox-Caster Web Audio synth (`js/*.js`).',
+  JS_FILES,
+  path.join(BUNDLES_DIR, 'bundle_javascript.md')
+);
+
+// 3. TEST SUITES & VERIFICATION
+const TEST_FILES = [
   'tests/js/data.test.js',
   'tests/js/rng.test.js',
   'tests/js/spawner.test.js',
@@ -80,13 +102,13 @@ const INDEX_FILES = [
 ];
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Mode 1 - Tactical Terminal & Spawner',
-  'Complete source code and test suites for the primary Mode 1 Horde Command terminal and spawner (`index.html`).',
-  INDEX_FILES,
-  path.join(BUNDLES_DIR, 'bundle_index.md')
+  '📦 Fires of Armageddon // Bundle: Test Suites & Verification',
+  'Unit, boundary, integration, and UI verification test suites for all game modes, data schemas, RNG determinism, and page requirements (`tests/**/*.test.js`).',
+  TEST_FILES,
+  path.join(BUNDLES_DIR, 'bundle_tests.md')
 );
 
-// 3. PAGE 2: Briefing & Ship Slider
+// 4. PAGE 2: Briefing & Ship Slider
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Briefings, Ship Slider & Sector Atlas',
   'Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md slider, and the 8-node Sector Atlas (`pages/briefing.html`).',
@@ -94,7 +116,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_briefing.md')
 );
 
-// 4. PAGE 3: Mode 2 PvP
+// 5. PAGE 3: Mode 2 PvP
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Mode 2 - 1v1 Ash Wastes PvP',
   'Complete source code for the 1v1 Ash Wastes PvP module, Hellscapes, Warp Storm Anomalies, and Unbound Adversaries (`pages/pvp.html`).',
@@ -102,7 +124,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_pvp.md')
 );
 
-// 5. PAGE 4: Mode 3 Rogue Sector & AI Tracker
+// 6. PAGE 4: Mode 3 Rogue Sector & AI Tracker
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Mode 3 - Rogue Sector & AI Tracker',
   'Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impact reference (`pages/rogue.html`).',
@@ -110,7 +132,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_rogue.md')
 );
 
-// 6. PAGE 5: Rosters & Nemesis Ledger
+// 7. PAGE 5: Rosters & Nemesis Ledger
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Rosters & Nemesis Ledger',
   'Complete source code for the Crusade Order of Battle rosters and Cross-Mode Nemesis Ledger (`pages/roster.html`).',
@@ -118,37 +140,51 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_roster.md')
 );
 
-// 7. CSS & PACKAGES
-const CSS_PACKAGE_FILES = [
+// 8. TACTICAL STYLESHEET & ASSETS
+const CSS_FILES = [
   'css/style.css',
+  'assets/favicon.svg'
+];
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Sanctuary-Noctis Tactical Stylesheet & Assets',
+  'Unified Tactical Stylesheet ("Sanctuary-Noctis Hybrid"), typography tokens, chamfered iron cards, Auspex CRT screens, and SVG icons (`css/style.css`, `assets/favicon.svg`).',
+  CSS_FILES,
+  path.join(BUNDLES_DIR, 'bundle_css.md')
+);
+
+// 9. PACKAGES, CONFIGURATION & DOCUMENTATION
+const PACKAGE_FILES = [
   'package.json',
   'wrangler.jsonc',
-  'assets/favicon.svg',
   'README.md',
   'AGENTS.md',
   '.gitignore'
 ];
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Stylesheet, Configuration & Packages',
-  'Global typography, design system tokens, Cloudflare Pages config, project metadata, and engineering rules.',
-  CSS_PACKAGE_FILES,
-  path.join(BUNDLES_DIR, 'bundle_css_packages.md')
+  '📦 Fires of Armageddon // Bundle: Packages, Configuration & Documentation',
+  'NPM package manifests, Cloudflare Pages deployment configs, repository documentation, and non-negotiable engineering directives.',
+  PACKAGE_FILES,
+  path.join(BUNDLES_DIR, 'bundle_packages.md')
 );
 
-// 8. BUNDLES DIRECTORY README
+// 10. BUNDLES DIRECTORY README
 const bundlesReadme = `# 📦 Modular Codebase Bundles
 
 This directory contains standalone, page-by-page and component-focused Markdown bundles designed for targeted NotebookLM and Gemini context ingestion.
 
 | Bundle Document | Target Scope | Included Files |
 | :--- | :--- | :--- |
-| [\`bundle_index.md\`](bundle_index.md) | **Mode 1: Tactical Terminal & Spawner** | \`index.html\`, \`js/*.js\`, \`tests/**/*.js\` |
+| [\`bundle_index.md\`](bundle_index.md) | **Mode 1: Tactical Terminal & Spawner** | \`index.html\` |
+| [\`bundle_javascript.md\`](bundle_javascript.md) | **JavaScript Engine & Audio** | \`js/data.js\`, \`js/rng.js\`, \`js/spawner.js\`, \`js/app.js\`, \`js/vox-audio.js\` |
+| [\`bundle_tests.md\`](bundle_tests.md) | **Test Suites & Verification** | \`tests/js/*.test.js\`, \`tests/ui/pages.test.js\` |
 | [\`bundle_briefing.md\`](bundle_briefing.md) | **Briefings, Ship Slider & Atlas** | \`pages/briefing.html\` |
 | [\`bundle_pvp.md\`](bundle_pvp.md) | **Mode 2: 1v1 Ash Wastes PvP** | \`pages/pvp.html\` |
 | [\`bundle_rogue.md\`](bundle_rogue.md) | **Mode 3: Rogue Sector & AI Tracker** | \`pages/rogue.html\` |
 | [\`bundle_roster.md\`](bundle_roster.md) | **Rosters & Nemesis Ledger** | \`pages/roster.html\` |
-| [\`bundle_css_packages.md\`](bundle_css_packages.md) | **Stylesheets, Config & Packages** | \`css/style.css\`, \`package.json\`, \`wrangler.jsonc\`, \`assets/favicon.svg\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\` |
+| [\`bundle_css.md\`](bundle_css.md) | **Sanctuary-Noctis Stylesheet & Assets** | \`css/style.css\`, \`assets/favicon.svg\` |
+| [\`bundle_packages.md\`](bundle_packages.md) | **Packages, Config & Documentation** | \`package.json\`, \`wrangler.jsonc\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\` |
 
 `;
 
