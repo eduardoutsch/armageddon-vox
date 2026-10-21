@@ -13,10 +13,10 @@ test('UI Boundary: index.html has complete navigation, stylesheets, and modular 
   const html = readPage('index.html');
 
   assert.ok(html.includes('<nav class="suite-nav">'), 'Missing suite navigation bar');
-  assert.ok(html.includes('href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>'));
-  assert.ok(html.includes('href="pvp.html"'));
-  assert.ok(html.includes('href="rogue.html"'));
-  assert.ok(html.includes('href="roster.html"'));
+  assert.ok(html.includes('href="pages/briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>'));
+  assert.ok(html.includes('href="pages/pvp.html"'));
+  assert.ok(html.includes('href="pages/rogue.html"'));
+  assert.ok(html.includes('href="pages/roster.html"'));
 
   // Stylesheet
   assert.ok(html.includes('<link rel="stylesheet" href="css/style.css">'));
@@ -28,53 +28,84 @@ test('UI Boundary: index.html has complete navigation, stylesheets, and modular 
   assert.ok(html.includes('<script src="js/app.js"></script>'));
 });
 
-test('UI Boundary: all pages share unified navigation title for Briefings, Ship & Atlas', () => {
-  const pages = ['pvp.html', 'rogue.html', 'roster.html', 'briefing.html'];
-  const expectedSnippet = 'href="briefing.html" class="suite-link';
+test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
+  const subpages = ['pvp.html', 'rogue.html', 'roster.html', 'briefing.html'];
+  const expectedBriefingSnippet = 'href="briefing.html" class="suite-link';
+  const expectedRootIndexSnippet = 'href="../index.html" class="suite-link';
 
-  for (const page of pages) {
-    const html = readPage(page);
-    assert.ok(html.includes(expectedSnippet), `${page} missing standard briefing suite-link`);
+  for (const page of subpages) {
+    const rootPagePath = path.join(ROOT_DIR, page);
+    assert.equal(fs.existsSync(rootPagePath), false, `${page} must not remain loose in repository root`);
+
+    const html = readPage(path.join('pages', page));
+    assert.ok(html.includes(expectedRootIndexSnippet), `pages/${page} must link back to ../index.html`);
+    assert.ok(html.includes(expectedBriefingSnippet), `pages/${page} missing standard briefing suite-link`);
     assert.ok(
       html.includes('Briefings, Ship &amp; Atlas') || html.includes('Briefings, Ship & Atlas'),
-      `${page} navigation text must match Briefings, Ship & Atlas`
+      `pages/${page} navigation text must match Briefings, Ship & Atlas`
+    );
+  }
+
+  const briefingHtml = readPage('pages/briefing.html');
+  assert.ok(
+    briefingHtml.includes('<link rel="stylesheet" href="../css/style.css">'),
+    'pages/briefing.html must link to ../css/style.css'
+  );
+  assert.ok(
+    briefingHtml.includes('href="../index.html" class="terminal-link-btn">'),
+    'pages/briefing.html terminal button must link to ../index.html'
+  );
+});
+
+test('All HTML pages link to assets/favicon.svg and apple-touch-icon in /assets', () => {
+  const faviconSvgPath = path.join(ROOT_DIR, 'assets/favicon.svg');
+  const faviconPngPath = path.join(ROOT_DIR, 'assets/favicon.png');
+  assert.ok(fs.existsSync(faviconSvgPath), 'assets/favicon.svg must exist in /assets directory');
+  assert.ok(fs.existsSync(faviconPngPath), 'assets/favicon.png must exist in /assets directory');
+  assert.equal(fs.existsSync(path.join(ROOT_DIR, 'favicon.svg')), false, 'favicon.svg must not remain in root');
+  assert.equal(fs.existsSync(path.join(ROOT_DIR, 'favicon.png')), false, 'favicon.png must not remain in root');
+
+  const indexHtml = readPage('index.html');
+  assert.match(
+    indexHtml,
+    /<link\s+rel="icon"\s+type="image\/svg\+xml"\s+href="assets\/favicon\.svg"\s*\/?>/i,
+    'index.html must include <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">'
+  );
+  assert.match(
+    indexHtml,
+    /<link\s+rel="apple-touch-icon"\s+href="assets\/favicon\.svg"\s*\/?>/i,
+    'index.html must include <link rel="apple-touch-icon" href="assets/favicon.svg">'
+  );
+
+  const subpages = ['pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html'];
+  for (const page of subpages) {
+    const html = readPage(page);
+    assert.match(
+      html,
+      /<link\s+rel="icon"\s+type="image\/svg\+xml"\s+href="\.\.\/assets\/favicon\.svg"\s*\/?>/i,
+      `${page} must include <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">`
+    );
+    assert.match(
+      html,
+      /<link\s+rel="apple-touch-icon"\s+href="\.\.\/assets\/favicon\.svg"\s*\/?>/i,
+      `${page} must include <link rel="apple-touch-icon" href="../assets/favicon.svg">`
     );
   }
 });
 
-test('All HTML pages link to favicon.svg and apple-touch-icon', () => {
-  const faviconPath = path.join(__dirname, '../../favicon.svg');
-  assert.ok(fs.existsSync(faviconPath), 'favicon.svg must exist in repository root');
-
-  const pages = ['index.html', 'briefing.html', 'pvp.html', 'rogue.html', 'roster.html'];
-  for (const page of pages) {
-    const html = fs.readFileSync(path.join(__dirname, '../../', page), 'utf8');
-    assert.match(
-      html,
-      /<link\s+rel="icon"\s+type="image\/svg\+xml"\s+href="favicon\.svg"\s*\/?>/i,
-      `${page} must include <link rel="icon" type="image/svg+xml" href="favicon.svg">`
-    );
-    assert.match(
-      html,
-      /<link\s+rel="apple-touch-icon"\s+href="favicon\.svg"\s*\/?>/i,
-      `${page} must include <link rel="apple-touch-icon" href="favicon.svg">`
-    );
-  }
-});
-
-test('UI Boundary: briefing.html defaults to Commander Beta dossier and includes immersive dispatch without Marauder spoiler', () => {
-  const html = readPage('briefing.html');
+test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and includes immersive dispatch without Marauder spoiler', () => {
+  const html = readPage('pages/briefing.html');
 
   // Verify tab switcher defaults to Beta
   assert.match(
     html,
     /<button\s+id="btnBeta"\s+class="active"/i,
-    'briefing.html must have #btnBeta active by default'
+    'pages/briefing.html must have #btnBeta active by default'
   );
   assert.doesNotMatch(
     html,
     /<button\s+id="btnAlpha"\s+class="active"/i,
-    'briefing.html must not have #btnAlpha active by default'
+    'pages/briefing.html must not have #btnAlpha active by default'
   );
 
   // Verify dossier containers default visibility
@@ -119,39 +150,39 @@ test('UI Boundary: briefing.html defaults to Commander Beta dossier and includes
   );
 });
 
-test('briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemony Race tracker', () => {
-  const html = fs.readFileSync(path.join(__dirname, '../../briefing.html'), 'utf8');
+test('pages/briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemony Race tracker', () => {
+  const html = readPage('pages/briefing.html');
 
-  assert.match(html, /id="armageddon-sector-map"/, 'briefing.html must contain #armageddon-sector-map SVG');
-  assert.match(html, /id="atlas-node-inspector"/, 'briefing.html must contain #atlas-node-inspector panel');
-  assert.match(html, /id="heg-bar-alpha"/, 'briefing.html must contain Alpha parallel hegemony bar');
-  assert.match(html, /id="heg-bar-beta"/, 'briefing.html must contain Beta parallel hegemony bar');
-  assert.match(html, /id="heg-bar-horde"/, 'briefing.html must contain 3rd Alliance parallel hegemony bar');
+  assert.match(html, /id="armageddon-sector-map"/, 'pages/briefing.html must contain #armageddon-sector-map SVG');
+  assert.match(html, /id="atlas-node-inspector"/, 'pages/briefing.html must contain #atlas-node-inspector panel');
+  assert.match(html, /id="heg-bar-alpha"/, 'pages/briefing.html must contain Alpha parallel hegemony bar');
+  assert.match(html, /id="heg-bar-beta"/, 'pages/briefing.html must contain Beta parallel hegemony bar');
+  assert.match(html, /id="heg-bar-horde"/, 'pages/briefing.html must contain 3rd Alliance parallel hegemony bar');
 
   for (let i = 0; i <= 7; i++) {
     assert.match(
       html,
       new RegExp(`data-node-id="${i}"`),
-      `SVG map in briefing.html must include interactive node data-node-id="${i}"`
+      `SVG map in pages/briefing.html must include interactive node data-node-id="${i}"`
     );
   }
 });
 
 test('UI Boundary: pages integrate localStorage persistence so users can navigate tabs without resetting progress', () => {
-  const briefingHtml = readPage('briefing.html');
-  assert.ok(briefingHtml.includes('foa_briefing_state_v1'), 'briefing.html must persist state to foa_briefing_state_v1');
-  assert.ok(briefingHtml.includes('saveBriefingState'), 'briefing.html must have saveBriefingState');
-  assert.ok(briefingHtml.includes('restoreBriefingState'), 'briefing.html must have restoreBriefingState');
+  const briefingHtml = readPage('pages/briefing.html');
+  assert.ok(briefingHtml.includes('foa_briefing_state_v1'), 'pages/briefing.html must persist state to foa_briefing_state_v1');
+  assert.ok(briefingHtml.includes('saveBriefingState'), 'pages/briefing.html must have saveBriefingState');
+  assert.ok(briefingHtml.includes('restoreBriefingState'), 'pages/briefing.html must have restoreBriefingState');
 
-  const pvpHtml = readPage('pvp.html');
-  assert.ok(pvpHtml.includes('foa_pvp_state_v1'), 'pvp.html must persist state to foa_pvp_state_v1');
-  assert.ok(pvpHtml.includes('savePvpState'), 'pvp.html must have savePvpState');
-  assert.ok(pvpHtml.includes('restorePvpState'), 'pvp.html must have restorePvpState');
+  const pvpHtml = readPage('pages/pvp.html');
+  assert.ok(pvpHtml.includes('foa_pvp_state_v1'), 'pages/pvp.html must persist state to foa_pvp_state_v1');
+  assert.ok(pvpHtml.includes('savePvpState'), 'pages/pvp.html must have savePvpState');
+  assert.ok(pvpHtml.includes('restorePvpState'), 'pages/pvp.html must have restorePvpState');
 
-  const rogueHtml = readPage('rogue.html');
-  assert.ok(rogueHtml.includes('foa_rogue_state_v1'), 'rogue.html must persist state to foa_rogue_state_v1');
-  assert.ok(rogueHtml.includes('saveRogueState'), 'rogue.html must have saveRogueState');
-  assert.ok(rogueHtml.includes('restoreRogueState'), 'rogue.html must have restoreRogueState');
+  const rogueHtml = readPage('pages/rogue.html');
+  assert.ok(rogueHtml.includes('foa_rogue_state_v1'), 'pages/rogue.html must persist state to foa_rogue_state_v1');
+  assert.ok(rogueHtml.includes('saveRogueState'), 'pages/rogue.html must have saveRogueState');
+  assert.ok(rogueHtml.includes('restoreRogueState'), 'pages/rogue.html must have restoreRogueState');
 
   const appJs = fs.readFileSync(path.join(ROOT_DIR, 'js/app.js'), 'utf8');
   assert.ok(appJs.includes('foa_horde_session_v1'), 'app.js must persist session to foa_horde_session_v1');

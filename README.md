@@ -9,17 +9,28 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 - **🧟 Mode 1: Horde Command & Spawner (`index.html`)**  
   Automated horde spawning with seed-synchronized zone generation, wave escalation mechanics, misery card deck management, and faction-specific tactical rules.
 
-- **⚔️ Mode 2: 1v1 Ash Wastes PvP (`pvp.html`)**  
+- **⚔️ Mode 2: 1v1 Ash Wastes PvP (`pages/pvp.html`)**  
   Competitive wasteland skirmish rules, hazardous environmental effects, dynamic primary and secondary objectives.
 
-- **🎲 Mode 3: Rogue Sector & AI Tracker (`rogue.html`)**  
+- **🎲 Mode 3: Rogue Sector & AI Tracker (`pages/rogue.html`)**  
   Co-op and solo automated AI decision engine, behavioral priority trees, and target acquisition rules for non-player units.
 
-- **🎖️ Rosters & Nemesis Ledger (`roster.html`)**  
+- **🎖️ Rosters & Nemesis Ledger (`pages/roster.html`)**  
   Enemy roster configurations across threat brackets, nemesis tracking, loadout customization, and local persistence.
 
-- **📜 Briefings, Ship & Atlas (`briefing.html`)**  
+- **📜 Briefings, Ship & Atlas (`pages/briefing.html`)**  
   Interactive planetary atlas, narrative lore briefings, campaign progression logs, and orbital command support assets.
+
+---
+
+## 📂 Repository Structure
+
+- `index.html` — Root entry point (Mode 1: Horde Command & Spawner).
+- `pages/` — Suite HTML views (`briefing.html`, `pvp.html`, `rogue.html`, `roster.html`).
+- `assets/` — Static icons and vector assets (`favicon.svg`, `favicon.png`).
+- `css/` — Shared application stylesheets (`style.css`).
+- `js/` — Modular client-side logic (`data.js`, `rng.js`, `spawner.js`, `app.js`).
+- `tests/` — Automated Node test suites mirroring `js/` (`tests/js/`) and UI boundary tests (`tests/ui/`).
 
 ---
 
