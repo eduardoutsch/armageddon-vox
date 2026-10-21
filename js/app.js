@@ -146,3 +146,40 @@ function updateHUD() {
   document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
   document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
 }
+
+// --- SECRET OBJECTIVES ---
+function drawSecretCards(count) {
+  let drawn = [];
+  for (let i = 0; i < count; i++) {
+    if (personalSecretDeck.length === 0) break;
+    drawn.push(personalSecretDeck.shift());
+  }
+  return drawn;
+}
+
+function renderSecretChoices(promptText) {
+  document.getElementById('selectionPrompt').innerText = promptText;
+  document.getElementById('selectionArea').classList.remove('hidden');
+  document.getElementById('lockedArea').classList.add('hidden');
+
+  const list = document.getElementById('choicesList');
+  list.innerHTML = currentChoices.map((c, idx) => {
+    const isCur = (activeCard && c.id === activeCard.id);
+    return `
+      <div class="card">
+        <span class="badge ${isCur ? 'gold' : ''}">${isCur ? 'Current Objective' : c.tags}</span>
+        <h4 class="card-title">${c.name}</h4>
+        <p class="card-desc">${c.desc}</p>
+        <button onclick="pickSecretCard(${idx})" style="margin-top:14px; width:100%;">
+          ${isCur ? 'Keep Current Objective' : 'Confirm & Lock Objective'}
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+function pickSecretCard(chosenIdx) {
+  const chosen = currentChoices[chosenIdx];
+  currentChoices.forEach((c, idx) => {
+    if (idx !== chosenIdx) personalSecretDeck.push(c);
+  });
