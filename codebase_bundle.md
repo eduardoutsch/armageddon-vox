@@ -66,7 +66,7 @@ All project files compiled into a single document for Gemini / NotebookLM ingest
 
 ## File: `.gitignore` <a id="file-gitignore"></a>
 
-````text
+````gitignore
 # OS metadata
 .DS_Store
 Thumbs.db
@@ -668,7 +668,7 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
       margin-bottom: 22px;
       box-shadow: 0 16px 40px rgba(0,0,0,0.6);
     }
-    .gate-btn {
+    .gate-btn, .unlock-btn {
       background: linear-gradient(135deg, #ff4757 0%, #b81929 100%);
       color: #fff;
       border: none;
@@ -680,6 +680,25 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
       letter-spacing: 0.8px;
       cursor: pointer;
       margin-top: 12px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .gate-btn:hover, .unlock-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(255, 71, 87, 0.4);
+    }
+    .lock-toggle-btn {
+      background: #262c40;
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: background 0.15s ease;
+    }
+    .lock-toggle-btn:hover {
+      background: #343b54;
     }
 
     .vox-header {
@@ -844,10 +863,10 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
 
   <!-- 4-TAB NAVIGATION -->
   <div class="commander-switcher">
-    <button id="btnAlpha" class="active" onclick="showDossier('alpha')">
+    <button id="btnAlpha" onclick="showDossier('alpha')">
       🦅 Alpha Briefing &amp; SHIP.md
     </button>
-    <button id="btnBeta" onclick="showDossier('beta')">
+    <button id="btnBeta" class="active" onclick="showDossier('beta')">
       💀 Beta (JUNEBUG) Briefing
     </button>
     <button id="btnAtlas" onclick="showDossier('atlas')">
@@ -861,7 +880,7 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
   <!-- ================================================================= -->
   <!-- TAB 1: COMMANDER ALPHA (PRIVATE BRIEFING + EMBEDDED SHIP.MD)      -->
   <!-- ================================================================= -->
-  <div id="dossierAlpha">
+  <div id="dossierAlpha" class="hidden">
 
     <!-- PRIVATE CLEARANCE GATE FOR ALPHA -->
     <div id="gateAlpha" class="clearance-gate">
@@ -1035,57 +1054,119 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
   </div>
 
   <!-- ================================================================= -->
-  <!-- TAB 2: COMMANDER BETA (JUNEBUG'S PRIVATE BRIEFING)                -->
+  <!-- DOSSIER 2: COMMANDER BETA (IMMERSIVE LORE BRIEFING - PRIVATE)     -->
   <!-- ================================================================= -->
-  <div id="dossierBeta" class="hidden">
+  <div id="dossierBeta">
 
+    <!-- CLEARANCE GATE FOR BETA -->
     <div id="gateBeta" class="clearance-gate">
-      <span class="section-tag purple">Clearance Vermilion-Beta • Private Dossier</span>
-      <h2>Commander Beta (JUNEBUG) Eyes Only</h2>
-      <p style="max-width:480px; margin:0 auto;">This terminal contains Commander Beta's private campaign briefing, Session 0 High Sanctum honours, and Alliance selection directives.</p>
-      <button class="gate-btn" style="background:linear-gradient(135deg, #9d5cff 0%, #6b2cf5 100%);" onclick="unlockTab('Beta')">🔓 Authenticate Commander Beta</button>
+      <div style="font-size:2.6rem; margin-bottom:8px;">👁️‍🗨️</div>
+      <span class="section-tag red">Clearance Vermilion-Beta • Restricted Dataslate</span>
+      <h2 style="margin-top:6px;">Commander Beta's Sealed Astropathic Dispatch</h2>
+      <p style="max-width:520px; margin:0 auto 18px auto; color:var(--muted);">
+        This frequency is encrypted for <strong>Commander Beta (JUNEBUG)</strong>. Unseal the transmission to read High Command's summons and review the theatre of war.
+      </p>
+      <button class="unlock-btn" onclick="unlockTab('Beta')">🔓 Unseal Astropathic Transmission</button>
     </div>
 
     <div id="contentBeta" class="hidden">
+      <div style="text-align:right; margin-bottom:10px;">
+        <button class="lock-toggle-btn" onclick="lockTab('Beta')">🔒 Reseal Dataslate</button>
+      </div>
+
       <div class="vox-header">
         <div class="vox-meta">
-          <span>+++ INCOMING TRANSMISSION // RECIPIENT: COMMANDER BETA (JUNEBUG) +++</span>
-          <button onclick="lockTab('Beta')" style="background:#262c40; color:#fff; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem;">🔒 Lock Screen</button>
+          <span>+++ ASTROPATHIC DUCT // RECIPIENT: COMMANDER BETA (JUNEBUG) +++</span>
+          <span>THEATRE: ARMAGEDDON</span>
         </div>
         <h1 class="vox-title">The Fires of Armageddon</h1>
         <blockquote class="vox-quote">
-          "Hail, Commander Beta. During the Session 0 trial in the equatorial forest clearing of <em>The Golgotha Arbor-Basin (Sector Node 0)</em>, your Adepta Sororitas Wardens pushed the Krieg Penitentiary Regiment to the brink—even as their Vanquisher cannons detonated every stained-glass war-engine on the field, Saint Celestine's descent into their rear echelon clinched a 3-point victory for the High Sanctum. Now Armageddon itself awaits your official Phase 1 Crusade banner."
+          "Hear me, Warlord. The sky above Armageddon does not weep rain; it weeps ash, promethium soot, and the curdled blood of a dying reality. Atop the jagged basalt cliffs of the Crimson Mesa, the Red Angel’s Gate stands torn wide—a yawning wound in the Immaterium that pulses like a butchered heart. From its depths, the laughter of dark gods and the screech of warp-born horrors echo across the continent, drowning the ruined spires of Hives Hades and Thoraddis in madness."
         </blockquote>
       </div>
 
+      <!-- THE PROLOGUE MEMORY & THE CHRONICLER -->
       <div class="section-card">
-        <span class="section-tag red">Section I • Who I Am &amp; Your Session 0 Legacy</span>
-        <h2>Your Campaign Master &amp; The 3rd Alliance Overlord</h2>
-        <ul>
-          <li><strong>1. Impartial Arbitrator &amp; Chronicler:</strong> While you track unit XP and Crusade cards on <strong>Administratum</strong>, I maintain the global 4-Phase Scoreboard, Strategic Points, and write custom lore chronicles (including custom names for every Battle Scar and Battle Honour!) for every match.</li>
-          <li><strong>2. The 3rd Alliance Overlord (The Horde AI):</strong> Commander Alpha has pledged <em>The Sanctuary of Ash</em> to the <strong>🛡️ Gatebreakers</strong> (and will switch to <strong>⚔️ Marauders</strong> if you claim Gatebreakers). Whichever of the three Alliances remains unchosen becomes <strong>my enigmatic 3rd Alliance Warhost!</strong></li>
-          <li><strong>3. Your Session 0 Legacy (<em>Saint Celestine &amp; Aestred Thurga</em>):</strong> If you play <strong>Adepta Sororitas</strong> for Phase 1 and agree to share <em>The Sanctuary of Ash</em>, you command the <strong>High Sanctum</strong> directly! If you register a different faction for Phase 1, Celestine and Thurga serve as the ship's NPC High Sanctum Wardens and roaming Inquisitorial Auditors!</li>
-        </ul>
+        <span class="section-tag gold">I • Echoes of the Arbor-Basin &amp; The Unseen Enemy</span>
+        <h2>Blood Beneath the Petrified Canopy</h2>
+        <p>
+          High in low-planetary orbit hangs <em>The Sanctuary of Ash</em>—a scarred, acid-scrubbed battle barge crewed by a condemned regiment of the Death Korps of Krieg. You remember them well. Before their heavy siege tanks were permitted to touch the soil of the <strong>Golgotha Arbor-Basin (Sector Node 0)</strong>, it was your <strong>Adepta Sororitas Wardens</strong> who met them beneath the petrified jungle canopy and subjected them to a trial of fire and blood.
+        </p>
+        <p>
+          Your Exorcists and war-engines burned that day under the merciless salvos of their Vanquisher cannons—the tanks their trench-rats now whisper of in the dark as <strong>"The Shrine-Breakers."</strong> Yet when the smoke cleared and every Krieg officer lay broken in the mud, it was <strong>Saint Celestine, the Ashen Seraph</strong>, who descended from the storm-clouds into their rear lines, slaughtering their command echelon and claiming the field by a razor's edge while <strong>Aestred Thurga &amp; Agathae Dolan</strong> inscribed their sins into the sacred tapestry.
+        </p>
+        <div class="hero-box red">
+          <strong>👁️‍🗨️ The Voice in the Ash (Your Chronicler &amp; The Third Force)</strong><br>
+          <span style="font-size:0.9rem; color:#c9d1d9;">
+            Now the prologue has ended, and the true war for Armageddon begins. Whether you return to the surface at the head of the <strong>Sisterhood of the High Sanctum</strong> to finish your vigil, or descend from the void commanding an <strong>entirely new warhost</strong> drawn by the scent of relics and slaughter—know that you are not alone.<br><br>
+            I am the Chronicler of this war—recording every scar, every fallen hero, and every legend your warriors forge—and <strong>I am also your enemy</strong>. In the uncharted fog beyond the forest canopy, a <strong>Third Force</strong> is stirring. We have no known flagship in orbit. Whether we claw our way up from subterranean brood-tunnels, erupt from screaming tears in the Warp, or march out of the choking ash-storms, my legions will contest every inch of this world against both you and the Krieg. When you two lock blades in the ashes, I will feast upon the aftermath. And when my hordes surround you both in the dark, you will have to decide whether the commander standing beside you is your salvation... or your next target.
+          </span>
+        </div>
       </div>
 
+      <!-- THE THREE BANNERS -->
       <div class="section-card">
-        <span class="section-tag gold">Section II • Choose Your Banner</span>
-        <h2>The Three Alliances of Armageddon</h2>
+        <span class="section-tag purple">II • The Three Banners of Armageddon</span>
+        <h2>Where Does Your Warhost Stand?</h2>
+        <p>Three great movements clash across the ruined sectors of Armageddon. Pledge your Crusade force to whichever cause speaks to your warlord's soul—and whatever banner remains unchosen shall be claimed by the Unseen Third Force gathering in the fog:</p>
+
         <div class="alliance-grid">
           <div class="alliance-box">
-            <div class="alliance-title">🛡️ Gatebreakers</div>
-            <p style="font-size:0.85rem; margin:0;">Defenders seeking to stem the tide of Chaos, hold the Imperator Line, and shatter the Red Angel’s Gate.</p>
+            <div class="alliance-title">🛡️ The Gatebreakers</div>
+            <p style="font-size:0.86rem; margin:0;">
+              <strong>Defenders of the Threshold:</strong> For those who stand as bulwarks against the dying of the light—sworn to hold the ancient ferrocrete bastions of the Imperator Line, purge the fallen hive cities, and shatter the black monoliths anchoring the Red Angel’s Gate before the planet is dragged into the Warp.
+            </p>
           </div>
           <div class="alliance-box desecrator">
-            <div class="alliance-title">💀 Desecrators</div>
-            <p style="font-size:0.85rem; margin:0;">Those who wish to turn Armageddon into a nightmare world of carnage and feed the gathering warp storm at the planet’s pole with worthy sacrifices.</p>
+            <div class="alliance-title">💀 The Desecrators</div>
+            <p style="font-size:0.86rem; margin:0;">
+              <strong>Heralds of the Red Angel:</strong> For those who look upon a burning world and desire only to feed the flames—seeking to slaughter the false champions of order, pile skulls at the feet of brass idols, and tear the polar rift wide until Armageddon becomes a daemon world of eternal carnage.
+            </p>
           </div>
           <div class="alliance-box marauder">
             <div class="alliance-title">⚔️ Marauders</div>
-            <p style="font-size:0.85rem; margin:0;">Opportunistic warhosts, xenos raiders, and renegades who strike from hidden haunts to plunder Antiquity Relics, decapitate enemy warlords, and profit from endless war.</p>
+            <p style="font-size:0.86rem; margin:0;">
+              <strong>Lords of the Endless Anarchy:</strong> For opportunistic warhosts, xenos raiders, mercenary fleets, and renegades who bow to neither throne nor altar—striking from the equatorial jungles to plunder long-buried <em>Antiquity Relics</em>, decapitate rival commanders, and profit from an endless war.
+            </p>
           </div>
         </div>
       </div>
+
+      <!-- HOW THE WAR UNFOLDS (NARRATIVE) -->
+      <div class="section-card">
+        <span class="section-tag blue">III • The Crucible of War</span>
+        <h2>Duels in the Ash &amp; Desperate Last Stands</h2>
+
+        <div class="hero-box blue">
+          <strong>⚔️ Clash of Warlords (Head-to-Head Battles)</strong><br>
+          <span style="font-size:0.88rem; color:#c9d1d9;">
+            When your warhost meets rival columns across Armageddon, the planet itself will fight you both. You will wage war amidst <strong>Hellscapes</strong> where reality fractures, time stutters, and gravity collapses—while roaming <strong>Unbound Adversaries</strong> lurch out of the ash-storms to butcher the unwary. Yet beware: every time you and Commander Alpha turn your guns upon each other, the <strong>Third Force</strong> creeps closer through the fog, seizing unguarded territory while you bleed.
+          </span>
+        </div>
+
+        <div class="hero-box red">
+          <strong>🧟 Breach Containment (Standing Together Against the Tide)</strong><br>
+          <span style="font-size:0.88rem; color:#c9d1d9;">
+            There will come nights when the ground splits open and the <strong>Third Force</strong> pours into your sector in an endless, apocalyptic tide. Forced into an uneasy truce, you and Commander Alpha will stand shoulder-to-shoulder inside a single perimeter, calling down desperate orbital <strong>Air Strikes</strong>, digging <strong>War Trenches</strong>, raising <strong>Shield Generators</strong>, and praying your lines hold through <strong>The Final Stand</strong>.<br><br>
+            • <strong>Whispers &amp; Betrayal in the Dark:</strong> Do not mistake an alliance of survival for brotherhood. Before the horde hits your lines, a <strong>Confidential Directive (Secret Objective)</strong> will be transmitted privately to your dataslate. You are forbidden to show it, and free to lie through your teeth. Some directives demand heroism; others offer <strong>forbidden spoils, stolen supplies, and ancient relics</strong> if you arrange an <em>"accidental"</em> artillery barrage on your partner's lines or ensure their warlord does not walk out of the breach alive...
+          </span>
+        </div>
+
+        <div class="hero-box purple">
+          <strong>🗺️ A Shrouded World of Living Scars &amp; Nemeses</strong><br>
+          <span style="font-size:0.88rem; color:#c9d1d9;">
+            Only the scorched forest clearing of <strong>The Golgotha Arbor-Basin (Sector Node 0)</strong> has been mapped; the other seven sectors of the theatre lie hidden behind impenetrable ash-storms. Every battle leaves permanent marks upon the world and upon your warriors—every unit that falls or triumphs will have its <strong>Scars and Honours</strong> etched into the chronicle by name, while the heroes and monsters that survive your bloodiest clashes will rise as <strong>Named Nemeses</strong> to haunt future battlefields.
+          </span>
+        </div>
+
+        <div class="hero-box">
+          <strong>📡 Answering the Summons</strong><br>
+          <span style="font-size:0.88rem; color:#c9d1d9;">
+            When you are ready to step into the war room, declare your <strong>Chosen Faction &amp; Crusade Force Name</strong>, your <strong>Warlord's Name &amp; Vision</strong>, and <strong>The Banner You Claim</strong>. The ashes of Armageddon await your tread.
+          </span>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1369,6 +1450,11 @@ function lockTab(who) {
 }
 
 selectSlider(0);
+
+// Default to Commander Beta (JUNEBUG) dossier unless a specific valid hash is targeted
+const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
+const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
+showDossier(validTabs.includes(hashTab) ? hashTab : 'beta');
 </script>
 
 </body>
@@ -3792,7 +3878,62 @@ test('All HTML pages link to favicon.svg and apple-touch-icon', () => {
     );
   }
 });
+
+test('UI Boundary: briefing.html defaults to Commander Beta dossier and includes immersive dispatch without Marauder spoiler', () => {
+  const html = readPage('briefing.html');
+
+  // Verify tab switcher defaults to Beta
+  assert.match(
+    html,
+    /<button\s+id="btnBeta"\s+class="active"/i,
+    'briefing.html must have #btnBeta active by default'
+  );
+  assert.doesNotMatch(
+    html,
+    /<button\s+id="btnAlpha"\s+class="active"/i,
+    'briefing.html must not have #btnAlpha active by default'
+  );
+
+  // Verify dossier containers default visibility
+  assert.match(
+    html,
+    /<div\s+id="dossierAlpha"\s+class="hidden"/i,
+    '#dossierAlpha must have class="hidden" by default'
+  );
+  assert.match(
+    html,
+    /<div\s+id="dossierBeta"(?!\s+class="hidden")/i,
+    '#dossierBeta must be visible (not hidden) on load'
+  );
+
+  // Verify new sealed Astropathic dispatch and clearance gate
+  assert.ok(
+    html.includes("Commander Beta's Sealed Astropathic Dispatch"),
+    'Must include Commander Beta sealed dispatch title'
+  );
+  assert.ok(
+    html.includes('Clearance Vermilion-Beta • Restricted Dataslate'),
+    'Must include Vermilion-Beta clearance tag'
+  );
+  assert.ok(
+    html.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
+    html.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
+    'Must include The Voice in the Ash narrative section'
+  );
+  assert.ok(
+    html.includes('unlock-btn') && html.includes("unlockTab('Beta')"),
+    'Must include unlock button for Beta'
+  );
+  assert.ok(
+    html.includes('lock-toggle-btn') && html.includes("lockTab('Beta')"),
+    'Must include lock toggle button for Beta'
+  );
+
+  // Verify secret Marauder spoiler is NOT present
+  assert.ok(
+    !html.includes('and will switch to <strong>⚔️ Marauders</strong> if you claim Gatebreakers'),
+    'Briefing must not reveal Alpha switching to Marauders if Beta chooses Gatebreakers'
+  );
+});
+
 ````
-
----
-
