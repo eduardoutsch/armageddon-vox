@@ -1,8 +1,14 @@
 // Main UI and Session Controller for Fires of Armageddon
 
+if (typeof require !== 'undefined') {
+  if (typeof HORDE_FACTIONS === 'undefined') Object.assign(globalThis, require('./data.js'));
+  if (typeof hashString === 'undefined') Object.assign(globalThis, require('./rng.js'));
+  if (typeof getBracketInfo === 'undefined') Object.assign(globalThis, require('./spawner.js'));
+}
+
 let selectedModeVal = 'coop';
 let selectedRoleVal = '1';
-let activeHordeFaction = HORDE_FACTIONS[0];
+let activeHordeFaction = typeof HORDE_FACTIONS !== 'undefined' ? HORDE_FACTIONS[0] : null;
 
 let personalSecretDeck = [];
 let sharedMiseryDeck = [];
@@ -24,12 +30,14 @@ let stratCount = 0;
 let currentZoneSpawns = [];
 
 // Populate Spawner Faction Dropdown on load
-window.addEventListener('DOMContentLoaded', () => {
-  const sel = document.getElementById('hordeFactionSelect');
-  if (sel) {
-    sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
-  }
-});
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('hordeFactionSelect');
+    if (sel && typeof HORDE_FACTIONS !== 'undefined') {
+      sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
+    }
+  });
+}
 
 function selectMode(mode) {
   selectedModeVal = mode;
@@ -346,11 +354,14 @@ function saveCustomPool() {
     b79: document.getElementById('pool79').value,
     b10: document.getElementById('pool10').value
   };
-  localStorage.setItem('armageddon_horde_pool', JSON.stringify(pool));
-  alert("Custom Shelf Pool saved!");
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('armageddon_horde_pool', JSON.stringify(pool));
+  }
+  if (typeof alert === 'function') alert("Custom Shelf Pool saved!");
 }
 
 function loadCustomPool() {
+  if (typeof localStorage === 'undefined') return;
   const saved = localStorage.getItem('armageddon_horde_pool');
   if (!saved) return;
   try {
@@ -567,7 +578,22 @@ function renderResupplyTable() {
 }
 
 function leaveSession() {
-  if (!confirm("Exit current battle terminal?")) return;
+  if (typeof confirm === 'function' && !confirm("Exit current battle terminal?")) return;
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
+}
+
+// Dual export for Node.js test runner and browser environment
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    selectMode,
+    selectRole,
+    resolveRoomSyncedFaction,
+    manualChangeFaction,
+    renderFactionReminderBanner,
+    startSession,
+    updateHUD,
+    buyResupply,
+    leaveSession
+  };
 }
