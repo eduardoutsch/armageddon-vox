@@ -119,7 +119,7 @@
       <span class="badge purple">Start of Battle Round • Warp Storm</span>
       <h3>Warp Event &amp; Anomaly Surge Roller</h3>
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-        <select id="warpIntensity">
+        <select id="warpIntensity" onchange="savePvpState()">
           <option value="minor">Intensity: Minor (Surge on 5+)</option>
           <option value="major" selected>Intensity: Major (Surge on 4+)</option>
           <option value="catastrophic">Intensity: Catastrophic (Surge on 3+)</option>
@@ -182,15 +182,69 @@ const UNBOUND_UNITS = [
   "<strong>Greater Daemon / Roaming Nemesis (Power Level 4):</strong> Monster/Walker (100mm+ base) OR an Inducted Campaign Nemesis Character from the Ledger!"
 ];
 
-function renderHellscape() {
+const STORAGE_KEY_PVP = 'foa_pvp_state_v1';
+
+function savePvpState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const data = {
+      hellscapeIdx: parseInt(document.getElementById('hellscapeSelect').value, 10) || 0,
+      warpIntensity: document.getElementById('warpIntensity').value || 'major',
+      anomalyHtml: document.getElementById('anomalyResultBox').innerHTML,
+      vultureKilled: document.getElementById('vultureKillCheck').checked,
+      unboundHtml: document.getElementById('unboundResult').innerHTML
+    };
+    localStorage.setItem(STORAGE_KEY_PVP, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Could not save pvp state:', e);
+  }
+}
+
+function restorePvpState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PVP);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data) return;
+
+    if (typeof data.hellscapeIdx === 'number') {
+      const el = document.getElementById('hellscapeSelect');
+      if (el) el.value = data.hellscapeIdx;
+      renderHellscape(false);
+    }
+    if (data.warpIntensity) {
+      const el = document.getElementById('warpIntensity');
+      if (el) el.value = data.warpIntensity;
+    }
+    if (data.anomalyHtml) {
+      const el = document.getElementById('anomalyResultBox');
+      if (el) el.innerHTML = data.anomalyHtml;
+    }
+    if (typeof data.vultureKilled === 'boolean') {
+      const el = document.getElementById('vultureKillCheck');
+      if (el) el.checked = data.vultureKilled;
+      updateVulture(false);
+    }
+    if (data.unboundHtml) {
+      const el = document.getElementById('unboundResult');
+      if (el) el.innerHTML = data.unboundHtml;
+    }
+  } catch (e) {
+    console.warn('Could not restore pvp state:', e);
+  }
+}
+
+function renderHellscape(shouldSave = true) {
   const idx = parseInt(document.getElementById('hellscapeSelect').value, 10);
   document.getElementById('hellscapeDesc').innerHTML = HELLSCAPES[idx];
+  if (shouldSave) savePvpState();
 }
 
 function rollRandomHellscape() {
   const idx = Math.floor(Math.random() * HELLSCAPES.length);
   document.getElementById('hellscapeSelect').value = idx;
-  renderHellscape();
+  renderHellscape(true);
 }
 
 function rollWarpAnomaly() {
@@ -205,19 +259,23 @@ function rollWarpAnomaly() {
   } else {
     box.innerHTML = `<span class="badge">Rolled ${roll} (Needed ${target}+) • Reality Holds</span><p style="margin:0;">The empyric currents subside this round. No new Anomaly manifests.</p>`;
   }
+  savePvpState();
 }
 
-function updateVulture() {
+function updateVulture(shouldSave = true) {
   const extra = document.getElementById('vultureKillCheck').checked ? 1 : 0;
   document.getElementById('vulturePts').innerText = `${3 + extra} SPts`;
+  if (shouldSave) savePvpState();
 }
 
 function rollUnboundAdversary() {
   const pick = UNBOUND_UNITS[Math.floor(Math.random() * UNBOUND_UNITS.length)];
   document.getElementById('unboundResult').innerHTML = `<p style="margin:0;">${pick}</p>`;
+  savePvpState();
 }
 
-renderHellscape();
+renderHellscape(false);
+restorePvpState();
 </script>
 </body>
 </html>

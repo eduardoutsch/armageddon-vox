@@ -160,15 +160,50 @@
   </div>
 
 <script>
+const STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
 let currentAiStep = 0;
-function nextAiStep() {
-  currentAiStep = (currentAiStep + 1) % 3;
+
+function saveRogueState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep }));
+  } catch (e) {
+    console.warn('Could not save rogue state:', e);
+  }
+}
+
+function restoreRogueState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ROGUE);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && typeof data.currentAiStep === 'number') {
+      setAiStep(data.currentAiStep, false);
+    }
+  } catch (e) {
+    console.warn('Could not restore rogue state:', e);
+  }
+}
+
+function setAiStep(step, shouldSave = true) {
+  currentAiStep = step;
   [0, 1, 2].forEach(i => {
     const el = document.getElementById('aiStep' + i);
-    el.classList.toggle('active-step', i === currentAiStep);
-    el.querySelector('.ai-step-title span:last-child').innerText = (i === currentAiStep) ? '[Active]' : '';
+    if (el) {
+      el.classList.toggle('active-step', i === currentAiStep);
+      const span = el.querySelector('.ai-step-title span:last-child');
+      if (span) span.innerText = (i === currentAiStep) ? '[Active]' : '';
+    }
   });
+  if (shouldSave) saveRogueState();
 }
+
+function nextAiStep() {
+  setAiStep((currentAiStep + 1) % 3);
+}
+
+restoreRogueState();
 </script>
 </body>
 </html>
