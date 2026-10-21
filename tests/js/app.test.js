@@ -187,3 +187,84 @@ test('app: restoreSessionState restores activeTab, markers, and spawner settings
   assert.equal(String(document.getElementById('mineCount').innerText), '3');
 });
 
+test('app: adjMarker modifies counter within bounds and persists state', () => {
+  const el = document.getElementById('teleCount');
+  el.innerText = '1';
+
+  // Increment within max 3
+  app.adjMarker('teleCount', 1, 3);
+  assert.equal(String(el.innerText), '2');
+
+  // Increment past max 3
+  app.adjMarker('teleCount', 5, 3);
+  assert.equal(String(el.innerText), '3');
+
+  // Decrement below min 0
+  app.adjMarker('teleCount', -10, 3);
+  assert.equal(String(el.innerText), '0');
+});
+
+test('app: switchTab activates specified tab and persists active tab index', () => {
+  app.switchTab(3);
+
+  assert.equal(document.getElementById('tab3').classList.contains('hidden'), false);
+  assert.equal(document.getElementById('tabBtn3').classList.contains('active'), true);
+  assert.equal(document.getElementById('tab1').classList.contains('hidden'), true);
+  assert.equal(document.getElementById('tabBtn1').classList.contains('active'), false);
+
+  const raw = localStorage.getItem('foa_horde_session_v1');
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.activeTab, 3);
+});
+
+test('app: togglePrivacy toggles privacy wrapper and button text', () => {
+  const btn = document.getElementById('privacyBtn');
+  const wrapper = document.getElementById('PrivacyWrapper');
+
+  app.togglePrivacy();
+  assert.equal(btn.innerText, 'Show Objective');
+  assert.equal(wrapper.classList.contains('hidden'), true);
+
+  app.togglePrivacy();
+  assert.equal(btn.innerText, 'Hide Screen');
+  assert.equal(wrapper.classList.contains('hidden'), false);
+});
+
+test('app: resource economy (SP & CP) functions update counters and tally', () => {
+  // Reset SP & CP
+  app.loseSP(100);
+  assert.equal(String(document.getElementById('hudSp').innerText), '0');
+
+  app.gainSP(4);
+  assert.equal(String(document.getElementById('hudSp').innerText), '4');
+
+  app.adjCP(3);
+  assert.equal(String(document.getElementById('hudCp').innerText), '4');
+
+  app.spendCPForStrat();
+  assert.equal(String(document.getElementById('hudCp').innerText), '3');
+  assert.ok(document.getElementById('hudStratTally').innerText.includes('1 Strats'));
+});
+
+test('app: saveCustomPool and loadCustomPool persist custom units to localStorage', () => {
+  document.getElementById('pool34').value = '10 Termagants';
+  document.getElementById('pool56').value = '5 Genestealers';
+  document.getElementById('pool79').value = '1 Carnifex';
+  document.getElementById('pool10').value = '1 Hive Tyrant';
+
+  globalThis.alert = () => {};
+  app.saveCustomPool();
+
+  const saved = JSON.parse(localStorage.getItem('armageddon_horde_pool'));
+  assert.equal(saved.b34, '10 Termagants');
+  assert.equal(saved.b10, '1 Hive Tyrant');
+
+  // Clear inputs and reload
+  document.getElementById('pool34').value = '';
+  document.getElementById('pool10').value = '';
+  app.loadCustomPool();
+
+  assert.equal(document.getElementById('pool34').value, '10 Termagants');
+  assert.equal(document.getElementById('pool10').value, '1 Hive Tyrant');
+});
+

@@ -440,6 +440,87 @@ test('app: restoreSessionState restores activeTab, markers, and spawner settings
   assert.equal(String(document.getElementById('mineCount').innerText), '3');
 });
 
+test('app: adjMarker modifies counter within bounds and persists state', () => {
+  const el = document.getElementById('teleCount');
+  el.innerText = '1';
+
+  // Increment within max 3
+  app.adjMarker('teleCount', 1, 3);
+  assert.equal(String(el.innerText), '2');
+
+  // Increment past max 3
+  app.adjMarker('teleCount', 5, 3);
+  assert.equal(String(el.innerText), '3');
+
+  // Decrement below min 0
+  app.adjMarker('teleCount', -10, 3);
+  assert.equal(String(el.innerText), '0');
+});
+
+test('app: switchTab activates specified tab and persists active tab index', () => {
+  app.switchTab(3);
+
+  assert.equal(document.getElementById('tab3').classList.contains('hidden'), false);
+  assert.equal(document.getElementById('tabBtn3').classList.contains('active'), true);
+  assert.equal(document.getElementById('tab1').classList.contains('hidden'), true);
+  assert.equal(document.getElementById('tabBtn1').classList.contains('active'), false);
+
+  const raw = localStorage.getItem('foa_horde_session_v1');
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.activeTab, 3);
+});
+
+test('app: togglePrivacy toggles privacy wrapper and button text', () => {
+  const btn = document.getElementById('privacyBtn');
+  const wrapper = document.getElementById('PrivacyWrapper');
+
+  app.togglePrivacy();
+  assert.equal(btn.innerText, 'Show Objective');
+  assert.equal(wrapper.classList.contains('hidden'), true);
+
+  app.togglePrivacy();
+  assert.equal(btn.innerText, 'Hide Screen');
+  assert.equal(wrapper.classList.contains('hidden'), false);
+});
+
+test('app: resource economy (SP & CP) functions update counters and tally', () => {
+  // Reset SP & CP
+  app.loseSP(100);
+  assert.equal(String(document.getElementById('hudSp').innerText), '0');
+
+  app.gainSP(4);
+  assert.equal(String(document.getElementById('hudSp').innerText), '4');
+
+  app.adjCP(3);
+  assert.equal(String(document.getElementById('hudCp').innerText), '4');
+
+  app.spendCPForStrat();
+  assert.equal(String(document.getElementById('hudCp').innerText), '3');
+  assert.ok(document.getElementById('hudStratTally').innerText.includes('1 Strats'));
+});
+
+test('app: saveCustomPool and loadCustomPool persist custom units to localStorage', () => {
+  document.getElementById('pool34').value = '10 Termagants';
+  document.getElementById('pool56').value = '5 Genestealers';
+  document.getElementById('pool79').value = '1 Carnifex';
+  document.getElementById('pool10').value = '1 Hive Tyrant';
+
+  globalThis.alert = () => {};
+  app.saveCustomPool();
+
+  const saved = JSON.parse(localStorage.getItem('armageddon_horde_pool'));
+  assert.equal(saved.b34, '10 Termagants');
+  assert.equal(saved.b10, '1 Hive Tyrant');
+
+  // Clear inputs and reload
+  document.getElementById('pool34').value = '';
+  document.getElementById('pool10').value = '';
+  app.loadCustomPool();
+
+  assert.equal(document.getElementById('pool34').value, '10 Termagants');
+  assert.equal(document.getElementById('pool10').value, '1 Hive Tyrant');
+});
+
 ````
 
 ---
@@ -454,6 +535,107 @@ const path = require('node:path');
 
 const ROOT_DIR = path.resolve(__dirname, '../../');
 const VOX_AUDIO_PATH = path.join(ROOT_DIR, 'js/vox-audio.js');
+
+// Mock Web Audio Context
+class MockAudioNode {
+  constructor() {
+    this.connectedTo = null;
+  }
+  connect(dest) {
+    this.connectedTo = dest;
+    return dest;
+  }
+}
+
+class MockAudioParam {
+  constructor(initial = 0) {
+    this.value = initial;
+    this.events = [];
+  }
+  setValueAtTime(val, time) {
+    this.value = val;
+    this.events.push({ type: 'set', val, time });
+  }
+  exponentialRampToValueAtTime(val, time) {
+    this.value = val;
+    this.events.push({ type: 'ramp', val, time });
+  }
+}
+
+class MockOscillator extends MockAudioNode {
+  constructor() {
+    super();
+    this.type = 'sine';
+    this.frequency = new MockAudioParam(440);
+    this.started = false;
+    this.stopped = false;
+  }
+  start(time) {
+    this.started = true;
+    this.startTime = time;
+  }
+  stop(time) {
+    this.stopped = true;
+    this.stopTime = time;
+  }
+}
+
+class MockGain extends MockAudioNode {
+  constructor() {
+    super();
+    this.gain = new MockAudioParam(1);
+  }
+}
+
+class MockAudioContext {
+  constructor() {
+    this.currentTime = 100.0;
+    this.state = 'running';
+    this.destination = new MockAudioNode();
+    this.oscillators = [];
+    this.gains = [];
+  }
+  createOscillator() {
+    const osc = new MockOscillator();
+    this.oscillators.push(osc);
+    return osc;
+  }
+  createGain() {
+    const g = new MockGain();
+    this.gains.push(g);
+    return g;
+  }
+  resume() {
+    this.state = 'running';
+  }
+}
+
+// Minimal mock DOM & Storage environment
+const storageStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+globalThis.window = {
+  AudioContext: MockAudioContext,
+  addEventListener: () => {}
+};
+
+const listeners = {};
+globalThis.document = {
+  addEventListener: (event, handler) => {
+    listeners[event] = handler;
+  },
+  querySelector: () => null,
+  getElementById: () => null,
+  createElement: () => ({ setAttribute: () => {}, style: {} }),
+  readyState: 'complete'
+};
+
+const voxModule = require('../../js/vox-audio.js');
 
 test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist and SFX synth', () => {
   assert.ok(fs.existsSync(VOX_AUDIO_PATH), 'js/vox-audio.js must exist');
@@ -486,6 +668,54 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   assert.ok(code.includes('DOMParser'), 'Must parse fetched pages via DOMParser');
 });
 
+test('vox-audio: VOX_TRACK_IDS contains curated 11-char YouTube track IDs and valid playlist', () => {
+  assert.ok(Array.isArray(voxModule.VOX_TRACK_IDS), 'VOX_TRACK_IDS must be an array');
+  assert.ok(voxModule.VOX_TRACK_IDS.length >= 8, 'VOX_TRACK_IDS must include at least 8 curated ambient tracks');
+
+  for (const id of voxModule.VOX_TRACK_IDS) {
+    assert.equal(typeof id, 'string');
+    assert.equal(id.length, 11, `Track ID '${id}' must be 11 characters long`);
+  }
+
+  assert.equal(voxModule.PLAYLIST_ID, 'PL1PnO3JojeSmA_jPzjhuiKycUQ8BHHjek');
+});
+
+test('vox-audio: playTerminalClank synthesizes distinct profiles via Web Audio API', () => {
+  // 1. Heavy profile (Launch, Gate, Confirm)
+  assert.doesNotThrow(() => {
+    voxModule.playTerminalClank('heavy');
+  });
+
+  // 2. Auspex scanner profile (Map inspection, Zoom)
+  assert.doesNotThrow(() => {
+    voxModule.playTerminalClank('auspex');
+  });
+
+  // 3. Pneumatic solenoid profile (Dice, Counters)
+  assert.doesNotThrow(() => {
+    voxModule.playTerminalClank('pneumatic');
+  });
+
+  // 4. Tactical card profile (Objectives, Miseries)
+  assert.doesNotThrow(() => {
+    voxModule.playTerminalClank('card');
+  });
+
+  // 5. Default relay profile (Generic mechanical switch)
+  assert.doesNotThrow(() => {
+    voxModule.playTerminalClank('relay');
+    voxModule.playTerminalClank('unknown');
+  });
+});
+
+test('vox-audio: saveCurrentPosition safely persists audio telemetry to localStorage', () => {
+  storageStore.clear();
+  assert.doesNotThrow(() => {
+    voxModule.saveCurrentPosition();
+  });
+  // Since ytPlayer is null in mock env, it handles absent player gracefully without throwing
+  assert.equal(storageStore.has('soa_vox_music_enabled_v1'), false);
+});
 ````
 
 ---

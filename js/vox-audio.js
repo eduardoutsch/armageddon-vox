@@ -210,7 +210,8 @@
   }
 
   // Global listener: contextually triggers sound profiles
-  document.addEventListener('click', (e) => {
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('click', (e) => {
     const target = e.target.closest(
       'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn, .fs-pill-btn, .mini-btn'
     );
@@ -235,6 +236,7 @@
       resumeOrStartMusic();
     }
   });
+  }
 
   // =========================================================================
   // PART 2: TOP-NAV YOUTUBE AMBIENT PLAYLIST RANDOMIZER WITH CONTINUITY
@@ -648,48 +650,66 @@
   }
 
   // Intercept all internal navigation link clicks
-  document.addEventListener('click', (e) => {
-    // Only handle standard left clicks without modifier keys
-    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('click', (e) => {
+      // Only handle standard left clicks without modifier keys
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 
-    const link = e.target.closest('a[href]');
-    if (!link) return;
+      const link = e.target.closest('a[href]');
+      if (!link) return;
 
-    const hrefAttr = link.getAttribute('href');
-    if (!hrefAttr || hrefAttr.startsWith('#') || hrefAttr.startsWith('javascript:') || hrefAttr.startsWith('mailto:')) return;
-    if (link.target && link.target !== '_self') return;
+      const hrefAttr = link.getAttribute('href');
+      if (!hrefAttr || hrefAttr.startsWith('#') || hrefAttr.startsWith('javascript:') || hrefAttr.startsWith('mailto:')) return;
+      if (link.target && link.target !== '_self') return;
 
-    try {
-      const url = new URL(link.href, window.location.href);
-      // Only intercept internal same-origin links
-      if (url.origin !== window.location.origin) return;
+      try {
+        const url = new URL(link.href, window.location.href);
+        // Only intercept internal same-origin links
+        if (url.origin !== window.location.origin) return;
 
-      // If linking to the exact same page path and search, allow normal anchor behavior
-      if (url.pathname === window.location.pathname && url.search === window.location.search) {
-        if (url.hash) return;
-        e.preventDefault();
-        return;
+        // If linking to the exact same page path and search, allow normal anchor behavior
+        if (url.pathname === window.location.pathname && url.search === window.location.search) {
+          if (url.hash) return;
+          e.preventDefault();
+          return;
+        }
+
+        // Check if it's an html page or directory root
+        if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || !url.pathname.includes('.')) {
+          e.preventDefault();
+          navigateSeamlessly(url.href, true);
+        }
+      } catch (err) {
+        // Allow default navigation if URL parsing fails
       }
-
-      // Check if it's an html page or directory root
-      if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || !url.pathname.includes('.')) {
-        e.preventDefault();
-        navigateSeamlessly(url.href, true);
-      }
-    } catch (err) {
-      // Allow default navigation if URL parsing fails
-    }
-  });
+    });
+  }
 
   // Handle browser Back / Forward buttons
-  window.addEventListener('popstate', () => {
-    navigateSeamlessly(window.location.href, false);
-  });
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('popstate', () => {
+      navigateSeamlessly(window.location.href, false);
+    });
+  }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectNavToggle);
-  } else {
-    injectNavToggle();
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading' && typeof document.addEventListener === 'function') {
+      document.addEventListener('DOMContentLoaded', injectNavToggle);
+    } else {
+      injectNavToggle();
+    }
+  }
+
+  // Dual export for Node.js test runner
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      PLAYLIST_ID,
+      VOX_TRACK_IDS,
+      playTerminalClank,
+      saveCurrentPosition,
+      navigateSeamlessly,
+      injectNavToggle
+    };
   }
 })();
 

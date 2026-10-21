@@ -906,6 +906,21 @@ if (typeof module !== 'undefined' && module.exports) {
     leaveSession,
     saveSessionState,
     restoreSessionState,
-    clearSessionState
+    clearSessionState,
+    adjMarker,
+    switchTab,
+    togglePrivacy,
+    advanceBattleRound,
+    drawMisery,
+    triggerSpecificMisery,
+    drawSecondary,
+    replaceSecondary,
+    drawSecretCards,
+    pickSecretCard,
+    triggerChangeOfPlans,
+    rollAllSpawnZones,
+    rollDownZone,
+    saveCustomPool,
+    loadCustomPool
   };
 }
