@@ -296,3 +296,188 @@ summary:hover { color: var(--text); }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px 0; }
 .section-header h3 { margin: 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
 .hidden { display: none !important; }
+
+/* ==========================================================================
+   SECTOR ATLAS HOLOLITH MAP & 3-WAY PARALLEL HEGEMONY TRACKER
+   ========================================================================== */
+.hololith-map-wrap {
+  background: radial-gradient(circle at 50% 45%, #161b26 0%, #090b10 85%);
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 18px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85), 0 4px 20px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.hololith-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(245, 176, 65, 0.25);
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hololith-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.sector-svg {
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+  display: block;
+  user-select: none;
+}
+
+.map-supply-line {
+  stroke: #30363d;
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  transition: stroke 0.25s ease;
+}
+
+.map-supply-line.active-line {
+  stroke: rgba(245, 176, 65, 0.65);
+  stroke-dasharray: none;
+}
+
+.map-node-group {
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.map-node-group:hover .node-outer-ring {
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 8px rgba(245, 176, 65, 0.7));
+}
+
+.map-node-group.selected-node .node-selection-reticle {
+  opacity: 1;
+}
+
+.node-selection-reticle {
+  opacity: 0;
+  stroke: #f5b041;
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  fill: none;
+  transition: opacity 0.2s ease;
+}
+
+.liberation-inspector {
+  background: rgba(22, 27, 34, 0.94);
+  border: 1px solid #f5b041;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.heg-race-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  background: rgba(13, 17, 23, 0.75);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #21262d;
+}
+
+.heg-row {
+  display: grid;
+  grid-template-columns: 175px 1fr 68px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .heg-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+.heg-seg-track {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  height: 12px;
+}
+
+.heg-seg {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.heg-seg.active-alpha {
+  background: linear-gradient(90deg, #1f6feb, #58a6ff);
+  border-color: #79c0ff;
+  box-shadow: 0 0 6px rgba(88, 166, 255, 0.45);
+}
+
+.heg-seg.active-beta {
+  background: linear-gradient(90deg, #b87d14, #f5b041);
+  border-color: #ffd280;
+  box-shadow: 0 0 6px rgba(245, 176, 65, 0.45);
+}
+
+.heg-seg.active-horde {
+  background: linear-gradient(90deg, #a91d2a, #ff4757);
+  border-color: #ff7b72;
+  box-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
+}
+
+.heg-seg.unknown-fog {
+  background: repeating-linear-gradient(
+    45deg,
+    #161b22,
+    #161b22 4px,
+    #2d223b 4px,
+    #2d223b 8px
+  );
+  border-color: #6e40aa;
+  opacity: 0.75;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rule-box {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
