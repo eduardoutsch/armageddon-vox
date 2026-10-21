@@ -29,13 +29,159 @@ let cp = 2;
 let stratCount = 0;
 let currentZoneSpawns = [];
 
-// Populate Spawner Faction Dropdown on load
+const STORAGE_KEY_SESSION = 'foa_horde_session_v1';
+
+function saveSessionState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const gameScreen = document.getElementById('gameScreen');
+    const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
+    const seed = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
+    const setupFactionMode = document.getElementById('setupFactionMode')?.value || 'SYNC_ALL';
+
+    const data = {
+      hasActiveSession: isSessionActive,
+      seed,
+      selectedModeVal,
+      selectedRoleVal,
+      setupFactionMode,
+      activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+      battleRound,
+      sp,
+      spGainedThisRound,
+      spRoundCap,
+      cp,
+      stratCount,
+      activeCard,
+      currentChoices,
+      activeMiseries,
+      activeSecondaries,
+      personalSecretDeck,
+      sharedMiseryDeck,
+      sharedSecondaryDeck,
+      currentZoneSpawns,
+      isPrivacyHidden,
+      currentShopFilter
+    };
+    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save session state:', e);
+  }
+}
+
+function restoreSessionState() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SESSION);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data) return false;
+
+    // Restore setup inputs
+    if (data.selectedModeVal) selectMode(data.selectedModeVal);
+    if (data.selectedRoleVal) selectRole(data.selectedRoleVal);
+    if (data.seed && document.getElementById('seedInput')) {
+      document.getElementById('seedInput').value = data.seed;
+    }
+    if (data.setupFactionMode && document.getElementById('setupFactionMode')) {
+      document.getElementById('setupFactionMode').value = data.setupFactionMode;
+    }
+
+    if (!data.hasActiveSession) return false;
+
+    // Restore session variables
+    isSoloMode = (data.selectedModeVal === 'solo');
+    spRoundCap = data.spRoundCap || (isSoloMode ? 16 : 8);
+    battleRound = data.battleRound || 0;
+    sp = (typeof data.sp === 'number') ? data.sp : 0;
+    spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
+    cp = (typeof data.cp === 'number') ? data.cp : 2;
+    stratCount = data.stratCount || 0;
+
+    activeCard = data.activeCard || null;
+    currentChoices = data.currentChoices || [];
+    activeMiseries = data.activeMiseries || [];
+    activeSecondaries = data.activeSecondaries || [];
+    personalSecretDeck = data.personalSecretDeck || [];
+    sharedMiseryDeck = data.sharedMiseryDeck || [];
+    sharedSecondaryDeck = data.sharedSecondaryDeck || [];
+    currentZoneSpawns = data.currentZoneSpawns || [];
+    isPrivacyHidden = !!data.isPrivacyHidden;
+    currentShopFilter = data.currentShopFilter || 'All';
+
+    if (data.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
+      activeHordeFaction = HORDE_FACTIONS.find(f => f.name === data.activeHordeFactionName) || HORDE_FACTIONS[0];
+      const sel = document.getElementById('hordeFactionSelect');
+      if (sel) sel.value = activeHordeFaction.name;
+      renderFactionReminderBanner();
+    }
+
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    if (setupScreen) setupScreen.classList.add('hidden');
+    if (gameScreen) gameScreen.classList.remove('hidden');
+
+    const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)]) ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)] : { misery: 1, spawnMod: '2D6+0' };
+    const roundTitle = document.getElementById('roundTitle');
+    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
+    const spawnModDisplay = document.getElementById('spawnModDisplay');
+    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    const nextRoundBtn = document.getElementById('nextRoundBtn');
+    if (nextRoundBtn) {
+      nextRoundBtn.innerText = battleRound < 6
+        ? `Advance to Battle Round ${battleRound + 1}`
+        : `Battle Round 6 Active (Final Stand)`;
+    }
+
+    if (activeCard) {
+      const activeCardBox = document.getElementById('activeCardBox');
+      if (activeCardBox) {
+        activeCardBox.innerHTML = `
+          <div class="card">
+            <span class="badge">${activeCard.tags}</span>
+            <h4 class="card-title">${activeCard.name}</h4>
+            <p class="card-desc">${activeCard.desc}</p>
+          </div>
+        `;
+      }
+      const cmCodeBox = document.getElementById('cmCodeBox');
+      if (cmCodeBox) cmCodeBox.innerText = `CM Verification Code: ${activeCard.code}`;
+      const selectionArea = document.getElementById('selectionArea');
+      if (selectionArea) selectionArea.classList.add('hidden');
+      const lockedArea = document.getElementById('lockedArea');
+      if (lockedArea) lockedArea.classList.remove('hidden');
+    } else if (currentChoices && currentChoices.length > 0) {
+      renderSecretChoices("Select 1 Initial Secret Objective");
+    }
+
+    updateHUD();
+    renderSharedDecks();
+    renderResupplyTable();
+    if (currentZoneSpawns && currentZoneSpawns.length > 0) {
+      renderSpawnZones();
+    }
+    loadCustomPool();
+
+    return true;
+  } catch (e) {
+    console.error('Failed to restore session state:', e);
+    return false;
+  }
+}
+
+function clearSessionState() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEY_SESSION);
+}
+
+// Populate Spawner Faction Dropdown and restore session on load
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('DOMContentLoaded', () => {
     const sel = document.getElementById('hordeFactionSelect');
     if (sel && typeof HORDE_FACTIONS !== 'undefined') {
       sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
     }
+    restoreSessionState();
   });
 }
 
@@ -44,12 +190,14 @@ function selectMode(mode) {
   document.getElementById('modeCardCoop').classList.toggle('selected-red', mode === 'coop');
   document.getElementById('modeCardSolo').classList.toggle('selected-red', mode === 'solo');
   document.getElementById('playerRoleSection').classList.toggle('hidden', mode === 'solo');
+  saveSessionState();
 }
 
 function selectRole(role) {
   selectedRoleVal = role;
   document.getElementById('roleCard1').classList.toggle('selected', role === '1');
   document.getElementById('roleCard2').classList.toggle('selected', role === '2');
+  saveSessionState();
 }
 
 function resolveRoomSyncedFaction(code) {
@@ -69,12 +217,14 @@ function resolveRoomSyncedFaction(code) {
 
   document.getElementById('hordeFactionSelect').value = activeHordeFaction.name;
   renderFactionReminderBanner();
+  saveSessionState();
 }
 
 function manualChangeFaction() {
   const val = document.getElementById('hordeFactionSelect').value;
   activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
   renderFactionReminderBanner();
+  saveSessionState();
 }
 
 function renderFactionReminderBanner() {
@@ -135,6 +285,7 @@ function startSession() {
   renderSharedDecks();
   renderResupplyTable();
   switchTab(2);
+  saveSessionState();
 }
 
 function switchTab(tabNum) {
@@ -153,6 +304,7 @@ function updateHUD() {
   document.getElementById('hudCp').innerText = cp;
   document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
   document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
+  saveSessionState();
 }
 
 // --- SECRET OBJECTIVES ---
@@ -204,6 +356,7 @@ function pickSecretCard(chosenIdx) {
     </div>
   `;
   document.getElementById('cmCodeBox').innerText = `CM Verification Code: ${activeCard.code}`;
+  saveSessionState();
 }
 
 function triggerChangeOfPlans() {
@@ -581,6 +734,7 @@ function leaveSession() {
   if (typeof confirm === 'function' && !confirm("Exit current battle terminal?")) return;
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
+  saveSessionState();
 }
 
 // Dual export for Node.js test runner and browser environment
@@ -593,7 +747,14 @@ if (typeof module !== 'undefined' && module.exports) {
     renderFactionReminderBanner,
     startSession,
     updateHUD,
+    gainSP,
+    loseSP,
+    adjCP,
+    spendCPForStrat,
     buyResupply,
-    leaveSession
+    leaveSession,
+    saveSessionState,
+    restoreSessionState,
+    clearSessionState
   };
 }
