@@ -41,3 +41,24 @@ test('UI Boundary: all pages share unified navigation title for Briefings, Ship 
     );
   }
 });
+
+test('All HTML pages link to favicon.svg and apple-touch-icon', () => {
+  const faviconPath = path.join(__dirname, '../../favicon.svg');
+  assert.ok(fs.existsSync(faviconPath), 'favicon.svg must exist in repository root');
+
+  const pages = ['index.html', 'briefing.html', 'pvp.html', 'rogue.html', 'roster.html'];
+  for (const page of pages) {
+    const html = fs.readFileSync(path.join(__dirname, '../../', page), 'utf8');
+    assert.match(
+      html,
+      /<link\s+rel="icon"\s+type="image\/svg\+xml"\s+href="favicon\.svg"\s*\/?>/i,
+      `${page} must include <link rel="icon" type="image/svg+xml" href="favicon.svg">`
+    );
+    assert.match(
+      html,
+      /<link\s+rel="apple-touch-icon"\s+href="favicon\.svg"\s*\/?>/i,
+      `${page} must include <link rel="apple-touch-icon" href="favicon.svg">`
+    );
+  }
+});
+
