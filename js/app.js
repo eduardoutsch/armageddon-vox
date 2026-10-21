@@ -68,3 +68,43 @@ function manualChangeFaction() {
   activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
   renderFactionReminderBanner();
 }
+
+function renderFactionReminderBanner() {
+  document.getElementById('activeFactionBannerTitle').innerText = `HORDE FACTION: ${activeHordeFaction.name} — "${activeHordeFaction.ruleTitle}"`;
+  document.getElementById('activeFactionBannerDesc').innerText = activeHordeFaction.desc;
+}
+
+function startSession() {
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const mode = selectedModeVal;
+  const role = selectedRoleVal;
+
+  isSoloMode = (mode === 'solo');
+  spRoundCap = isSoloMode ? 16 : 8;
+
+  // 1. Resolve Room-Synced Horde Faction
+  resolveRoomSyncedFaction(code);
+
+  // 2. Resolve Room-Synced Decks
+  const rngSecret = mulberry32(hashString(code + "_SEC"));
+  const rngMisery = mulberry32(hashString(code + "_MIS"));
+  const rngSecond = mulberry32(hashString(code + "_MSN"));
+
+  const validSecrets = isSoloMode
+    ? OBJECTIVES.filter(o => !o.tags.includes("Multiplayer"))
+    : OBJECTIVES;
+
+  const shuffledSecrets = seededShuffle(validSecrets, rngSecret);
+
+  if (isSoloMode) {
+    personalSecretDeck = shuffledSecrets;
+    document.getElementById('secretPoolNotice').innerText = `Solo Deck (${personalSecretDeck.length} valid cards; Multiplayer blocked)`;
+  } else {
+    personalSecretDeck = (role === "1") ? shuffledSecrets.slice(0, 17) : shuffledSecrets.slice(17, 34);
+    document.getElementById('secretPoolNotice').innerText = `Co-op Split Pool (${personalSecretDeck.length} cards)`;
+  }
+
+  sharedMiseryDeck = seededShuffle(MISERIES, rngMisery);
+  sharedSecondaryDeck = seededShuffle(SECONDARIES, rngSecond);
+
+  battleRound = 0;
