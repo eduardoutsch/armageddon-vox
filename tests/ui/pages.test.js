@@ -62,3 +62,60 @@ test('All HTML pages link to favicon.svg and apple-touch-icon', () => {
   }
 });
 
+test('UI Boundary: briefing.html defaults to Commander Beta dossier and includes immersive dispatch without Marauder spoiler', () => {
+  const html = readPage('briefing.html');
+
+  // Verify tab switcher defaults to Beta
+  assert.match(
+    html,
+    /<button\s+id="btnBeta"\s+class="active"/i,
+    'briefing.html must have #btnBeta active by default'
+  );
+  assert.doesNotMatch(
+    html,
+    /<button\s+id="btnAlpha"\s+class="active"/i,
+    'briefing.html must not have #btnAlpha active by default'
+  );
+
+  // Verify dossier containers default visibility
+  assert.match(
+    html,
+    /<div\s+id="dossierAlpha"\s+class="hidden"/i,
+    '#dossierAlpha must have class="hidden" by default'
+  );
+  assert.match(
+    html,
+    /<div\s+id="dossierBeta"(?!\s+class="hidden")/i,
+    '#dossierBeta must be visible (not hidden) on load'
+  );
+
+  // Verify new sealed Astropathic dispatch and clearance gate
+  assert.ok(
+    html.includes("Commander Beta's Sealed Astropathic Dispatch"),
+    'Must include Commander Beta sealed dispatch title'
+  );
+  assert.ok(
+    html.includes('Clearance Vermilion-Beta • Restricted Dataslate'),
+    'Must include Vermilion-Beta clearance tag'
+  );
+  assert.ok(
+    html.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
+    html.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
+    'Must include The Voice in the Ash narrative section'
+  );
+  assert.ok(
+    html.includes('unlock-btn') && html.includes("unlockTab('Beta')"),
+    'Must include unlock button for Beta'
+  );
+  assert.ok(
+    html.includes('lock-toggle-btn') && html.includes("lockTab('Beta')"),
+    'Must include lock toggle button for Beta'
+  );
+
+  // Verify secret Marauder spoiler is NOT present
+  assert.ok(
+    !html.includes('and will switch to <strong>⚔️ Marauders</strong> if you claim Gatebreakers'),
+    'Briefing must not reveal Alpha switching to Marauders if Beta chooses Gatebreakers'
+  );
+});
+
