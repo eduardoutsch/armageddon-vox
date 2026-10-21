@@ -1,0 +1,222 @@
+# 📦 Fires of Armageddon // Bundle: Mode 3 - Rogue Sector & AI Tracker
+
+Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impact reference (`pages/rogue.html`).
+
+## 📑 Table of Contents
+- [pages/rogue.html](#file-pagesroguehtml)
+
+---
+
+## File: `pages/rogue.html` <a id="file-pagesroguehtml"></a>
+
+````html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fires of Armageddon // Rogue Sector &amp; AI Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="apple-touch-icon" href="../assets/favicon.svg">
+  <style>
+    :root {
+      --bg: #0a0b10;
+      --surface: #141720;
+      --border: #262b3d;
+      --text: #eceff4;
+      --muted: #8b92a5;
+      --purple: #9d5cff;
+      --red: #ff4757;
+      --gold: #f5b041;
+      --blue: #3b82f6;
+      --green: #10b981;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle at 50% 0%, rgba(157, 92, 255, 0.14) 0%, transparent 55%);
+      color: var(--text);
+      margin: 0; padding: 0; line-height: 1.5;
+    }
+    .suite-nav {
+      background: rgba(12, 14, 20, 0.95); border-bottom: 1px solid var(--border);
+      padding: 8px 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+    }
+    .suite-link {
+      text-decoration: none; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; padding: 6px 12px; border-radius: 8px; color: var(--muted); border: 1px solid transparent;
+    }
+    .suite-link:hover { color: var(--text); background: var(--surface); }
+    .suite-link.active {
+      color: var(--purple); background: rgba(157, 92, 255, 0.12); border-color: rgba(157, 92, 255, 0.35);
+    }
+    .app-shell { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .hero-banner {
+      background: linear-gradient(135deg, #1d162b 0%, #141720 100%);
+      border: 1px solid rgba(157, 92, 255, 0.35);
+      border-radius: 18px; padding: 24px; text-align: center; margin-bottom: 20px;
+    }
+    .hero-banner h1 { margin: 0 0 6px 0; font-size: 1.6rem; text-transform: uppercase; color: var(--purple); }
+    .hero-banner p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 4px solid var(--purple); border-radius: 12px;
+      padding: 18px; margin-bottom: 16px;
+    }
+    .card.gold { border-left-color: var(--gold); }
+    .card.green { border-left-color: var(--green); }
+    .badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px; margin-bottom: 8px;
+      background: rgba(157, 92, 255, 0.15); color: var(--purple);
+    }
+    .badge.gold { background: rgba(245, 176, 65, 0.15); color: var(--gold); }
+    .badge.green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+    h3 { margin: 0 0 8px 0; font-size: 1.1rem; }
+    p { margin: 0 0 10px 0; color: #c9d1d9; font-size: 0.92rem; }
+    button {
+      background: var(--purple); color: #fff; border: none; padding: 10px 16px;
+      border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+    }
+    button.btn-green { background: var(--green); color: #fff; }
+    .ai-step {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    .ai-step.active-step {
+      border-color: var(--green);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+    }
+    .ai-step-title { font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .impact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+    .impact-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <nav class="suite-nav">
+    <a href="../index.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
+    <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
+    <a href="rogue.html" class="suite-link active">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
+    <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
+    <a href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
+  </nav>
+
+  <div class="app-shell">
+    <div class="hero-banner">
+      <h1>AI Flowchart &amp; Rogue Sector Reference</h1>
+      <p>Step-by-Step Horde / Unbound Adversary Pilot &amp; Off-Roster Planetary Shifts</p>
+    </div>
+
+    <!-- 1. INTERACTIVE AI PHASE TRACKER -->
+    <div class="card green">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span class="badge green">Autonomous AI • Step-by-Step Pilot</span>
+        <button class="btn-green" onclick="nextAiStep()" style="padding:6px 12px; font-size:0.8rem;">Next AI Phase →</button>
+      </div>
+      <h3>Horde &amp; Unbound Adversary AI Sequencer</h3>
+
+      <div id="aiStep0" class="ai-step active-step">
+        <div class="ai-step-title"><span>1. Movement &amp; Ingress Phase</span><span>[Active]</span></div>
+        <p style="margin:0; font-size:0.86rem;">
+          • <strong>Closest Target:</strong> Move towards the closest Player unit (or closest Objective if tied). Never stay in a Spawn Zone unless stationary shooting is required.<br>
+          • <strong>Scouts Bonus:</strong> Units with <em>Scouts</em> that spawned this turn (and did not ingress) add their Scouts distance to their Move characteristic!<br>
+          • <strong>Advance Logic:</strong> Advance if all weapons are [ASSAULT], if eligible to shoot/charge after advancing, or if out of shooting/charge range.<br>
+          • <strong>Deep Strike Ingress (R2–R4):</strong> Set up >8" from enemy models, as close to a player unit as possible, and outside range of objectives.
+        </p>
+      </div>
+
+      <div id="aiStep1" class="ai-step">
+        <div class="ai-step-title"><span>2. Shooting Phase Target Priority</span><span></span></div>
+        <p style="margin:0; font-size:0.86rem;">
+          Each model shoots the <strong>closest legal target</strong>, except for these priority overrides:<br>
+          • <strong>[ANTI-X] / [X HUNTER]:</strong> Targets the closest visible unit with the matching <em>X</em> keyword.<br>
+          • <strong>[PRECISION]:</strong> Targets the closest visible unit with a Leader or Support model.<br>
+          • <strong>[MELTA]:</strong> Targets the closest visible non-INFANTRY, non-SWARM unit.
+        </p>
+      </div>
+
+      <div id="aiStep2" class="ai-step">
+        <div class="ai-step-title"><span>3. Charge &amp; Fight Phase</span><span></span></div>
+        <p style="margin:0; font-size:0.86rem;">
+          • <strong>Charges:</strong> Declare a charge against the closest reachable Player unit(s).<br>
+          • <strong>Splitting Melee Attacks:</strong> Each model attacks the closest Player model's unit in range.<br>
+          • <strong>Consolidation:</strong> AI units <em>always</em> make consolidation moves towards the closest Player unit or objective if able.
+        </p>
+      </div>
+    </div>
+
+    <!-- 2. ROGUE BATTLE PLANETARY IMPACT REFERENCE -->
+    <div class="card">
+      <span class="badge">Rogue Sector Battles • Zero Roster Bloat</span>
+      <h3>Planetary Consequences Reference</h3>
+      <p>Off-roster Rogue Battles leave your Administratum Crusade rosters 100% untouched. Simply report the winner (and any heroic model that earned a Nemesis induction!) to the Campaign Master in chat:</p>
+
+      <div class="impact-grid">
+        <div class="impact-box" style="border-top:3px solid var(--gold);">
+          <strong style="color:var(--gold);">🛡️ Imperium Victory</strong><br>
+          Stabilizes sector: Next main game Warp Intensity drops to <em>Minor</em> (or -1 to 1st R1 Horde Spawn Roll) + <strong>1 SPt to Gatebreakers</strong>.
+        </div>
+        <div class="impact-box" style="border-top:3px solid var(--red);">
+          <strong style="color:var(--red);">💀 Chaos Victory</strong><br>
+          Widens breach: Next main game Warp Intensity escalates to <em>Catastrophic</em> (or triggers <em>Banishing Rifts</em>) + <strong>1 SPt to Desecrators</strong>.
+        </div>
+        <div class="impact-box" style="border-top:3px solid var(--purple);">
+          <strong style="color:var(--purple);">⚔️ Xenos Victory</strong><br>
+          Plunders vaults: Triggers <em>Gravitic Nexus</em> or <em>Staggered Time</em> Hellscape next main match + <strong>1 SPt to Marauders</strong>.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+const STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
+let currentAiStep = 0;
+
+function saveRogueState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep }));
+  } catch (e) {
+    console.warn('Could not save rogue state:', e);
+  }
+}
+
+function restoreRogueState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ROGUE);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && typeof data.currentAiStep === 'number') {
+      setAiStep(data.currentAiStep, false);
+    }
+  } catch (e) {
+    console.warn('Could not restore rogue state:', e);
+  }
+}
+
+function setAiStep(step, shouldSave = true) {
+  currentAiStep = step;
+  [0, 1, 2].forEach(i => {
+    const el = document.getElementById('aiStep' + i);
+    if (el) {
+      el.classList.toggle('active-step', i === currentAiStep);
+      const span = el.querySelector('.ai-step-title span:last-child');
+      if (span) span.innerText = (i === currentAiStep) ? '[Active]' : '';
+    }
+  });
+  if (shouldSave) saveRogueState();
+}
+
+function nextAiStep() {
+  setAiStep((currentAiStep + 1) % 3);
+}
+
+restoreRogueState();
+</script>
+</body>
+</html>
+````

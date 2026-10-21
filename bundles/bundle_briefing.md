@@ -1,0 +1,698 @@
+# 📦 Fires of Armageddon // Bundle: Briefings, Ship Slider & Sector Atlas
+
+Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md slider, and the 8-node Sector Atlas (`pages/briefing.html`).
+
+## 📑 Table of Contents
+- [pages/briefing.html](#file-pagesbriefinghtml)
+
+---
+
+## File: `pages/briefing.html` <a id="file-pagesbriefinghtml"></a>
+
+````html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fires of Armageddon // Briefings, Ship Slider &amp; Sector Atlas</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="apple-touch-icon" href="../assets/favicon.svg">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <!-- CAMPAIGN SUITE TOP NAVIGATION -->
+  <nav class="suite-nav">
+    <a href="../index.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
+    <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
+    <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
+    <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
+    <a href="briefing.html" class="suite-link active">📜 Briefings, Ship &amp; Atlas</a>
+  </nav>
+
+<div class="app-shell">
+
+  <!-- 4-TAB DOSSIER SWITCHER (DEFAULTS TO BETA PER UI BOUNDARY TESTS) -->
+  <div class="nav-pills" style="margin-top:8px; margin-bottom:20px;">
+    <button id="btnAlpha" onclick="showDossier('alpha')">🦅 Alpha &amp; Ship</button>
+    <button id="btnBeta" class="active" onclick="showDossier('beta')">💀 Beta Briefing</button>
+    <button id="btnAtlas" onclick="showDossier('atlas')">🗺️ Sector Atlas</button>
+    <button id="btnRules" onclick="showDossier('rules')">⚡ Horde → Crusade Rules</button>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 1: COMMANDER ALPHA (THE SANCTUARY OF ASH & SHIP.MD SLIDER)    -->
+  <!-- ================================================================= -->
+  <div id="dossierAlpha" class="hidden">
+
+    <!-- CLEARANCE GATE ALPHA -->
+    <div id="gateAlpha" class="hero-card" style="text-align:center; padding:36px 24px; border-color:rgba(245, 176, 65, 0.45);">
+      <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion-Alpha • Restricted Dataslate</div>
+      <h2 class="hero-title" style="font-size:1.6rem;">The Sanctuary of Ash // Command &amp; Ship Slider</h2>
+      <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
+        Private operational ledger for <strong>Commander Alpha</strong> (Lower Decks &amp; Shipboard Control Slider). Unauthorized inspection by rival Warlords is prohibited.
+      </p>
+      <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Alpha')">
+        🔓 Authenticate Commander Alpha
+      </button>
+    </div>
+
+    <!-- UNLOCKED ALPHA CONTENT -->
+    <div id="contentAlpha" class="hidden">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+        <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Alpha')">🔒 Lock Alpha Dataslate</button>
+      </div>
+
+      <div class="hero-card" style="margin-bottom:20px;">
+        <div class="status-pill">Registered Dossier • Commander Alpha • Alliance: Gatebreakers</div>
+        <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Sanctuary of Ash</h1>
+        <div class="lore-quote">
+          "Once, a Sororitas pilgrim vessel named <em>Divine Providence</em> was defiled when heretics slaughtered its crew and used it to bombard holy worlds. After its recapture, the Sororitas decreed it too tainted to exist—until a Krieg regiment, condemned for a 'failure' they did not commit, claimed it as their floating purgatory. The Krieg spent decades reforging it into a hybrid prison-monastery, scrubbing its halls with acid and ash from their own cremated dead. They renamed it <em>The Sanctuary of Ash</em>: a bitter joke, for there is no sanctuary here, only endless war."
+        </div>
+      </div>
+
+      <!-- INTERACTIVE SHIP.MD BALANCE SLIDER (-3 TO +3) -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
+        <div class="section-header" style="margin-top:0;">
+          <h3>SHIP.md // Shipboard Tug-of-War Slider (-3 to +3)</h3>
+          <span class="hud-sub" id="shipSliderLabel">Current State: 0 (Balanced)</span>
+        </div>
+        <p class="card-desc" style="margin-bottom:14px;">
+          Track the internal struggle between the <strong>Lower Decks</strong> (Commissar Dravik's Brig Wall Warrants &amp; Covert Directives) and the <strong>High Sanctum</strong> (Sororitas Wardens). Positions <strong>-1</strong> and <strong>+1</strong> are the tactical Sweet Spots; pushing to <strong>±2</strong> or <strong>±3</strong> triggers severe shipboard quicksand!
+        </p>
+
+        <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-bottom:16px;">
+          <button type="button" class="chip" id="sliderBtn-3" onclick="selectSlider(-3)">-3 Abyss</button>
+          <button type="button" class="chip" id="sliderBtn-2" onclick="selectSlider(-2)">-2 Mutiny</button>
+          <button type="button" class="chip" id="sliderBtn-1" onclick="selectSlider(-1)">-1 Sweet Spot</button>
+          <button type="button" class="chip active" id="sliderBtn0" onclick="selectSlider(0)">0 Balanced</button>
+          <button type="button" class="chip" id="sliderBtn1" onclick="selectSlider(1)">+1 Sweet Spot</button>
+          <button type="button" class="chip" id="sliderBtn2" onclick="selectSlider(2)">+2 Penance</button>
+          <button type="button" class="chip" id="sliderBtn3" onclick="selectSlider(3)">+3 Tyranny</button>
+        </div>
+
+        <div id="sliderDetailBox" class="card" style="background:#0b0d13; margin-bottom:12px;"></div>
+
+        <details>
+          <summary style="cursor:pointer; font-weight:700; color:var(--gold);">7-Level Dynamic Phase Reckoning Table (If 3rd Alliance Wins Phase)</summary>
+          <div class="drawer-body" style="font-size:0.88rem; line-height:1.55; margin-top:10px;">
+            <p>If the Campaign Master's <strong>3rd Alliance</strong> wins the Campaign Phase, Segmentum Solar High Command audits <em>The Sanctuary of Ash</em> based on where your slider rests:</p>
+            <ul>
+              <li><strong>At -1 or +1 (The Sweet Spots):</strong> Your covert maneuvering masks the failure—no High Command penalty, and you claim the <strong>Phase-End Shipboard Cache (+1 RP or +100 pts Supply Limit)</strong>!</li>
+              <li><strong>At 0 (Balanced Indecision):</strong> Neither deck takes the blame; lose 1 Supply Cache Token (or start next game with -1 CP).</li>
+              <li><strong>At -2 or +2 (Factional Strife):</strong> Internal purges cost you <strong>1 RP</strong> (or 1 unit suffers a automatic Battle Scar).</li>
+              <li><strong>At -3 (Lower Decks Abyss):</strong> High Sanctum unleashes <em>Saint Celestine &amp; Aestred Thurga</em> as hostile Executioners in your next battle!</li>
+              <li><strong>At +3 (High Sanctum Tyranny):</strong> The Sororitas confiscate your Phase-End Cache (+1 RP) and brand <em>The Exile's</em> hull with an automatic Battle Scar on a failed Leadership test (-1)!</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <!-- ALPHA DRAMATIS PERSONAE & ACTIVE CRUSADE RULES -->
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-top:0; color:var(--gold);">Command Echelon &amp; Regiment Rules (1,820 / 1,900 Pts)</h3>
+        <ul>
+          <li><strong>🎖️ Warlord: The Exile — Rogal Dorn Commander (<em>"Mercy's Delay"</em> • 265 pts | <em>Calm Under Fire</em>):</strong> Once a decorated Cadian officer who survived seven doomed last stands. <strong>Special Rule (<em>The Exile's Curse — "Mercy Delayed Again"</em>):</strong> Whenever <em>The Exile</em> survives a Horde Mode Round 6 Final Stand while 3+ friendly Krieg units were destroyed, he gains <strong>+1 bonus XP</strong>, and one destroyed Krieg Battleline squad that failed its Out of Action test may replace its Battle Scar with <strong>"Absolved in Ash"</strong> (<em>Feel No Pain 6+</em> within 6" of <em>The Exile</em>).</li>
+          <li><strong>⚔️ Mighty Champion: Lord Marshal Dreir (100 pts | <em>Inspirational Champion</em> [+1 Crusade Pt]):</strong> Ignore all Battle Scars on the Bodyguard unit he leads (<em>Death Riders</em>), and select <strong>one additional unit</strong> to be <em>Marked for Greatness (+3 XP)</em> at the end of every battle!</li>
+          <li><strong>💥 2x Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em> • 145 pts each):</strong> Unofficial lower-deck legend born in Session 0 after detonating every Sororitas war-engine at the Golgotha Landing Site. <strong>Session 0 Legacy Perk:</strong> The first time either Vanquisher reaches <em>Blooded</em> (6 XP), it may re-roll its Weapon Modification or Battle Trait roll for free!</li>
+          <li><strong>💀 The Unseen Jury (65 pts | <em>Stalwart's Honours</em>) &amp; Commissar Dravik, The Silent Judge (30 pts):</strong> Enforcers of the ship's blood-warrants.</li>
+          <li><strong>🦅 Faction Crusade Blessing — Faith and Duty (Imperium):</strong> When Underdog, select 1 objective marker at start of battle; non-Battle-shocked models within range gain <strong>+1 OC</strong>.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 2: COMMANDER BETA (JUNEBUG — DEFAULT VISIBLE TAB)             -->
+  <!-- ================================================================= -->
+  <div id="dossierBeta">
+
+    <!-- CLEARANCE GATE BETA -->
+    <div id="gateBeta" class="hero-card" style="text-align:center; padding:36px 24px; border-color:rgba(255, 71, 87, 0.45);">
+      <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion-Beta • Restricted Dataslate</div>
+      <h2 class="hero-title" style="font-size:1.6rem;">Commander Beta's Sealed Astropathic Dispatch</h2>
+      <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
+        Encrypted Segmentum Solar High Command transmission routed exclusively to <strong>Commander Beta (JUNEBUG)</strong>.
+      </p>
+      <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Beta')">
+        🔓 Authenticate &amp; Decrypt Dispatch
+      </button>
+    </div>
+
+    <!-- UNLOCKED BETA CONTENT -->
+    <div id="contentBeta" class="hidden">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+        <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Beta')">🔒 Lock Beta Dataslate</button>
+      </div>
+
+      <div class="hero-card" style="margin-bottom:20px;">
+        <div class="status-pill">Incoming Vox-Transmission // Recipient: Commander Beta</div>
+        <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Fires of Armageddon</h1>
+
+        <div class="lore-quote" style="text-align:left; line-height:1.65;">
+          <p style="margin-bottom:10px;">
+            <em>"Hear me, my lord. The sky above Armageddon does not weep rain; it weeps ash, promethium soot, and the curdled blood of a dying reality.</em>
+          </p>
+          <p style="margin-bottom:10px;">
+            <em>Atop the jagged basalt cliffs of the Crimson Mesa, the Red Angel’s Gate stands torn wide—a yawning wound in the Immaterium that pulses like a butchered heart. From its depths, the laughter of dark gods and the screech of warp-born horrors echo across the continent, drowning the ruined spires of Hives Hades and Thoraddis in madness.</em>
+          </p>
+          <p style="margin-bottom:10px;">
+            <em>Down in the suffocating heat of the Golgotha Arbor-Basin, the petrified jungle still smolders from your first contact. Blackened tree trunks lie shattered across craters of vitrified mud, and the air remains thick with the stench of ozone, melted ceramite, and promethium smoke. It was a brutal, grinding crucible of point-blank artillery and burning steel. Even as stained-glass war-engines detonated in blinding fireballs across the clearing, your lines held through the inferno—until wings of white fire tore through the low, sulfuric clouds to butcher the enemy's rear guard and claim that blood-soaked mire by a razor's edge.</em>
+          </p>
+          <p style="margin-bottom:10px;">
+            <em>Yet that clash in the forest was only an omen. High above the toxic cloud-banks, your flagship now hangs in the ash-choked void, its launch bays primed and its warriors awaiting the order to unleash your true Crusade host upon the world below.</em>
+          </p>
+          <p style="margin-bottom:10px;">
+            <em>Who is it that answers your call in the dark, my lord? Do you return at the head of those same zealous Sisters, descending once more with bolter, flamer, and miracle to scour this world clean? Or was that first battle merely a prelude—and even now, does an entirely different warhost stir within your fleet's holds? Perhaps ancient vaults and forgotten relics call to you from beneath the ashes; perhaps your legions hunger for skulls, or wait in cold, inhuman silence to reclaim an empire of dust.</em>
+          </p>
+          <p style="margin-bottom:0;">
+            <em>Whatever army you unleash, know that you do not drop into an empty warzone. A rival commander already fortifies the northern clearings, nursing the wounds of your first encounter—and in the uncharted fog beyond the trees, a <strong>Third Force</strong> is waking. We have no flagship in orbit. We answer to no imperial tithe. Whether we claw our way up from subterranean brood-tunnels, erupt from screaming tears in the Warp, or march out of the choking ash-storms, my legions will contest every inch of this dying world against you both. When you lock blades with your rival in the ashes, I will feast upon the aftermath. And when my hordes surround you in the dark, you will have to decide whether the commander standing beside you is your salvation... or your next victim."</em>
+          </p>
+        </div>
+      </div>
+
+      <!-- SECTION I: THE VOICE IN THE ASH -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--red);">
+        <h2 style="margin-top:0; font-size:1.25rem;">The Voice in the Ash (Your Chronicler &amp; The Third Force)</h2>
+        <p class="card-desc">
+          Welcome to our <strong>Warhammer 40,000: Armageddon Crusade</strong>! While you and Commander Alpha track your unit cards on <strong>Administratum</strong>, I serve two roles simultaneously:
+        </p>
+        <ul style="font-size:0.92rem; line-height:1.6;">
+          <li><strong>1. Impartial Chronicler &amp; Campaign Master:</strong> After every battle, I chronicle your Warlord's deeds, name your units' Battle Scars and Honours, manage the 8-Node Planetary Sector Atlas, and bestow thematic <strong>Mighty Champion</strong> abilities upon any <strong>Epic Hero</strong> in your roster.</li>
+          <li><strong>2. Overlord of the Unseen Third Force (The Horde AI):</strong> Armageddon features <strong>three warring Alliances</strong>. Once you and Commander Alpha each claim your banner, <strong>I take direct command of the remaining 3rd Alliance</strong>—competing against you both for Sector Hegemony, Strategic Points, and Campaign Points across all 4 Campaign Phases!</li>
+        </ul>
+      </div>
+
+      <!-- SECTION II: THE THREE BANNERS -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
+        <h2 style="margin-top:0; font-size:1.25rem;">Choose Your Banner: The Three Alliances of Armageddon</h2>
+        <p class="card-desc" style="margin-bottom:12px;">
+          Pledge your Crusade force to whichever cause aligns with your ambition—and whatever banner remains unchosen shall be claimed by the Third Force gathering in the fog:
+        </p>
+        <div class="choice-grid" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));">
+          <div class="card" style="border-top:3px solid var(--gold); margin:0;">
+            <div class="choice-title">🛡️ The Gatebreakers</div>
+            <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
+              Defenders of the Threshold. Sworn to hold the ancient ferrocrete bastions of the Imperator Line, purge the fallen hive cities, and shatter the black monoliths anchoring the Red Angel’s Gate.
+            </p>
+          </div>
+          <div class="card" style="border-top:3px solid var(--red); margin:0;">
+            <div class="choice-title">💀 The Desecrators</div>
+            <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
+              Heralds of the Red Angel. Those who look upon a burning world and desire only to feed the flames—slaying the champions of order and tearing the polar rift wide into a daemon world.
+            </p>
+          </div>
+          <div class="card" style="border-top:3px solid var(--purple); margin:0;">
+            <div class="choice-title">⚔️ The Marauders</div>
+            <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
+              Lords of the Endless Anarchy. Opportunistic warhosts, xenos raiders, and renegades who strike from hidden haunts to plunder <strong>Antiquity Relics</strong>, decapitate enemy commanders, and profit from endless war.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION III: HOW THE WAR UNFOLDS -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--blue);">
+        <h2 style="margin-top:0; font-size:1.25rem;">How the War Unfolds Upon the Ashes</h2>
+        <ul style="font-size:0.92rem; line-height:1.6;">
+          <li><strong>⚔️ Mode 1 — Clash of Commanders (1v1 PvP):</strong> Wage head-to-head battles across Armageddon's <strong>Hellscapes</strong>, <strong>Warp Anomalies</strong>, and roaming <strong>Unbound Adversaries</strong>. Beware: every time you two fight each other, the Third Force creeps forward through the fog (+3 Vulture SPts and +1 Hegemony Point in an adjacent sector!).</li>
+          <li><strong>🧟 Mode 2 — Breach Containment (Co-op Hard Mode Horde):</strong> Stand shoulder-to-shoulder inside a single perimeter against endless waves from <strong>n + 1 Spawn Zones</strong> through <strong>Battle Round 6 (The Final Stand)</strong>.
+            <br><em>Whispers &amp; Betrayal in the Dark:</em> Before the horde hits your lines, our web terminal deals each commander a private <strong>Secret Objective</strong>. You are forbidden to show it and free to lie. Some directives demand heroism; others are covert <strong>Traitor Directives</strong> offering stolen Requisition Points, expanded Supply Limits, and ancient relics if you arrange an "accidental" artillery barrage on your partner's lines or ensure their warlord does not walk out of the breach alive...</li>
+          <li><strong>🎲 Mode 3 — Rogue Sector Clashes &amp; Living Nemeses:</strong> Play off-roster games at any time to shift planetary Warp weather without risking your main Crusade units, while standout survivors and bosses across all modes are inducted into our <strong>Cross-Mode Nemesis Ledger</strong>!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 3: 8-NODE SECTOR ATLAS & PARALLEL HEGEMONY TRACKER            -->
+  <!-- ================================================================= -->
+  <div id="dossierAtlas" class="hidden">
+    <div class="hero-card" style="margin-bottom:20px;">
+      <div class="status-pill">Interactive Theatre Cartography • 8-Node Planetary Grid</div>
+      <h1 class="hero-title" style="font-size:1.75rem; margin-top:8px;">Armageddon Sector Atlas &amp; Hegemony Race</h1>
+      <p class="hero-subtitle">
+        Tap any Sector Node on the tactical map below to inspect its terrain rules and <strong>3-Way Parallel Hegemony Race (0–8 HP)</strong>. Undiscovered nodes conceal the 3rd Alliance's true strength beneath the Fog of War!
+      </p>
+
+      <!-- 8-NODE INTERACTIVE SVG MAP (NODES 0 TO 7) -->
+      <div style="background:#07090e; border:1px solid var(--border); border-radius:14px; padding:12px; margin-top:14px; overflow-x:auto;">
+        <svg id="armageddon-sector-map" viewBox="0 0 760 320" style="width:100%; height:auto; min-width:540px; display:block;">
+          <!-- Transit Links -->
+          <g stroke="#262c40" stroke-width="2.5" stroke-dasharray="6,5">
+            <line x1="110" y1="160" x2="250" y2="85"/>
+            <line x1="110" y1="160" x2="250" y2="235"/>
+            <line x1="250" y1="85" x2="250" y2="235"/>
+            <line x1="250" y1="85" x2="415" y2="85"/>
+            <line x1="250" y1="235" x2="415" y2="235"/>
+            <line x1="415" y1="85" x2="415" y2="235"/>
+            <line x1="415" y1="85" x2="555" y2="160"/>
+            <line x1="415" y1="235" x2="555" y2="160"/>
+            <line x1="415" y1="85" x2="665" y2="75"/>
+            <line x1="415" y1="235" x2="665" y2="245"/>
+            <line x1="555" y1="160" x2="665" y2="75"/>
+            <line x1="555" y1="160" x2="665" y2="245"/>
+          </g>
+
+          <!-- Node 0: Golgotha Arbor-Basin (DISCOVERED) -->
+          <g class="map-node-group atlas-node-group" data-node-id="0" onclick="selectAtlasNode(0)" style="cursor:pointer;">
+            <circle cx="110" cy="160" r="30" fill="#13221a" stroke="#10b981" stroke-width="3"/>
+            <text x="110" y="156" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="800">NODE 0</text>
+            <text x="110" y="170" text-anchor="middle" fill="#10b981" font-size="8.5" font-weight="700">1/8 • 2/8 • 1/8</text>
+            <text x="110" y="206" text-anchor="middle" fill="#eceff4" font-size="10" font-weight="700">Golgotha Arbor-Basin</text>
+          </g>
+
+          <!-- Node 1: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="1" onclick="selectAtlasNode(1)" style="cursor:pointer;">
+            <circle cx="250" cy="85" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="250" y="82" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 1</text>
+            <text x="250" y="95" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="250" y="126" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+
+          <!-- Node 2: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="2" onclick="selectAtlasNode(2)" style="cursor:pointer;">
+            <circle cx="250" cy="235" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="250" y="232" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 2</text>
+            <text x="250" y="245" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="250" y="276" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+
+          <!-- Node 3: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="3" onclick="selectAtlasNode(3)" style="cursor:pointer;">
+            <circle cx="415" cy="85" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="415" y="82" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 3</text>
+            <text x="415" y="95" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="415" y="126" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+
+          <!-- Node 4: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="4" onclick="selectAtlasNode(4)" style="cursor:pointer;">
+            <circle cx="415" cy="235" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="415" y="232" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 4</text>
+            <text x="415" y="245" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="415" y="276" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+
+          <!-- Node 5: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="5" onclick="selectAtlasNode(5)" style="cursor:pointer;">
+            <circle cx="555" cy="160" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="555" y="157" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 5</text>
+            <text x="555" y="170" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="555" y="201" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+
+          <!-- Node 6: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="6" onclick="selectAtlasNode(6)" style="cursor:pointer;">
+            <circle cx="665" cy="75" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="665" y="72" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 6</text>
+            <text x="665" y="85" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="665" y="116" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+
+          <!-- Node 7: Fog of War -->
+          <g class="map-node-group atlas-node-group" data-node-id="7" onclick="selectAtlasNode(7)" style="cursor:pointer;">
+            <circle cx="665" cy="245" r="27" fill="#12151f" stroke="#6e40aa" stroke-width="2" stroke-dasharray="4,3"/>
+            <text x="665" y="242" text-anchor="middle" fill="#c9d1d9" font-size="10.5" font-weight="800">NODE 7</text>
+            <text x="665" y="255" text-anchor="middle" fill="#9d5cff" font-size="8">[FOG • ?/8]</text>
+            <text x="665" y="286" text-anchor="middle" fill="#8b92a5" font-size="9.5">Unmapped Sector</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- NODE INSPECTOR & PARALLEL 8-PIP HEGEMONY BARS -->
+    <div id="atlas-node-inspector" class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
+      <div class="section-header" style="margin-top:0;">
+        <h3 id="inspectorNodeTitle">Sector Node 0: The Golgotha Arbor-Basin</h3>
+        <span class="status-pill" id="inspectorNodeBadge">DISCOVERED • CONTESTED</span>
+      </div>
+      <p id="inspectorNodeLore" class="card-desc"></p>
+      <div id="inspectorNodeRule" class="card" style="background:#0b0d13; margin:12px 0; font-size:0.88rem;"></div>
+
+      <h4 style="margin:14px 0 8px 0; font-size:0.85rem; text-transform:uppercase; color:var(--gold);">
+        Parallel Sector Hegemony Race (First to 8 HP Locks &amp; Conquers Sector)
+      </h4>
+
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
+          <span>🦅 Commander Alpha (Gatebreakers)</span>
+          <strong id="heg-label-alpha">1 / 8 HP</strong>
+        </div>
+        <div id="heg-bar-alpha" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
+          <span>💀 Commander Beta (JUNEBUG)</span>
+          <strong id="heg-label-beta">2 / 8 HP</strong>
+        </div>
+        <div id="heg-bar-beta" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
+      </div>
+
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
+          <span>👁️‍🗨️ 3rd Alliance Overlord (Horde AI)</span>
+          <strong id="heg-label-horde">1 / 8 HP</strong>
+        </div>
+        <div id="heg-bar-horde" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TAB 4: HORDE → CRUSADE ROSTER PROGRESSION RULES                   -->
+  <!-- ================================================================= -->
+  <div id="dossierRules" class="hidden">
+    <div class="hero-card" style="margin-bottom:20px;">
+      <div class="status-pill">Campaign Synergy Rules • Mode B → Administratum Roster</div>
+      <h1 class="hero-title" style="font-size:1.75rem; margin-top:8px;">Spoils of Breach Containment</h1>
+      <p class="hero-subtitle">
+        Completing your confidential Secret Objective, extracting Fortifications, and banking leftover Supply Points in Horde Mode permanently strengthens your Crusade Order of Battle.
+      </p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px; border-left:4px solid var(--red);">
+      <h3 style="margin-top:0; color:var(--red);">1. The Traitor's Bounty (Covert Betrayal Payout)</h3>
+      <p class="card-desc">
+        Completing a Secret Objective carrying the <strong>Traitor</strong> tag in Co-op Horde Mode requires orchestrating the downfall of your partner amidst the breach. Because of the extreme risk and the permanent grudge it creates, fulfilling a <strong>Traitor Directive</strong> awards a <strong>Double Spoils Payout</strong>:
+      </p>
+      <ul style="font-size:0.9rem; line-height:1.6;">
+        <li><strong>Plundered Command Cache:</strong> Steal <strong>1 Requisition Point (RP)</strong> (or <strong>2 Strategic Points</strong>) directly from the betrayed Commander, <strong>AND</strong> expand your Crusade Force's <strong>Supply Limit by +200 pts</strong> for free.</li>
+        <li><strong>Forbidden Spoils of Treachery:</strong> Bestow a free <strong>Battle Honour</strong> (or an Armageddon <strong>Antiquity Relic</strong> if a Character) upon your Warlord or the unit that executed the betrayal, <strong>plus +3 bonus XP</strong>.</li>
+        <li><strong>Shipboard Shift (Alpha Only):</strong> Completing a Traitor directive shifts <em>The Sanctuary of Ash</em> Balance Slider <strong>1 step toward the Lower Decks (-1)</strong>.</li>
+        <li><strong>The Grudge Consequence:</strong> In your next 1v1 PvP clash, the betrayed Commander automatically receives <strong>1 free Armageddon Crusade Blessing</strong> even if they are not the Underdog!</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-bottom:16px; border-left:4px solid var(--gold);">
+      <h3 style="margin-top:0; color:var(--gold);">2. Standard Secret Objective Victor Bonuses</h3>
+      <p class="card-desc">
+        Completing any non-Traitor Secret Objective (and surviving Round 6 if required) awards <strong>+5 Strategic Points</strong>, <strong>+1 bonus RP (or +100 pts Supply Limit)</strong>, plus the reward matching your card's tag:
+      </p>
+      <ul style="font-size:0.9rem; line-height:1.6;">
+        <li><strong>Action / Relic Directives:</strong> The unit that completed the Action earns a free <strong>Battle Trait</strong> or <strong>Weapon Modification</strong> (or a free <strong>Crusade Relic</strong> if a Character) without needing to rank up.</li>
+        <li><strong>Kill / Combat Directives:</strong> Select <strong>one additional unit</strong> to be <em>Marked for Greatness (+3 XP)</em> at the end of the battle.</li>
+        <li><strong>Support / Fortify / Extraction Directives:</strong> Claim a free <strong>Repair and Recuperate</strong> Requisition after the battle (heal 1 Battle Scar on any unit for 0 RP).</li>
+      </ul>
+    </div>
+
+    <div class="card" style="margin-bottom:16px; border-left:4px solid var(--blue);">
+      <h3 style="margin-top:0; color:var(--blue);">3. Field Promotions, Leftover SP &amp; Persistent Fortifications</h3>
+      <ul style="font-size:0.9rem; line-height:1.6;">
+        <li><strong>"A Name Earned" (1 SP) Discount:</strong> If a Character buys <em>A Name Earned</em> during Horde Mode, survives Round 6, and slays a Horde Character/Monster/Vehicle (or completes an Action), reduce the RP cost of making that Enhancement permanent via <em>Renowned Heroes</em> by <strong>1 RP</strong> (min 1 RP).</li>
+        <li><strong>Recruiting Reinforcements:</strong> Any unit summoned via <em>Reinforcements Arrive (12 SP)</em> or <em>Field Promotion (X SP)</em> that survives Round 6 can be inducted directly into your Order of Battle starting with <strong>3 XP</strong>!</li>
+        <li><strong>Leftover SP Salvage:</strong> Unspent SP after surviving Round 6 can be cashed in: <strong>2 SP</strong> = Orbital Auspex Recon Probe into an adjacent Fog-of-War Sector Node; <strong>3 SP</strong> = Bank a 1v1 <em>Supply Cache Token</em>; <strong>5 SP</strong> = +2 XP to a surviving unit; <strong>8 SP</strong> = +1 RP or +100 pts Supply Limit.</li>
+        <li><strong>Extracted Fortifications:</strong> Still controlling a Fortified Objective at the end of Round 6 grants a sector bonus: <strong>Field Hospital</strong> (all destroyed units auto-pass Out of Action tests), <strong>Ammo Dump</strong> (free Weapon Mod or +2 XP), <strong>War Trench</strong> (+1 XP to surviving Infantry/Battleline), or <strong>FOB</strong> (+1 bonus SPt &amp; +1 Sector Hegemony Pip).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="btn-row" style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+    <a href="roster.html" class="terminal-link-btn alt">
+      🎖️ View Dramatis Personae &amp; Nemesis Ledger →
+    </a>
+    <a href="../index.html" class="terminal-link-btn">
+      ⚔️ Open Tactical Command Terminal →
+    </a>
+  </div>
+
+</div>
+
+<script>
+const BRIEFING_STORAGE_KEY = 'foa_briefing_state_v1';
+const STORAGE_KEY_BRIEFING = BRIEFING_STORAGE_KEY;
+
+const SHIP_SLIDER_DATA = {
+  "-3": {
+    title: "-3 // Lower Decks Abyss (Full Mutiny & Heretical Unsealing)",
+    desc: "<strong>Buff:</strong> Krieg Infantry gain <em>Sustained Hits 1</em> in melee &amp; <em>Feel No Pain 5+</em> within 6\" of <em>The Exile</em>.<br><strong>Quicksand Penalty:</strong> High Sanctum cuts orbital support (<em>Air Strike / Artillery Strike</em> cost +2 SP). If the 3rd Alliance wins the Phase, Saint Celestine &amp; Aestred Thurga deploy as hostile Executioners against you!"
+  },
+  "-2": {
+    title: "-2 // Silent Insurrection (The Brig Bleeds)",
+    desc: "<strong>Buff:</strong> Keep -1 buffs, plus Commissar Dravik's summary executions grant +1 SP in Horde Mode.<br><strong>Quicksand Penalty:</strong> High Sanctum locks the med-bays (<em>Field Hospital</em> costs +2 SP, and failed Out of Action tests suffer -1)."
+  },
+  "-1": {
+    title: "-1 // Lower Decks Favored (★ THE ASH-HOLD SWEET SPOT ★)",
+    desc: "<strong>Sweet Spot Buff:</strong> Your Krieg Battleline &amp; Combat Engineers gain <strong>Feel No Pain 6+</strong> while within 6\" of <em>The Exile</em>, and your first <em>Resupply / Reinforcements</em> purchase each battle costs <strong>-1 SP</strong>.<br><strong>Phase Vault:</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong> with zero High Sanctum penalties!"
+  },
+  "0": {
+    title: "0 // Balanced — Synchronized Broadsides",
+    desc: "<strong>Status:</strong> Uneasy equilibrium between the Lower Decks and the High Sanctum. Standard Crusade and Horde Mode rules apply with no shipboard penalties or Sweet Spot bonuses."
+  },
+  "1": {
+    title: "+1 // High Sanctum Favored (★ THE SANCTUM SWEET SPOT ★)",
+    desc: "<strong>Sweet Spot Buff:</strong> Appeasing the Sororitas Wardens grants <em>The Exile's</em> unit <strong>re-roll 1s to Hit</strong> and reduces the SP cost of your first <em>Strike</em> or <em>Fortify</em> purchase each battle by <strong>1 SP</strong>.<br><strong>Phase Vault:</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong>!"
+  },
+  "2": {
+    title: "+2 // Strict Atonement (No Retreat for the Condemned)",
+    desc: "<strong>Buff:</strong> Keep +1 buffs.<br><strong>Quicksand Penalty:</strong> Sororitas Arbites lock the hangars—you are <strong>locked out of Traitor Secret Objectives</strong>, cannot use <em>Emergency Evac (5 SP)</em>, and any unit that Falls Back suffers <strong>D3 Mortal Wounds</strong>!"
+  },
+  "3": {
+    title: "+3 // Total High Sanctum Tyranny (The Martyr's Tithe)",
+    desc: "<strong>Buff:</strong> Keep +1/+2 buffs, plus gain 1 free Miracle Die (valued at 5) once per battle for <em>The Exile</em>.<br><strong>Quicksand Penalty:</strong> The Sororitas confiscate your Phase-End Cache (+1 RP), and <em>The Exile</em> must pass a Leadership test (-1) after every battle or suffer an automatic Battle Scar (<em>Scorched by Purity Seals</em>)!"
+  }
+};
+
+const ATLAS_NODES = {
+  0: {
+    title: "Sector Node 0: The Golgotha Arbor-Basin",
+    badge: "DISCOVERED • CONTESTED",
+    lore: "A rare, fiercely contested oasis of towering, ash-choked equatorial jungle and petrified iron-wood trees. Blackened trunks and the shattered stained-glass hulls of Session 0 Exorcists litter the central Landing Site.",
+    rule: "<strong>Active Sector Rule (Canopy &amp; Wreckage):</strong> Forest terrain grants <strong>Stealth</strong> to Infantry wholly within it, and the central Landing Site objective grants <strong>Benefit of Cover</strong>. Ending a turn within 3\" of the center or Defender's home objective requires a Leadership test or inflicts <strong>1 Warp Counter</strong>.",
+    alphaHP: 1,
+    betaHP: 2,
+    hordeHP: 1
+  },
+  1: {
+    title: "Sector Node 1: Northern Ash-Ridge [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "Impenetrable promethium soot-clouds and violent empyric static block orbital auspex scans. Deploy a recon force into this sector or spend 2 Leftover SP on an Orbital Auspex Probe to reveal its terrain rules and 3rd Alliance Hegemony progress.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  },
+  2: {
+    title: "Sector Node 2: Southern Sunken Mire [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "Subterranean tremors and bio-acidic fog obscure all surface movement. Reconnoiter this node in battle to uncover its true state.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  },
+  3: {
+    title: "Sector Node 3: Ruined Outskirts of Hive Thoraddis [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "Collapsed ferrocrete hab-spires and silence on all Imperial vox-channels. The 3rd Alliance's true progress here is unknown.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  },
+  4: {
+    title: "Sector Node 4: Deep Fire Wastes Basin [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "Severe warp-storm interference and seismic anomalies prevent orbital observation.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  },
+  5: {
+    title: "Sector Node 5: The Imperator Bastion Line [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "Ancient macro-cannon batteries lost behind curtains of ash. Uncover this node to see who holds the guns.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  },
+  6: {
+    title: "Sector Node 6: Shattered Shrine of Hades [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "Unverified empyric signatures pulsing beneath the rubble.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  },
+  7: {
+    title: "Sector Node 7: Crimson Mesa Approach [FOG OF WAR]",
+    badge: "UNDISCOVERED • SHROUDED IN ASH",
+    lore: "The basalt approaches to the Red Angel's Gate, veiled in blood-red lightning.",
+    rule: "<strong>Sector Telemetry:</strong> <em>[CLASSIFIED UNTIL RECONNOITERED]</em>",
+    alphaHP: 0,
+    betaHP: 0,
+    hordeHP: null
+  }
+};
+
+let briefingState = {
+  activeDossier: 'beta',
+  unlockedAlpha: false,
+  unlockedBeta: false,
+  shipSlider: 0,
+  selectedNode: 0
+};
+
+function saveBriefingState() {
+  try {
+    localStorage.setItem(BRIEFING_STORAGE_KEY, JSON.stringify(briefingState));
+  } catch (e) {
+    console.warn('Could not save briefing state:', e);
+  }
+}
+
+function restoreBriefingState() {
+  try {
+    const raw = localStorage.getItem(BRIEFING_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      briefingState = { ...briefingState, ...parsed };
+    }
+  } catch (e) {
+    console.warn('Could not restore briefing state:', e);
+  }
+
+  // URL hash navigation takes precedence if a valid hash is specified
+  const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
+  const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
+  if (validTabs.includes(hashTab)) {
+    briefingState.activeDossier = hashTab;
+  }
+
+  applyBriefingState();
+}
+
+function applyBriefingState() {
+  showDossier(briefingState.activeDossier, false);
+  if (briefingState.unlockedAlpha) unlockTab('Alpha', false);
+  if (briefingState.unlockedBeta) unlockTab('Beta', false);
+  selectSlider(briefingState.shipSlider, false);
+  selectAtlasNode(briefingState.selectedNode, false);
+}
+
+function showDossier(which, persist = true) {
+  briefingState.activeDossier = which;
+  const map = {
+    alpha: ['dossierAlpha', 'btnAlpha'],
+    beta: ['dossierBeta', 'btnBeta'],
+    atlas: ['dossierAtlas', 'btnAtlas'],
+    rules: ['dossierRules', 'btnRules']
+  };
+  Object.keys(map).forEach(k => {
+    const [divId, btnId] = map[k];
+    const divEl = document.getElementById(divId);
+    const btnEl = document.getElementById(btnId);
+    if (divEl) divEl.classList.toggle('hidden', k !== which);
+    if (btnEl) btnEl.classList.toggle('active', k === which);
+  });
+  if (persist) saveBriefingState();
+}
+
+function unlockTab(who, persist = true) {
+  const gate = document.getElementById('gate' + who);
+  const content = document.getElementById('content' + who);
+  if (gate) gate.classList.add('hidden');
+  if (content) content.classList.remove('hidden');
+  if (who === 'Alpha') briefingState.unlockedAlpha = true;
+  if (who === 'Beta') briefingState.unlockedBeta = true;
+  if (persist) saveBriefingState();
+}
+
+function lockTab(who, persist = true) {
+  const gate = document.getElementById('gate' + who);
+  const content = document.getElementById('content' + who);
+  if (gate) gate.classList.remove('hidden');
+  if (content) content.classList.add('hidden');
+  if (who === 'Alpha') briefingState.unlockedAlpha = false;
+  if (who === 'Beta') briefingState.unlockedBeta = false;
+  if (persist) saveBriefingState();
+}
+
+function selectSlider(val, persist = true) {
+  const key = String(val);
+  briefingState.shipSlider = Number(val);
+  for (let i = -3; i <= 3; i++) {
+    const btn = document.getElementById('sliderBtn' + i);
+    if (btn) btn.classList.toggle('active', i === Number(val));
+    const nodeEl = document.getElementById('node' + i);
+    if (nodeEl) nodeEl.classList.toggle('active', i === Number(val));
+  }
+  const info = SHIP_SLIDER_DATA[key] || SHIP_SLIDER_DATA["0"];
+  const label = document.getElementById('shipSliderLabel');
+  const box = document.getElementById('sliderDetailBox');
+  if (label) label.textContent = `Current State: ${info.title}`;
+  if (box) box.innerHTML = `<div style="font-weight:800; color:var(--gold); margin-bottom:6px;">${info.title}</div><div style="font-size:0.88rem; line-height:1.55;">${info.desc}</div>`;
+  if (persist) saveBriefingState();
+}
+
+function renderHegBar(containerId, count, activeClass) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (count === null) {
+    el.innerHTML = Array.from({ length: 8 }, () =>
+      `<div class="heg-seg unknown-fog" style="border-radius:3px; border:1px solid #6e40aa;"></div>`
+    ).join('');
+    return;
+  }
+  el.innerHTML = Array.from({ length: 8 }, (_, idx) => {
+    const filled = idx < count;
+    const bg = filled
+      ? (activeClass === 'alpha' ? '#f5b041' : activeClass === 'beta' ? '#3b82f6' : '#ff4757')
+      : '#161b22';
+    return `<div class="heg-seg ${filled ? 'active-' + activeClass : ''}" style="background:${bg}; border-radius:3px; border:1px solid #262c40;"></div>`;
+  }).join('');
+}
+
+function selectAtlasNode(nodeId, persist = true) {
+  const n = ATLAS_NODES[nodeId] || ATLAS_NODES[0];
+  briefingState.selectedNode = nodeId;
+
+  document.querySelectorAll('#armageddon-sector-map .atlas-node-group, #armageddon-sector-map .map-node-group').forEach(el => {
+    el.classList.toggle('selected-node', Number(el.getAttribute('data-node-id')) === nodeId);
+  });
+
+  const titleEl = document.getElementById('inspectorNodeTitle') || document.getElementById('insp-title');
+  if (titleEl) titleEl.textContent = n.title;
+
+  const badgeEl = document.getElementById('inspectorNodeBadge') || document.getElementById('insp-badge');
+  if (badgeEl) badgeEl.textContent = n.badge;
+
+  const loreEl = document.getElementById('inspectorNodeLore') || document.getElementById('insp-desc');
+  if (loreEl) loreEl.textContent = n.lore;
+
+  const ruleEl = document.getElementById('inspectorNodeRule') || document.getElementById('insp-rule');
+  if (ruleEl) ruleEl.innerHTML = n.rule;
+
+  const lblAlpha = document.getElementById('heg-label-alpha') || document.getElementById('heg-val-alpha');
+  if (lblAlpha) lblAlpha.textContent = `${n.alphaHP} / 8 HP`;
+
+  const lblBeta = document.getElementById('heg-label-beta') || document.getElementById('heg-val-beta');
+  if (lblBeta) lblBeta.textContent = `${n.betaHP} / 8 HP`;
+
+  const lblHorde = document.getElementById('heg-label-horde') || document.getElementById('heg-val-horde');
+  if (lblHorde) {
+    lblHorde.textContent = n.hordeHP === null ? `??? / 8 HP (Shrouded in Ash)` : `${n.hordeHP} / 8 HP`;
+  }
+
+  renderHegBar('heg-bar-alpha', n.alphaHP, 'alpha');
+  renderHegBar('heg-bar-beta', n.betaHP, 'beta');
+  renderHegBar('heg-bar-horde', n.hordeHP, 'horde');
+
+  if (persist) saveBriefingState();
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', restoreBriefingState);
+} else {
+  restoreBriefingState();
+}
+</script>
+
+</body>
+</html>
+````
