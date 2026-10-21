@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fires of Armageddon // 1v1 Ash Wastes PvP</title>
+  <style>
+    :root {
+      --bg: #0a0b10;
+      --surface: #141720;
+      --border: #262b3d;
+      --text: #eceff4;
+      --muted: #8b92a5;
+      --purple: #9d5cff;
+      --red: #ff4757;
+      --gold: #f5b041;
+      --blue: #3b82f6;
+      --green: #10b981;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      background-image: radial-gradient(circle at 50% 0%, rgba(245, 176, 65, 0.12) 0%, transparent 55%);
+      color: var(--text);
+      margin: 0; padding: 0; line-height: 1.5;
+    }
+    .suite-nav {
+      background: rgba(12, 14, 20, 0.95); border-bottom: 1px solid var(--border);
+      padding: 8px 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+    }
+    .suite-link {
+      text-decoration: none; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; padding: 6px 12px; border-radius: 8px; color: var(--muted); border: 1px solid transparent;
+    }
+    .suite-link:hover { color: var(--text); background: var(--surface); }
+    .suite-link.active {
+      color: var(--gold); background: rgba(245, 176, 65, 0.12); border-color: rgba(245, 176, 65, 0.35);
+    }
+    .app-shell { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .hero-banner {
+      background: linear-gradient(135deg, #221c14 0%, #141720 100%);
+      border: 1px solid rgba(245, 176, 65, 0.35);
+      border-radius: 18px; padding: 24px; text-align: center; margin-bottom: 20px;
+    }
+    .hero-banner h1 { margin: 0 0 6px 0; font-size: 1.6rem; text-transform: uppercase; color: var(--gold); }
+    .hero-banner p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 4px solid var(--gold); border-radius: 12px;
+      padding: 18px; margin-bottom: 16px;
+    }
+    .card.red { border-left-color: var(--red); }
+    .card.purple { border-left-color: var(--purple); }
+    .badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 6px; margin-bottom: 8px;
+      background: rgba(245, 176, 65, 0.15); color: var(--gold);
+    }
+    .badge.red { background: rgba(255, 71, 87, 0.15); color: var(--red); }
+    .badge.purple { background: rgba(157, 92, 255, 0.15); color: var(--purple); }
+    h3 { margin: 0 0 8px 0; font-size: 1.1rem; }
+    p { margin: 0 0 10px 0; color: #c9d1d9; font-size: 0.92rem; }
+    button {
+      background: var(--gold); color: #111; border: none; padding: 10px 16px;
+      border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+    }
+    button.btn-red { background: var(--red); color: #fff; }
+    button.btn-purple { background: var(--purple); color: #fff; }
+    select {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      padding: 9px 12px; border-radius: 8px; font-size: 0.9rem;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-box {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="suite-nav">
+    <a href="index.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
+    <a href="pvp.html" class="suite-link active">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
+    <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
+    <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
+    <a href="briefing.html" class="suite-link">📜 Campaign Briefing</a>
+  </nav>
+
+  <div class="app-shell">
+    <div class="hero-banner">
+      <h1>1v1 Ash Wastes Clash</h1>
+      <p>Armageddon Crusade Mission Environment, Warp Anomalies &amp; Unbound Adversaries</p>
+    </div>
+
+    <!-- 1. HELLSCAPE GENERATOR -->
+    <div class="card">
+      <span class="badge">Planetary Environment • Hellscape</span>
+      <h3>Active Armageddon Hellscape</h3>
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <select id="hellscapeSelect" onchange="renderHellscape()" style="flex:1;">
+          <option value="0">1 - Folded Space (Perilous Shortcuts)</option>
+          <option value="1">2 - Fractured Realm (Empyric Fissures)</option>
+          <option value="2">3 - Fading Reality (Phasing Cover &amp; Sight)</option>
+          <option value="3">4 - Staggered Time (Odd/Even Round Objectives)</option>
+          <option value="4">5 - Gravitic Nexus (Gravity Inversion Launch)</option>
+          <option value="5">6 - Banishing Rifts (Daemon &amp; Warp Flux)</option>
+        </select>
+        <button onclick="rollRandomHellscape()">🎲 Roll D6</button>
+      </div>
+      <p id="hellscapeDesc" style="margin:0;"></p>
+    </div>
+
+    <!-- 2. WARP EVENT & ANOMALY TRACKER -->
+    <div class="card purple">
+      <span class="badge purple">Start of Battle Round • Warp Storm</span>
+      <h3>Warp Event &amp; Anomaly Surge Roller</h3>
+      <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <select id="warpIntensity">
+          <option value="minor">Intensity: Minor (Surge on 5+)</option>
+          <option value="major" selected>Intensity: Major (Surge on 4+)</option>
+          <option value="catastrophic">Intensity: Catastrophic (Surge on 3+)</option>
+        </select>
+        <button class="btn-purple" onclick="rollWarpAnomaly()">⚡ Roll Battle Round Anomaly</button>
+      </div>
+      <div id="anomalyResultBox" class="stat-box" style="text-align:left;">
+        <p style="margin:0;">Tap "Roll Battle Round Anomaly" at the start of each round to test for Warp Surges and Anomalies.</p>
+      </div>
+    </div>
+
+    <!-- 3. UNBOUND ADVERSARIES (3RD ALLIANCE INTERFERENCE) -->
+    <div class="card red">
+      <span class="badge red">3rd Alliance Interference • Unbound Adversaries</span>
+      <h3>Unbound Adversaries AI Turn &amp; Vulture Tracker</h3>
+      <p>At the start of each Battle Round, Unbound Adversaries take their turn (Move → Shoot → Charge → Fight closest player unit). While you two fight, the Campaign Master's 3rd Alliance vultures <strong>3 Strategic Points</strong> (+1 extra SPt if Unbound Adversaries destroy at least 1 player unit!).</p>
+      
+      <div class="grid-2" style="margin-bottom:12px;">
+        <div class="stat-box">
+          <div style="font-size:0.75rem; color:var(--muted);">3RD ALLIANCE VULTURE PTS</div>
+          <div id="vulturePts" style="font-size:1.5rem; font-weight:800; color:var(--red);">3 SPts</div>
+          <label style="font-size:0.8rem; cursor:pointer;">
+            <input type="checkbox" id="vultureKillCheck" onchange="updateVulture()"> Destroyed a Player Unit (+1)
+          </label>
+        </div>
+        <div class="stat-box">
+          <div style="font-size:0.75rem; color:var(--muted);">SPAWN UNBOUND THREAT</div>
+          <button class="btn-red" style="margin-top:8px; width:100%;" onclick="rollUnboundAdversary()">🎲 Roll Adversary</button>
+        </div>
+      </div>
+      <div id="unboundResult" class="stat-box" style="text-align:left;">
+        <p style="margin:0;">Roll above to see which Unbound Adversary datasheet or Roaming Nemesis invades No Man's Land.</p>
+      </div>
+    </div>
+  </div>
+
+<script>
+const HELLSCAPES = [
+  "<strong>Folded Space:</strong> Units wholly within 3\" of a battlefield edge can use a <em>Perilous Shortcut</em> to teleport to the opposite battlefield edge (>9\" from enemies), rolling 1D6: on a 1, suffer D3 mortal wounds.",
+  "<strong>Fractured Realm:</strong> Reality cracks across No Man's Land. Units advancing or charging across objective markers must roll 1D6: on a 1, suffer D3 mortal wounds; on a 6, gain +2\" to the move.",
+  "<strong>Fading Reality:</strong> Ranged attacks targeting units more than 18\" away suffer -1 to Hit as silhouettes flicker between realspace and the warp.",
+  "<strong>Staggered Time:</strong> Temporal echoes distort objectives. In Odd Battle Rounds, Northern/Eastern NML objectives grant bonus VP; in Even Battle Rounds, Southern/Western NML objectives grant bonus VP.",
+  "<strong>Gravitic Nexus:</strong> Units starting their Movement phase within range of an objective marker may trigger Gravity Inversion—gaining FLY and +3\" Move for that phase.",
+  "<strong>Banishing Rifts:</strong> Units with Warp Counters or the DAEMON keyword re-roll Wound rolls of 1 while within No Man's Land, but suffer 1 mortal wound on unmodified save rolls of 1."
+];
+
+const ANOMALIES = [
+  "<strong>Blood Rain of Khorne:</strong> All melee weapons across the battlefield gain [SUSTAINED HITS 1] until the end of the battle round.",
+  "<strong>Empyric Backlash:</strong> Each unit with a Warp Counter or PSYKER keyword suffers D3 mortal wounds, then gains a 5+ Invulnerable Save this round.",
+  "<strong>Ash Storm Blindness:</strong> All units gain the Stealth ability against ranged attacks made from more than 12\" away this round.",
+  "<strong>Rift Eruption:</strong> Spawn 1 Unbound Adversary unit within 6\" of the center of the battlefield (>9\" from player units).",
+  "<strong> Choruses of Madness:</strong> All units must subtract 1 from Battle-shock and Leadership tests until the end of the battle round.",
+  "<strong>Warp-Surge Empowerment:</strong> Characters add +1 to the Attacks and Strength characteristics of their melee weapons this round."
+];
+
+const UNBOUND_UNITS = [
+  "<strong>Lesser Daemons (Power Level 1):</strong> 10-model Infantry squad (32mm bases) — M6\" T4 Sv5+ Inv4+ W1 | 2A WS3+ S4 AP-1 D1.",
+  "<strong>Abominations (Power Level 2):</strong> 2–4 model Infantry/Beast unit (50mm bases) — M8\" T5 Sv4+ FNP5+ W4 | D6+2A WS4+ S5 AP-1 D2.",
+  "<strong>Daemonic Beasts (Power Level 3):</strong> 3–6 model Mounted/Beast unit (75mm/90mm oval bases) — M10\" T6 Sv4+ Inv4+ W4 | 4A WS3+ S6 AP-2 D2 (Lance).",
+  "<strong>Greater Daemon / Roaming Nemesis (Power Level 4):</strong> Monster/Walker (100mm+ base) OR an Inducted Campaign Nemesis Character from the Ledger!"
+];
+
+function renderHellscape() {
+  const idx = parseInt(document.getElementById('hellscapeSelect').value, 10);
+  document.getElementById('hellscapeDesc').innerHTML = HELLSCAPES[idx];
+}
+
+function rollRandomHellscape() {
+  const idx = Math.floor(Math.random() * HELLSCAPES.length);
+  document.getElementById('hellscapeSelect').value = idx;
+  renderHellscape();
+}
+
+function rollWarpAnomaly() {
+  const intensity = document.getElementById('warpIntensity').value;
+  const target = intensity === 'minor' ? 5 : (intensity === 'major' ? 4 : 3);
+  const roll = Math.ceil(Math.random() * 6);
+  const box = document.getElementById('anomalyResultBox');
+
+  if (roll >= target) {
+    const anom = ANOMALIES[Math.floor(Math.random() * ANOMALIES.length)];
+    box.innerHTML = `<span class="badge purple">Rolled ${roll} (Needed ${target}+) • WARP SURGE!</span><p style="margin:0;">${anom}</p>`;
+  } else {
+    box.innerHTML = `<span class="badge">Rolled ${roll} (Needed ${target}+) • Reality Holds</span><p style="margin:0;">The empyric currents subside this round. No new Anomaly manifests.</p>`;
+  }
+}
+
+function updateVulture() {
+  const extra = document.getElementById('vultureKillCheck').checked ? 1 : 0;
+  document.getElementById('vulturePts').innerText = `${3 + extra} SPts`;
+}
+
+function rollUnboundAdversary() {
+  const pick = UNBOUND_UNITS[Math.floor(Math.random() * UNBOUND_UNITS.length)];
+  document.getElementById('unboundResult').innerHTML = `<p style="margin:0;">${pick}</p>`;
+}
+
+renderHellscape();
+</script>
+</body>
+</html>
