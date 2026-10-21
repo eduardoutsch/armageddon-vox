@@ -80,8 +80,8 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 ## 📂 Repository Structure
 
 - `index.html` — Root entry point (Mode 1: Horde Command & Spawner).
-- `pages/` — Suite HTML views (`briefing.html`, `pvp.html`, `rogue.html`, `roster.html`).
-- `bundles/` — Modular Markdown ingestion bundles per page (`bundle_index.md`, `bundle_briefing.md`, etc.), engine modules (`bundle_javascript.md`), test suites (`bundle_tests.md`), tactical styles (`bundle_css.md`), and packages (`bundle_packages.md`).
+- `pages/` — Suite HTML views (`briefing.html`, `pvp.html`, `rogue.html`, `roster.html`, `welcome.html`).
+- `bundles/` — Modular Markdown ingestion bundles per page (`bundle_index.md`, `bundle_briefing.md`, `bundle_welcome.md`, etc.), engine modules (`bundle_javascript.md`), test suites (`bundle_tests.md`), tactical styles (`bundle_css.md`), and packages (`bundle_packages.md`).
 - `assets/` — Static icons and vector assets (`favicon.svg`, `favicon.png`).
 - `css/` — Shared application stylesheets (`style.css`).
 - `js/` — Modular client-side logic (`data.js`, `rng.js`, `spawner.js`, `app.js`).
@@ -151,7 +151,7 @@ Clean code does NOT substitute for thorough technical documentation.
 
 ## VIII. Modular Codebase Bundles Synchronization (`/bundles/` Directory)
 Any and all changes made to the codebase (files added, modified, renamed, or deleted) MUST immediately and continuously be reflected in the modular markdown bundles in `/bundles/` via `npm run bundle` / `node scripts/generate_bundles.js`.
-- The `/bundles` directory provides modular, page-by-page and component-focused ingestion artifacts for Gemini Notebook and NotebookLM (`bundle_index.md`, `bundle_javascript.md`, `bundle_tests.md`, `bundle_briefing.md`, `bundle_pvp.md`, `bundle_rogue.md`, `bundle_roster.md`, `bundle_css.md`, and `bundle_packages.md`).
+- The `/bundles` directory provides modular, page-by-page and component-focused ingestion artifacts for Gemini Notebook and NotebookLM (`bundle_index.md`, `bundle_javascript.md`, `bundle_tests.md`, `bundle_briefing.md`, `bundle_pvp.md`, `bundle_rogue.md`, `bundle_roster.md`, `bundle_welcome.md`, `bundle_css.md`, and `bundle_packages.md`).
 - Each bundle maintains an up-to-date Table of Contents with working anchor links to its constituent project files.
 - All code fences in each bundle MUST use quadruple backticks (` ````lang `) to prevent formatting conflicts with nested code blocks or Markdown documentation.
 - No task, commit, or pull request is considered complete until all modular bundles in `/bundles/` have been regenerated, verified, and kept in sync with the current repository state.

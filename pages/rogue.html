@@ -6,80 +6,7 @@
   <title>Fires of Armageddon // Rogue Sector &amp; AI Tracker</title>
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
-  <style>
-    :root {
-      --bg: #0a0b10;
-      --surface: #141720;
-      --border: #262b3d;
-      --text: #eceff4;
-      --muted: #8b92a5;
-      --purple: #9d5cff;
-      --red: #ff4757;
-      --gold: #f5b041;
-      --blue: #3b82f6;
-      --green: #10b981;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--bg);
-      background-image: radial-gradient(circle at 50% 0%, rgba(157, 92, 255, 0.14) 0%, transparent 55%);
-      color: var(--text);
-      margin: 0; padding: 0; line-height: 1.5;
-    }
-    .suite-nav {
-      background: rgba(12, 14, 20, 0.95); border-bottom: 1px solid var(--border);
-      padding: 8px 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
-    }
-    .suite-link {
-      text-decoration: none; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.8px; padding: 6px 12px; border-radius: 8px; color: var(--muted); border: 1px solid transparent;
-    }
-    .suite-link:hover { color: var(--text); background: var(--surface); }
-    .suite-link.active {
-      color: var(--purple); background: rgba(157, 92, 255, 0.12); border-color: rgba(157, 92, 255, 0.35);
-    }
-    .app-shell { max-width: 720px; margin: 0 auto; padding: 16px; }
-    .hero-banner {
-      background: linear-gradient(135deg, #1d162b 0%, #141720 100%);
-      border: 1px solid rgba(157, 92, 255, 0.35);
-      border-radius: 18px; padding: 24px; text-align: center; margin-bottom: 20px;
-    }
-    .hero-banner h1 { margin: 0 0 6px 0; font-size: 1.6rem; text-transform: uppercase; color: var(--purple); }
-    .hero-banner p { margin: 0; color: var(--muted); font-size: 0.9rem; }
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-left: 4px solid var(--purple); border-radius: 12px;
-      padding: 18px; margin-bottom: 16px;
-    }
-    .card.gold { border-left-color: var(--gold); }
-    .card.green { border-left-color: var(--green); }
-    .badge {
-      display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-      padding: 3px 8px; border-radius: 6px; margin-bottom: 8px;
-      background: rgba(157, 92, 255, 0.15); color: var(--purple);
-    }
-    .badge.gold { background: rgba(245, 176, 65, 0.15); color: var(--gold); }
-    .badge.green { background: rgba(16, 185, 129, 0.15); color: var(--green); }
-    h3 { margin: 0 0 8px 0; font-size: 1.1rem; }
-    p { margin: 0 0 10px 0; color: #c9d1d9; font-size: 0.92rem; }
-    button {
-      background: var(--purple); color: #fff; border: none; padding: 10px 16px;
-      border-radius: 10px; font-size: 0.88rem; font-weight: 700; cursor: pointer;
-    }
-    button.btn-green { background: var(--green); color: #fff; }
-    .ai-step {
-      background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-      padding: 12px 14px; margin-bottom: 10px;
-    }
-    .ai-step.active-step {
-      border-color: var(--green);
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
-    }
-    .ai-step-title { font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; justify-content: space-between; }
-    .impact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
-    .impact-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 0.85rem; }
-  </style>
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
@@ -89,6 +16,7 @@
     <a href="rogue.html" class="suite-link active">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
     <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
     <a href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
+    <a href="welcome.html" class="suite-link">📖 Codex &amp; Guide</a>
   </nav>
 
   <div class="app-shell">

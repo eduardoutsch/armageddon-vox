@@ -140,7 +140,15 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_roster.md')
 );
 
-// 8. TACTICAL STYLESHEET & ASSETS
+// 8. PAGE 6: Field Codex & Tutorials
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Field Codex & Quickstart Tutorials',
+  'Complete source code for the introductory tutorial and field operations manual (`pages/welcome.html`).',
+  ['pages/welcome.html'],
+  path.join(BUNDLES_DIR, 'bundle_welcome.md')
+);
+
+// 9. TACTICAL STYLESHEET & ASSETS
 const CSS_FILES = [
   'css/style.css',
   'assets/favicon.svg'
@@ -153,7 +161,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_css.md')
 );
 
-// 9. PACKAGES, CONFIGURATION & DOCUMENTATION
+// 10. PACKAGES, CONFIGURATION & DOCUMENTATION
 const PACKAGE_FILES = [
   'package.json',
   'wrangler.jsonc',
@@ -169,7 +177,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_packages.md')
 );
 
-// 10. BUNDLES DIRECTORY README
+// 11. BUNDLES DIRECTORY README
 const bundlesReadme = `# 📦 Modular Codebase Bundles
 
 This directory contains standalone, page-by-page and component-focused Markdown bundles designed for targeted NotebookLM and Gemini context ingestion.
@@ -183,6 +191,7 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 | [\`bundle_pvp.md\`](bundle_pvp.md) | **Mode 2: 1v1 Ash Wastes PvP** | \`pages/pvp.html\` |
 | [\`bundle_rogue.md\`](bundle_rogue.md) | **Mode 3: Rogue Sector & AI Tracker** | \`pages/rogue.html\` |
 | [\`bundle_roster.md\`](bundle_roster.md) | **Rosters & Nemesis Ledger** | \`pages/roster.html\` |
+| [\`bundle_welcome.md\`](bundle_welcome.md) | **Field Codex & Tutorials** | \`pages/welcome.html\` |
 | [\`bundle_css.md\`](bundle_css.md) | **Sanctuary-Noctis Stylesheet & Assets** | \`css/style.css\`, \`assets/favicon.svg\` |
 | [\`bundle_packages.md\`](bundle_packages.md) | **Packages, Config & Documentation** | \`package.json\`, \`wrangler.jsonc\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\` |
 

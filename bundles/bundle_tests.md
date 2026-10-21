@@ -413,10 +413,15 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   // Verify core constants and identifiers
   assert.ok(code.includes('PL1PnO3JojeSmA_jPzjhuiKycUQ8BHHjek'), 'Must configure the official YouTube playlist ID');
   assert.ok(code.includes('soa_vox_music_enabled_v1'), 'Must configure localStorage key for music state persistence');
+  assert.ok(code.includes('soa_vox_track_index_v1'), 'Must persist track index for seamless tab switching');
+  assert.ok(code.includes('soa_vox_track_time_v1'), 'Must persist track timestamp for seamless tab switching');
 
-  // Verify Web Audio button clank synthesizer
-  assert.ok(code.includes('playTerminalClank'), 'Must define playTerminalClank SFX function');
+  // Verify Web Audio button clank synthesizer and sound variety
+  assert.ok(code.includes('playTerminalClank') || code.includes('playTerminalSound'), 'Must define terminal sound synthesis');
   assert.ok(code.includes('AudioContext') || code.includes('webkitAudioContext'), 'Must instantiate Web AudioContext');
+  assert.ok(code.includes('auspex'), 'Must include Auspex scanner chirp sound profile');
+  assert.ok(code.includes('pneumatic'), 'Must include pneumatic solenoid sound profile');
+  assert.ok(code.includes('card'), 'Must include tactical data-slate card sound profile');
 
   // Verify YouTube IFrame API integration
   assert.ok(code.includes('https://www.youtube.com/iframe_api'), 'Must dynamically load YouTube Iframe API');
@@ -462,7 +467,7 @@ test('UI Boundary: index.html has complete navigation, stylesheets, and modular 
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
-  const subpages = ['pvp.html', 'rogue.html', 'roster.html', 'briefing.html'];
+  const subpages = ['pvp.html', 'rogue.html', 'roster.html', 'briefing.html', 'welcome.html'];
   const expectedBriefingSnippet = 'href="briefing.html" class="suite-link';
   const expectedRootIndexSnippet = 'href="../index.html" class="suite-link';
 
@@ -478,13 +483,10 @@ test('UI Boundary: all subpages live in /pages and share unified navigation link
       `pages/${page} navigation text must match Briefings, Ship & Atlas`
     );
     assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), `pages/${page} must link to ../js/vox-audio.js`);
+    assert.ok(html.includes('<link rel="stylesheet" href="../css/style.css">'), `pages/${page} must link to ../css/style.css`);
   }
 
   const briefingHtml = readPage('pages/briefing.html');
-  assert.ok(
-    briefingHtml.includes('<link rel="stylesheet" href="../css/style.css">'),
-    'pages/briefing.html must link to ../css/style.css'
-  );
   assert.ok(
     briefingHtml.includes('href="../index.html" class="terminal-link-btn">'),
     'pages/briefing.html terminal button must link to ../index.html'
@@ -511,7 +513,7 @@ test('All HTML pages link to assets/favicon.svg and apple-touch-icon in /assets'
     'index.html must include <link rel="apple-touch-icon" href="assets/favicon.svg">'
   );
 
-  const subpages = ['pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html'];
+  const subpages = ['pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/welcome.html'];
   for (const page of subpages) {
     const html = readPage(page);
     assert.match(
@@ -649,6 +651,7 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_pvp.md', check: 'pages/pvp.html' },
     { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
     { file: 'bundle_roster.md', check: 'pages/roster.html' },
+    { file: 'bundle_welcome.md', check: 'pages/welcome.html' },
     { file: 'bundle_css.md', check: 'css/style.css' },
     { file: 'bundle_packages.md', check: 'package.json' }
   ];
@@ -673,6 +676,22 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     false,
     'codebase_bundle.md is deprecated; project exclusively uses modular bundles in /bundles/'
   );
+});
+
+test('UI Boundary: pages/welcome.html provides concise tutorials for all game modes and audio suite', () => {
+  const html = readPage('pages/welcome.html');
+  assert.ok(
+    html.includes('Mode 1: Horde Command &amp; Automated Spawner') ||
+    html.includes('Mode 1: Horde Command & Automated Spawner'),
+    'welcome.html must explain Mode 1'
+  );
+  assert.ok(html.includes('Mode 2: 1v1 Ash Wastes PvP'), 'welcome.html must explain Mode 2');
+  assert.ok(html.includes('Mode 3: Rogue Sector'), 'welcome.html must explain Mode 3');
+  assert.ok(html.includes('Mode 4: Rosters'), 'welcome.html must explain Mode 4');
+  assert.ok(html.includes('Mode 5: Briefings'), 'welcome.html must explain Mode 5');
+  assert.ok(html.includes('Cogitator Audio'), 'welcome.html must explain audio features');
+  assert.ok(html.includes('<link rel="stylesheet" href="../css/style.css">'), 'welcome.html must link to style.css');
+  assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), 'welcome.html must link to vox-audio.js');
 });
 
 

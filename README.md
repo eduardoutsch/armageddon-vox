@@ -26,8 +26,8 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 ## 📂 Repository Structure
 
 - `index.html` — Root entry point (Mode 1: Horde Command & Spawner).
-- `pages/` — Suite HTML views (`briefing.html`, `pvp.html`, `rogue.html`, `roster.html`).
-- `bundles/` — Modular Markdown ingestion bundles per page (`bundle_index.md`, `bundle_briefing.md`, etc.), engine modules (`bundle_javascript.md`), test suites (`bundle_tests.md`), tactical styles (`bundle_css.md`), and packages (`bundle_packages.md`).
+- `pages/` — Suite HTML views (`briefing.html`, `pvp.html`, `rogue.html`, `roster.html`, `welcome.html`).
+- `bundles/` — Modular Markdown ingestion bundles per page (`bundle_index.md`, `bundle_briefing.md`, `bundle_welcome.md`, etc.), engine modules (`bundle_javascript.md`), test suites (`bundle_tests.md`), tactical styles (`bundle_css.md`), and packages (`bundle_packages.md`).
 - `assets/` — Static icons and vector assets (`favicon.svg`, `favicon.png`).
 - `css/` — Shared application stylesheets (`style.css`).
 - `js/` — Modular client-side logic (`data.js`, `rng.js`, `spawner.js`, `app.js`).

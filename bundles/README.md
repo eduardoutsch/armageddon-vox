@@ -11,6 +11,7 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 | [`bundle_pvp.md`](bundle_pvp.md) | **Mode 2: 1v1 Ash Wastes PvP** | `pages/pvp.html` |
 | [`bundle_rogue.md`](bundle_rogue.md) | **Mode 3: Rogue Sector & AI Tracker** | `pages/rogue.html` |
 | [`bundle_roster.md`](bundle_roster.md) | **Rosters & Nemesis Ledger** | `pages/roster.html` |
+| [`bundle_welcome.md`](bundle_welcome.md) | **Field Codex & Tutorials** | `pages/welcome.html` |
 | [`bundle_css.md`](bundle_css.md) | **Sanctuary-Noctis Stylesheet & Assets** | `css/style.css`, `assets/favicon.svg` |
 | [`bundle_packages.md`](bundle_packages.md) | **Packages, Config & Documentation** | `package.json`, `wrangler.jsonc`, `README.md`, `AGENTS.md`, `.gitignore` |
 

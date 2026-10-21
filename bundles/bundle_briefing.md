@@ -29,6 +29,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
     <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
     <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
     <a href="briefing.html" class="suite-link active">📜 Briefings, Ship &amp; Atlas</a>
+    <a href="welcome.html" class="suite-link">📖 Codex &amp; Guide</a>
   </nav>
 
 <div class="app-shell briefing-shell">
@@ -235,9 +236,10 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       <p class="hero-subtitle">
         Live orbital auspex projection of <strong>Armageddon Prime</strong>, the <strong>Equatorial Jungle</strong>, <strong>Armageddon Secundus</strong>, and <strong>The Fire Wastes</strong>. Tap any Sector Node (<strong>N0–N7</strong>) to inspect its strategic installation, or use the <strong>🔍 Expand Fullscreen &amp; Zoom</strong> controls to inspect the theatre up close.
       </p>
+    </div>
 
-      <!-- LORE-ACCURATE ARMAGEDDON TACTICAL AUSPEX SVG MAP (NODES 0 TO 7) -->
-      <div id="auspexMapFrame" class="auspex-map-frame">
+    <!-- LORE-ACCURATE ARMAGEDDON TACTICAL AUSPEX SVG MAP (NODES 0 TO 7) -->
+    <div id="auspexMapFrame" class="auspex-map-frame">
         <!-- TOP AUSPEX HEADER & ZOOM / FULLSCREEN CONTROLS -->
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:4px 8px 10px 8px; border-bottom:1px solid rgba(74, 222, 128, 0.2); margin-bottom:8px; font-family:monospace; font-size:0.75rem; color:#86efac;">
           <span>📡 AUSPEX TELEMETRY // 998.M41 — ERA OF THE RED ANGEL'S GATE</span>
@@ -372,9 +374,9 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
             <!-- 5. CANONICAL OCEAN & CONTINENT LABELS (Strictly 3 Hives Total on Map!) -->
             <g fill="rgba(167, 243, 208, 0.45)" font-size="13" font-weight="700" letter-spacing="3">
               <text x="515" y="24" text-anchor="middle" fill="rgba(252, 165, 165, 0.75)" font-size="15">THE FIRE WASTES</text>
-              <text x="365" y="96" text-anchor="middle">THE BOILING SEA</text>
+              <text x="365" y="76" text-anchor="middle">THE BOILING SEA</text>
               <text x="520" y="368" text-anchor="middle">THE TEMPEST OCEAN</text>
-              <text x="370" y="476" text-anchor="middle" fill="rgba(156, 163, 175, 0.55)">THE DEADLANDS</text>
+              <text x="315" y="482" text-anchor="middle" fill="rgba(156, 163, 175, 0.55)">THE DEADLANDS</text>
               <text x="88" y="295" text-anchor="middle" transform="rotate(-38 88 295)" font-size="11">THE OCEAN OF FURY</text>
             </g>
 
@@ -578,7 +580,6 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
           </div>
         </div>
       </div>
-    </div>
 
     <!-- NODE INSPECTOR & PARALLEL 8-PIP HEGEMONY BARS -->
     <div id="atlas-node-inspector" class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
