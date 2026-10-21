@@ -1776,44 +1776,110 @@ const SLIDER_LEVELS = {
   }
 };
 
-function selectSlider(val) {
+const STORAGE_KEY_BRIEFING = 'foa_briefing_state_v1';
+let currentBriefingState = {
+  activeTab: 'beta',
+  unlockedAlpha: false,
+  unlockedBeta: false,
+  sliderVal: 0,
+  selectedAtlasNode: 0
+};
+
+function saveBriefingState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_BRIEFING, JSON.stringify(currentBriefingState));
+  } catch (err) {
+    console.warn('Could not save briefing state:', err);
+  }
+}
+
+function restoreBriefingState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BRIEFING);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+    currentBriefingState = { ...currentBriefingState, ...parsed };
+
+    if (currentBriefingState.unlockedAlpha) unlockTab('Alpha', false);
+    if (currentBriefingState.unlockedBeta) unlockTab('Beta', false);
+
+    if (typeof currentBriefingState.sliderVal === 'number') {
+      selectSlider(currentBriefingState.sliderVal, false);
+    }
+    if (typeof currentBriefingState.selectedAtlasNode === 'number') {
+      selectAtlasNode(currentBriefingState.selectedAtlasNode, false);
+    }
+
+    const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
+    const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
+    if (validTabs.includes(hashTab)) {
+      showDossier(hashTab, false);
+    } else if (validTabs.includes(currentBriefingState.activeTab)) {
+      showDossier(currentBriefingState.activeTab, false);
+    }
+  } catch (err) {
+    console.warn('Could not restore briefing state:', err);
+  }
+}
+
+function selectSlider(val, shouldSave = true) {
+  currentBriefingState.sliderVal = val;
   [-3, -2, -1, 0, 1, 2, 3].forEach(n => {
     const el = document.getElementById('node' + n);
-    el.className = 'slider-node';
+    if (el) el.className = 'slider-node';
     const row = document.getElementById('reckRow' + n);
     if (row) row.classList.toggle('highlight-row', n === val);
   });
   const cfg = SLIDER_LEVELS[String(val)];
-  document.getElementById('node' + val).classList.add(cfg.cls);
+  const activeNode = document.getElementById('node' + val);
+  if (activeNode) activeNode.classList.add(cfg.cls);
   const box = document.getElementById('sliderDetailBox');
-  box.className = cfg.boxCls;
-  box.innerHTML = `<h3 style="margin:0 0 6px 0;">${cfg.title}</h3><div style="font-size:0.88rem; line-height:1.5;">${cfg.body}</div>`;
+  if (box) {
+    box.className = cfg.boxCls;
+    box.innerHTML = `<h3 style="margin:0 0 6px 0;">${cfg.title}</h3><div style="font-size:0.88rem; line-height:1.5;">${cfg.body}</div>`;
+  }
+  if (shouldSave) saveBriefingState();
 }
 
-function showDossier(which) {
+function showDossier(which, shouldSave = true) {
+  currentBriefingState.activeTab = which;
   ['alpha', 'beta', 'atlas', 'rules'].forEach(k => {
     const cap = k.charAt(0).toUpperCase() + k.slice(1);
-    document.getElementById('dossier' + cap).classList.toggle('hidden', which !== k);
-    document.getElementById('btn' + cap).classList.toggle('active', which === k);
+    const dossierEl = document.getElementById('dossier' + cap);
+    if (dossierEl) dossierEl.classList.toggle('hidden', which !== k);
+    const btnEl = document.getElementById('btn' + cap);
+    if (btnEl) btnEl.classList.toggle('active', which === k);
   });
+  if (shouldSave) saveBriefingState();
 }
 
-function unlockTab(who) {
-  document.getElementById('gate' + who).classList.add('hidden');
-  document.getElementById('content' + who).classList.remove('hidden');
+function unlockTab(who, shouldSave = true) {
+  currentBriefingState['unlocked' + who] = true;
+  const gateEl = document.getElementById('gate' + who);
+  if (gateEl) gateEl.classList.add('hidden');
+  const contentEl = document.getElementById('content' + who);
+  if (contentEl) contentEl.classList.remove('hidden');
+  if (shouldSave) saveBriefingState();
 }
 
-function lockTab(who) {
-  document.getElementById('content' + who).classList.add('hidden');
-  document.getElementById('gate' + who).classList.remove('hidden');
+function lockTab(who, shouldSave = true) {
+  currentBriefingState['unlocked' + who] = false;
+  const contentEl = document.getElementById('content' + who);
+  if (contentEl) contentEl.classList.add('hidden');
+  const gateEl = document.getElementById('gate' + who);
+  if (gateEl) gateEl.classList.remove('hidden');
+  if (shouldSave) saveBriefingState();
 }
 
-selectSlider(0);
+selectSlider(0, false);
 
 // Default to Commander Beta (JUNEBUG) dossier unless a specific valid hash is targeted
 const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
 const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
-showDossier(validTabs.includes(hashTab) ? hashTab : 'beta');
+showDossier(validTabs.includes(hashTab) ? hashTab : 'beta', false);
 
 const ATLAS_NODES = {
   0: {
@@ -1928,7 +1994,8 @@ function renderHegBar(containerId, count, activeClass) {
   el.innerHTML = html;
 }
 
-function selectAtlasNode(nodeId) {
+function selectAtlasNode(nodeId, shouldSave = true) {
+  currentBriefingState.selectedAtlasNode = nodeId;
   const data = ATLAS_NODES[nodeId];
   if (!data) return;
 
@@ -1980,10 +2047,12 @@ function selectAtlasNode(nodeId) {
     ruleEl.innerHTML = data.rule;
     ruleEl.style.borderLeftColor = data.ruleBorder;
   }
+  if (shouldSave) saveBriefingState();
 }
 
-// Initialize Node 0 on page load
-selectAtlasNode(0);
+// Initialize default Node 0 then restore saved user state from localStorage
+selectAtlasNode(0, false);
+restoreBriefingState();
 </script>
 
 </body>
@@ -2116,7 +2185,7 @@ selectAtlasNode(0);
       <span class="badge purple">Start of Battle Round • Warp Storm</span>
       <h3>Warp Event &amp; Anomaly Surge Roller</h3>
       <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-        <select id="warpIntensity">
+        <select id="warpIntensity" onchange="savePvpState()">
           <option value="minor">Intensity: Minor (Surge on 5+)</option>
           <option value="major" selected>Intensity: Major (Surge on 4+)</option>
           <option value="catastrophic">Intensity: Catastrophic (Surge on 3+)</option>
@@ -2179,15 +2248,69 @@ const UNBOUND_UNITS = [
   "<strong>Greater Daemon / Roaming Nemesis (Power Level 4):</strong> Monster/Walker (100mm+ base) OR an Inducted Campaign Nemesis Character from the Ledger!"
 ];
 
-function renderHellscape() {
+const STORAGE_KEY_PVP = 'foa_pvp_state_v1';
+
+function savePvpState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const data = {
+      hellscapeIdx: parseInt(document.getElementById('hellscapeSelect').value, 10) || 0,
+      warpIntensity: document.getElementById('warpIntensity').value || 'major',
+      anomalyHtml: document.getElementById('anomalyResultBox').innerHTML,
+      vultureKilled: document.getElementById('vultureKillCheck').checked,
+      unboundHtml: document.getElementById('unboundResult').innerHTML
+    };
+    localStorage.setItem(STORAGE_KEY_PVP, JSON.stringify(data));
+  } catch (e) {
+    console.warn('Could not save pvp state:', e);
+  }
+}
+
+function restorePvpState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PVP);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data) return;
+
+    if (typeof data.hellscapeIdx === 'number') {
+      const el = document.getElementById('hellscapeSelect');
+      if (el) el.value = data.hellscapeIdx;
+      renderHellscape(false);
+    }
+    if (data.warpIntensity) {
+      const el = document.getElementById('warpIntensity');
+      if (el) el.value = data.warpIntensity;
+    }
+    if (data.anomalyHtml) {
+      const el = document.getElementById('anomalyResultBox');
+      if (el) el.innerHTML = data.anomalyHtml;
+    }
+    if (typeof data.vultureKilled === 'boolean') {
+      const el = document.getElementById('vultureKillCheck');
+      if (el) el.checked = data.vultureKilled;
+      updateVulture(false);
+    }
+    if (data.unboundHtml) {
+      const el = document.getElementById('unboundResult');
+      if (el) el.innerHTML = data.unboundHtml;
+    }
+  } catch (e) {
+    console.warn('Could not restore pvp state:', e);
+  }
+}
+
+function renderHellscape(shouldSave = true) {
   const idx = parseInt(document.getElementById('hellscapeSelect').value, 10);
   document.getElementById('hellscapeDesc').innerHTML = HELLSCAPES[idx];
+  if (shouldSave) savePvpState();
 }
 
 function rollRandomHellscape() {
   const idx = Math.floor(Math.random() * HELLSCAPES.length);
   document.getElementById('hellscapeSelect').value = idx;
-  renderHellscape();
+  renderHellscape(true);
 }
 
 function rollWarpAnomaly() {
@@ -2202,19 +2325,23 @@ function rollWarpAnomaly() {
   } else {
     box.innerHTML = `<span class="badge">Rolled ${roll} (Needed ${target}+) • Reality Holds</span><p style="margin:0;">The empyric currents subside this round. No new Anomaly manifests.</p>`;
   }
+  savePvpState();
 }
 
-function updateVulture() {
+function updateVulture(shouldSave = true) {
   const extra = document.getElementById('vultureKillCheck').checked ? 1 : 0;
   document.getElementById('vulturePts').innerText = `${3 + extra} SPts`;
+  if (shouldSave) savePvpState();
 }
 
 function rollUnboundAdversary() {
   const pick = UNBOUND_UNITS[Math.floor(Math.random() * UNBOUND_UNITS.length)];
   document.getElementById('unboundResult').innerHTML = `<p style="margin:0;">${pick}</p>`;
+  savePvpState();
 }
 
-renderHellscape();
+renderHellscape(false);
+restorePvpState();
 </script>
 </body>
 </html>
@@ -2387,15 +2514,50 @@ renderHellscape();
   </div>
 
 <script>
+const STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
 let currentAiStep = 0;
-function nextAiStep() {
-  currentAiStep = (currentAiStep + 1) % 3;
+
+function saveRogueState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep }));
+  } catch (e) {
+    console.warn('Could not save rogue state:', e);
+  }
+}
+
+function restoreRogueState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ROGUE);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data && typeof data.currentAiStep === 'number') {
+      setAiStep(data.currentAiStep, false);
+    }
+  } catch (e) {
+    console.warn('Could not restore rogue state:', e);
+  }
+}
+
+function setAiStep(step, shouldSave = true) {
+  currentAiStep = step;
   [0, 1, 2].forEach(i => {
     const el = document.getElementById('aiStep' + i);
-    el.classList.toggle('active-step', i === currentAiStep);
-    el.querySelector('.ai-step-title span:last-child').innerText = (i === currentAiStep) ? '[Active]' : '';
+    if (el) {
+      el.classList.toggle('active-step', i === currentAiStep);
+      const span = el.querySelector('.ai-step-title span:last-child');
+      if (span) span.innerText = (i === currentAiStep) ? '[Active]' : '';
+    }
   });
+  if (shouldSave) saveRogueState();
 }
+
+function nextAiStep() {
+  setAiStep((currentAiStep + 1) % 3);
+}
+
+restoreRogueState();
 </script>
 </body>
 </html>
@@ -3616,13 +3778,159 @@ let cp = 2;
 let stratCount = 0;
 let currentZoneSpawns = [];
 
-// Populate Spawner Faction Dropdown on load
+const STORAGE_KEY_SESSION = 'foa_horde_session_v1';
+
+function saveSessionState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const gameScreen = document.getElementById('gameScreen');
+    const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
+    const seed = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
+    const setupFactionMode = document.getElementById('setupFactionMode')?.value || 'SYNC_ALL';
+
+    const data = {
+      hasActiveSession: isSessionActive,
+      seed,
+      selectedModeVal,
+      selectedRoleVal,
+      setupFactionMode,
+      activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+      battleRound,
+      sp,
+      spGainedThisRound,
+      spRoundCap,
+      cp,
+      stratCount,
+      activeCard,
+      currentChoices,
+      activeMiseries,
+      activeSecondaries,
+      personalSecretDeck,
+      sharedMiseryDeck,
+      sharedSecondaryDeck,
+      currentZoneSpawns,
+      isPrivacyHidden,
+      currentShopFilter
+    };
+    localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save session state:', e);
+  }
+}
+
+function restoreSessionState() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SESSION);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!data) return false;
+
+    // Restore setup inputs
+    if (data.selectedModeVal) selectMode(data.selectedModeVal);
+    if (data.selectedRoleVal) selectRole(data.selectedRoleVal);
+    if (data.seed && document.getElementById('seedInput')) {
+      document.getElementById('seedInput').value = data.seed;
+    }
+    if (data.setupFactionMode && document.getElementById('setupFactionMode')) {
+      document.getElementById('setupFactionMode').value = data.setupFactionMode;
+    }
+
+    if (!data.hasActiveSession) return false;
+
+    // Restore session variables
+    isSoloMode = (data.selectedModeVal === 'solo');
+    spRoundCap = data.spRoundCap || (isSoloMode ? 16 : 8);
+    battleRound = data.battleRound || 0;
+    sp = (typeof data.sp === 'number') ? data.sp : 0;
+    spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
+    cp = (typeof data.cp === 'number') ? data.cp : 2;
+    stratCount = data.stratCount || 0;
+
+    activeCard = data.activeCard || null;
+    currentChoices = data.currentChoices || [];
+    activeMiseries = data.activeMiseries || [];
+    activeSecondaries = data.activeSecondaries || [];
+    personalSecretDeck = data.personalSecretDeck || [];
+    sharedMiseryDeck = data.sharedMiseryDeck || [];
+    sharedSecondaryDeck = data.sharedSecondaryDeck || [];
+    currentZoneSpawns = data.currentZoneSpawns || [];
+    isPrivacyHidden = !!data.isPrivacyHidden;
+    currentShopFilter = data.currentShopFilter || 'All';
+
+    if (data.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
+      activeHordeFaction = HORDE_FACTIONS.find(f => f.name === data.activeHordeFactionName) || HORDE_FACTIONS[0];
+      const sel = document.getElementById('hordeFactionSelect');
+      if (sel) sel.value = activeHordeFaction.name;
+      renderFactionReminderBanner();
+    }
+
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    if (setupScreen) setupScreen.classList.add('hidden');
+    if (gameScreen) gameScreen.classList.remove('hidden');
+
+    const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)]) ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)] : { misery: 1, spawnMod: '2D6+0' };
+    const roundTitle = document.getElementById('roundTitle');
+    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
+    const spawnModDisplay = document.getElementById('spawnModDisplay');
+    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    const nextRoundBtn = document.getElementById('nextRoundBtn');
+    if (nextRoundBtn) {
+      nextRoundBtn.innerText = battleRound < 6
+        ? `Advance to Battle Round ${battleRound + 1}`
+        : `Battle Round 6 Active (Final Stand)`;
+    }
+
+    if (activeCard) {
+      const activeCardBox = document.getElementById('activeCardBox');
+      if (activeCardBox) {
+        activeCardBox.innerHTML = `
+          <div class="card">
+            <span class="badge">${activeCard.tags}</span>
+            <h4 class="card-title">${activeCard.name}</h4>
+            <p class="card-desc">${activeCard.desc}</p>
+          </div>
+        `;
+      }
+      const cmCodeBox = document.getElementById('cmCodeBox');
+      if (cmCodeBox) cmCodeBox.innerText = `CM Verification Code: ${activeCard.code}`;
+      const selectionArea = document.getElementById('selectionArea');
+      if (selectionArea) selectionArea.classList.add('hidden');
+      const lockedArea = document.getElementById('lockedArea');
+      if (lockedArea) lockedArea.classList.remove('hidden');
+    } else if (currentChoices && currentChoices.length > 0) {
+      renderSecretChoices("Select 1 Initial Secret Objective");
+    }
+
+    updateHUD();
+    renderSharedDecks();
+    renderResupplyTable();
+    if (currentZoneSpawns && currentZoneSpawns.length > 0) {
+      renderSpawnZones();
+    }
+    loadCustomPool();
+
+    return true;
+  } catch (e) {
+    console.error('Failed to restore session state:', e);
+    return false;
+  }
+}
+
+function clearSessionState() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEY_SESSION);
+}
+
+// Populate Spawner Faction Dropdown and restore session on load
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('DOMContentLoaded', () => {
     const sel = document.getElementById('hordeFactionSelect');
     if (sel && typeof HORDE_FACTIONS !== 'undefined') {
       sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
     }
+    restoreSessionState();
   });
 }
 
@@ -3631,12 +3939,14 @@ function selectMode(mode) {
   document.getElementById('modeCardCoop').classList.toggle('selected-red', mode === 'coop');
   document.getElementById('modeCardSolo').classList.toggle('selected-red', mode === 'solo');
   document.getElementById('playerRoleSection').classList.toggle('hidden', mode === 'solo');
+  saveSessionState();
 }
 
 function selectRole(role) {
   selectedRoleVal = role;
   document.getElementById('roleCard1').classList.toggle('selected', role === '1');
   document.getElementById('roleCard2').classList.toggle('selected', role === '2');
+  saveSessionState();
 }
 
 function resolveRoomSyncedFaction(code) {
@@ -3656,12 +3966,14 @@ function resolveRoomSyncedFaction(code) {
 
   document.getElementById('hordeFactionSelect').value = activeHordeFaction.name;
   renderFactionReminderBanner();
+  saveSessionState();
 }
 
 function manualChangeFaction() {
   const val = document.getElementById('hordeFactionSelect').value;
   activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
   renderFactionReminderBanner();
+  saveSessionState();
 }
 
 function renderFactionReminderBanner() {
@@ -3722,6 +4034,7 @@ function startSession() {
   renderSharedDecks();
   renderResupplyTable();
   switchTab(2);
+  saveSessionState();
 }
 
 function switchTab(tabNum) {
@@ -3740,6 +4053,7 @@ function updateHUD() {
   document.getElementById('hudCp').innerText = cp;
   document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
   document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
+  saveSessionState();
 }
 
 // --- SECRET OBJECTIVES ---
@@ -3791,6 +4105,7 @@ function pickSecretCard(chosenIdx) {
     </div>
   `;
   document.getElementById('cmCodeBox').innerText = `CM Verification Code: ${activeCard.code}`;
+  saveSessionState();
 }
 
 function triggerChangeOfPlans() {
@@ -4168,6 +4483,7 @@ function leaveSession() {
   if (typeof confirm === 'function' && !confirm("Exit current battle terminal?")) return;
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
+  saveSessionState();
 }
 
 // Dual export for Node.js test runner and browser environment
@@ -4180,8 +4496,15 @@ if (typeof module !== 'undefined' && module.exports) {
     renderFactionReminderBanner,
     startSession,
     updateHUD,
+    gainSP,
+    loseSP,
+    adjCP,
+    spendCPForStrat,
     buyResupply,
-    leaveSession
+    leaveSession,
+    saveSessionState,
+    restoreSessionState,
+    clearSessionState
   };
 }
 ````
@@ -4459,8 +4782,17 @@ function getOrCreateElement(id) {
   return mockElements[id];
 }
 
+const storageStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
 globalThis.document = {
-  getElementById: (id) => getOrCreateElement(id)
+  getElementById: (id) => getOrCreateElement(id),
+  querySelectorAll: () => []
 };
 globalThis.window = {
   addEventListener: () => {}
@@ -4522,6 +4854,42 @@ test('app: startSession launches game screen from seed input', () => {
   assert.equal(gameScreen.classList.contains('hidden'), false);
   assert.equal(setupScreen.classList.contains('hidden'), true);
 });
+
+test('app: session state persists to localStorage and can be restored across tab switches', () => {
+  // 1. Verify startSession writes to localStorage
+  const raw = localStorage.getItem('foa_horde_session_v1');
+  assert.ok(raw, 'localStorage must contain foa_horde_session_v1 after startSession');
+
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.hasActiveSession, true);
+  assert.equal(parsed.seed, 'TERRA-99');
+
+  // 2. Mutate state with gainSP and adjCP
+  app.gainSP(5);
+  app.adjCP(1);
+
+  const updatedRaw = localStorage.getItem('foa_horde_session_v1');
+  const updatedParsed = JSON.parse(updatedRaw);
+  assert.equal(updatedParsed.sp, 5);
+  assert.equal(updatedParsed.cp, 3);
+
+  // 3. Simulate reload or tab switch and restore
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+
+  const restored = app.restoreSessionState();
+  assert.equal(restored, true, 'restoreSessionState must return true when active session exists');
+  assert.equal(document.getElementById('gameScreen').classList.contains('hidden'), false);
+  assert.equal(document.getElementById('setupScreen').classList.contains('hidden'), true);
+
+  // 4. Test leaveSession deactivates active session
+  globalThis.confirm = () => true;
+  app.leaveSession();
+  const leftRaw = localStorage.getItem('foa_horde_session_v1');
+  const leftParsed = JSON.parse(leftRaw);
+  assert.equal(leftParsed.hasActiveSession, false);
+});
+
 ````
 
 ---
@@ -4666,6 +5034,28 @@ test('briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemo
       `SVG map in briefing.html must include interactive node data-node-id="${i}"`
     );
   }
+});
+
+test('UI Boundary: pages integrate localStorage persistence so users can navigate tabs without resetting progress', () => {
+  const briefingHtml = readPage('briefing.html');
+  assert.ok(briefingHtml.includes('foa_briefing_state_v1'), 'briefing.html must persist state to foa_briefing_state_v1');
+  assert.ok(briefingHtml.includes('saveBriefingState'), 'briefing.html must have saveBriefingState');
+  assert.ok(briefingHtml.includes('restoreBriefingState'), 'briefing.html must have restoreBriefingState');
+
+  const pvpHtml = readPage('pvp.html');
+  assert.ok(pvpHtml.includes('foa_pvp_state_v1'), 'pvp.html must persist state to foa_pvp_state_v1');
+  assert.ok(pvpHtml.includes('savePvpState'), 'pvp.html must have savePvpState');
+  assert.ok(pvpHtml.includes('restorePvpState'), 'pvp.html must have restorePvpState');
+
+  const rogueHtml = readPage('rogue.html');
+  assert.ok(rogueHtml.includes('foa_rogue_state_v1'), 'rogue.html must persist state to foa_rogue_state_v1');
+  assert.ok(rogueHtml.includes('saveRogueState'), 'rogue.html must have saveRogueState');
+  assert.ok(rogueHtml.includes('restoreRogueState'), 'rogue.html must have restoreRogueState');
+
+  const appJs = fs.readFileSync(path.join(ROOT_DIR, 'js/app.js'), 'utf8');
+  assert.ok(appJs.includes('foa_horde_session_v1'), 'app.js must persist session to foa_horde_session_v1');
+  assert.ok(appJs.includes('saveSessionState'), 'app.js must define saveSessionState');
+  assert.ok(appJs.includes('restoreSessionState'), 'app.js must define restoreSessionState');
 });
 
 
