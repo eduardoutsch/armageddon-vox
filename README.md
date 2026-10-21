@@ -23,10 +23,9 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Deployment & Hosting
 
-Play the live web app directly in your browser:  
-👉 **[https://eduardoutsch.github.io/fires-of-armageddon/](https://eduardoutsch.github.io/fires-of-armageddon/)**
+Designed for static hosting on **Cloudflare Pages** (unlimited free bandwidth and automated builds from private Git repository) or any static web host.
 
 ---
 
