@@ -253,3 +253,321 @@ function advanceBattleRound() {
   renderSharedDecks();
 }
 
+function drawMisery(count) {
+  for (let i = 0; i < count; i++) {
+    if (sharedMiseryDeck.length === 0) {
+      const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+      sharedMiseryDeck = seededShuffle(MISERIES, mulberry32(hashString(code + "_MIS_R" + battleRound)));
+    }
+    const card = sharedMiseryDeck.shift();
+    activeMiseries.push(card);
+    if (card.id === 20) drawMisery(2);
+    if (card.id === 14 && isSoloMode) drawMisery(2);
+  }
+  renderSharedDecks();
+}
+
+function triggerSpecificMisery() {
+  const id = parseInt(document.getElementById('specificMiserySelect').value, 10);
+  const found = MISERIES.find(m => m.id === id);
+  if (!found) return;
+  sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
+  activeMiseries.push(found);
+  renderSharedDecks();
+}
+
+function drawSecondary(isRound1) {
+  if (sharedSecondaryDeck.length === 0) {
+    const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+    sharedSecondaryDeck = seededShuffle(SECONDARIES, mulberry32(hashString(code + "_MSN_R" + battleRound)));
+  }
+  let skipped = [];
+  let chosen = null;
+  while (sharedSecondaryDeck.length > 0) {
+    let candidate = sharedSecondaryDeck.shift();
+    if (isRound1 && candidate.r1Skip) {
+      skipped.push(candidate);
+    } else {
+      chosen = candidate;
+      break;
+    }
+  }
+  sharedSecondaryDeck.push(...skipped);
+  if (chosen) activeSecondaries.push(chosen);
+  renderSharedDecks();
+}
+
+function replaceSecondary() {
+  if (activeSecondaries.length === 0) return alert("No active Secondary Mission to replace!");
+  activeSecondaries.pop();
+  drawSecondary(battleRound === 1);
+}
+
+function renderSharedDecks() {
+  document.getElementById('secDeckCount').innerText = `${sharedSecondaryDeck.length} in deck`;
+  document.getElementById('misDeckCount').innerText = `${sharedMiseryDeck.length} in deck`;
+
+  const secBox = document.getElementById('activeSecondariesBox');
+  if (activeSecondaries.length === 0) {
+    secBox.innerHTML = `<div class="card secondary" style="opacity:0.6;"><p class="card-desc">No active Secondary Mission.</p></div>`;
+  } else {
+    secBox.innerHTML = activeSecondaries.map(s => `
+      <div class="card secondary">
+        <span class="badge gold">Secondary Mission</span>
+        <h4 class="card-title">${s.name}</h4>
+        <p class="card-desc">${s.cond}</p>
+        <div class="meta-row">
+          <span class="reward-pill"><strong>Reward:</strong> ${s.rew}</span>
+          <span class="punish-pill"><strong>Failure:</strong> ${s.pun}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const misBox = document.getElementById('activeMiseriesBox');
+  if (activeMiseries.length === 0) {
+    misBox.innerHTML = `<div class="card misery" style="opacity:0.6;"><p class="card-desc">No active Misery Cards.</p></div>`;
+  } else {
+    misBox.innerHTML = activeMiseries.map(m => `
+      <div class="card misery">
+        <span class="badge red">Misery Effect</span>
+        <h4 class="card-title">${m.name}</h4>
+        <p class="card-desc">${m.desc}</p>
+      </div>
+    `).join('');
+  }
+}
+
+// --- TAB 4: ROOM-SYNCED HORDE SPAWNER ---
+function saveCustomPool() {
+  const pool = {
+    b34: document.getElementById('pool34').value,
+    b56: document.getElementById('pool56').value,
+    b79: document.getElementById('pool79').value,
+    b10: document.getElementById('pool10').value
+  };
+  localStorage.setItem('armageddon_horde_pool', JSON.stringify(pool));
+  alert("Custom Shelf Pool saved!");
+}
+
+function loadCustomPool() {
+  const saved = localStorage.getItem('armageddon_horde_pool');
+  if (!saved) return;
+  try {
+    const p = JSON.parse(saved);
+    if (p.b34) document.getElementById('pool34').value = p.b34;
+    if (p.b56) document.getElementById('pool56').value = p.b56;
+    if (p.b79) document.getElementById('pool79').value = p.b79;
+    if (p.b10) document.getElementById('pool10').value = p.b10;
+  } catch (e) {}
+}
+
+function rollAllSpawnZones() {
+  if (battleRound === 6) {
+    return alert("Battle Round 6 (Hard Mode Final Stand): Do NOT roll Spawn Rolls in Round 6!");
+  }
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const effRound = Math.max(1, battleRound);
+  const numZones = parseInt(document.getElementById('spawnZoneCountSelect').value, 10);
+  const fac = activeHordeFaction.name;
+  const extraMod = parseInt(document.getElementById('extraSpawnMod').value, 10) || 0;
+  const jammerActive = document.getElementById('jammerCheck').checked;
+  const unluckyNightActive = activeMiseries.some(m => m.id === 7);
+  const firstBonus6 = document.getElementById('firstRollBonusCheck').checked;
+  const firstBonus12 = document.getElementById('baitTrapBonusCheck').checked;
+
+  const rndIndex = Math.max(1, Math.min(effRound, 5));
+  let baseRoundMod = HARD_MODE_ROUNDS[rndIndex].spawnModNum;
+  if (effRound === 3 && fac === 'Orks') baseRoundMod += 1;
+
+  currentZoneSpawns = [];
+
+  for (let z = 1; z <= numZones; z++) {
+    // Seeded RNG per Room + Round + Zone so both phones roll identical spawns!
+    const rngZone = mulberry32(hashString(`${code}_SPAWN_R${effRound}_Z${z}`));
+    let unmod = 0;
+    let diceStr = "";
+
+    if (z === 1 && effRound >= 4 && fac === 'Adepta Sororitas') {
+      unmod = 12;
+      diceStr = "Auto-12 (Martyrs & Miracles)";
+    } else if (unluckyNightActive) {
+      const d1 = Math.floor(rngZone() * 6) + 1;
+      const d2 = Math.floor(rngZone() * 6) + 1;
+      const d3 = Math.floor(rngZone() * 6) + 1;
+      const sorted = [d1, d2, d3].sort((a,b) => b - a);
+      unmod = sorted[0] + sorted[1];
+      diceStr = `3D6 Drop Lowest (${d1},${d2},${d3} → ${unmod})`;
+    } else {
+      const d1 = Math.floor(rngZone() * 6) + 1;
+      const d2 = Math.floor(rngZone() * 6) + 1;
+      unmod = d1 + d2;
+      diceStr = `2D6 (${d1}+${d2} = ${unmod})`;
+    }
+
+    let totalMod = baseRoundMod + extraMod + (jammerActive ? -1 : 0);
+    if (z === 1 && firstBonus6) totalMod += 6;
+    if (z === 1 && firstBonus12) totalMod += 12;
+
+    const finalRoll = unmod + totalMod;
+    const bInfo = getBracketInfo(finalRoll, unmod);
+    const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, rngZone);
+
+    currentZoneSpawns.push({
+      zone: z,
+      diceStr,
+      unmod,
+      totalMod,
+      finalRoll,
+      bracketKey: bInfo.key,
+      bracketLabel: bInfo.label,
+      pts: bInfo.pts,
+      units: [unitPicked]
+    });
+  }
+
+  renderSpawnZones();
+}
+
+function rollDownZone(idx) {
+  const z = currentZoneSpawns[idx];
+  const rollDownResult = calculateRollDown(z.bracketKey);
+  if (!rollDownResult) {
+    return alert("Cannot roll down lower than Bracket [3–4]!");
+  }
+
+  const { nextKey, bracketLabel, pts } = rollDownResult;
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const rngDown = mulberry32(hashString(`${code}_ROLLDOWN_R${battleRound}_Z${z.zone}_${nextKey}`));
+
+  const newCount = z.units.length * 2;
+  let newUnits = [];
+  for (let i = 0; i < newCount; i++) {
+    newUnits.push(pickSyncedUnitFromBracket(nextKey, rngDown));
+  }
+  z.bracketKey = nextKey;
+  z.bracketLabel = bracketLabel;
+  z.pts = pts;
+  z.units = newUnits;
+  renderSpawnZones();
+}
+
+function renderSpawnZones() {
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = currentZoneSpawns.map((z, idx) => `
+    <div class="card spawn-zone">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+        <span class="badge green">Spawn Zone ${z.zone} • ${z.bracketLabel} (${z.pts})</span>
+        <span class="hud-sub">${z.diceStr} | Mod: ${z.totalMod >= 0 ? '+'+z.totalMod : z.totalMod} → <strong>Total: ${z.finalRoll}</strong></span>
+      </div>
+      <h4 class="card-title" style="margin-top:4px;">${z.units.join('  +  ')}</h4>
+      ${(z.bracketKey !== 'NONE' && z.bracketKey !== '3-4') ? `
+        <button class="btn-ghost btn-sm" style="margin-top:8px;" onclick="rollDownZone(${idx})">
+          ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
+        </button>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+// --- SP, CP & RESUPPLY SHOP ---
+function gainSP(amount) {
+  const remainingCap = spRoundCap - spGainedThisRound;
+  if (remainingCap <= 0) {
+    if (!confirm(`Round cap of ${spRoundCap} SP reached! Add SP anyway?`)) return;
+    sp += amount;
+  } else {
+    const actual = Math.min(amount, remainingCap);
+    sp += actual;
+    spGainedThisRound += actual;
+  }
+  updateHUD();
+}
+
+function loseSP(amount) {
+  sp = Math.max(0, sp - amount);
+  updateHUD();
+}
+
+function adjCP(delta) {
+  cp = Math.max(0, cp + delta);
+  updateHUD();
+}
+
+function spendCPForStrat() {
+  if (cp <= 0) return alert("0 CP remaining!");
+  cp--;
+  stratCount++;
+  updateHUD();
+}
+
+function adjMarker(id, delta, max) {
+  const el = document.getElementById(id);
+  let val = parseInt(el.innerText, 10) + delta;
+  el.innerText = Math.max(0, Math.min(max, val));
+}
+
+function setShopFilter(tag, btnEl) {
+  currentShopFilter = tag;
+  document.querySelectorAll('.filter-bar .chip').forEach(b => b.classList.remove('active'));
+  btnEl.classList.add('active');
+  renderResupplyTable();
+}
+
+function buyResupply(idx) {
+  const item = RESUPPLIES[idx];
+  const isDoubled = document.getElementById('doubleCostToggle').checked;
+  let finalCost = item.cost;
+
+  if (item.varCost) {
+    const input = prompt(`Enter X SP to spend on ${item.name}:`, "3");
+    if (input === null) return;
+    finalCost = parseInt(input, 10) || 0;
+  }
+  if (isDoubled) finalCost *= 2;
+
+  if (sp < finalCost) {
+    return alert(`Insufficient SP! Need ${finalCost} SP (You have ${sp} SP).`);
+  }
+  sp -= finalCost;
+  if (item.autoCP) cp += item.autoCP;
+  if (item.name === "A Change of Plans") {
+    switchTab(2);
+    triggerChangeOfPlans();
+  } else if (item.name === "Tempt Fate") {
+    drawSecondary(battleRound === 1);
+    switchTab(1);
+  } else if (item.name === "Advanced Tactics") {
+    replaceSecondary();
+    switchTab(1);
+  }
+  updateHUD();
+}
+
+function renderResupplyTable() {
+  const isDoubled = document.getElementById('doubleCostToggle').checked;
+  const container = document.getElementById('resupplyList');
+
+  const filtered = RESUPPLIES.map((r, i) => ({ ...r, origIdx: i }))
+    .filter(r => currentShopFilter === 'All' || r.tags.includes(currentShopFilter));
+
+  container.innerHTML = filtered.map(r => {
+    const dispCost = r.varCost ? (isDoubled ? "2X SP" : "X SP") : `${isDoubled ? r.cost * 2 : r.cost} SP`;
+    return `
+      <div class="card resupply">
+        <div>
+          <span class="badge blue" style="margin-bottom:4px;">${dispCost} • ${r.tags}</span>
+          <h4 class="card-title" style="font-size:1rem;">${r.name}</h4>
+          <p class="card-desc" style="font-size:0.86rem;">${r.desc}</p>
+        </div>
+        <button class="btn-blue btn-sm" onclick="buyResupply(${r.origIdx})">Buy</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function leaveSession() {
+  if (!confirm("Exit current battle terminal?")) return;
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+}
