@@ -31,13 +31,42 @@ let currentZoneSpawns = [];
 
 const STORAGE_KEY_SESSION = 'foa_horde_session_v1';
 
+let isRestoring = false;
+
 function saveSessionState() {
-  if (typeof localStorage === 'undefined') return;
+  if (isRestoring || typeof localStorage === 'undefined') return;
+  // Guard: strictly only save if we are on the spawner page
+  const setupScreen = document.getElementById('setupScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  if (!setupScreen && !gameScreen) return;
+
   try {
-    const gameScreen = document.getElementById('gameScreen');
     const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
     const seed = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
     const setupFactionMode = document.getElementById('setupFactionMode')?.value || 'SYNC_ALL';
+
+    // 1. Capture active tab
+    let activeTab = 1;
+    for (let i = 1; i <= 4; i++) {
+      const t = document.getElementById('tab' + i);
+      if (t && !t.classList.contains('hidden')) activeTab = i;
+    }
+
+    // 2. Capture fortifications and markers
+    const fortChecks = [];
+    document.querySelectorAll('.fort-grid input[type="checkbox"]').forEach(cb => {
+      fortChecks.push(cb.checked);
+    });
+    const teleCount = parseInt(document.getElementById('teleCount')?.innerText || '0', 10);
+    const wireCount = parseInt(document.getElementById('wireCount')?.innerText || '0', 10);
+    const mineCount = parseInt(document.getElementById('mineCount')?.innerText || '0', 10);
+
+    // 3. Capture spawner controls
+    const spawnZoneCount = document.getElementById('spawnZoneCountSelect')?.value || '3';
+    const extraSpawnMod = document.getElementById('extraSpawnMod')?.value || '0';
+    const firstRollBonus = !!document.getElementById('firstRollBonusCheck')?.checked;
+    const baitTrapBonus = !!document.getElementById('baitTrapBonusCheck')?.checked;
+    const doubleCost = !!document.getElementById('doubleCostToggle')?.checked;
 
     const data = {
       hasActiveSession: isSessionActive,
@@ -46,6 +75,7 @@ function saveSessionState() {
       selectedRoleVal,
       setupFactionMode,
       activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+      activeTab,
       battleRound,
       sp,
       spGainedThisRound,
@@ -61,7 +91,16 @@ function saveSessionState() {
       sharedSecondaryDeck,
       currentZoneSpawns,
       isPrivacyHidden,
-      currentShopFilter
+      currentShopFilter,
+      fortChecks,
+      teleCount,
+      wireCount,
+      mineCount,
+      spawnZoneCount,
+      extraSpawnMod,
+      firstRollBonus,
+      baitTrapBonus,
+      doubleCost
     };
     localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
   } catch (e) {
@@ -74,6 +113,8 @@ function restoreSessionState() {
   if (typeof document !== 'undefined' && !document.getElementById('setupScreen') && !document.getElementById('gameScreen')) {
     return false;
   }
+
+  isRestoring = true;
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SESSION);
     if (!raw) return false;
@@ -95,7 +136,7 @@ function restoreSessionState() {
     // Restore session variables
     isSoloMode = (data.selectedModeVal === 'solo');
     spRoundCap = data.spRoundCap || (isSoloMode ? 16 : 8);
-    battleRound = data.battleRound || 0;
+    battleRound = (typeof data.battleRound === 'number') ? data.battleRound : 0;
     sp = (typeof data.sp === 'number') ? data.sp : 0;
     spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
     cp = (typeof data.cp === 'number') ? data.cp : 2;
@@ -126,14 +167,22 @@ function restoreSessionState() {
 
     const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)]) ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)] : { misery: 1, spawnMod: '2D6+0' };
     const roundTitle = document.getElementById('roundTitle');
-    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
+    if (roundTitle) roundTitle.innerText = battleRound === 0 ? "Deployment & Setup" : `Battle Round ${battleRound}`;
     const spawnModDisplay = document.getElementById('spawnModDisplay');
-    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    if (spawnModDisplay) {
+      spawnModDisplay.innerText = battleRound === 0
+        ? "Open Tab 4 (Spawner) to roll Round 1 Horde Spawns!"
+        : `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    }
     const nextRoundBtn = document.getElementById('nextRoundBtn');
     if (nextRoundBtn) {
-      nextRoundBtn.innerText = battleRound < 6
-        ? `Advance to Battle Round ${battleRound + 1}`
-        : `Battle Round 6 Active (Final Stand)`;
+      nextRoundBtn.innerText = battleRound === 0
+        ? "Begin Battle Round 1"
+        : (battleRound < 6 ? `Advance to Battle Round ${battleRound + 1}` : `Battle Round 6 Active (Final Stand)`);
+    }
+    const spawnerBtnRound = document.getElementById('spawnerBtnRound');
+    if (spawnerBtnRound) {
+      spawnerBtnRound.innerText = Math.max(1, battleRound);
     }
 
     if (activeCard) {
@@ -157,6 +206,46 @@ function restoreSessionState() {
       renderSecretChoices("Select 1 Initial Secret Objective");
     }
 
+    if (isPrivacyHidden) {
+      const pw = document.getElementById('PrivacyWrapper');
+      if (pw) pw.classList.add('hidden');
+      const pb = document.getElementById('privacyBtn');
+      if (pb) pb.innerText = "Show Objective";
+    }
+
+    // Restore fortifications
+    if (data.fortChecks && Array.isArray(data.fortChecks)) {
+      document.querySelectorAll('.fort-grid input[type="checkbox"]').forEach((cb, idx) => {
+        if (typeof data.fortChecks[idx] === 'boolean') cb.checked = data.fortChecks[idx];
+      });
+    }
+    if (typeof data.teleCount === 'number' && document.getElementById('teleCount')) {
+      document.getElementById('teleCount').innerText = data.teleCount;
+    }
+    if (typeof data.wireCount === 'number' && document.getElementById('wireCount')) {
+      document.getElementById('wireCount').innerText = data.wireCount;
+    }
+    if (typeof data.mineCount === 'number' && document.getElementById('mineCount')) {
+      document.getElementById('mineCount').innerText = data.mineCount;
+    }
+
+    // Restore spawner inputs
+    if (data.spawnZoneCount && document.getElementById('spawnZoneCountSelect')) {
+      document.getElementById('spawnZoneCountSelect').value = data.spawnZoneCount;
+    }
+    if (data.extraSpawnMod && document.getElementById('extraSpawnMod')) {
+      document.getElementById('extraSpawnMod').value = data.extraSpawnMod;
+    }
+    if (typeof data.firstRollBonus === 'boolean' && document.getElementById('firstRollBonusCheck')) {
+      document.getElementById('firstRollBonusCheck').checked = data.firstRollBonus;
+    }
+    if (typeof data.baitTrapBonus === 'boolean' && document.getElementById('baitTrapBonusCheck')) {
+      document.getElementById('baitTrapBonusCheck').checked = data.baitTrapBonus;
+    }
+    if (typeof data.doubleCost === 'boolean' && document.getElementById('doubleCostToggle')) {
+      document.getElementById('doubleCostToggle').checked = data.doubleCost;
+    }
+
     updateHUD();
     renderSharedDecks();
     renderResupplyTable();
@@ -165,10 +254,17 @@ function restoreSessionState() {
     }
     loadCustomPool();
 
+    // Restore active tab
+    if (data.activeTab && data.activeTab >= 1 && data.activeTab <= 4) {
+      switchTab(data.activeTab, false);
+    }
+
     return true;
   } catch (e) {
     console.error('Failed to restore session state:', e);
     return false;
+  } finally {
+    isRestoring = false;
   }
 }
 
@@ -178,13 +274,44 @@ function clearSessionState() {
 }
 
 // Populate Spawner Faction Dropdown and restore session on load
+function initApp() {
+  const sel = document.getElementById('hordeFactionSelect');
+  if (sel && typeof HORDE_FACTIONS !== 'undefined') {
+    sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
+  }
+  restoreSessionState();
+}
+
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-  window.addEventListener('DOMContentLoaded', () => {
-    const sel = document.getElementById('hordeFactionSelect');
-    if (sel && typeof HORDE_FACTIONS !== 'undefined') {
-      sel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
+  if (typeof document !== 'undefined' && document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
+  window.addEventListener('beforeunload', saveSessionState);
+  window.addEventListener('pagehide', saveSessionState);
+}
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('change', (e) => {
+    if (e.target && typeof e.target.closest === 'function') {
+      if (e.target.closest('#setupScreen, #gameScreen')) {
+        saveSessionState();
+      }
+      if (e.target.closest('#pool34, #pool56, #pool79, #pool10')) {
+        saveCustomPool();
+      }
     }
-    restoreSessionState();
+  });
+  document.addEventListener('input', (e) => {
+    if (e.target && typeof e.target.closest === 'function') {
+      if (e.target.closest('#seedInput, #extraSpawnMod')) {
+        saveSessionState();
+      }
+      if (e.target.closest('#pool34, #pool56, #pool79, #pool10')) {
+        saveCustomPool();
+      }
+    }
   });
 }
 
@@ -296,11 +423,14 @@ function startSession() {
   saveSessionState();
 }
 
-function switchTab(tabNum) {
+function switchTab(tabNum, persist = true) {
   [1, 2, 3, 4].forEach(n => {
-    document.getElementById('tab' + n).classList.toggle('hidden', n !== tabNum);
-    document.getElementById('tabBtn' + n).classList.toggle('active', n === tabNum);
+    const tabEl = document.getElementById('tab' + n);
+    const btnEl = document.getElementById('tabBtn' + n);
+    if (tabEl) tabEl.classList.toggle('hidden', n !== tabNum);
+    if (btnEl) btnEl.classList.toggle('active', n === tabNum);
   });
+  if (persist) saveSessionState();
 }
 
 function updateHUD() {
@@ -386,8 +516,11 @@ function triggerOrbitalPunishment() {
 
 function togglePrivacy() {
   isPrivacyHidden = !isPrivacyHidden;
-  document.getElementById('PrivacyWrapper').classList.toggle('hidden', isPrivacyHidden);
-  document.getElementById('privacyBtn').innerText = isPrivacyHidden ? "Show Objective" : "Hide Screen";
+  const pw = document.getElementById('PrivacyWrapper');
+  if (pw) pw.classList.toggle('hidden', isPrivacyHidden);
+  const pb = document.getElementById('privacyBtn');
+  if (pb) pb.innerText = isPrivacyHidden ? "Show Objective" : "Hide Screen";
+  saveSessionState();
 }
 
 // --- BATTLE ROUND, MISERY & SECONDARIES ---
@@ -434,6 +567,7 @@ function drawMisery(count) {
     if (card.id === 14 && isSoloMode) drawMisery(2);
   }
   renderSharedDecks();
+  saveSessionState();
 }
 
 function triggerSpecificMisery() {
@@ -443,6 +577,7 @@ function triggerSpecificMisery() {
   sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
   activeMiseries.push(found);
   renderSharedDecks();
+  saveSessionState();
 }
 
 function drawSecondary(isRound1) {
@@ -464,12 +599,14 @@ function drawSecondary(isRound1) {
   sharedSecondaryDeck.push(...skipped);
   if (chosen) activeSecondaries.push(chosen);
   renderSharedDecks();
+  saveSessionState();
 }
 
 function replaceSecondary() {
   if (activeSecondaries.length === 0) return alert("No active Secondary Mission to replace!");
   activeSecondaries.pop();
   drawSecondary(battleRound === 1);
+  saveSessionState();
 }
 
 function renderSharedDecks() {
@@ -599,6 +736,7 @@ function rollAllSpawnZones() {
   }
 
   renderSpawnZones();
+  saveSessionState();
 }
 
 function rollDownZone(idx) {
@@ -622,6 +760,7 @@ function rollDownZone(idx) {
   z.pts = pts;
   z.units = newUnits;
   renderSpawnZones();
+  saveSessionState();
 }
 
 function renderSpawnZones() {
@@ -677,8 +816,10 @@ function spendCPForStrat() {
 
 function adjMarker(id, delta, max) {
   const el = document.getElementById(id);
+  if (!el) return;
   let val = parseInt(el.innerText, 10) + delta;
   el.innerText = Math.max(0, Math.min(max, val));
+  saveSessionState();
 }
 
 function setShopFilter(tag, btnEl) {

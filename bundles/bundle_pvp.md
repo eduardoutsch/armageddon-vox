@@ -127,13 +127,15 @@ const STORAGE_KEY_PVP = 'foa_pvp_state_v1';
 
 function savePvpState() {
   if (typeof localStorage === 'undefined') return;
+  const select = document.getElementById('hellscapeSelect');
+  if (!select) return;
   try {
     const data = {
-      hellscapeIdx: parseInt(document.getElementById('hellscapeSelect').value, 10) || 0,
-      warpIntensity: document.getElementById('warpIntensity').value || 'major',
-      anomalyHtml: document.getElementById('anomalyResultBox').innerHTML,
-      vultureKilled: document.getElementById('vultureKillCheck').checked,
-      unboundHtml: document.getElementById('unboundResult').innerHTML
+      hellscapeIdx: parseInt(select.value, 10) || 0,
+      warpIntensity: document.getElementById('warpIntensity')?.value || 'major',
+      anomalyHtml: document.getElementById('anomalyResultBox')?.innerHTML || '',
+      vultureKilled: !!document.getElementById('vultureKillCheck')?.checked,
+      unboundHtml: document.getElementById('unboundResult')?.innerHTML || ''
     };
     localStorage.setItem(STORAGE_KEY_PVP, JSON.stringify(data));
   } catch (e) {

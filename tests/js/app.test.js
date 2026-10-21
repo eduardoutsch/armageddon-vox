@@ -40,7 +40,8 @@ globalThis.localStorage = {
 
 globalThis.document = {
   getElementById: (id) => getOrCreateElement(id),
-  querySelectorAll: () => []
+  querySelectorAll: () => [],
+  addEventListener: () => {}
 };
 globalThis.window = {
   addEventListener: () => {}
@@ -136,5 +137,53 @@ test('app: session state persists to localStorage and can be restored across tab
   const leftRaw = localStorage.getItem('foa_horde_session_v1');
   const leftParsed = JSON.parse(leftRaw);
   assert.equal(leftParsed.hasActiveSession, false);
+});
+
+test('app: saveSessionState ignores call when not on spawner page', () => {
+  // If we are on another page (e.g. index.html) where setupScreen and gameScreen are absent
+  const origGetElementById = document.getElementById;
+  document.getElementById = (id) => {
+    if (id === 'setupScreen' || id === 'gameScreen') return null;
+    return origGetElementById(id);
+  };
+
+  localStorage.setItem('foa_horde_session_v1', JSON.stringify({ hasActiveSession: true, testValue: 123 }));
+  app.saveSessionState();
+
+  const after = JSON.parse(localStorage.getItem('foa_horde_session_v1'));
+  assert.equal(after.testValue, 123, 'Must not overwrite session state when DOM elements are absent');
+
+  // Restore mock
+  document.getElementById = origGetElementById;
+});
+
+test('app: restoreSessionState restores activeTab, markers, and spawner settings', () => {
+  document.getElementById('gameScreen').classList.remove('hidden');
+  document.getElementById('setupScreen').classList.add('hidden');
+
+  localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+    hasActiveSession: true,
+    seed: 'WARP-7',
+    selectedModeVal: 'coop',
+    selectedRoleVal: '1',
+    activeTab: 4,
+    battleRound: 3,
+    sp: 4,
+    cp: 1,
+    teleCount: 2,
+    wireCount: 1,
+    mineCount: 3,
+    spawnZoneCount: '4',
+    extraSpawnMod: '1',
+    firstRollBonus: true,
+    baitTrapBonus: false,
+    doubleCost: true
+  }));
+
+  const res = app.restoreSessionState();
+  assert.equal(res, true);
+  assert.equal(String(document.getElementById('teleCount').innerText), '2');
+  assert.equal(String(document.getElementById('wireCount').innerText), '1');
+  assert.equal(String(document.getElementById('mineCount').innerText), '3');
 });
 

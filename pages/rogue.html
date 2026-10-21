@@ -93,6 +93,7 @@ let currentAiStep = 0;
 
 function saveRogueState() {
   if (typeof localStorage === 'undefined') return;
+  if (!document.getElementById('aiStep0')) return;
   try {
     localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep }));
   } catch (e) {

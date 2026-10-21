@@ -804,6 +804,8 @@ let briefingState = {
 };
 
 function saveBriefingState() {
+  if (typeof localStorage === 'undefined') return;
+  if (!document.getElementById('dossierBeta') && !document.getElementById('atlas-node-inspector')) return;
   try {
     localStorage.setItem(BRIEFING_STORAGE_KEY, JSON.stringify(briefingState));
   } catch (e) {

@@ -523,16 +523,16 @@
 
     try {
       // 1. Save current page state before leaving
-      if (typeof saveSessionState === 'function') {
+      if (typeof saveSessionState === 'function' && (document.getElementById('setupScreen') || document.getElementById('gameScreen'))) {
         try { saveSessionState(); } catch (e) {}
       }
-      if (typeof saveBriefingState === 'function') {
+      if (typeof saveBriefingState === 'function' && (document.getElementById('atlas-node-inspector') || document.getElementById('dossierBeta'))) {
         try { saveBriefingState(); } catch (e) {}
       }
-      if (typeof savePvpState === 'function') {
+      if (typeof savePvpState === 'function' && document.getElementById('hellscapeSelect')) {
         try { savePvpState(); } catch (e) {}
       }
-      if (typeof saveRogueState === 'function') {
+      if (typeof saveRogueState === 'function' && document.getElementById('aiStep0')) {
         try { saveRogueState(); } catch (e) {}
       }
       saveCurrentPosition();
@@ -625,13 +625,13 @@
           restoreSessionState();
         }
       }
-      if (document.getElementById('atlas-node-inspector') && typeof restoreBriefingState === 'function') {
+      if ((document.getElementById('atlas-node-inspector') || document.getElementById('dossierBeta')) && typeof restoreBriefingState === 'function') {
         restoreBriefingState();
       }
-      if (document.getElementById('pvpGameScreen') && typeof restorePvpState === 'function') {
+      if (document.getElementById('hellscapeSelect') && typeof restorePvpState === 'function') {
         restorePvpState();
       }
-      if (document.getElementById('rogueTurnCount') && typeof restoreRogueState === 'function') {
+      if (document.getElementById('aiStep0') && typeof restoreRogueState === 'function') {
         restoreRogueState();
       }
 

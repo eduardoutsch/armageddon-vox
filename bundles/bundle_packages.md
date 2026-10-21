@@ -183,4 +183,5 @@ desktop.ini
 node_modules/
 *.log
 .wrangler/
+scratch/
 ````
