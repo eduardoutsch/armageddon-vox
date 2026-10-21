@@ -26,6 +26,7 @@ test('UI Boundary: index.html has complete navigation, stylesheets, and modular 
   assert.ok(html.includes('<script src="js/rng.js"></script>'));
   assert.ok(html.includes('<script src="js/spawner.js"></script>'));
   assert.ok(html.includes('<script src="js/app.js"></script>'));
+  assert.ok(html.includes('<script src="js/vox-audio.js"></script>'), 'index.html must link to js/vox-audio.js');
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
@@ -44,6 +45,7 @@ test('UI Boundary: all subpages live in /pages and share unified navigation link
       html.includes('Briefings, Ship &amp; Atlas') || html.includes('Briefings, Ship & Atlas'),
       `pages/${page} navigation text must match Briefings, Ship & Atlas`
     );
+    assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), `pages/${page} must link to ../js/vox-audio.js`);
   }
 
   const briefingHtml = readPage('pages/briefing.html');

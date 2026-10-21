@@ -70,10 +70,12 @@ const INDEX_FILES = [
   'js/rng.js',
   'js/spawner.js',
   'js/app.js',
+  'js/vox-audio.js',
   'tests/js/data.test.js',
   'tests/js/rng.test.js',
   'tests/js/spawner.test.js',
   'tests/js/app.test.js',
+  'tests/js/vox-audio.test.js',
   'tests/ui/pages.test.js'
 ];
 

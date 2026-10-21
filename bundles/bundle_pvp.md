@@ -289,6 +289,7 @@ function rollUnboundAdversary() {
 renderHellscape(false);
 restorePvpState();
 </script>
+<script src="../js/vox-audio.js"></script>
 </body>
 </html>
 ````
