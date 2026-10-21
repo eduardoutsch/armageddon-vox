@@ -13,6 +13,7 @@ All project files compiled into a single document for Gemini / NotebookLM ingest
 - [pvp.html](#file-pvphtml)
 - [rogue.html](#file-roguehtml)
 - [roster.html](#file-rosterhtml)
+- [favicon.svg](#file-faviconsvg)
 - [css/style.css](#file-cssstylecss)
 - [js/data.js](#file-jsdatajs)
 - [js/rng.js](#file-jsrngjs)
@@ -23,7 +24,6 @@ All project files compiled into a single document for Gemini / NotebookLM ingest
 - [tests/js/spawner.test.js](#file-testsjsspawnertestjs)
 - [tests/js/app.test.js](#file-testsjsapptestjs)
 - [tests/ui/pages.test.js](#file-testsuipagestestjs)
-- [favicon.svg](#file-faviconsvg) *(Graphic Asset)*
 
 ---
 
@@ -2074,6 +2074,70 @@ function nextAiStep() {
 
 ---
 
+## File: `favicon.svg` <a id="file-faviconsvg"></a>
+
+````xml
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Base Plate (Dark iron-clad shield) -->
+  <rect x="16" y="16" width="480" height="480" rx="100" ry="100" fill="#18151c" stroke="#ff4757" stroke-width="16" />
+
+  <!-- Tactical Stitch / Perimeter Border (Bronze dashed line) -->
+  <rect x="36" y="36" width="440" height="440" rx="84" ry="84" fill="none" stroke="#a67c42" stroke-width="5" stroke-dasharray="16, 12" />
+
+  <!-- Vox Activation Top Beacon -->
+  <circle cx="256" cy="68" r="18" fill="#ff4757" />
+
+  <!-- Lateral Sonic Broadcast Waves (Left) -->
+  <!-- Outer deep red pulse -->
+  <path d="M 80 155 C 60 215, 60 295, 80 355" fill="none" stroke="#7a242f" stroke-width="10" stroke-linecap="round" />
+  <!-- Inner hot vox surge -->
+  <path d="M 115 180 C 100 225, 100 285, 115 330" fill="none" stroke="#ff4757" stroke-width="16" stroke-linecap="round" />
+
+  <!-- Lateral Sonic Broadcast Waves (Right) -->
+  <!-- Inner hot vox surge -->
+  <path d="M 397 180 C 412 225, 412 285, 397 330" fill="none" stroke="#ff4757" stroke-width="16" stroke-linecap="round" />
+  <!-- Outer deep red pulse -->
+  <path d="M 432 155 C 452 215, 452 295, 432 355" fill="none" stroke="#7a242f" stroke-width="10" stroke-linecap="round" />
+
+  <!-- Central Armageddon Sanctified Skull -->
+  <g id="skull" filter="url(#shadow)">
+    <!-- Cranium and Brow -->
+    <path d="M 172 250 
+             C 160 200, 190 180, 256 180 
+             C 322 180, 352 200, 340 250 
+             C 334 275, 320 292, 305 315 
+             L 305 375 
+             C 305 382, 300 388, 292 388 
+             L 220 388 
+             C 212 388, 207 382, 207 375 
+             L 207 315 
+             C 192 292, 178 275, 172 250 Z" 
+          fill="#f0b042" />
+
+    <!-- Ocular Optics (Red sensor sockets) -->
+    <circle cx="218" cy="254" r="18" fill="#ff4757" />
+    <circle cx="294" cy="254" r="18" fill="#ff4757" />
+
+    <!-- Nasal Cavity (Inverted triangle) -->
+    <polygon points="256,274 246,306 266,306" fill="#18151c" />
+
+    <!-- Mandible / Vox Grille (Mouth cutout) -->
+    <rect x="214" y="324" width="84" height="46" rx="8" ry="8" fill="#18151c" />
+  </g>
+
+  <!-- Sub-Vox Directional Chevron -->
+  <path d="M 194 425 L 256 458 L 318 425" fill="none" stroke="#ff4757" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
+````
+
+---
+
 ## File: `css/style.css` <a id="file-cssstylecss"></a>
 
 ````css
@@ -3729,12 +3793,6 @@ test('All HTML pages link to favicon.svg and apple-touch-icon', () => {
   }
 });
 ````
-
----
-
-## File: `favicon.svg` <a id="file-faviconsvg"></a>
-
-> **Asset Notice**: `favicon.svg` is a 1.29 MB raster image asset (Warhammer 40k vox skull icon). Raw binary data is excluded from text code fences to prevent null-byte corruption in Gemini Notebook / NotebookLM ingestion.
 
 ---
 
