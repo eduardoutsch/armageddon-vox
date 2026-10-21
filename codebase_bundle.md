@@ -575,6 +575,7 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
   <title>Fires of Armageddon // Briefings, Ship Slider &amp; Sector Atlas</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
   <style>
     :root {
       --bg: #08090d;
@@ -846,6 +847,166 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
     .terminal-link-btn.alt {
       background: linear-gradient(135deg, #9d5cff 0%, #6b2cf5 100%);
     }
+    /* SECTOR ATLAS HOLOLITH MAP & 3-WAY PARALLEL HEGEMONY TRACKER */
+    .hololith-map-wrap {
+      background: radial-gradient(circle at 50% 45%, #161b26 0%, #090b10 85%);
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 18px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85), 0 4px 20px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .hololith-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed rgba(245, 176, 65, 0.25);
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .hololith-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+    }
+    .legend-dot {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .sector-svg {
+      width: 100%;
+      height: auto;
+      max-height: 440px;
+      display: block;
+      user-select: none;
+    }
+    .map-supply-line {
+      stroke: #30363d;
+      stroke-width: 2.5;
+      stroke-dasharray: 6 6;
+      transition: stroke 0.25s ease;
+    }
+    .map-supply-line.active-line {
+      stroke: rgba(245, 176, 65, 0.65);
+      stroke-dasharray: none;
+    }
+    .map-node-group {
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .map-node-group:hover .node-outer-ring {
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 8px rgba(245, 176, 65, 0.7));
+    }
+    .map-node-group.selected-node .node-selection-reticle {
+      opacity: 1;
+    }
+    .node-selection-reticle {
+      opacity: 0;
+      stroke: #f5b041;
+      stroke-width: 2;
+      stroke-dasharray: 5 4;
+      fill: none;
+      transition: opacity 0.2s ease;
+    }
+    .liberation-inspector {
+      background: rgba(22, 27, 34, 0.94);
+      border: 1px solid #f5b041;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+    .heg-race-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0;
+      background: rgba(13, 17, 23, 0.75);
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid #21262d;
+    }
+    .heg-row {
+      display: grid;
+      grid-template-columns: 175px 1fr 68px;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+    }
+    @media (max-width: 600px) {
+      .heg-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+    .heg-seg-track {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      height: 12px;
+    }
+    .heg-seg {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 2px;
+      transition: all 0.2s ease;
+    }
+    .heg-seg.active-alpha {
+      background: linear-gradient(90deg, #1f6feb, #58a6ff);
+      border-color: #79c0ff;
+      box-shadow: 0 0 6px rgba(88, 166, 255, 0.45);
+    }
+    .heg-seg.active-beta {
+      background: linear-gradient(90deg, #b87d14, #f5b041);
+      border-color: #ffd280;
+      box-shadow: 0 0 6px rgba(245, 176, 65, 0.45);
+    }
+    .heg-seg.active-horde {
+      background: linear-gradient(90deg, #a91d2a, #ff4757);
+      border-color: #ff7b72;
+      box-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
+    }
+    .heg-seg.unknown-fog {
+      background: repeating-linear-gradient(
+        45deg,
+        #161b22,
+        #161b22 4px,
+        #2d223b 4px,
+        #2d223b 8px
+      );
+      border-color: #6e40aa;
+      opacity: 0.75;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .rule-box {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
     .hidden { display: none !important; }
   </style>
 </head>
@@ -1184,6 +1345,204 @@ Any and all changes made to the codebase (files added, modified, renamed, or del
       </blockquote>
     </div>
 
+    <!-- INTERACTIVE ORBITAL HOLOLITH MAP & 3-WAY PARALLEL HEGEMONY TRACKER -->
+    <div class="section-card">
+      <span class="section-tag green">I-A • Orbital Auspex Topography &amp; Parallel Sector Hegemony Race</span>
+      <h2>Armageddon Theatre Hololith (Nodes 0–7)</h2>
+      <p style="font-size:0.88rem; color:var(--muted);">
+        Because Commanders Alpha and Beta frequently deploy side-by-side against the Horde, each Sector Node tracks a <strong>3-Way Parallel Hegemony Race (0 / 8 Hegemony Points)</strong>. Both players and the 3rd Alliance accumulate Hegemony Points simultaneously in the same node based on combat performance. The first Alliance to reach <strong>8 / 8 HP</strong> conquers and locks the Sector—forcing rivals to <strong>Siege &amp; Unconquer</strong> it back to 0 before a new race can begin, while the owner can spend <strong>RP, Leftover SP, or Fortifications</strong> to maintain control without even fighting there!
+      </p>
+
+      <div class="hololith-map-wrap">
+        <div class="hololith-header">
+          <span>📡 ORBITAL AUGUR SCAN // PARALLEL HEGEMONY TELEMETRY (TARGET: 8 HP)</span>
+          <div class="hololith-legend">
+            <span><i class="legend-dot" style="background:#58a6ff;"></i>Alpha (Sanctuary of Ash)</span>
+            <span><i class="legend-dot" style="background:#f5b041;"></i>Beta (JUNEBUG)</span>
+            <span><i class="legend-dot" style="background:#ff4757;"></i>3rd Alliance Overlord</span>
+            <span><i class="legend-dot" style="background:#484f58;"></i>Fog of War</span>
+          </div>
+        </div>
+
+        <!-- SVG TACTICAL SECTOR MAP -->
+        <svg id="armageddon-sector-map" class="sector-svg" viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="arborGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#2ea043" stop-opacity="0.35"/>
+              <stop offset="100%" stop-color="#2ea043" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="riftGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ff4757" stop-opacity="0.45"/>
+              <stop offset="100%" stop-color="#ff4757" stop-opacity="0"/>
+            </radialGradient>
+            <pattern id="tacticalGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+            </pattern>
+          </defs>
+
+          <!-- Background Tactical Grid & Topographic Contours -->
+          <rect width="800" height="420" fill="url(#tacticalGrid)"/>
+          <path d="M 30,290 Q 140,220 220,250 T 420,210 T 620,150 L 770,90 L 770,390 L 30,390 Z" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+          <path d="M 70,120 Q 240,60 410,110 T 730,60" fill="none" stroke="rgba(255,71,87,0.15)" stroke-width="2" stroke-dasharray="10 6"/>
+          <path d="M 450,10 Q 470,160 440,270 T 490,415" fill="none" stroke="rgba(210,153,34,0.22)" stroke-width="6"/>
+
+          <!-- Ambient Biome Glows -->
+          <circle cx="135" cy="245" r="75" fill="url(#arborGlow)"/>
+          <circle cx="700" cy="85" r="85" fill="url(#riftGlow)"/>
+
+          <!-- SECTOR SUPPLY LINES -->
+          <line x1="135" y1="245" x2="265" y2="155" class="map-supply-line active-line"/>
+          <line x1="135" y1="245" x2="285" y2="315" class="map-supply-line active-line"/>
+          <line x1="265" y1="155" x2="285" y2="315" class="map-supply-line"/>
+          <line x1="265" y1="155" x2="415" y2="115" class="map-supply-line"/>
+          <line x1="265" y1="155" x2="455" y2="250" class="map-supply-line"/>
+          <line x1="285" y1="315" x2="455" y2="250" class="map-supply-line"/>
+          <line x1="285" y1="315" x2="545" y2="345" class="map-supply-line"/>
+          <line x1="415" y1="115" x2="455" y2="250" class="map-supply-line"/>
+          <line x1="415" y1="115" x2="590" y2="185" class="map-supply-line"/>
+          <line x1="415" y1="115" x2="700" y2="85" class="map-supply-line"/>
+          <line x1="455" y1="250" x2="545" y2="345" class="map-supply-line"/>
+          <line x1="455" y1="250" x2="590" y2="185" class="map-supply-line"/>
+          <line x1="545" y1="345" x2="590" y2="185" class="map-supply-line"/>
+          <line x1="590" y1="185" x2="700" y2="85" class="map-supply-line"/>
+
+          <!-- NODE 0: THE GOLGOTHA ARBOR-BASIN (DISCOVERED) -->
+          <g class="map-node-group selected-node" data-node-id="0" onclick="selectAtlasNode(0)">
+            <circle cx="135" cy="245" r="34" class="node-selection-reticle"/>
+            <circle cx="135" cy="245" r="25" fill="#122117" stroke="#2ea043" stroke-width="2.5" class="node-outer-ring"/>
+            <text x="135" y="250" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="bold">N0</text>
+            <text x="135" y="294" text-anchor="middle" fill="#7ee787" font-size="11" font-weight="bold">GOLGOTHA ARBOR-BASIN</text>
+            <text x="135" y="308" text-anchor="middle" fill="#f5b041" font-size="9">[RACE: B 2/8 • A 1/8 • H 1/8]</text>
+          </g>
+
+          <!-- NODE 1: FERROCRETE PERIMETER (SHROUDED) -->
+          <g class="map-node-group" data-node-id="1" onclick="selectAtlasNode(1)">
+            <circle cx="265" cy="155" r="32" class="node-selection-reticle"/>
+            <circle cx="265" cy="155" r="22" fill="#161b22" stroke="#f5b041" stroke-width="2" stroke-dasharray="4 3" class="node-outer-ring"/>
+            <text x="265" y="160" text-anchor="middle" fill="#f5b041" font-size="12" font-weight="bold">N1?</text>
+            <text x="265" y="196" text-anchor="middle" fill="#c9d1d9" font-size="10" font-weight="bold">SECTOR NODE 1</text>
+            <text x="265" y="209" text-anchor="middle" fill="#d2a8ff" font-size="9">[FOG OF WAR • ?/8]</text>
+          </g>
+
+          <!-- NODE 2: SUB-SURFACE SEISMIC ANOMALY (SHROUDED) -->
+          <g class="map-node-group" data-node-id="2" onclick="selectAtlasNode(2)">
+            <circle cx="285" cy="315" r="32" class="node-selection-reticle"/>
+            <circle cx="285" cy="315" r="22" fill="#161b22" stroke="#6e7681" stroke-width="2" stroke-dasharray="4 3" class="node-outer-ring"/>
+            <text x="285" y="320" text-anchor="middle" fill="#8b949e" font-size="12" font-weight="bold">N2?</text>
+            <text x="285" y="355" text-anchor="middle" fill="#8b949e" font-size="10">SECTOR NODE 2</text>
+            <text x="285" y="368" text-anchor="middle" fill="#6e7681" font-size="9">[FOG OF WAR • ?/8]</text>
+          </g>
+
+          <!-- NODE 3: EXTREME EMPYRIC RADIATION SPIKE (SHROUDED) -->
+          <g class="map-node-group" data-node-id="3" onclick="selectAtlasNode(3)">
+            <circle cx="415" cy="115" r="32" class="node-selection-reticle"/>
+            <circle cx="415" cy="115" r="22" fill="#1f121b" stroke="#bc8cff" stroke-width="2" stroke-dasharray="4 3" class="node-outer-ring"/>
+            <text x="415" y="120" text-anchor="middle" fill="#d2a8ff" font-size="12" font-weight="bold">N3?</text>
+            <text x="415" y="155" text-anchor="middle" fill="#8b949e" font-size="10">SECTOR NODE 3</text>
+            <text x="415" y="168" text-anchor="middle" fill="#bc8cff" font-size="9">[FOG OF WAR • ?/8]</text>
+          </g>
+
+          <!-- NODE 4: TOXIC HYDRO-SIGNATURE (SHROUDED) -->
+          <g class="map-node-group" data-node-id="4" onclick="selectAtlasNode(4)">
+            <circle cx="455" cy="250" r="32" class="node-selection-reticle"/>
+            <circle cx="455" cy="250" r="22" fill="#161b22" stroke="#6e7681" stroke-width="2" stroke-dasharray="4 3" class="node-outer-ring"/>
+            <text x="455" y="255" text-anchor="middle" fill="#8b949e" font-size="12" font-weight="bold">N4?</text>
+            <text x="455" y="290" text-anchor="middle" fill="#8b949e" font-size="10">SECTOR NODE 4</text>
+            <text x="455" y="303" text-anchor="middle" fill="#6e7681" font-size="9">[FOG OF WAR • ?/8]</text>
+          </g>
+
+          <!-- NODE 5: THERMAL REFINERY SIGNATURE (SHROUDED) -->
+          <g class="map-node-group" data-node-id="5" onclick="selectAtlasNode(5)">
+            <circle cx="545" cy="345" r="32" class="node-selection-reticle"/>
+            <circle cx="545" cy="345" r="22" fill="#161b22" stroke="#6e7681" stroke-width="2" stroke-dasharray="4 3" class="node-outer-ring"/>
+            <text x="545" y="350" text-anchor="middle" fill="#8b949e" font-size="12" font-weight="bold">N5?</text>
+            <text x="545" y="385" text-anchor="middle" fill="#8b949e" font-size="10">SECTOR NODE 5</text>
+            <text x="545" y="398" text-anchor="middle" fill="#6e7681" font-size="9">[FOG OF WAR • ?/8]</text>
+          </g>
+
+          <!-- NODE 6: MAGNETIC RAIL-CORRIDOR ANOMALY (SHROUDED) -->
+          <g class="map-node-group" data-node-id="6" onclick="selectAtlasNode(6)">
+            <circle cx="590" cy="185" r="32" class="node-selection-reticle"/>
+            <circle cx="590" cy="185" r="22" fill="#161b22" stroke="#6e7681" stroke-width="2" stroke-dasharray="4 3" class="node-outer-ring"/>
+            <text x="590" y="190" text-anchor="middle" fill="#8b949e" font-size="12" font-weight="bold">N6?</text>
+            <text x="590" y="225" text-anchor="middle" fill="#8b949e" font-size="10">SECTOR NODE 6</text>
+            <text x="590" y="238" text-anchor="middle" fill="#6e7681" font-size="9">[FOG OF WAR • ?/8]</text>
+          </g>
+
+          <!-- NODE 7: POLAR VORTEX THRESHOLD (SHROUDED) -->
+          <g class="map-node-group" data-node-id="7" onclick="selectAtlasNode(7)">
+            <circle cx="700" cy="85" r="34" class="node-selection-reticle"/>
+            <circle cx="700" cy="85" r="24" fill="#241016" stroke="#ff4757" stroke-width="2.5" stroke-dasharray="5 3" class="node-outer-ring"/>
+            <text x="700" y="90" text-anchor="middle" fill="#ff7b72" font-size="12" font-weight="bold">N7?</text>
+            <text x="700" y="128" text-anchor="middle" fill="#ff7b72" font-size="10" font-weight="bold">SECTOR NODE 7</text>
+            <text x="700" y="141" text-anchor="middle" fill="#ff4757" font-size="9">[DEEP FOG • ?/8]</text>
+          </g>
+        </svg>
+
+        <!-- SELECTED SECTOR NODE INSPECTOR & 3-WAY PARALLEL HEGEMONY BARS -->
+        <div id="atlas-node-inspector" class="liberation-inspector">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span id="insp-badge" class="section-tag green" style="margin-bottom:4px;">DISCOVERED • ACTIVE 3-WAY HEGEMONY RACE</span>
+              <h3 id="insp-title" style="margin:2px 0; color:#e6edf3;">Sector Node 0: The Golgotha Arbor-Basin</h3>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase;">Sovereignty Status (8 HP to Lock)</span>
+              <div id="insp-lib-label" style="font-size:0.95rem; font-weight:bold; color:#f5b041;">CONTESTED RACE (Beta Leading 2 / 8 HP)</div>
+            </div>
+          </div>
+
+          <!-- 3 PARALLEL 8-SEGMENT HEGEMONY BARS -->
+          <div class="heg-race-grid">
+            <div class="heg-row">
+              <span style="color:#58a6ff; font-weight:bold;">🦅 Alpha (Sanctuary)</span>
+              <div id="heg-bar-alpha" class="heg-seg-track"></div>
+              <span id="heg-val-alpha" style="text-align:right; color:#58a6ff; font-weight:bold;">1 / 8 HP</span>
+            </div>
+            <div class="heg-row">
+              <span style="color:#f5b041; font-weight:bold;">💀 Beta (JUNEBUG)</span>
+              <div id="heg-bar-beta" class="heg-seg-track"></div>
+              <span id="heg-val-beta" style="text-align:right; color:#f5b041; font-weight:bold;">2 / 8 HP</span>
+            </div>
+            <div class="heg-row">
+              <span style="color:#ff4757; font-weight:bold;">👁️ 3rd Alliance (AI)</span>
+              <div id="heg-bar-horde" class="heg-seg-track"></div>
+              <span id="heg-val-horde" style="text-align:right; color:#ff4757; font-weight:bold;">1 / 8 HP</span>
+            </div>
+          </div>
+
+          <p id="insp-desc" style="font-size:0.86rem; color:#c9d1d9; margin:8px 0;">
+            <strong>"The Petrified Canopy &amp; Graveyard of Stained Glass"</strong> — Session 0 planetfall site. Beta earned <strong>2 HP</strong> from Saint Celestine's narrow victory, while Alpha claimed <strong>1 HP</strong> for annihilating every Sororitas war-machine with <em>The Shrine-Breakers</em>, and the 3rd Alliance gained <strong>1 HP</strong> along the perimeter.
+          </p>
+          <div id="insp-rule" style="font-size:0.83rem; background:rgba(0,0,0,0.35); padding:8px 10px; border-radius:6px; border-left:3px solid #2ea043; color:#7ee787;">
+            <strong>Active Sector Rule ("Canopy &amp; Wreckage"):</strong> Forest terrain grants <strong>Stealth</strong> to Infantry wholly within it; the central Landing Site objective grants <strong>Benefit of Cover</strong>. Ending a turn within 3" of the center or Defender's home objective requires a Leadership test or grants <strong>1 Warp Counter</strong>.
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTOR HEGEMONY, SIEGE & RESOURCE MAINTENANCE RULES -->
+      <div class="grid-2" style="margin-top:14px;">
+        <div class="rule-box" style="border-left:3px solid #58a6ff;">
+          <h4 style="margin-top:0; color:#58a6ff;">⚡ Parallel Race &amp; Locking a Node (8 HP)</h4>
+          <ul style="font-size:0.83rem; padding-left:18px; margin-bottom:0;">
+            <li><strong>Co-op / Solo Horde Race:</strong> Both players earn HP in the same node simultaneously: <strong>+1 HP</strong> (Survive Rnd 6), <strong>+1 HP</strong> (Secret Objective), <strong>+1 HP per Fortified Objective</strong> held at Rnd 6 end, and <strong>+1 HP</strong> (Warrant / <strong>+2 HP</strong> for Traitor Secret). The Horde AI gains <strong>+1 passive HP</strong> (+2 per player wiped, +1 per failed Secret).</li>
+            <li><strong>1v1 PvP &amp; Rogue Clashes:</strong> Winner gains <strong>+2 HP</strong> (+1 bonus HP for Agenda/Goal). In 1v1, the 3rd Alliance Vulture Rule adds <strong>+1 HP</strong> locally and <strong>+2 HP</strong> to an adjacent node!</li>
+            <li><strong>Conquest Lock (8 / 8 HP):</strong> First Alliance to <strong>8 HP</strong> becomes <strong>Sector Sovereign</strong> (wiping rival race progress to 0). Sovereign gains <strong>+3 SPts</strong> at Phase End and <strong>+1 starting SP / 1 free re-roll</strong> in connected nodes!</li>
+          </ul>
+        </div>
+        <div class="rule-box" style="border-left:3px solid #f5b041;">
+          <h4 style="margin-top:0; color:#f5b041;">🛡️ Unconquering (Siege) &amp; Resource Maintenance</h4>
+          <ul style="font-size:0.83rem; padding-left:18px; margin-bottom:0;">
+            <li><strong>Must Unconquer Before Racing Again:</strong> Once locked at <strong>8 / 8 Bastion Integrity</strong>, rivals must strip the Sovereign's Integrity down to <strong>0</strong> (via combat HP in that node, <strong>-1 HP</strong> from winning in an adjacent node, or <strong>-3 HP</strong> from a Traitor Secret Objective sabotage) before a new race can begin!</li>
+            <li><strong>Resource Maintenance (No Fighting Needed!):</strong> The Sovereign can repair &amp; maintain a Conquered Node's Integrity from afar by:<br>
+              1. <strong>Garrison Tithe (1 RP):</strong> Spend <strong>1 RP</strong> between games to restore <strong>+3 Integrity</strong>.<br>
+              2. <strong>Supply Convoy (Leftover SP):</strong> Send <strong>3 Leftover Horde SP</strong> from <em>any</em> battle to restore <strong>+2 Integrity</strong> (or 6 SP for +4).<br>
+              3. <strong>Etched Fortifications:</strong> Each permanent Fortification on the node auto-repairs <strong>+1 Integrity</strong> after every campaign match!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- 8-NODE FOG OF WAR MAP (NODE 0 DISCOVERED + NODES 1-7 UNDISCOVERED) -->
     <div class="section-card">
       <span class="section-tag green">Dynamic Campaign Map • 1 of 8 Nodes Discovered</span>
@@ -1455,6 +1814,176 @@ selectSlider(0);
 const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
 const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
 showDossier(validTabs.includes(hashTab) ? hashTab : 'beta');
+
+const ATLAS_NODES = {
+  0: {
+    discovered: true,
+    badge: 'DISCOVERED • ACTIVE 3-WAY HEGEMONY RACE',
+    badgeClass: 'section-tag green',
+    title: 'Sector Node 0: The Golgotha Arbor-Basin',
+    libLabel: 'CONTESTED RACE (Beta Leading 2 / 8 HP)',
+    libColor: '#f5b041',
+    alphaHP: 1, betaHP: 2, hordeHP: 1,
+    desc: '<strong>"The Petrified Canopy &amp; Graveyard of Stained Glass"</strong> — Session 0 planetfall site. Beta earned <strong>2 HP</strong> from Saint Celestine\'s narrow victory, while Alpha claimed <strong>1 HP</strong> for annihilating every Sororitas war-machine with <em>The Shrine-Breakers</em>, and the 3rd Alliance gained <strong>1 HP</strong> along the perimeter.',
+    rule: '<strong>Active Sector Rule ("Canopy &amp; Wreckage"):</strong> Forest terrain grants <strong>Stealth</strong> to Infantry wholly within it; the central Landing Site objective grants <strong>Benefit of Cover</strong>. Ending a turn within 3" of the center or Defender\'s home objective requires a Leadership test or grants <strong>1 Warp Counter</strong>.',
+    ruleBorder: '#2ea043'
+  },
+  1: {
+    discovered: false,
+    badge: 'FOG OF WAR • ADJACENT RECON TARGET',
+    badgeClass: 'section-tag gold',
+    title: 'Sector Node 1: [Unmapped Ferrocrete Perimeter]',
+    libLabel: 'SHROUDED IN ASH (3rd Alliance Presence Unknown!)',
+    libColor: '#d2a8ff',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Directly adjacent to Node 0\'s northern treeline. Orbital augurs detect heavy armored track imprints and ancient ferrocrete bastion signatures beneath the ash, but thick empyric interference masks how far the 3rd Alliance has progressed here.',
+    rule: '<strong>Blind Recon Protocol:</strong> Deploy into Sector Node 1 (or fire an Orbital Recon Probe for 2 Leftover SP / 1 RP) to lift the Fog of War and force the Campaign Master to reveal the 3rd Alliance\'s true Hegemony progress!',
+    ruleBorder: '#f5b041'
+  },
+  2: {
+    discovered: false,
+    badge: 'FOG OF WAR • ADJACENT TO NODE 0',
+    badgeClass: 'section-tag',
+    title: 'Sector Node 2: [Sub-Surface Seismic Anomaly]',
+    libLabel: 'SHROUDED IN ASH (3rd Alliance Presence Unknown!)',
+    libColor: '#d2a8ff',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Southern border of the Golgotha Arbor-Basin. Deep-crust sonar indicates cavernous sub-surface voids and collapsed imperial cathedral spires buried in the drift.',
+    rule: '<strong>Blind Recon Protocol:</strong> Connected via direct supply route from Sector Node 0. True 3rd Alliance Hegemony (0/8 up to 8/8) remains hidden by the Campaign Master until uncovered.',
+    ruleBorder: '#6e7681'
+  },
+  3: {
+    discovered: false,
+    badge: 'FOG OF WAR • DEEP SECTOR',
+    badgeClass: 'section-tag purple',
+    title: 'Sector Node 3: [Extreme Empyric Radiation Spike]',
+    libLabel: 'SHROUDED IN ASH (3rd Alliance Presence Unknown!)',
+    libColor: '#bc8cff',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Unstable tectonic warp-faults and towering black monolith signatures detected through the lightning clouds. All orbital telemetry is jammed.',
+    rule: '<strong>Status:</strong> Locked behind Sector Node 1. Uncover Node 1 to open supply lines into Node 3.',
+    ruleBorder: '#bc8cff'
+  },
+  4: {
+    discovered: false,
+    badge: 'FOG OF WAR • CENTRAL ARTERY',
+    badgeClass: 'section-tag',
+    title: 'Sector Node 4: [Toxic Hydro-Signature]',
+    libLabel: 'SHROUDED IN ASH (3rd Alliance Presence Unknown!)',
+    libColor: '#d2a8ff',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Boiling acid-river chasms bisecting the continent. Narrow industrial bridge bottlenecks control all heavy armor movement between the western jungle and eastern wastes.',
+    rule: '<strong>Status:</strong> Locked behind Sector Nodes 1 &amp; 2. 3rd Alliance Hegemony level classified.',
+    ruleBorder: '#6e7681'
+  },
+  5: {
+    discovered: false,
+    badge: 'FOG OF WAR • SOUTHERN INDUSTRIAL ZONE',
+    badgeClass: 'section-tag',
+    title: 'Sector Node 5: [Thermal Refinery Signature]',
+    libLabel: 'SHROUDED IN ASH (3rd Alliance Presence Unknown!)',
+    libColor: '#d2a8ff',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Intense thermal blooms from volatile promethium pipelines, sludge vats, and derelict manufactorum silos.',
+    rule: '<strong>Status:</strong> Locked behind Sector Nodes 2 &amp; 4. 3rd Alliance Hegemony level classified.',
+    ruleBorder: '#6e7681'
+  },
+  6: {
+    discovered: false,
+    badge: 'FOG OF WAR • EASTERN CORRIDOR',
+    badgeClass: 'section-tag',
+    title: 'Sector Node 6: [Magnetic Rail-Corridor Anomaly]',
+    libLabel: 'SHROUDED IN ASH (3rd Alliance Presence Unknown!)',
+    libColor: '#d2a8ff',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Derelict continent-spanning mag-train arteries and dormant orbital defense laser silos guarding the approach to the polar highlands.',
+    rule: '<strong>Status:</strong> Locked behind Sector Nodes 3, 4 &amp; 5. 3rd Alliance Hegemony level classified.',
+    ruleBorder: '#6e7681'
+  },
+  7: {
+    discovered: false,
+    badge: 'FOG OF WAR • POLAR CITADEL THRESHOLD',
+    badgeClass: 'section-tag red',
+    title: 'Sector Node 7: [Polar Vortex / Crimson Mesa Threshold]',
+    libLabel: 'DEEP FOG OF WAR (Extreme Anomaly Readings)',
+    libColor: '#ff4757',
+    alphaHP: 0, betaHP: 0, hordeHP: null,
+    desc: '<strong>High-Altitude Ash Telemetry:</strong> Outer threshold of the Crimson Mesa and the Red Angel\'s Gate. Reality itself is fracturing under catastrophic empyric storms, blinding all orbital sensors.',
+    rule: '<strong>Status:</strong> Final Phase Theatre Objective. Reachable via Sector Nodes 3 &amp; 6. True 3rd Alliance fortification state hidden until approached.',
+    ruleBorder: '#ff4757'
+  }
+};
+
+function renderHegBar(containerId, count, activeClass) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  let html = '';
+  for (let i = 1; i <= 8; i++) {
+    if (count === null) {
+      html += `<div class="heg-seg unknown-fog" title="Shrouded in Ash-Storm Fog of War"></div>`;
+    } else {
+      html += `<div class="heg-seg${i <= count ? ' ' + activeClass : ''}"></div>`;
+    }
+  }
+  el.innerHTML = html;
+}
+
+function selectAtlasNode(nodeId) {
+  const data = ATLAS_NODES[nodeId];
+  if (!data) return;
+
+  document.querySelectorAll('#armageddon-sector-map .map-node-group').forEach(el => {
+    el.classList.toggle('selected-node', Number(el.getAttribute('data-node-id')) === nodeId);
+  });
+
+  const badgeEl = document.getElementById('insp-badge');
+  if (badgeEl) {
+    badgeEl.className = data.badgeClass;
+    badgeEl.textContent = data.badge;
+  }
+
+  const titleEl = document.getElementById('insp-title');
+  if (titleEl) titleEl.textContent = data.title;
+
+  const libLabel = document.getElementById('insp-lib-label');
+  if (libLabel) {
+    libLabel.textContent = data.libLabel;
+    libLabel.style.color = data.libColor;
+  }
+
+  renderHegBar('heg-bar-alpha', data.alphaHP, 'active-alpha');
+  renderHegBar('heg-bar-beta', data.betaHP, 'active-beta');
+  renderHegBar('heg-bar-horde', data.hordeHP, 'active-horde');
+
+  const valAlpha = document.getElementById('heg-val-alpha');
+  if (valAlpha) valAlpha.textContent = `${data.alphaHP} / 8 HP`;
+
+  const valBeta = document.getElementById('heg-val-beta');
+  if (valBeta) valBeta.textContent = `${data.betaHP} / 8 HP`;
+
+  const hordeValEl = document.getElementById('heg-val-horde');
+  if (hordeValEl) {
+    if (data.hordeHP === null) {
+      hordeValEl.textContent = '? / 8 HP';
+      hordeValEl.style.color = '#d2a8ff';
+    } else {
+      hordeValEl.textContent = `${data.hordeHP} / 8 HP`;
+      hordeValEl.style.color = '#ff4757';
+    }
+  }
+
+  const descEl = document.getElementById('insp-desc');
+  if (descEl) descEl.innerHTML = data.desc;
+
+  const ruleEl = document.getElementById('insp-rule');
+  if (ruleEl) {
+    ruleEl.innerHTML = data.rule;
+    ruleEl.style.borderLeftColor = data.ruleBorder;
+  }
+}
+
+// Initialize Node 0 on page load
+selectAtlasNode(0);
 </script>
 
 </body>
@@ -2525,6 +3054,191 @@ summary:hover { color: var(--text); }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 10px 0; }
 .section-header h3 { margin: 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
 .hidden { display: none !important; }
+
+/* ==========================================================================
+   SECTOR ATLAS HOLOLITH MAP & 3-WAY PARALLEL HEGEMONY TRACKER
+   ========================================================================== */
+.hololith-map-wrap {
+  background: radial-gradient(circle at 50% 45%, #161b26 0%, #090b10 85%);
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 18px;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85), 0 4px 20px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.hololith-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(245, 176, 65, 0.25);
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hololith-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.sector-svg {
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+  display: block;
+  user-select: none;
+}
+
+.map-supply-line {
+  stroke: #30363d;
+  stroke-width: 2.5;
+  stroke-dasharray: 6 6;
+  transition: stroke 0.25s ease;
+}
+
+.map-supply-line.active-line {
+  stroke: rgba(245, 176, 65, 0.65);
+  stroke-dasharray: none;
+}
+
+.map-node-group {
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.map-node-group:hover .node-outer-ring {
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 8px rgba(245, 176, 65, 0.7));
+}
+
+.map-node-group.selected-node .node-selection-reticle {
+  opacity: 1;
+}
+
+.node-selection-reticle {
+  opacity: 0;
+  stroke: #f5b041;
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  fill: none;
+  transition: opacity 0.2s ease;
+}
+
+.liberation-inspector {
+  background: rgba(22, 27, 34, 0.94);
+  border: 1px solid #f5b041;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.heg-race-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  background: rgba(13, 17, 23, 0.75);
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #21262d;
+}
+
+.heg-row {
+  display: grid;
+  grid-template-columns: 175px 1fr 68px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .heg-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+.heg-seg-track {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  height: 12px;
+}
+
+.heg-seg {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.heg-seg.active-alpha {
+  background: linear-gradient(90deg, #1f6feb, #58a6ff);
+  border-color: #79c0ff;
+  box-shadow: 0 0 6px rgba(88, 166, 255, 0.45);
+}
+
+.heg-seg.active-beta {
+  background: linear-gradient(90deg, #b87d14, #f5b041);
+  border-color: #ffd280;
+  box-shadow: 0 0 6px rgba(245, 176, 65, 0.45);
+}
+
+.heg-seg.active-horde {
+  background: linear-gradient(90deg, #a91d2a, #ff4757);
+  border-color: #ff7b72;
+  box-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
+}
+
+.heg-seg.unknown-fog {
+  background: repeating-linear-gradient(
+    45deg,
+    #161b22,
+    #161b22 4px,
+    #2d223b 4px,
+    #2d223b 8px
+  );
+  border-color: #6e40aa;
+  opacity: 0.75;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rule-box {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
 ````
 
 ---
@@ -3935,5 +4649,24 @@ test('UI Boundary: briefing.html defaults to Commander Beta dossier and includes
     'Briefing must not reveal Alpha switching to Marauders if Beta chooses Gatebreakers'
   );
 });
+
+test('briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemony Race tracker', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../../briefing.html'), 'utf8');
+
+  assert.match(html, /id="armageddon-sector-map"/, 'briefing.html must contain #armageddon-sector-map SVG');
+  assert.match(html, /id="atlas-node-inspector"/, 'briefing.html must contain #atlas-node-inspector panel');
+  assert.match(html, /id="heg-bar-alpha"/, 'briefing.html must contain Alpha parallel hegemony bar');
+  assert.match(html, /id="heg-bar-beta"/, 'briefing.html must contain Beta parallel hegemony bar');
+  assert.match(html, /id="heg-bar-horde"/, 'briefing.html must contain 3rd Alliance parallel hegemony bar');
+
+  for (let i = 0; i <= 7; i++) {
+    assert.match(
+      html,
+      new RegExp(`data-node-id="${i}"`),
+      `SVG map in briefing.html must include interactive node data-node-id="${i}"`
+    );
+  }
+});
+
 
 ````
