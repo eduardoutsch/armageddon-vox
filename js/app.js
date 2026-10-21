@@ -71,6 +71,9 @@ function saveSessionState() {
 
 function restoreSessionState() {
   if (typeof localStorage === 'undefined') return false;
+  if (typeof document !== 'undefined' && !document.getElementById('setupScreen') && !document.getElementById('gameScreen')) {
+    return false;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY_SESSION);
     if (!raw) return false;
@@ -187,16 +190,21 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 
 function selectMode(mode) {
   selectedModeVal = mode;
-  document.getElementById('modeCardCoop').classList.toggle('selected-red', mode === 'coop');
-  document.getElementById('modeCardSolo').classList.toggle('selected-red', mode === 'solo');
-  document.getElementById('playerRoleSection').classList.toggle('hidden', mode === 'solo');
+  const coop = document.getElementById('modeCardCoop');
+  const solo = document.getElementById('modeCardSolo');
+  const roleSec = document.getElementById('playerRoleSection');
+  if (coop) coop.classList.toggle('selected-red', mode === 'coop');
+  if (solo) solo.classList.toggle('selected-red', mode === 'solo');
+  if (roleSec) roleSec.classList.toggle('hidden', mode === 'solo');
   saveSessionState();
 }
 
 function selectRole(role) {
   selectedRoleVal = role;
-  document.getElementById('roleCard1').classList.toggle('selected', role === '1');
-  document.getElementById('roleCard2').classList.toggle('selected', role === '2');
+  const r1 = document.getElementById('roleCard1');
+  const r2 = document.getElementById('roleCard2');
+  if (r1) r1.classList.toggle('selected', role === '1');
+  if (r2) r2.classList.toggle('selected', role === '2');
   saveSessionState();
 }
 
@@ -624,11 +632,13 @@ function renderSpawnZones() {
         <span class="badge green">Spawn Zone ${z.zone} • ${z.bracketLabel} (${z.pts})</span>
         <span class="hud-sub">${z.diceStr} | Mod: ${z.totalMod >= 0 ? '+'+z.totalMod : z.totalMod} → <strong>Total: ${z.finalRoll}</strong></span>
       </div>
-      <h4 class="card-title" style="margin-top:4px;">${z.units.join('  +  ')}</h4>
+      <h4 class="card-title" style="margin-top:6px;">${z.units.join('  +  ')}</h4>
       ${(z.bracketKey !== 'NONE' && z.bracketKey !== '3-4') ? `
-        <button class="btn-ghost btn-sm" style="margin-top:8px;" onclick="rollDownZone(${idx})">
-          ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
-        </button>
+        <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+          <button class="btn-ghost btn-sm" onclick="rollDownZone(${idx})">
+            ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
+          </button>
+        </div>
       ` : ''}
     </div>
   `).join('');

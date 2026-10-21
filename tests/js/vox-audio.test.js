@@ -30,5 +30,10 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   assert.ok(code.includes('https://www.youtube.com/iframe_api'), 'Must dynamically load YouTube Iframe API');
   assert.ok(code.includes('voxMusicToggle'), 'Must create voxMusicToggle top-nav button');
   assert.ok(code.includes('voxMusicSkip'), 'Must create voxMusicSkip button');
+
+  // Verify Seamless Client-Side Page Router (Gapless Audio)
+  assert.ok(code.includes('navigateSeamlessly'), 'Must implement navigateSeamlessly for gapless audio across page switching');
+  assert.ok(code.includes('popstate'), 'Must handle popstate events for browser back/forward navigation');
+  assert.ok(code.includes('DOMParser'), 'Must parse fetched pages via DOMParser');
 });
 

@@ -1036,6 +1036,323 @@ input, select, textarea {
   font-family: var(--font-ui);
 }
 
+/* ==========================================================================
+   MODE 1 SPAWNER, RESUPPLY & TACTICAL INTERACTION COMPONENTS
+   ========================================================================== */
+.choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .choice-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.choice-card {
+  background: #141210;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.choice-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.choice-card.selected {
+  background: rgba(157, 92, 255, 0.12);
+  border-color: var(--purple);
+  box-shadow: 0 0 18px rgba(157, 92, 255, 0.2);
+}
+
+.choice-card.selected-red {
+  background: rgba(204, 41, 54, 0.14);
+  border-color: var(--red);
+  box-shadow: 0 0 18px rgba(204, 41, 54, 0.2);
+}
+
+.choice-icon {
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.choice-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.choice-sub {
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.rules-strip {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0;
+}
+
+.rule-tag {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: #a5b0c2;
+  font-size: 0.74rem;
+  font-family: var(--font-mono);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.rule-tag strong {
+  color: var(--gold);
+}
+
+.round-banner {
+  background: linear-gradient(180deg, #1a1714 0%, #100e0c 100%);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--red);
+  clip-path: var(--clip-card);
+  padding: 20px 18px;
+  margin-bottom: 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+.round-banner h2 {
+  font-size: 1.35rem;
+  color: var(--gold-bright);
+  margin: 0 0 6px 0;
+  text-align: center;
+}
+
+.round-banner p {
+  color: var(--text);
+  font-size: 0.88rem;
+  margin: 0 0 14px 0;
+  text-align: center;
+  max-width: 620px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--gold);
+}
+
+.card-title {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 6px 0 6px 0;
+  letter-spacing: 0.5px;
+}
+
+.card-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #d1d5db;
+  margin: 0 0 10px 0;
+}
+
+.card.resupply {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-left-color: var(--green);
+}
+
+.card.resupply > div {
+  flex: 1;
+}
+
+.card.resupply .btn-blue {
+  flex-shrink: 0;
+}
+
+.card.spawn-zone {
+  border-left-color: var(--green);
+}
+
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: var(--gold);
+}
+
+.chip.active {
+  background: rgba(212, 163, 73, 0.22);
+  color: var(--gold-bright);
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(212, 163, 73, 0.25);
+}
+
+.fort-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.fort-item {
+  background: var(--bg);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.fort-item input[type="checkbox"] {
+  accent-color: var(--gold);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+summary {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gold);
+  cursor: pointer;
+  user-select: none;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.15s ease;
+}
+
+summary:hover {
+  color: var(--gold-bright);
+  background: rgba(212, 163, 73, 0.06);
+}
+
+details[open] > summary {
+  border-bottom: 1px dashed var(--border);
+  background: rgba(212, 163, 73, 0.08);
+}
+
+.drawer-body {
+  padding: 14px 16px;
+}
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.reward-pill {
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 4px;
+}
+
+.reward-pill strong {
+  color: #a7f3d0;
+}
+
+.punish-pill {
+  background: rgba(204, 41, 54, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(204, 41, 54, 0.35);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 4px;
+}
+
+.punish-pill strong {
+  color: #f87171;
+}
+
+.cm-code {
+  display: inline-block;
+  background: var(--bg);
+  border: 1px dashed var(--gold);
+  color: var(--gold);
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-top: 10px;
+  text-align: center;
+}
+
 .hidden { display: none !important; }
 
 /* ==========================================================================

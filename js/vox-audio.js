@@ -512,6 +512,180 @@
     }
   }
 
+  // =========================================================================
+  // PART 3: SEAMLESS CLIENT-SIDE PAGE ROUTER (GAPLESS AUDIO ACROSS NAVIGATION)
+  // =========================================================================
+  let isNavigating = false;
+
+  async function navigateSeamlessly(targetUrl, push = true) {
+    if (isNavigating) return;
+    isNavigating = true;
+
+    try {
+      // 1. Save current page state before leaving
+      if (typeof saveSessionState === 'function') {
+        try { saveSessionState(); } catch (e) {}
+      }
+      if (typeof saveBriefingState === 'function') {
+        try { saveBriefingState(); } catch (e) {}
+      }
+      if (typeof savePvpState === 'function') {
+        try { savePvpState(); } catch (e) {}
+      }
+      if (typeof saveRogueState === 'function') {
+        try { saveRogueState(); } catch (e) {}
+      }
+      saveCurrentPosition();
+
+      // 2. Fetch destination page HTML
+      const resp = await fetch(targetUrl);
+      if (!resp.ok) {
+        window.location.href = targetUrl;
+        return;
+      }
+      const htmlText = await resp.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+
+      // 3. Update Document Title
+      if (doc.title) {
+        document.title = doc.title;
+      }
+
+      // 4. Locate and swap main content shell
+      const targetShellSelector = '.app-shell, .briefing-shell, .container';
+      const currentShell = document.querySelector(targetShellSelector);
+      const newShell = doc.querySelector(targetShellSelector);
+
+      if (currentShell && newShell) {
+        currentShell.replaceWith(document.importNode(newShell, true));
+      } else {
+        window.location.href = targetUrl;
+        return;
+      }
+
+      // 5. Update suite navigation links and active state
+      const currentNav = document.querySelector('.suite-nav');
+      const newNav = doc.querySelector('.suite-nav');
+      if (currentNav && newNav) {
+        const newLinks = newNav.querySelectorAll('.suite-link');
+        const currentLinks = currentNav.querySelectorAll('.suite-link');
+        currentLinks.forEach(l => l.remove());
+        const voxBar = currentNav.querySelector('.vox-caster-bar');
+        newLinks.forEach(l => {
+          const imported = document.importNode(l, true);
+          if (voxBar) {
+            currentNav.insertBefore(imported, voxBar);
+          } else {
+            currentNav.appendChild(imported);
+          }
+        });
+      }
+
+      // 6. Update browser address bar / history
+      if (push && window.location.href !== targetUrl) {
+        window.history.pushState({}, '', targetUrl);
+      }
+
+      // 7. Instant scroll to top
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+
+      // 8. Dynamically load any missing external scripts
+      const externalScripts = Array.from(doc.querySelectorAll('script[src]'));
+      for (const s of externalScripts) {
+        const src = s.getAttribute('src');
+        if (!src || src.includes('vox-audio.js')) continue;
+        const resolvedSrc = new URL(src, targetUrl).href;
+        if (!document.querySelector(`script[src="${resolvedSrc}"], script[src="${src}"]`)) {
+          await new Promise((resolve) => {
+            const scriptEl = document.createElement('script');
+            scriptEl.src = resolvedSrc;
+            scriptEl.onload = resolve;
+            scriptEl.onerror = resolve;
+            document.head.appendChild(scriptEl);
+          });
+        }
+      }
+
+      // 9. Execute inline scripts from destination page
+      const inlineScripts = doc.querySelectorAll('script:not([src])');
+      inlineScripts.forEach(s => {
+        const scriptEl = document.createElement('script');
+        scriptEl.textContent = s.textContent;
+        document.body.appendChild(scriptEl);
+      });
+
+      // 10. Re-trigger mode-specific setup routines
+      if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
+        const hordeSel = document.getElementById('hordeFactionSelect');
+        if (hordeSel && typeof HORDE_FACTIONS !== 'undefined') {
+          hordeSel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
+        }
+        if (typeof restoreSessionState === 'function') {
+          restoreSessionState();
+        }
+      }
+      if (document.getElementById('atlas-node-inspector') && typeof restoreBriefingState === 'function') {
+        restoreBriefingState();
+      }
+      if (document.getElementById('pvpGameScreen') && typeof restorePvpState === 'function') {
+        restorePvpState();
+      }
+      if (document.getElementById('rogueTurnCount') && typeof restoreRogueState === 'function') {
+        restoreRogueState();
+      }
+
+      // 11. Dispatch navigation events
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      window.dispatchEvent(new Event('vox:page-swapped'));
+
+    } catch (err) {
+      console.warn('Seamless router fallback to standard navigation:', err);
+      window.location.href = targetUrl;
+    } finally {
+      isNavigating = false;
+    }
+  }
+
+  // Intercept all internal navigation link clicks
+  document.addEventListener('click', (e) => {
+    // Only handle standard left clicks without modifier keys
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+
+    const hrefAttr = link.getAttribute('href');
+    if (!hrefAttr || hrefAttr.startsWith('#') || hrefAttr.startsWith('javascript:') || hrefAttr.startsWith('mailto:')) return;
+    if (link.target && link.target !== '_self') return;
+
+    try {
+      const url = new URL(link.href, window.location.href);
+      // Only intercept internal same-origin links
+      if (url.origin !== window.location.origin) return;
+
+      // If linking to the exact same page path and search, allow normal anchor behavior
+      if (url.pathname === window.location.pathname && url.search === window.location.search) {
+        if (url.hash) return;
+        e.preventDefault();
+        return;
+      }
+
+      // Check if it's an html page or directory root
+      if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || !url.pathname.includes('.')) {
+        e.preventDefault();
+        navigateSeamlessly(url.href, true);
+      }
+    } catch (err) {
+      // Allow default navigation if URL parsing fails
+    }
+  });
+
+  // Handle browser Back / Forward buttons
+  window.addEventListener('popstate', () => {
+    navigateSeamlessly(window.location.href, false);
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', injectNavToggle);
   } else {
