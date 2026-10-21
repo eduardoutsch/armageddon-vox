@@ -1207,44 +1207,110 @@ const SLIDER_LEVELS = {
   }
 };
 
-function selectSlider(val) {
+const STORAGE_KEY_BRIEFING = 'foa_briefing_state_v1';
+let currentBriefingState = {
+  activeTab: 'beta',
+  unlockedAlpha: false,
+  unlockedBeta: false,
+  sliderVal: 0,
+  selectedAtlasNode: 0
+};
+
+function saveBriefingState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_BRIEFING, JSON.stringify(currentBriefingState));
+  } catch (err) {
+    console.warn('Could not save briefing state:', err);
+  }
+}
+
+function restoreBriefingState() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BRIEFING);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+    currentBriefingState = { ...currentBriefingState, ...parsed };
+
+    if (currentBriefingState.unlockedAlpha) unlockTab('Alpha', false);
+    if (currentBriefingState.unlockedBeta) unlockTab('Beta', false);
+
+    if (typeof currentBriefingState.sliderVal === 'number') {
+      selectSlider(currentBriefingState.sliderVal, false);
+    }
+    if (typeof currentBriefingState.selectedAtlasNode === 'number') {
+      selectAtlasNode(currentBriefingState.selectedAtlasNode, false);
+    }
+
+    const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
+    const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
+    if (validTabs.includes(hashTab)) {
+      showDossier(hashTab, false);
+    } else if (validTabs.includes(currentBriefingState.activeTab)) {
+      showDossier(currentBriefingState.activeTab, false);
+    }
+  } catch (err) {
+    console.warn('Could not restore briefing state:', err);
+  }
+}
+
+function selectSlider(val, shouldSave = true) {
+  currentBriefingState.sliderVal = val;
   [-3, -2, -1, 0, 1, 2, 3].forEach(n => {
     const el = document.getElementById('node' + n);
-    el.className = 'slider-node';
+    if (el) el.className = 'slider-node';
     const row = document.getElementById('reckRow' + n);
     if (row) row.classList.toggle('highlight-row', n === val);
   });
   const cfg = SLIDER_LEVELS[String(val)];
-  document.getElementById('node' + val).classList.add(cfg.cls);
+  const activeNode = document.getElementById('node' + val);
+  if (activeNode) activeNode.classList.add(cfg.cls);
   const box = document.getElementById('sliderDetailBox');
-  box.className = cfg.boxCls;
-  box.innerHTML = `<h3 style="margin:0 0 6px 0;">${cfg.title}</h3><div style="font-size:0.88rem; line-height:1.5;">${cfg.body}</div>`;
+  if (box) {
+    box.className = cfg.boxCls;
+    box.innerHTML = `<h3 style="margin:0 0 6px 0;">${cfg.title}</h3><div style="font-size:0.88rem; line-height:1.5;">${cfg.body}</div>`;
+  }
+  if (shouldSave) saveBriefingState();
 }
 
-function showDossier(which) {
+function showDossier(which, shouldSave = true) {
+  currentBriefingState.activeTab = which;
   ['alpha', 'beta', 'atlas', 'rules'].forEach(k => {
     const cap = k.charAt(0).toUpperCase() + k.slice(1);
-    document.getElementById('dossier' + cap).classList.toggle('hidden', which !== k);
-    document.getElementById('btn' + cap).classList.toggle('active', which === k);
+    const dossierEl = document.getElementById('dossier' + cap);
+    if (dossierEl) dossierEl.classList.toggle('hidden', which !== k);
+    const btnEl = document.getElementById('btn' + cap);
+    if (btnEl) btnEl.classList.toggle('active', which === k);
   });
+  if (shouldSave) saveBriefingState();
 }
 
-function unlockTab(who) {
-  document.getElementById('gate' + who).classList.add('hidden');
-  document.getElementById('content' + who).classList.remove('hidden');
+function unlockTab(who, shouldSave = true) {
+  currentBriefingState['unlocked' + who] = true;
+  const gateEl = document.getElementById('gate' + who);
+  if (gateEl) gateEl.classList.add('hidden');
+  const contentEl = document.getElementById('content' + who);
+  if (contentEl) contentEl.classList.remove('hidden');
+  if (shouldSave) saveBriefingState();
 }
 
-function lockTab(who) {
-  document.getElementById('content' + who).classList.add('hidden');
-  document.getElementById('gate' + who).classList.remove('hidden');
+function lockTab(who, shouldSave = true) {
+  currentBriefingState['unlocked' + who] = false;
+  const contentEl = document.getElementById('content' + who);
+  if (contentEl) contentEl.classList.add('hidden');
+  const gateEl = document.getElementById('gate' + who);
+  if (gateEl) gateEl.classList.remove('hidden');
+  if (shouldSave) saveBriefingState();
 }
 
-selectSlider(0);
+selectSlider(0, false);
 
 // Default to Commander Beta (JUNEBUG) dossier unless a specific valid hash is targeted
 const validTabs = ['alpha', 'beta', 'atlas', 'rules'];
 const hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
-showDossier(validTabs.includes(hashTab) ? hashTab : 'beta');
+showDossier(validTabs.includes(hashTab) ? hashTab : 'beta', false);
 
 const ATLAS_NODES = {
   0: {
@@ -1359,7 +1425,8 @@ function renderHegBar(containerId, count, activeClass) {
   el.innerHTML = html;
 }
 
-function selectAtlasNode(nodeId) {
+function selectAtlasNode(nodeId, shouldSave = true) {
+  currentBriefingState.selectedAtlasNode = nodeId;
   const data = ATLAS_NODES[nodeId];
   if (!data) return;
 
@@ -1411,10 +1478,12 @@ function selectAtlasNode(nodeId) {
     ruleEl.innerHTML = data.rule;
     ruleEl.style.borderLeftColor = data.ruleBorder;
   }
+  if (shouldSave) saveBriefingState();
 }
 
-// Initialize Node 0 on page load
-selectAtlasNode(0);
+// Initialize default Node 0 then restore saved user state from localStorage
+selectAtlasNode(0, false);
+restoreBriefingState();
 </script>
 
 </body>
