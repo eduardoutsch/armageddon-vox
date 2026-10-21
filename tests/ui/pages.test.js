@@ -148,6 +148,10 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
     !html.includes('and will switch to <strong>⚔️ Marauders</strong> if you claim Gatebreakers'),
     'Briefing must not reveal Alpha switching to Marauders if Beta chooses Gatebreakers'
   );
+  assert.ok(
+    !html.includes('Commander Alpha (Gatebreakers)'),
+    'Briefing must not reveal Alpha choosing Gatebreakers on public Atlas or non-Alpha sections'
+  );
 });
 
 test('pages/briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemony Race tracker', () => {
@@ -155,9 +159,18 @@ test('pages/briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel 
 
   assert.match(html, /id="armageddon-sector-map"/, 'pages/briefing.html must contain #armageddon-sector-map SVG');
   assert.match(html, /id="atlas-node-inspector"/, 'pages/briefing.html must contain #atlas-node-inspector panel');
+  assert.match(html, /id="fullscreenQuickHud"/, 'pages/briefing.html must contain #fullscreenQuickHud telemetry panel');
+  assert.match(html, /id="fsHudRule"/, 'pages/briefing.html must contain #fsHudRule strategic intelligence box');
   assert.match(html, /id="heg-bar-alpha"/, 'pages/briefing.html must contain Alpha parallel hegemony bar');
   assert.match(html, /id="heg-bar-beta"/, 'pages/briefing.html must contain Beta parallel hegemony bar');
   assert.match(html, /id="heg-bar-horde"/, 'pages/briefing.html must contain 3rd Alliance parallel hegemony bar');
+
+  // Verify scoreboard in roster.html does not spoil Alpha alliance
+  const rosterHtml = readPage('pages/roster.html');
+  assert.ok(
+    !rosterHtml.includes('Commander Alpha • Gatebreakers'),
+    'Global scoreboard in roster.html must not spoil Commander Alpha alliance'
+  );
 
   for (let i = 0; i <= 7; i++) {
     assert.match(

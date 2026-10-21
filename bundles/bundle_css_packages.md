@@ -685,10 +685,10 @@ summary:hover { color: var(--text); }
 
 .fs-node-tag {
   font-family: monospace;
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 4px;
   background: rgba(16, 185, 129, 0.18);
   color: #86efac;
@@ -699,9 +699,9 @@ summary:hover { color: var(--text); }
   display: inline-flex;
   align-items: center;
   font-family: monospace;
-  font-size: 0.74rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 2px 9px;
+  padding: 3px 10px;
   border-radius: 4px;
   background: rgba(245, 176, 65, 0.14);
   color: #fde68a;
@@ -723,9 +723,9 @@ summary:hover { color: var(--text); }
   border: 1px solid #1f3a2e;
   color: #86efac;
   font-family: monospace;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -751,13 +751,23 @@ summary:hover { color: var(--text); }
 
 .fs-hud-rule-box {
   background: #09130e;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid rgba(16, 185, 129, 0.35);
   border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  padding: 12px 16px;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: #ecfdf5;
+  margin-bottom: 12px;
+}
+
+.fs-hud-rule-box strong {
+  color: #6ee7b7;
+  font-weight: 700;
+}
+
+.fs-hud-rule-box em {
   color: #d1fae5;
-  margin-bottom: 10px;
+  font-style: normal;
 }
 
 .fs-hud-heg-grid {
@@ -770,22 +780,23 @@ summary:hover { color: var(--text); }
   background: #08110c;
   border: 1px solid #182d21;
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 8px 12px;
 }
 
 .fs-heg-label {
   display: flex;
   justify-content: space-between;
-  font-size: 0.76rem;
-  margin-bottom: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 5px;
   color: #a7f3d0;
 }
 
 .fs-heg-bar {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 3px;
-  height: 9px;
+  gap: 4px;
+  height: 11px;
 }
 ````
 

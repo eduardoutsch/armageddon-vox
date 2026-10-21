@@ -527,7 +527,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
           <div class="fs-hud-header">
             <div class="fs-hud-title-wrap">
               <span class="fs-node-tag" id="fsHudBadge">ACTIVE ZONE</span>
-              <strong id="fsHudTitle" style="color:#ecfdf5; font-size:0.96rem;">Sector Node 0: Golgotha Arbor-Basin</strong>
+              <strong id="fsHudTitle" style="color:#ecfdf5; font-size:1.05rem; font-weight:800;">Sector Node 0: Golgotha Arbor-Basin</strong>
               <div id="fsHudDominance" class="fs-dominance-pill">💀 Commander Beta Leading (2 / 8 HP)</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
@@ -555,7 +555,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
             <div class="fs-hud-heg-grid">
               <div class="fs-heg-row">
                 <div class="fs-heg-label">
-                  <span>🦅 Commander Alpha (Gatebreakers)</span>
+                  <span>🦅 Commander Alpha</span>
                   <strong id="fs-heg-val-alpha">1 / 8 HP</strong>
                 </div>
                 <div id="fs-heg-bar-alpha" class="fs-heg-bar"></div>
@@ -598,7 +598,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
 
       <div style="margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
-          <span>🦅 Commander Alpha (Gatebreakers)</span>
+          <span>🦅 Commander Alpha</span>
           <strong id="heg-label-alpha">1 / 8 HP</strong>
         </div>
         <div id="heg-bar-alpha" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
@@ -852,10 +852,9 @@ function showDossier(which, persist = true) {
     if (btnEl) btnEl.classList.toggle('active', k === which);
   });
 
-  const fsTitle = document.getElementById('fsHudTitle');
-  const fsSub = document.getElementById('fsHudSub');
-  if (fsTitle) fsTitle.innerHTML = n.title;
-  if (fsSub) fsSub.textContent = `[Alpha: ${n.alphaHP}/8 • Beta: ${n.betaHP}/8 • 3rd Alliance: ${n.hordeHP === null ? '?/8' : n.hordeHP + '/8'}]`;
+  if (which === 'atlas') {
+    selectAtlasNode(briefingState.selectedNode, false);
+  }
 
   if (persist) saveBriefingState();
 }
