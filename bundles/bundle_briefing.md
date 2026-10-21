@@ -670,7 +670,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
     </div>
   </div>
 
-  <div class="btn-row" style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
+  <div class="btn-row">
     <a href="roster.html" class="terminal-link-btn alt">
       🎖️ View Dramatis Personae &amp; Nemesis Ledger →
     </a>

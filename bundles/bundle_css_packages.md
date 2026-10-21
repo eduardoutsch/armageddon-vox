@@ -83,6 +83,7 @@ body {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), 0 0 30px rgba(255, 71, 87, 0.08);
   position: relative;
   overflow: hidden;
+  text-align: center;
 }
 .hero-card::before {
   content: "";
@@ -102,9 +103,9 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  padding: 5px 12px;
+  padding: 5px 14px;
   border-radius: 99px;
-  margin-bottom: 14px;
+  margin: 0 auto 14px auto;
 }
 .pulse-dot {
   width: 8px; height: 8px;
@@ -124,7 +125,13 @@ body {
   background: linear-gradient(135deg, #ffffff 0%, #ffb8b8 50%, #ff4757 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
 }
-.hero-subtitle { color: var(--muted); font-size: 0.9rem; margin: 0 auto; max-width: 460px; }
+.hero-subtitle {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0 auto;
+  max-width: 740px;
+}
 .lore-quote {
   background: rgba(10, 11, 16, 0.65); border-left: 3px solid var(--gold);
   padding: 10px 14px; border-radius: 0 8px 8px 0;
@@ -565,6 +572,7 @@ summary:hover { color: var(--text); }
   height: auto;
   min-width: 680px;
   display: block;
+  margin: 0 auto;
   font-family: 'Segoe UI', Roboto, monospace;
   user-select: none;
   transition: width 0.2s ease;
@@ -636,12 +644,19 @@ summary:hover { color: var(--text); }
   width: 100%;
 }
 
+.briefing-shell .nav-pills {
+  max-width: 860px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .btn-row {
   display: flex;
   gap: 14px;
   margin-top: 24px;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
   width: 100%;
 }
 
