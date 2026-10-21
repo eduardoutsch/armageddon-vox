@@ -39,12 +39,12 @@ Clean code does NOT substitute for thorough technical documentation.
 - Every new module, capability, or architectural change MUST be reflected with improvements and updates in the relevant `README.md` and documentation files.
 - Documentation is a living artifact and an inseparable part of delivering software value.
 
-## VIII. Single-File Codebase Bundle Synchronization (`codebase_bundle.md`)
-Any and all changes made to the codebase (files added, modified, renamed, or deleted) MUST immediately and continuously be reflected in `codebase_bundle.md`.
-- `codebase_bundle.md` serves as the centralized, comprehensive ingestion artifact for Gemini Notebook and NotebookLM.
-- The bundle MUST always maintain an up-to-date Table of Contents with working anchor links to every single project file.
-- All code fences in the bundle MUST use quadruple backticks (` ````lang `) to prevent formatting conflicts with nested code blocks or Markdown documentation.
-- No task, commit, or pull request is considered complete until `codebase_bundle.md` has been regenerated, verified, and kept in sync with the current repository state.
+## VIII. Modular Codebase Bundles Synchronization (`/bundles/` Directory)
+Any and all changes made to the codebase (files added, modified, renamed, or deleted) MUST immediately and continuously be reflected in the modular markdown bundles in `/bundles/` via `npm run bundle` / `node scripts/generate_bundles.js`.
+- The `/bundles` directory provides modular, page-by-page and component-focused ingestion artifacts for Gemini Notebook and NotebookLM (`bundle_index.md`, `bundle_briefing.md`, `bundle_pvp.md`, `bundle_rogue.md`, `bundle_roster.md`, and `bundle_css_packages.md`).
+- Each bundle maintains an up-to-date Table of Contents with working anchor links to its constituent project files.
+- All code fences in each bundle MUST use quadruple backticks (` ````lang `) to prevent formatting conflicts with nested code blocks or Markdown documentation.
+- No task, commit, or pull request is considered complete until all modular bundles in `/bundles/` have been regenerated, verified, and kept in sync with the current repository state.
 
 ---
-> **Note for Autonomous Agents**: You are strictly required to treat this document as the highest-priority directive when planning architecture, suggesting refactoring, or implementing new routines and features (including operations performed via Google Antigravity, OPSX, or autonomous workflows). **Whenever you create, modify, or delete any file in the repository, you MUST regenerate and synchronize `codebase_bundle.md` before concluding your turn.**
+> **Note for Autonomous Agents**: You are strictly required to treat this document as the highest-priority directive when planning architecture, suggesting refactoring, or implementing new routines and features (including operations performed via Google Antigravity, OPSX, or autonomous workflows). **Whenever you create, modify, or delete any file in the repository, you MUST regenerate and synchronize the modular `/bundles/` directory before concluding your turn.**

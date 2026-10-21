@@ -11,4 +11,3 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 | [`bundle_roster.md`](bundle_roster.md) | **Rosters & Nemesis Ledger** | `pages/roster.html` |
 | [`bundle_css_packages.md`](bundle_css_packages.md) | **Stylesheets, Config & Packages** | `css/style.css`, `package.json`, `wrangler.jsonc`, `assets/favicon.svg`, `README.md`, `AGENTS.md`, `.gitignore` |
 
-*For the unified, single-file bundle containing the entire repository, see [`../codebase_bundle.md`](../codebase_bundle.md).*

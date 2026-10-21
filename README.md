@@ -33,7 +33,6 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 - `js/` — Modular client-side logic (`data.js`, `rng.js`, `spawner.js`, `app.js`).
 - `scripts/` — Utility generators (`generate_bundles.js`).
 - `tests/` — Automated Node test suites mirroring `js/` (`tests/js/`) and UI boundary tests (`tests/ui/`).
-- `codebase_bundle.md` — Unified master single-file bundle for AI and NotebookLM ingestion.
 
 ---
 

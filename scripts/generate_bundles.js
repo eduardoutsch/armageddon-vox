@@ -61,37 +61,7 @@ function compileBundle(title, description, fileList, targetPath) {
   console.log(`Bundle generated: ${path.relative(ROOT_DIR, targetPath)} (${out.length} characters)`);
 }
 
-// 1. MASTER BUNDLE: codebase_bundle.md
-const MASTER_FILES = [
-  'package.json',
-  'wrangler.jsonc',
-  '.gitignore',
-  'README.md',
-  'AGENTS.md',
-  'index.html',
-  'pages/briefing.html',
-  'pages/pvp.html',
-  'pages/rogue.html',
-  'pages/roster.html',
-  'assets/favicon.svg',
-  'css/style.css',
-  'js/data.js',
-  'js/rng.js',
-  'js/spawner.js',
-  'js/app.js',
-  'tests/js/data.test.js',
-  'tests/js/rng.test.js',
-  'tests/js/spawner.test.js',
-  'tests/js/app.test.js',
-  'tests/ui/pages.test.js'
-];
-
-compileBundle(
-  '📦 Fires of Armageddon // Complete Codebase Bundle',
-  'All project files compiled into a single document for Gemini / NotebookLM ingestion.',
-  MASTER_FILES,
-  path.join(ROOT_DIR, 'codebase_bundle.md')
-);
+// Modular bundles compiled to /bundles directory
 
 // 2. PAGE 1: Mode 1 Spawner & Tactical Terminal (index.html + JS core + test suites)
 const INDEX_FILES = [
@@ -178,7 +148,6 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 | [\`bundle_roster.md\`](bundle_roster.md) | **Rosters & Nemesis Ledger** | \`pages/roster.html\` |
 | [\`bundle_css_packages.md\`](bundle_css_packages.md) | **Stylesheets, Config & Packages** | \`css/style.css\`, \`package.json\`, \`wrangler.jsonc\`, \`assets/favicon.svg\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\` |
 
-*For the unified, single-file bundle containing the entire repository, see [\`../codebase_bundle.md\`](../codebase_bundle.md).*
 `;
 
 fs.writeFileSync(path.join(BUNDLES_DIR, 'README.md'), bundlesReadme, 'utf8');

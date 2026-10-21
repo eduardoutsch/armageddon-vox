@@ -212,11 +212,13 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     assert.equal(content.includes('\0'), false, `${b.file} must not contain null bytes`);
   }
 
-  // Root bundle must also exist and be synchronized
+  // Legacy monolithic codebase_bundle.md is deprecated in favor of /bundles directory
   const rootBundlePath = path.join(ROOT_DIR, 'codebase_bundle.md');
-  assert.ok(fs.existsSync(rootBundlePath), 'codebase_bundle.md must exist in root');
-  const rootContent = fs.readFileSync(rootBundlePath, 'utf8');
-  assert.equal(rootContent.includes('\0'), false, 'codebase_bundle.md must not contain null bytes');
+  assert.equal(
+    fs.existsSync(rootBundlePath),
+    false,
+    'codebase_bundle.md is deprecated; project exclusively uses modular bundles in /bundles/'
+  );
 });
 
 
