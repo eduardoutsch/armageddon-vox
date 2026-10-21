@@ -137,4 +137,26 @@ test('briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemo
   }
 });
 
+test('UI Boundary: pages integrate localStorage persistence so users can navigate tabs without resetting progress', () => {
+  const briefingHtml = readPage('briefing.html');
+  assert.ok(briefingHtml.includes('foa_briefing_state_v1'), 'briefing.html must persist state to foa_briefing_state_v1');
+  assert.ok(briefingHtml.includes('saveBriefingState'), 'briefing.html must have saveBriefingState');
+  assert.ok(briefingHtml.includes('restoreBriefingState'), 'briefing.html must have restoreBriefingState');
+
+  const pvpHtml = readPage('pvp.html');
+  assert.ok(pvpHtml.includes('foa_pvp_state_v1'), 'pvp.html must persist state to foa_pvp_state_v1');
+  assert.ok(pvpHtml.includes('savePvpState'), 'pvp.html must have savePvpState');
+  assert.ok(pvpHtml.includes('restorePvpState'), 'pvp.html must have restorePvpState');
+
+  const rogueHtml = readPage('rogue.html');
+  assert.ok(rogueHtml.includes('foa_rogue_state_v1'), 'rogue.html must persist state to foa_rogue_state_v1');
+  assert.ok(rogueHtml.includes('saveRogueState'), 'rogue.html must have saveRogueState');
+  assert.ok(rogueHtml.includes('restoreRogueState'), 'rogue.html must have restoreRogueState');
+
+  const appJs = fs.readFileSync(path.join(ROOT_DIR, 'js/app.js'), 'utf8');
+  assert.ok(appJs.includes('foa_horde_session_v1'), 'app.js must persist session to foa_horde_session_v1');
+  assert.ok(appJs.includes('saveSessionState'), 'app.js must define saveSessionState');
+  assert.ok(appJs.includes('restoreSessionState'), 'app.js must define restoreSessionState');
+});
+
 
