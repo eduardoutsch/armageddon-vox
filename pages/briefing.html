@@ -19,7 +19,7 @@
     <a href="briefing.html" class="suite-link active">📜 Briefings, Ship &amp; Atlas</a>
   </nav>
 
-<div class="app-shell">
+<div class="app-shell briefing-shell">
 
   <!-- 4-TAB DOSSIER SWITCHER (DEFAULTS TO BETA PER UI BOUNDARY TESTS) -->
   <div class="nav-pills" style="margin-top:8px; margin-bottom:20px;">
@@ -360,9 +360,9 @@
             <!-- 5. CANONICAL OCEAN & CONTINENT LABELS (Strictly 3 Hives Total on Map!) -->
             <g fill="rgba(167, 243, 208, 0.45)" font-size="13" font-weight="700" letter-spacing="3">
               <text x="515" y="24" text-anchor="middle" fill="rgba(252, 165, 165, 0.75)" font-size="15">THE FIRE WASTES</text>
-              <text x="445" y="96" text-anchor="middle">THE BOILING SEA</text>
+              <text x="365" y="96" text-anchor="middle">THE BOILING SEA</text>
               <text x="520" y="368" text-anchor="middle">THE TEMPEST OCEAN</text>
-              <text x="505" y="482" text-anchor="middle" fill="rgba(156, 163, 175, 0.55)">THE DEADLANDS</text>
+              <text x="370" y="476" text-anchor="middle" fill="rgba(156, 163, 175, 0.55)">THE DEADLANDS</text>
               <text x="88" y="295" text-anchor="middle" transform="rotate(-38 88 295)" font-size="11">THE OCEAN OF FURY</text>
             </g>
 
@@ -510,13 +510,60 @@
           </svg>
         </div>
 
-        <!-- COMPACT STATUS BAR VISIBLE INSIDE FULLSCREEN MODE -->
-        <div id="fullscreenQuickHud" class="hidden" style="margin-top:8px; padding:8px 12px; background:#0b1310; border:1px solid #10b981; border-radius:8px; display:none; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; font-size:0.82rem;">
-          <div>
-            <strong id="fsHudTitle" style="color:#ecfdf5;">Sector Node 0: Golgotha Arbor-Basin</strong>
-            <span id="fsHudSub" style="color:#86efac; margin-left:8px;">[A: 1/8 • B: 2/8 • H: 1/8]</span>
+        <!-- INTERACTIVE AUSPEX TELEMETRY HUD INSIDE FULLSCREEN MODE -->
+        <div id="fullscreenQuickHud" class="auspex-fullscreen-hud" style="display:none;">
+          <div class="fs-hud-header">
+            <div class="fs-hud-title-wrap">
+              <span class="fs-node-tag" id="fsHudBadge">ACTIVE ZONE</span>
+              <strong id="fsHudTitle" style="color:#ecfdf5; font-size:0.96rem;">Sector Node 0: Golgotha Arbor-Basin</strong>
+              <div id="fsHudDominance" class="fs-dominance-pill">💀 Commander Beta Leading (2 / 8 HP)</div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button type="button" class="auspex-toolbar-btn" id="fsToggleDetailsBtn" onclick="toggleFsHudDetails()">▾ Telemetry Details</button>
+              <button type="button" class="auspex-toolbar-btn" onclick="toggleAuspexFullscreen()">✕ Exit Fullscreen</button>
+            </div>
           </div>
-          <button type="button" class="auspex-toolbar-btn" onclick="toggleAuspexFullscreen()">✕ Exit Fullscreen</button>
+
+          <!-- QUICK NODE SELECTOR PILLS -->
+          <div class="fs-hud-pills">
+            <span style="font-size:0.68rem; color:#86efac; font-family:monospace; margin-right:4px;">RECON SECTOR:</span>
+            <button type="button" class="fs-pill-btn active" id="fsPill0" onclick="selectAtlasNode(0)">N0 Golgotha</button>
+            <button type="button" class="fs-pill-btn" id="fsPill1" onclick="selectAtlasNode(1)">N1 Anthrand</button>
+            <button type="button" class="fs-pill-btn" id="fsPill2" onclick="selectAtlasNode(2)">N2 Stygies</button>
+            <button type="button" class="fs-pill-btn" id="fsPill3" onclick="selectAtlasNode(3)">N3 Volcanus</button>
+            <button type="button" class="fs-pill-btn" id="fsPill4" onclick="selectAtlasNode(4)">N4 Tempest</button>
+            <button type="button" class="fs-pill-btn" id="fsPill5" onclick="selectAtlasNode(5)">N5 Deadlands</button>
+            <button type="button" class="fs-pill-btn" id="fsPill6" onclick="selectAtlasNode(6)">N6 Hades/Thoraddis</button>
+            <button type="button" class="fs-pill-btn" id="fsPill7" onclick="selectAtlasNode(7)">N7 Red Angel</button>
+          </div>
+
+          <!-- COLLAPSIBLE EXPANDED FULLSCREEN INTELLIGENCE & 3-WAY BARS -->
+          <div id="fsHudDetails" class="fs-hud-details">
+            <div id="fsHudRule" class="fs-hud-rule-box"></div>
+            <div class="fs-hud-heg-grid">
+              <div class="fs-heg-row">
+                <div class="fs-heg-label">
+                  <span>🦅 Commander Alpha (Gatebreakers)</span>
+                  <strong id="fs-heg-val-alpha">1 / 8 HP</strong>
+                </div>
+                <div id="fs-heg-bar-alpha" class="fs-heg-bar"></div>
+              </div>
+              <div class="fs-heg-row">
+                <div class="fs-heg-label">
+                  <span>💀 Commander Beta (JUNEBUG)</span>
+                  <strong id="fs-heg-val-beta">2 / 8 HP</strong>
+                </div>
+                <div id="fs-heg-bar-beta" class="fs-heg-bar"></div>
+              </div>
+              <div class="fs-heg-row">
+                <div class="fs-heg-label">
+                  <span>👁️‍🗨️ 3rd Alliance (Horde AI)</span>
+                  <strong id="fs-heg-val-horde">1 / 8 HP</strong>
+                </div>
+                <div id="fs-heg-bar-horde" class="fs-heg-bar"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -525,7 +572,10 @@
     <div id="atlas-node-inspector" class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
       <div class="section-header" style="margin-top:0;">
         <h3 id="inspectorNodeTitle">Sector Node 0: Equatorial Jungle // The Golgotha Arbor-Basin</h3>
-        <span class="status-pill" id="inspectorNodeBadge">DISCOVERED • CONTESTED</span>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <span class="status-pill" id="inspectorNodeBadge">DISCOVERED • CONTESTED</span>
+          <span class="fs-dominance-pill" id="inspectorDominance">💀 Commander Beta Leading (2 / 8 HP)</span>
+        </div>
       </div>
       <p id="inspectorNodeLore" class="card-desc"></p>
       <div id="inspectorNodeRule" class="card" style="background:#0b0d13; margin:12px 0; font-size:0.88rem;"></div>
@@ -558,7 +608,6 @@
         <div id="heg-bar-horde" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
       </div>
     </div>
-  </div>
   </div>
 
   <!-- ================================================================= -->
@@ -660,7 +709,7 @@ const ATLAS_NODES = {
     title: "Sector Node 0: Equatorial Jungle // The Golgotha Arbor-Basin",
     badge: "DISCOVERED • BIO-OXYGEN LANDING ZONE",
     lore: "A rare surviving basin of petrified iron-wood jungle bridging Armageddon Prime and Secundus. Breathable oxygen pockets, promethium-timber, and the shattered stained-glass hulls of Session 0 Exorcists make this the primary planetfall staging ground.",
-    rule: "<strong>Active Sector Rule (Canopy &amp; Wreckage):</strong> Forest terrain grants <strong>Stealth</strong> to Infantry wholly within it, and the central Landing Site objective grants <strong>Benefit of Cover</strong>. Ending a turn within 3\" of the center or Defender's home objective requires a Leadership test or inflicts <strong>1 Warp Counter</strong>.",
+    rule: "<strong>Active Sector Rule (Canopy &amp; Wreckage):</strong> Dense iron-wood canopy grants <strong>Stealth</strong> to Infantry; landing site debris grants <strong>Benefit of Cover</strong>. Lingering near the center strains sanity (requires Leadership test or inflicts <strong>1 Warp Counter</strong>).<br><strong>Conquest Incentive:</strong> Solidifies planetfall beachheads and opens primary ground transit corridors between Prime and Secundus.",
     alphaHP: 1,
     betaHP: 2,
     hordeHP: 1
@@ -669,7 +718,7 @@ const ATLAS_NODES = {
     title: "Sector Node 1: Anthrand Siege-Vaults [MUNITIONS CACHE]",
     badge: "UNDISCOVERED • BURIED ORDNANCE DEPOT",
     lore: "Deep beneath the acidic mire-swamps west of the River Stygies lie sealed Segmentum Solar macro-ordnance bunkers and Earthshaker shell stockpiles buried since the Second War for Armageddon.",
-    rule: "<strong>Strategic Asset Interest (Munitions Cache):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — Securing this subterranean cache unlocks free Artillery/Ordnance Resupply support and Weapon Modification discounts.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Buried Munitions Cache):</strong> <em>[TELEMETRY CLASSIFIED] — Auspex signatures detect massive unspent siege munitions and ordnance reserves slumbering beneath the silt. Securing this sector promises heavy ballistic resupply advantages and discounted heavy weaponry refits for whichever warlord unseals the vaults.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -678,7 +727,7 @@ const ATLAS_NODES = {
     title: "Sector Node 2: Stygies Aegis Redoubt [DEACTIVATED MILITARY OUTPOST]",
     badge: "UNDISCOVERED • DORMANT BASTION &amp; AUSPEX ARRAY",
     lore: "An abandoned Tempestus and Militarum fortress-complex overlooking the boiling sulfur bridges of the River Stygies. Its hydra flak-turrets, void-relays, and long-range auspex dishes sit cold and unpowered.",
-    rule: "<strong>Strategic Asset Interest (Military Outpost):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — Reactivating this outpost provides free Orbital Auspex scans and starting Forward Operating Base (FOB) fortifications.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Military Outpost):</strong> <em>[TELEMETRY CLASSIFIED] — Fortified garrison commanding the River Stygies crossing. Restoring power to its long-range sensory array promises enhanced orbital recon capabilities and pre-established forward operating fortifications.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -687,7 +736,7 @@ const ATLAS_NODES = {
     title: "Sector Node 3: Hive Volcanus [IMPERIAL FORGE-HIVE #1]",
     badge: "UNDISCOVERED • GEOTHERMAL MANUFAC-SPIRE",
     lore: "Anchored into the volcanic calderas of western Armageddon Prime, Hive Volcanus houses titanic geothermal plasma-forges and super-heavy tank assembly lines shrouded in volcanic ash.",
-    rule: "<strong>Strategic Asset Interest (Forge-Hive):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — Controlling Volcanus bolsters Vehicle, Monster, and Walker production and repairs.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Imperial Forge-Hive #1):</strong> <em>[TELEMETRY CLASSIFIED] — Subterranean manufactorums capable of churning out endless war materiel. Capturing Volcanus promises battlefield support for heavy war engines, mechanized walker cohorts, and armor reclamation.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -696,7 +745,7 @@ const ATLAS_NODES = {
     title: "Sector Node 4: Tempest Defense Silos [ORBITAL LASER BATTERY]",
     badge: "UNDISCOVERED • SURFACE-TO-ORBIT DEFENSE COMPLEX",
     lore: "Perched along the toxic southern cliffs of the Tempest Ocean, these armored defense silos house dormant anti-ship macro-lasers and coastal void-shield generators.",
-    rule: "<strong>Strategic Asset Interest (Defense Silos):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — Bringing the silos online shields your conquered nodes from 3rd Alliance Vulture raids and lowers orbital strike costs.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Orbital Defense Battery):</strong> <em>[TELEMETRY CLASSIFIED] — Armored defense silos overlooking the southern approaches. Powering up these macro-batteries promises coastal airspace supremacy, cheaper orbital fire support, and defensive protection against marauding incursions.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -705,7 +754,7 @@ const ATLAS_NODES = {
     title: "Sector Node 5: Deadlands Ark-Vault [GROUNDED MECHANICUS VESSEL]",
     badge: "UNDISCOVERED • FROZEN ARCHEOTECH RELIQUARY",
     lore: "Half-buried in the sub-zero ash glaciers of the Netheria Peninsula lies a grounded Adeptus Mechanicus Ark-Barge and a sealed pre-Imperial vault-complex humming with ancient power.",
-    rule: "<strong>Strategic Asset Interest (Archeotech Vault):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — Excavating the Ark-Vault unlocks access to Armageddon Antiquity Relics and anomalous tech-spoils.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Sub-Polar Reliquary):</strong> <em>[TELEMETRY CLASSIFIED] — Anomalous energy readings point to ancient archeotech and forgotten technology sealed within permafrost stasis-vaults. Excavating the barge promises access to powerful Antiquity Relics and technological arcana.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -714,7 +763,7 @@ const ATLAS_NODES = {
     title: "Sector Node 6: Ruins of Hive Hades &amp; Hive Thoraddis [HIVES #2 &amp; #3]",
     badge: "UNDISCOVERED • SHATTERED CRATER &amp; BESIEGED SPIRE",
     lore: "The twin heart of northeastern Armageddon Secundus cited in High Command dispatches: the radioactive, warp-haunted glass crater of ruined Hive Hades and its sister-city Hive Thoraddis, whose upper spires still echo with desperate vox-screams.",
-    rule: "<strong>Strategic Asset Interest (Twin Hive Zone):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — High-value Strategic Point yield (+4 SPts on conquest) amidst intense Warp Counter activity.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Twin Hive Nexus):</strong> <em>[TELEMETRY CLASSIFIED] — The strategic crux of Armageddon Secundus. Dominating this shattered ground grants immense campaign momentum and vast strategic influence, though fighting amidst the radioactive glass incurs severe warp turbulence.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -723,7 +772,7 @@ const ATLAS_NODES = {
     title: "Sector Node 7: The Fire Wastes &amp; The Red Angel's Gate [POLAR CITADEL]",
     badge: "UNDISCOVERED • IMMATERIUM BREACH THRESHOLD",
     lore: "Across the Boiling Sea and past Phoenix Island lies the scorched northern continent of the Fire Wastes—where the basalt cliffs of the Crimson Mesa and the Red Angel's Gate bleed endless nightmare legions into reality.",
-    rule: "<strong>Strategic Asset Interest (Polar Rift Citadel):</strong> <em>[CLASSIFIED UNTIL RECONNOITERED — Final Phase Theatre Objective.]</em>",
+    rule: "<strong>Strategic Asset Intelligence (Polar Rift Citadel):</strong> <em>[TELEMETRY CLASSIFIED] — The apocalyptic gateway anchoring the daemon world incursion. Sealing or claiming this threshold represents the ultimate theatre objective and planetary supremacy.</em>",
     alphaHP: 0,
     betaHP: 0,
     hordeHP: null
@@ -878,23 +927,59 @@ function toggleAuspexFullscreen() {
     btn.classList.toggle('active', isFs);
   }
   if (quickHud) {
-    quickHud.style.display = isFs ? 'flex' : 'none';
+    quickHud.style.display = isFs ? 'block' : 'none';
   }
+}
+
+function toggleFsHudDetails() {
+  const details = document.getElementById('fsHudDetails');
+  const btn = document.getElementById('fsToggleDetailsBtn');
+  if (!details) return;
+  const isHidden = details.classList.toggle('hidden-details');
+  if (btn) {
+    btn.textContent = isHidden ? '▾ Show Telemetry' : '▴ Hide Telemetry';
+  }
+}
+
+function getDominanceText(n) {
+  if (n.hordeHP === null && n.alphaHP === 0 && n.betaHP === 0) {
+    return '◌ Fog of War — No Hegemony Established (?/8 HP)';
+  }
+  const a = n.alphaHP || 0;
+  const b = n.betaHP || 0;
+  const h = n.hordeHP || 0;
+  if (b > a && b > h) return `💀 Commander Beta Leading (${b} / 8 HP)`;
+  if (a > b && a > h) return `🦅 Commander Alpha Leading (${a} / 8 HP)`;
+  if (h > a && h > b) return `👁️‍🗨️ 3rd Alliance Leading (${h} / 8 HP)`;
+  return `⚔️ Contested Stalemate (Tied at ${Math.max(a, b, h)} HP)`;
 }
 
 function selectAtlasNode(nodeId, persist = true) {
   const n = ATLAS_NODES[nodeId] || ATLAS_NODES[0];
   briefingState.selectedNode = nodeId;
 
+  // Highlight SVG node
   document.querySelectorAll('#armageddon-sector-map .atlas-node-group, #armageddon-sector-map .map-node-group').forEach(el => {
     el.classList.toggle('selected-node', Number(el.getAttribute('data-node-id')) === nodeId);
   });
 
+  // Highlight Fullscreen HUD selector pills
+  for (let i = 0; i <= 7; i++) {
+    const pill = document.getElementById('fsPill' + i);
+    if (pill) pill.classList.toggle('active', i === nodeId);
+  }
+
+  const dominanceText = getDominanceText(n);
+
+  // Standard non-fullscreen Inspector
   const titleEl = document.getElementById('inspectorNodeTitle') || document.getElementById('insp-title');
   if (titleEl) titleEl.textContent = n.title;
 
   const badgeEl = document.getElementById('inspectorNodeBadge') || document.getElementById('insp-badge');
   if (badgeEl) badgeEl.textContent = n.badge;
+
+  const domEl = document.getElementById('inspectorDominance');
+  if (domEl) domEl.textContent = dominanceText;
 
   const loreEl = document.getElementById('inspectorNodeLore') || document.getElementById('insp-desc');
   if (loreEl) loreEl.textContent = n.lore;
@@ -916,6 +1001,34 @@ function selectAtlasNode(nodeId, persist = true) {
   renderHegBar('heg-bar-alpha', n.alphaHP, 'alpha');
   renderHegBar('heg-bar-beta', n.betaHP, 'beta');
   renderHegBar('heg-bar-horde', n.hordeHP, 'horde');
+
+  // Fullscreen Interactive HUD elements
+  const fsTitle = document.getElementById('fsHudTitle');
+  if (fsTitle) fsTitle.textContent = n.title;
+
+  const fsBadge = document.getElementById('fsHudBadge');
+  if (fsBadge) fsBadge.textContent = n.badge;
+
+  const fsDom = document.getElementById('fsHudDominance');
+  if (fsDom) fsDom.textContent = dominanceText;
+
+  const fsRule = document.getElementById('fsHudRule');
+  if (fsRule) fsRule.innerHTML = n.rule;
+
+  const fsAlpha = document.getElementById('fs-heg-val-alpha');
+  if (fsAlpha) fsAlpha.textContent = `${n.alphaHP} / 8 HP`;
+
+  const fsBeta = document.getElementById('fs-heg-val-beta');
+  if (fsBeta) fsBeta.textContent = `${n.betaHP} / 8 HP`;
+
+  const fsHorde = document.getElementById('fs-heg-val-horde');
+  if (fsHorde) {
+    fsHorde.textContent = n.hordeHP === null ? `??? / 8 HP` : `${n.hordeHP} / 8 HP`;
+  }
+
+  renderHegBar('fs-heg-bar-alpha', n.alphaHP, 'alpha');
+  renderHegBar('fs-heg-bar-beta', n.betaHP, 'beta');
+  renderHegBar('fs-heg-bar-horde', n.hordeHP, 'horde');
 
   if (persist) saveBriefingState();
 }
