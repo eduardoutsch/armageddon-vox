@@ -18,7 +18,7 @@ Any submitted change must strive for and target 100% test coverage (covering uni
 
 ## IV. Test-First Imperative (TDD)
 Test-Driven Development (TDD) is **mandatory** and non-negotiable.
-- ANY production logic or UI module MUST have a corresponding test suite file in the `tests/` directory (e.g., `tests/<module>.test.js`).
+- ANY production logic or UI module MUST have a corresponding test suite file in the `tests/` directory, **strictly mirroring the directory structure of the source** (e.g., `js/<module>.js` MUST have `tests/js/<module>.test.js`, and UI/integration tests must live in `tests/ui/`).
 - Tests MUST be written and executed first (and must initially fail) before starting any production code implementation.
 - The Red-Green-Refactor cycle must be strictly followed for every new feature, rule addition, or logical unit introduced.
 
@@ -39,5 +39,12 @@ Clean code does NOT substitute for thorough technical documentation.
 - Every new module, capability, or architectural change MUST be reflected with improvements and updates in the relevant `README.md` and documentation files.
 - Documentation is a living artifact and an inseparable part of delivering software value.
 
+## VIII. Single-File Codebase Bundle Synchronization (`codebase_bundle.md`)
+Any and all changes made to the codebase (files added, modified, renamed, or deleted) MUST immediately and continuously be reflected in `codebase_bundle.md`.
+- `codebase_bundle.md` serves as the centralized, comprehensive ingestion artifact for Gemini Notebook and NotebookLM.
+- The bundle MUST always maintain an up-to-date Table of Contents with working anchor links to every single project file.
+- All code fences in the bundle MUST use quadruple backticks (` ````lang `) to prevent formatting conflicts with nested code blocks or Markdown documentation.
+- No task, commit, or pull request is considered complete until `codebase_bundle.md` has been regenerated, verified, and kept in sync with the current repository state.
+
 ---
-> **Note for Autonomous Agents**: You are strictly required to treat this document as the highest-priority directive when planning architecture, suggesting refactoring, or implementing new routines and features (including operations performed via Google Antigravity, OPSX, or autonomous workflows).
+> **Note for Autonomous Agents**: You are strictly required to treat this document as the highest-priority directive when planning architecture, suggesting refactoring, or implementing new routines and features (including operations performed via Google Antigravity, OPSX, or autonomous workflows). **Whenever you create, modify, or delete any file in the repository, you MUST regenerate and synchronize `codebase_bundle.md` before concluding your turn.**
