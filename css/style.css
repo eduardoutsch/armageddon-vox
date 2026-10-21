@@ -481,3 +481,42 @@ summary:hover { color: var(--text); }
   border-radius: 8px;
   padding: 12px 14px;
 }
+
+.terminal-link-btn {
+  flex: 1;
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  background: linear-gradient(135deg, #ff4757 0%, #b81929 100%);
+  color: #fff;
+  font-weight: 700;
+  padding: 15px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 16px rgba(255, 71, 87, 0.35);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.terminal-link-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.terminal-link-btn.alt {
+  background: linear-gradient(135deg, #9d5cff 0%, #6b2cf5 100%);
+  box-shadow: 0 4px 16px rgba(157, 92, 255, 0.35);
+}
+
+.lock-toggle-btn {
+  background: #262c40;
+  color: #fff;
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+.lock-toggle-btn:hover {
+  background: #343b54;
+}
