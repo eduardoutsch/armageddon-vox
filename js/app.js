@@ -183,3 +183,38 @@ function pickSecretCard(chosenIdx) {
   currentChoices.forEach((c, idx) => {
     if (idx !== chosenIdx) personalSecretDeck.push(c);
   });
+  activeCard = chosen;
+  currentChoices = [];
+  document.getElementById('selectionArea').classList.add('hidden');
+  document.getElementById('lockedArea').classList.remove('hidden');
+
+  document.getElementById('activeCardBox').innerHTML = `
+    <div class="card">
+      <span class="badge">${activeCard.tags}</span>
+      <h4 class="card-title">${activeCard.name}</h4>
+      <p class="card-desc">${activeCard.desc}</p>
+    </div>
+  `;
+  document.getElementById('cmCodeBox').innerText = `CM Verification Code: ${activeCard.code}`;
+}
+
+function triggerChangeOfPlans() {
+  const drawn = drawSecretCards(2);
+  if (drawn.length === 0) return alert("No cards remaining in your Secret Objective deck!");
+  currentChoices = activeCard ? [activeCard, ...drawn] : drawn;
+  renderSecretChoices("Change of Plans: Pick 1 or Keep Current");
+}
+
+function triggerOrbitalPunishment() {
+  if (!confirm("Failed 'Establish Orbital Comms'? This draws 2 cards and assigns one at random!")) return;
+  const drawn = drawSecretCards(2);
+  const pool = activeCard ? [activeCard, ...drawn] : drawn;
+  const randIdx = Math.floor(Math.random() * pool.length);
+  currentChoices = pool;
+  pickSecretCard(randIdx);
+  alert(`New Randomized Secret Objective: ${activeCard.name}`);
+}
+
+function togglePrivacy() {
+  isPrivacyHidden = !isPrivacyHidden;
+  document.getElementById('PrivacyWrapper').classList.toggle('hidden', isPrivacyHidden);
