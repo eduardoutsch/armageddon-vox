@@ -218,3 +218,38 @@ function triggerOrbitalPunishment() {
 function togglePrivacy() {
   isPrivacyHidden = !isPrivacyHidden;
   document.getElementById('PrivacyWrapper').classList.toggle('hidden', isPrivacyHidden);
+  document.getElementById('privacyBtn').innerText = isPrivacyHidden ? "Show Objective" : "Hide Screen";
+}
+
+// --- BATTLE ROUND, MISERY & SECONDARIES ---
+function advanceBattleRound() {
+  if (battleRound >= 6) {
+    if (!confirm("Round 6 complete! Continue into Infinite Mode Round " + (battleRound + 1) + "?")) return;
+  }
+  battleRound++;
+  spGainedThisRound = 0;
+
+  const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)];
+  document.getElementById('roundTitle').innerText = `Battle Round ${battleRound}`;
+  document.getElementById('spawnModDisplay').innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+  document.getElementById('nextRoundBtn').innerText = battleRound < 6
+    ? `Advance to Battle Round ${battleRound + 1}`
+    : `Battle Round 6 Active (Final Stand)`;
+
+  activeMiseries = [];
+  activeSecondaries = [];
+
+  drawMisery(cfg.misery);
+  // Orks Round 3 High (Green) Tide check
+  if (battleRound === 3 && activeHordeFaction.name === 'Orks') {
+    drawMisery(1);
+  }
+
+  if (battleRound <= 5) {
+    drawSecondary(battleRound === 1);
+  }
+
+  updateHUD();
+  renderSharedDecks();
+}
+
