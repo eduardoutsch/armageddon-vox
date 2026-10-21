@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { hashString, mulberry32, seededShuffle, generateRandomCode } = require('../js/rng.js');
+const { hashString, mulberry32, seededShuffle, generateRandomCode } = require('../../js/rng.js');
 
 test('hashString should produce deterministic 32-bit uint', () => {
   const hash1 = hashString('HADES-1');
