@@ -108,3 +108,41 @@ function startSession() {
   sharedSecondaryDeck = seededShuffle(SECONDARIES, rngSecond);
 
   battleRound = 0;
+  activeCard = null;
+  activeMiseries = [];
+  activeSecondaries = [];
+  sp = 0;
+  spGainedThisRound = 0;
+  cp = 2;
+  stratCount = 0;
+
+  loadCustomPool();
+
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+
+  currentChoices = drawSecretCards(2);
+  renderSecretChoices("Select 1 Initial Secret Objective");
+  updateHUD();
+  renderSharedDecks();
+  renderResupplyTable();
+  switchTab(2);
+}
+
+function switchTab(tabNum) {
+  [1, 2, 3, 4].forEach(n => {
+    document.getElementById('tab' + n).classList.toggle('hidden', n !== tabNum);
+    document.getElementById('tabBtn' + n).classList.toggle('active', n === tabNum);
+  });
+}
+
+function updateHUD() {
+  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  document.getElementById('hudSessionInfo').innerText = isSoloMode ? `${code} • SOLO` : `${code} • P${selectedRoleVal}`;
+  document.getElementById('hudRound').innerText = battleRound === 0 ? "Pre-Game" : `Round ${battleRound}/6`;
+  document.getElementById('hudSp').innerText = sp;
+  document.getElementById('hudSpCap').innerText = `(${spGainedThisRound}/${spRoundCap})`;
+  document.getElementById('hudCp').innerText = cp;
+  document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
+  document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
+}
