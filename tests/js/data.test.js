@@ -7,7 +7,7 @@ const {
   SECONDARIES,
   RESUPPLIES,
   HARD_MODE_ROUNDS
-} = require('../js/data.js');
+} = require('../../js/data.js');
 
 test('HORDE_FACTIONS: contains all 23 official factions with valid schema', () => {
   assert.equal(HORDE_FACTIONS.length, 23);
