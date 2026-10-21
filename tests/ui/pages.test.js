@@ -119,3 +119,22 @@ test('UI Boundary: briefing.html defaults to Commander Beta dossier and includes
   );
 });
 
+test('briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel Hegemony Race tracker', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../../briefing.html'), 'utf8');
+
+  assert.match(html, /id="armageddon-sector-map"/, 'briefing.html must contain #armageddon-sector-map SVG');
+  assert.match(html, /id="atlas-node-inspector"/, 'briefing.html must contain #atlas-node-inspector panel');
+  assert.match(html, /id="heg-bar-alpha"/, 'briefing.html must contain Alpha parallel hegemony bar');
+  assert.match(html, /id="heg-bar-beta"/, 'briefing.html must contain Beta parallel hegemony bar');
+  assert.match(html, /id="heg-bar-horde"/, 'briefing.html must contain 3rd Alliance parallel hegemony bar');
+
+  for (let i = 0; i <= 7; i++) {
+    assert.match(
+      html,
+      new RegExp(`data-node-id="${i}"`),
+      `SVG map in briefing.html must include interactive node data-node-id="${i}"`
+    );
+  }
+});
+
+
