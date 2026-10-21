@@ -190,4 +190,34 @@ test('UI Boundary: pages integrate localStorage persistence so users can navigat
   assert.ok(appJs.includes('restoreSessionState'), 'app.js must define restoreSessionState');
 });
 
+test('Documentation Boundary: breakdown bundle markdown files exist for each page and css/packages', () => {
+  const bundlesDir = path.join(ROOT_DIR, 'bundles');
+  assert.ok(fs.existsSync(bundlesDir), 'bundles/ directory must exist');
+
+  const requiredBundles = [
+    { file: 'bundle_index.md', check: 'index.html' },
+    { file: 'bundle_briefing.md', check: 'pages/briefing.html' },
+    { file: 'bundle_pvp.md', check: 'pages/pvp.html' },
+    { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
+    { file: 'bundle_roster.md', check: 'pages/roster.html' },
+    { file: 'bundle_css_packages.md', check: 'css/style.css' }
+  ];
+
+  for (const b of requiredBundles) {
+    const bundlePath = path.join(bundlesDir, b.file);
+    assert.ok(fs.existsSync(bundlePath), `${b.file} must exist in bundles/ directory`);
+    const content = fs.readFileSync(bundlePath, 'utf8');
+    assert.ok(content.length > 500, `${b.file} must not be empty`);
+    assert.ok(content.includes(b.check), `${b.file} must contain its target file ${b.check}`);
+    assert.equal(content.includes('\0'), false, `${b.file} must not contain null bytes`);
+  }
+
+  // Root bundle must also exist and be synchronized
+  const rootBundlePath = path.join(ROOT_DIR, 'codebase_bundle.md');
+  assert.ok(fs.existsSync(rootBundlePath), 'codebase_bundle.md must exist in root');
+  const rootContent = fs.readFileSync(rootBundlePath, 'utf8');
+  assert.equal(rootContent.includes('\0'), false, 'codebase_bundle.md must not contain null bytes');
+});
+
+
 
