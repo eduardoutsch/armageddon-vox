@@ -25,3 +25,40 @@ body {
   line-height: 1.5;
   min-height: 100vh;
 }
+.suite-nav {
+  background: rgba(12, 14, 20, 0.95);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.suite-link {
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.suite-link:hover { color: var(--text); background: var(--surface); }
+.suite-link.active {
+  color: var(--red);
+  background: rgba(255, 71, 87, 0.12);
+  border-color: rgba(255, 71, 87, 0.35);
+}
+
+.app-shell { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+/* HOME SCREEN */
+.hero-card {
+  background: linear-gradient(180deg, rgba(24, 28, 40, 0.95) 0%, rgba(16, 19, 28, 0.98) 100%);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  border-radius: 20px;
+  padding: 28px 22px;
+  margin-top: 10px;
