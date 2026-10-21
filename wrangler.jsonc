@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "fires-of-armageddon",
+  "name": "armageddon-vox",
   "compatibility_date": "2026-10-19",
   "assets": {
     "directory": "."
