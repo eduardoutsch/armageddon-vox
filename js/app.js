@@ -33,3 +33,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function selectMode(mode) {
   selectedModeVal = mode;
+  document.getElementById('modeCardCoop').classList.toggle('selected-red', mode === 'coop');
+  document.getElementById('modeCardSolo').classList.toggle('selected-red', mode === 'solo');
+  document.getElementById('playerRoleSection').classList.toggle('hidden', mode === 'solo');
+}
+
+function selectRole(role) {
+  selectedRoleVal = role;
+  document.getElementById('roleCard1').classList.toggle('selected', role === '1');
+  document.getElementById('roleCard2').classList.toggle('selected', role === '2');
+}
+
+function resolveRoomSyncedFaction(code) {
+  const mode = document.getElementById('setupFactionMode').value;
+  const rngFac = mulberry32(hashString(code + "_HORDE_FACTION"));
+
+  if (mode.startsWith("SYNC_")) {
+    let pool = HORDE_FACTIONS;
+    if (mode === "SYNC_CHAOS") pool = HORDE_FACTIONS.filter(f => f.group === "Chaos");
+    if (mode === "SYNC_XENOS") pool = HORDE_FACTIONS.filter(f => f.group === "Xenos");
+    if (mode === "SYNC_IMPERIUM") pool = HORDE_FACTIONS.filter(f => f.group === "Imperium");
+    const idx = Math.floor(rngFac() * pool.length);
+    activeHordeFaction = pool[idx];
+  } else {
+    activeHordeFaction = HORDE_FACTIONS.find(f => f.name === mode) || HORDE_FACTIONS[0];
+  }
+
+  document.getElementById('hordeFactionSelect').value = activeHordeFaction.name;
+  renderFactionReminderBanner();
+}
+
+function manualChangeFaction() {
+  const val = document.getElementById('hordeFactionSelect').value;
+  activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
+  renderFactionReminderBanner();
+}
