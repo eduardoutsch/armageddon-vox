@@ -19,109 +19,146 @@ Complete source code for the introductory tutorial and field operations manual (
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <meta http-equiv="refresh" content="0; url=../index.html">
+  <script>
+    if (window.location.pathname.endsWith('welcome.html')) {
+      window.location.replace('../index.html');
+    }
+  </script>
 </head>
 <body>
 
   <!-- CAMPAIGN SUITE TOP NAVIGATION -->
   <nav class="suite-nav">
-    <a href="../index.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
+    <a href="../index.html" class="suite-link active">📖 Field Codex &amp; Guide</a>
+    <a href="spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
     <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
     <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
     <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
     <a href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
-    <a href="welcome.html" class="suite-link active">📖 Codex &amp; Guide</a>
   </nav>
 
   <div class="container">
 
     <!-- HERO HEADER -->
-    <div class="hero-card" style="margin-bottom:24px;">
-      <div class="status-pill">Imperial Field Manual • Sub-Sector Armageddon Cogitator Protocols</div>
-      <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">Sanctuary Field Codex &amp; Quickstart Manual</h1>
-      <p class="hero-subtitle">
+    <div class="hero-card" style="margin-bottom:24px; text-align:center;">
+      <div class="status-pill" style="margin:0 auto 10px auto;">Imperial Field Manual • Sub-Sector Armageddon Cogitator Protocols</div>
+      <h1 class="hero-title" style="font-size:1.95rem; margin-top:6px; text-align:center;">Sanctuary Field Codex &amp; Quickstart Manual</h1>
+      <p class="hero-subtitle" style="text-align:center; margin:0 auto 18px auto; max-width:760px;">
         Welcome, Commander. This automated Munitorum terminal manages cooperative horde survival battles, 1v1 wasteland skirmishes, autonomous AI logic, and persistent narrative campaign progression. Review these quick operational field guides before engaging the enemy.
       </p>
+
+      <!-- CENTERED QUICK-LAUNCH COMMAND MATRIX -->
+      <div class="welcome-quick-grid">
+        <a href="spawner.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">🧟</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 1: Spawner</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Synced Co-op Horde Command</span>
+        </a>
+        <a href="pvp.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">⚔️</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 2: 1v1 PvP</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Ash Wastes Head-to-Head</span>
+        </a>
+        <a href="rogue.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">🎲</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 3: Rogue AI</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Flowchart &amp; Pilot Engine</span>
+        </a>
+        <a href="roster.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">🎖️</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 4: Rosters</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Ledger &amp; Persistent Nemeses</span>
+        </a>
+        <a href="briefing.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">📜</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 5: Briefings</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Ship Slider &amp; Sector Atlas</span>
+        </a>
+      </div>
     </div>
 
     <!-- TUTORIAL 1: MODE 1 HOARDE COMMAND & AUTOMATED SPAWNER -->
     <div class="section-card" style="border-left-color:var(--red);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright);">🧟 Mode 1: Horde Command &amp; Automated Spawner</h2>
+      <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright); text-align:center;">🧟 Mode 1: Horde Command &amp; Automated Spawner</h2>
         <span class="badge red">Co-op Hard Mode</span>
       </div>
-      <p style="color:var(--text); font-size:0.94rem; margin-bottom:14px;">
+      <p style="color:var(--text); font-size:0.94rem; margin-bottom:16px; text-align:center;">
         Automates wave escalation, threat-bracket cascades, and dynamic battlefield events for tabletop horde defense games.
       </p>
 
       <div class="grid-2" style="margin-bottom:14px;">
         <div class="hero-box red">
-          <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px;">1. Multi-Player Seed Synchronization</strong>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">1. Multi-Player Seed Synchronization</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
-            Both players enter the <strong>identical 6-character Room Seed</strong> (e.g. <code>ARM-01</code>). This uses deterministic pseudo-random hashing to ensure both players see the exact same enemy units, wave spawns, and misery draws.
+            Both players enter the <strong>identical 6-character Room Seed</strong> (e.g. <code>HADES-1</code>). This uses deterministic pseudo-random hashing to ensure both players see the exact same enemy units, wave spawns, and misery draws.
           </p>
         </div>
         <div class="hero-box red">
-          <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px;">2. Threat Escalation &amp; Brackets</strong>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">2. Threat Escalation &amp; Brackets</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
-            Each battle round, roll 2D6 on the terminal. The terminal cascades down from 10+ (Monsters/Bosses) to 3-4 (Swarms). An unmodified 2 always yields <strong>No Spawn</strong>. Battle Round 6 triggers <strong>The Final Stand</strong>!
+            Each battle round, roll 2D6 on the terminal. The terminal cascades down from 10+ (Monsters/Bosses) to 3–4 (Swarms). An unmodified 2 always yields <strong>No Spawn</strong>. Battle Round 6 triggers <strong>The Final Stand</strong>!
           </p>
         </div>
       </div>
 
       <div class="hero-box">
-        <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px;">3. Secret Objectives &amp; Covert Treachery</strong>
+        <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">3. Secret Objectives &amp; Covert Treachery</strong>
         <p style="font-size:0.86rem; color:var(--text); margin:0;">
           Before the horde breaches the perimeter, each player is dealt a confidential <strong>Secret Objective</strong> with a verification code. Keep it secret. Some are heroic deeds; others are high-risk <strong>Traitor Directives</strong> offering plundered Requisition Points and relics if you engineer your partner's downfall...
         </p>
       </div>
 
-      <div style="margin-top:14px; text-align:right;">
-        <a href="../index.html" class="terminal-link-btn" style="display:inline-block; max-width:240px; padding:10px 18px;">🧟 Launch Mode 1 Spawner</a>
+      <!-- CENTERED ACTION BUTTON -->
+      <div class="welcome-btn-row">
+        <a href="spawner.html" class="terminal-link-btn" style="display:inline-flex; align-items:center; justify-content:center; max-width:280px; padding:12px 24px;">🧟 Launch Mode 1 Spawner</a>
       </div>
     </div>
 
     <!-- TUTORIAL 2: MODE 2 1V1 ASH WASTES PVP -->
     <div class="section-card" style="border-left-color:var(--gold);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright);">⚔️ Mode 2: 1v1 Ash Wastes PvP Skirmishes</h2>
+      <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright); text-align:center;">⚔️ Mode 2: 1v1 Ash Wastes PvP Skirmishes</h2>
         <span class="badge gold">Head-to-Head Clash</span>
       </div>
-      <p style="color:var(--text); font-size:0.94rem; margin-bottom:14px;">
+      <p style="color:var(--text); font-size:0.94rem; margin-bottom:16px; text-align:center;">
         Wage head-to-head battles across Armageddon's hostile surface with randomized weather, psychic surges, and roaming scavengers.
       </p>
 
       <div class="grid-2">
         <div class="hero-box">
-          <strong style="color:var(--gold); font-size:0.92rem; display:block; margin-bottom:4px;">1. Hellscapes &amp; Hazards</strong>
+          <strong style="color:var(--gold); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">1. Hellscapes &amp; Hazards</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
             Click <strong>Generate Hellscape</strong> to roll environmental conditions such as <em>Sulfur Smog</em> (-1 to hit beyond 12") or <em>Ash Tsunami</em> (-2" Move).
           </p>
         </div>
         <div class="hero-box">
-          <strong style="color:var(--gold); font-size:0.92rem; display:block; margin-bottom:4px;">2. Unbound Adversaries (3rd Force)</strong>
+          <strong style="color:var(--gold); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">2. Unbound Adversaries (3rd Force)</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
             Every time the two commanders clash, click <strong>Roll Unbound Adversary</strong>. Roaming beasts enter the fray, advancing the 3rd Alliance (+3 Vulture SPts &amp; +1 Sector Hegemony).
           </p>
         </div>
       </div>
 
-      <div style="margin-top:14px; text-align:right;">
-        <a href="pvp.html" class="terminal-link-btn" style="display:inline-block; max-width:240px; padding:10px 18px;">⚔️ Open 1v1 PvP Arena</a>
+      <!-- CENTERED ACTION BUTTON -->
+      <div class="welcome-btn-row">
+        <a href="pvp.html" class="terminal-link-btn" style="display:inline-flex; align-items:center; justify-content:center; max-width:280px; padding:12px 24px;">⚔️ Open 1v1 PvP Arena</a>
       </div>
     </div>
 
     <!-- TUTORIAL 3: MODE 3 ROGUE SECTOR AI PILOT -->
     <div class="section-card" style="border-left-color:var(--purple);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright);">🎲 Mode 3: Rogue Sector &amp; AI Decision Flowchart</h2>
+      <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright); text-align:center;">🎲 Mode 3: Rogue Sector &amp; AI Decision Flowchart</h2>
         <span class="badge purple">Automated AI Pilot</span>
       </div>
-      <p style="color:var(--text); font-size:0.94rem; margin-bottom:14px;">
+      <p style="color:var(--text); font-size:0.94rem; margin-bottom:16px; text-align:center;">
         Step-by-step priority engine to pilot non-player horde units and unbound monsters without human bias.
       </p>
 
       <div class="ai-step active-step">
-        <div class="ai-step-title">
+        <div class="ai-step-title" style="display:flex; justify-content:space-between; align-items:center;">
           <span>Phase Sequence Checklist</span>
           <span style="color:var(--gold-bright);">Phases 1 → 5</span>
         </div>
@@ -130,60 +167,62 @@ Complete source code for the introductory tutorial and field operations manual (
         </p>
       </div>
 
-      <div style="margin-top:14px; text-align:right;">
-        <a href="rogue.html" class="terminal-link-btn alt" style="display:inline-block; max-width:240px; padding:10px 18px;">🎲 Open AI Flowchart</a>
+      <!-- CENTERED ACTION BUTTON -->
+      <div class="welcome-btn-row">
+        <a href="rogue.html" class="terminal-link-btn alt" style="display:inline-flex; align-items:center; justify-content:center; max-width:280px; padding:12px 24px;">🎲 Open AI Flowchart</a>
       </div>
     </div>
 
     <!-- TUTORIAL 4: MODE 4 ROSTERS & NEMESIS LEDGER -->
     <div class="section-card" style="border-left-color:var(--blue);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright);">🎖️ Mode 4: Rosters &amp; Cross-Mode Nemesis Ledger</h2>
+      <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright); text-align:center;">🎖️ Mode 4: Rosters &amp; Cross-Mode Nemesis Ledger</h2>
         <span class="badge blue">Crusade Progression</span>
       </div>
-      <p style="color:var(--text); font-size:0.94rem; margin-bottom:14px;">
+      <p style="color:var(--text); font-size:0.94rem; margin-bottom:16px; text-align:center;">
         Persistent campaign ledger for orders of battle, hero deeds, supply limit expansions, and recurring nemesis warlords.
       </p>
 
       <div class="grid-2">
         <div class="hero-box blue">
-          <strong style="color:var(--blue); font-size:0.92rem; display:block; margin-bottom:4px;">Persistent Nemeses</strong>
+          <strong style="color:var(--blue); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">Persistent Nemeses</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
             Any boss or squad leader that slays a Commander's Warlord or survives Round 6 is immortalized in the Ledger, gaining battle traits and returning in future games!
           </p>
         </div>
         <div class="hero-box blue">
-          <strong style="color:var(--blue); font-size:0.92rem; display:block; margin-bottom:4px;">Spoils of Breach Containment</strong>
+          <strong style="color:var(--blue); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">Spoils of Breach Containment</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
             Unspent Supply Points (SP) bank into orbital scans, free weapon modifications, or emergency field promotions for surviving recruits.
           </p>
         </div>
       </div>
 
-      <div style="margin-top:14px; text-align:right;">
-        <a href="roster.html" class="terminal-link-btn" style="display:inline-block; max-width:240px; padding:10px 18px;">🎖️ Inspect Rosters</a>
+      <!-- CENTERED ACTION BUTTON -->
+      <div class="welcome-btn-row">
+        <a href="roster.html" class="terminal-link-btn" style="display:inline-flex; align-items:center; justify-content:center; max-width:280px; padding:12px 24px;">🎖️ Inspect Rosters</a>
       </div>
     </div>
 
     <!-- TUTORIAL 5: MODE 5 BRIEFINGS, SHIP SLIDER & SECTOR ATLAS -->
     <div class="section-card" style="border-left-color:var(--green);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
-        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright);">📜 Mode 5: Briefings, Ship Slider &amp; 8-Node Sector Atlas</h2>
+      <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <h2 style="margin:0; font-size:1.35rem; color:var(--gold-bright); text-align:center;">📜 Mode 5: Briefings, Ship Slider &amp; 8-Node Sector Atlas</h2>
         <span class="badge green">Narrative Theatre</span>
       </div>
-      <p style="color:var(--text); font-size:0.94rem; margin-bottom:14px;">
+      <p style="color:var(--text); font-size:0.94rem; margin-bottom:16px; text-align:center;">
         Planetary auspex projection of Armageddon Prime, Secundus, the Equatorial Jungle, and the Fire Wastes with interactive parallel hegemony tracking.
       </p>
 
       <div class="grid-2" style="margin-bottom:14px;">
         <div class="hero-box green">
-          <strong style="color:var(--green); font-size:0.92rem; display:block; margin-bottom:4px;">The Sanctuary Ship Slider</strong>
+          <strong style="color:var(--green); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">The Sanctuary Ship Slider</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
             Commander Alpha's vessel balances between the Lower Decks (-3 to -1, brutal penal conscripts), Stasis (0), and Upper Sanctum (+1 to +3, sacred relic blessings).
           </p>
         </div>
         <div class="hero-box green">
-          <strong style="color:var(--green); font-size:0.92rem; display:block; margin-bottom:4px;">3-Way Hegemony Race (0–8 HP)</strong>
+          <strong style="color:var(--green); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">3-Way Hegemony Race (0–8 HP)</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
             Every node (N0–N7) tracks parallel Hegemony Points for Alpha, Beta, and the Horde AI. The first faction to claim 8 HP permanently locks and conquers that sector!
           </p>
@@ -191,22 +230,23 @@ Complete source code for the introductory tutorial and field operations manual (
       </div>
 
       <div class="hero-box green">
-        <strong style="color:var(--green); font-size:0.92rem; display:block; margin-bottom:4px;">🔍 Fullscreen Auspex Mode</strong>
+        <strong style="color:var(--green); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">🔍 Fullscreen Auspex Mode</strong>
         <p style="font-size:0.86rem; color:var(--text); margin:0;">
           Double-click the map or tap <code>🔍 Expand Fullscreen</code> to enter full-theatre Auspex mode on tablet or monitor, complete with interactive quick-recon HUD and zoom levels (1x, 1.6x, 2.2x).
         </p>
       </div>
 
-      <div style="margin-top:14px; text-align:right;">
-        <a href="briefing.html" class="terminal-link-btn" style="display:inline-block; max-width:240px; padding:10px 18px;">🗺️ Explore Planetary Atlas</a>
+      <!-- CENTERED ACTION BUTTON -->
+      <div class="welcome-btn-row">
+        <a href="briefing.html" class="terminal-link-btn" style="display:inline-flex; align-items:center; justify-content:center; max-width:280px; padding:12px 24px;">🗺️ Explore Planetary Atlas</a>
       </div>
     </div>
 
     <!-- AUDIO & SFX HIGHLIGHT -->
-    <div class="card" style="border-left-color:var(--gold);">
-      <h3 style="margin-top:0; color:var(--gold-bright);">📡 Cogitator Audio &amp; Terminal Sound Suite</h3>
-      <p style="font-size:0.92rem; color:var(--text); line-height:1.6; margin:0;">
-        <strong>Vox-Caster Ambience:</strong> Toggle the top-nav speaker (<code>VOX-AMBIENCE: ON</code>) for atmospheric 40K soundscapes. Playback continues uninterrupted across page transitions, saving your current track and timestamp.<br>
+    <div class="card" style="border-left-color:var(--gold); text-align:center;">
+      <h3 style="margin-top:0; color:var(--gold-bright); text-align:center;">📡 Cogitator Audio &amp; Terminal Sound Suite</h3>
+      <p style="font-size:0.92rem; color:var(--text); line-height:1.6; margin:0 auto; max-width:760px;">
+        <strong>Vox-Caster Ambience:</strong> Toggle the top-nav speaker (<code>VOX-AMBIENCE: ON</code>) for atmospheric 40K soundscapes. Playback continues uninterrupted across page transitions, preserving your exact track and timestamp.<br>
         <strong>Tactical Sound Effects:</strong> Every button, sector reticle, and card flip synthesizes themed Imperial mechanical clanks, CRT scanner chirps, and pneumatic solenoid taps.
       </p>
     </div>

@@ -4,7 +4,7 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 
 | Bundle Document | Target Scope | Included Files |
 | :--- | :--- | :--- |
-| [`bundle_index.md`](bundle_index.md) | **Mode 1: Tactical Terminal & Spawner** | `index.html` |
+| [`bundle_index.md`](bundle_index.md) | **Home Launchpad & Mode 1 Spawner** | `index.html`, `pages/spawner.html` |
 | [`bundle_javascript.md`](bundle_javascript.md) | **JavaScript Engine & Audio** | `js/data.js`, `js/rng.js`, `js/spawner.js`, `js/app.js`, `js/vox-audio.js` |
 | [`bundle_tests.md`](bundle_tests.md) | **Test Suites & Verification** | `tests/js/*.test.js`, `tests/ui/pages.test.js` |
 | [`bundle_briefing.md`](bundle_briefing.md) | **Briefings, Ship Slider & Atlas** | `pages/briefing.html` |

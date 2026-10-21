@@ -415,6 +415,9 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   assert.ok(code.includes('soa_vox_music_enabled_v1'), 'Must configure localStorage key for music state persistence');
   assert.ok(code.includes('soa_vox_track_index_v1'), 'Must persist track index for seamless tab switching');
   assert.ok(code.includes('soa_vox_track_time_v1'), 'Must persist track timestamp for seamless tab switching');
+  assert.ok(code.includes('soa_vox_track_id_v1'), 'Must persist exact video ID for true seamless track continuity');
+  assert.ok(code.includes('VOX_TRACK_IDS'), 'Must define curated ambient 40K track array');
+  assert.ok(code.includes('playNextRandomTrack'), 'Must implement 100% random track selection');
 
   // Verify Web Audio button clank synthesizer and sound variety
   assert.ok(code.includes('playTerminalClank') || code.includes('playTerminalSound'), 'Must define terminal sound synthesis');
@@ -428,6 +431,7 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   assert.ok(code.includes('voxMusicToggle'), 'Must create voxMusicToggle top-nav button');
   assert.ok(code.includes('voxMusicSkip'), 'Must create voxMusicSkip button');
 });
+
 ````
 
 ---
@@ -446,28 +450,31 @@ function readPage(fileName) {
   return fs.readFileSync(path.join(ROOT_DIR, fileName), 'utf8');
 }
 
-test('UI Boundary: index.html has complete navigation, stylesheets, and modular scripts', () => {
-  const html = readPage('index.html');
+test('UI Boundary: index.html is the home launchpad and pages/spawner.html houses Mode 1 modular scripts', () => {
+  const indexHtml = readPage('index.html');
 
-  assert.ok(html.includes('<nav class="suite-nav">'), 'Missing suite navigation bar');
-  assert.ok(html.includes('href="pages/briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>'));
-  assert.ok(html.includes('href="pages/pvp.html"'));
-  assert.ok(html.includes('href="pages/rogue.html"'));
-  assert.ok(html.includes('href="pages/roster.html"'));
+  assert.ok(indexHtml.includes('<nav class="suite-nav">'), 'Missing suite navigation bar in index.html');
+  assert.ok(indexHtml.includes('href="pages/spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>'));
+  assert.ok(indexHtml.includes('href="pages/briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>'));
+  assert.ok(indexHtml.includes('href="pages/pvp.html"'));
+  assert.ok(indexHtml.includes('href="pages/rogue.html"'));
+  assert.ok(indexHtml.includes('href="pages/roster.html"'));
 
-  // Stylesheet
-  assert.ok(html.includes('<link rel="stylesheet" href="css/style.css">'));
+  // Stylesheet and Vox Audio in index.html
+  assert.ok(indexHtml.includes('<link rel="stylesheet" href="css/style.css">'));
+  assert.ok(indexHtml.includes('<script src="js/vox-audio.js"></script>'), 'index.html must link to js/vox-audio.js');
 
-  // Modular script architecture
-  assert.ok(html.includes('<script src="js/data.js"></script>'));
-  assert.ok(html.includes('<script src="js/rng.js"></script>'));
-  assert.ok(html.includes('<script src="js/spawner.js"></script>'));
-  assert.ok(html.includes('<script src="js/app.js"></script>'));
-  assert.ok(html.includes('<script src="js/vox-audio.js"></script>'), 'index.html must link to js/vox-audio.js');
+  // Mode 1 Spawner modular script architecture in pages/spawner.html
+  const spawnerHtml = readPage('pages/spawner.html');
+  assert.ok(spawnerHtml.includes('<script src="../js/data.js"></script>'));
+  assert.ok(spawnerHtml.includes('<script src="../js/rng.js"></script>'));
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner.js"></script>'));
+  assert.ok(spawnerHtml.includes('<script src="../js/app.js"></script>'));
+  assert.ok(spawnerHtml.includes('<script src="../js/vox-audio.js"></script>'), 'spawner.html must link to js/vox-audio.js');
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
-  const subpages = ['pvp.html', 'rogue.html', 'roster.html', 'briefing.html', 'welcome.html'];
+  const subpages = ['spawner.html', 'pvp.html', 'rogue.html', 'roster.html', 'briefing.html', 'welcome.html'];
   const expectedBriefingSnippet = 'href="briefing.html" class="suite-link';
   const expectedRootIndexSnippet = 'href="../index.html" class="suite-link';
 
@@ -513,7 +520,7 @@ test('All HTML pages link to assets/favicon.svg and apple-touch-icon in /assets'
     'index.html must include <link rel="apple-touch-icon" href="assets/favicon.svg">'
   );
 
-  const subpages = ['pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/welcome.html'];
+  const subpages = ['pages/spawner.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/welcome.html'];
   for (const page of subpages) {
     const html = readPage(page);
     assert.match(
@@ -693,6 +700,19 @@ test('UI Boundary: pages/welcome.html provides concise tutorials for all game mo
   assert.ok(html.includes('<link rel="stylesheet" href="../css/style.css">'), 'welcome.html must link to style.css');
   assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), 'welcome.html must link to vox-audio.js');
 });
+
+test('UI Boundary: index.html serves as the centered Field Codex home launchpad', () => {
+  const html = readPage('index.html');
+  assert.ok(html.includes('Sanctuary Field Codex &amp; Quickstart Manual') || html.includes('Sanctuary Field Codex & Quickstart Manual'));
+  assert.ok(html.includes('welcome-quick-grid'), 'index.html must feature centered quick-launch command matrix');
+  assert.ok(html.includes('welcome-btn-row'), 'index.html must feature centered action button rows');
+  assert.ok(html.includes('pages/spawner.html'), 'index.html must link to Mode 1 spawner');
+  assert.ok(html.includes('pages/pvp.html'), 'index.html must link to Mode 2 1v1 PvP');
+  assert.ok(html.includes('pages/rogue.html'), 'index.html must link to Mode 3 Rogue AI');
+  assert.ok(html.includes('pages/roster.html'), 'index.html must link to Mode 4 Rosters');
+  assert.ok(html.includes('pages/briefing.html'), 'index.html must link to Mode 5 Briefings');
+});
+
 
 
 

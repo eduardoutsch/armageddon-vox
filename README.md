@@ -6,7 +6,10 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 
 ## 🎮 Game Modes & Features
 
-- **🧟 Mode 1: Horde Command & Spawner (`index.html`)**  
+- **📖 Field Codex & Command Launchpad (`index.html`)**  
+  Central briefing console, quickstart guides, mode overviews, and unified tactical navigation across all Munitorum operations.
+
+- **🧟 Mode 1: Horde Command & Spawner (`pages/spawner.html`)**  
   Automated horde spawning with seed-synchronized zone generation, wave escalation mechanics, misery card deck management, and faction-specific tactical rules.
 
 - **⚔️ Mode 2: 1v1 Ash Wastes PvP (`pages/pvp.html`)**  
@@ -25,8 +28,8 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
 
 ## 📂 Repository Structure
 
-- `index.html` — Root entry point (Mode 1: Horde Command & Spawner).
-- `pages/` — Suite HTML views (`briefing.html`, `pvp.html`, `rogue.html`, `roster.html`, `welcome.html`).
+- `index.html` — Root entry point (Sanctuary Field Codex & Command Launchpad).
+- `pages/` — Suite HTML views (`spawner.html`, `briefing.html`, `pvp.html`, `rogue.html`, `roster.html`, `welcome.html`).
 - `bundles/` — Modular Markdown ingestion bundles per page (`bundle_index.md`, `bundle_briefing.md`, `bundle_welcome.md`, etc.), engine modules (`bundle_javascript.md`), test suites (`bundle_tests.md`), tactical styles (`bundle_css.md`), and packages (`bundle_packages.md`).
 - `assets/` — Static icons and vector assets (`favicon.svg`, `favicon.png`).
 - `css/` — Shared application stylesheets (`style.css`).

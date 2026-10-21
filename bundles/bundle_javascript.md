@@ -1131,6 +1131,31 @@ if (typeof module !== 'undefined' && module.exports) {
   const STORAGE_KEY_MUSIC = 'soa_vox_music_enabled_v1';
   const STORAGE_KEY_TRACK_INDEX = 'soa_vox_track_index_v1';
   const STORAGE_KEY_TRACK_TIME = 'soa_vox_track_time_v1';
+  const STORAGE_KEY_TRACK_ID = 'soa_vox_track_id_v1';
+
+  // Curated 20 ambient 40K soundscapes from the official Sanctuary playlist
+  const VOX_TRACK_IDS = [
+    '2QQerwk9ibs',
+    'spnhLfHGHko',
+    'BXjLjZCMYOk',
+    'MOcBnBzZ2us',
+    'CCQBh3XlsvQ',
+    '7Z--CqggdC4',
+    'YwKHbMxBzPY',
+    'uHBH4zXThFI',
+    'O6HcnAFhfb4',
+    'XFRYg1vPc-Q',
+    'tXoEite1JYo',
+    'Zi2kgjDhmC0',
+    'Pg19ptB8kCQ',
+    'k3w4rYX1ERw',
+    'k5xDyG72wHE',
+    'KPObDVPb_XM',
+    'VMs_p5EWri4',
+    'vwJOJiOixHo',
+    'Ej5LheTW5Jk',
+    'isCFBRHtjFo'
+  ];
 
   let ytPlayer = null;
   let ytReady = false;
@@ -1176,7 +1201,7 @@ if (typeof module !== 'undefined' && module.exports) {
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Micro-pitch randomization (±6%) so repeated clicks never sound robotic
+    // Micro-pitch randomization (+-6%) so repeated clicks never sound robotic
     const detune = 1 + (Math.random() * 0.12 - 0.06);
 
     if (profile === 'heavy' || profile === true) {
@@ -1362,7 +1387,7 @@ if (typeof module !== 'undefined' && module.exports) {
 
     document.getElementById('voxMusicToggle').addEventListener('click', toggleMusic);
     document.getElementById('voxMusicSkip').addEventListener('click', () => {
-      if (ytReady) startRandomTrack();
+      playNextRandomTrack();
     });
 
     updateMusicUI(wantMusic);
@@ -1403,27 +1428,58 @@ if (typeof module !== 'undefined' && module.exports) {
     };
   }
 
+  /**
+   * Resolves the current track ID to play:
+   * If a track ID is already saved in localStorage from a previous page or session,
+   * reuse it for 100% seamless continuity. Otherwise, pick a 100% random track.
+   */
+  function getActiveTrackConfig() {
+    let savedId = null;
+    let savedTime = 0;
+    try {
+      savedId = localStorage.getItem(STORAGE_KEY_TRACK_ID);
+      const timeVal = localStorage.getItem(STORAGE_KEY_TRACK_TIME);
+      savedTime = timeVal ? Math.max(0, parseInt(timeVal, 10)) : 0;
+    } catch (e) {}
+
+    if (!savedId || !VOX_TRACK_IDS.includes(savedId)) {
+      // 100% random initial selection
+      const randIdx = Math.floor(Math.random() * VOX_TRACK_IDS.length);
+      savedId = VOX_TRACK_IDS[randIdx];
+      savedTime = 0;
+      try {
+        localStorage.setItem(STORAGE_KEY_TRACK_ID, savedId);
+        localStorage.setItem(STORAGE_KEY_TRACK_INDEX, String(randIdx));
+        localStorage.setItem(STORAGE_KEY_TRACK_TIME, '0');
+      } catch (e) {}
+    }
+
+    return { videoId: savedId, startSeconds: savedTime };
+  }
+
   function createPlayer() {
     if (ytPlayer) return;
+
+    const { videoId, startSeconds } = getActiveTrackConfig();
+
     ytPlayer = new YT.Player('soaHiddenYtPlayer', {
       height: '1',
       width: '1',
+      videoId: videoId,
       playerVars: {
-        listType: 'playlist',
-        list: PLAYLIST_ID,
         autoplay: wantMusic ? 1 : 0,
+        start: startSeconds,
         loop: 1,
         controls: 0,
         disablekb: 1,
         modestbranding: 1,
-        playsinline: 1
+        playsinline: 1,
+        enablejsapi: 1
       },
       events: {
         onReady: (event) => {
           ytReady = true;
           event.target.setVolume(35);
-          event.target.setLoop(true);
-          event.target.setShuffle(true);
           if (wantMusic) {
             resumeOrStartMusic();
           }
@@ -1433,9 +1489,11 @@ if (typeof module !== 'undefined' && module.exports) {
             isPlaying = true;
             updateMusicUI(true);
             startTrackingProgress();
+          } else if (event.data === YT.PlayerState.ENDED) {
+            // Track naturally completed: pick a fresh 100% random track
+            playNextRandomTrack();
           } else if (
-            event.data === YT.PlayerState.PAUSED ||
-            event.data === YT.PlayerState.ENDED
+            event.data === YT.PlayerState.PAUSED
           ) {
             if (!wantMusic) {
               isPlaying = false;
@@ -1455,18 +1513,12 @@ if (typeof module !== 'undefined' && module.exports) {
       try {
         if (typeof ytPlayer.getCurrentTime === 'function') {
           const t = ytPlayer.getCurrentTime();
-          if (typeof t === 'number' && t > 0) {
+          if (typeof t === 'number' && t >= 0) {
             localStorage.setItem(STORAGE_KEY_TRACK_TIME, String(Math.floor(t)));
           }
         }
-        if (typeof ytPlayer.getPlaylistIndex === 'function') {
-          const idx = ytPlayer.getPlaylistIndex();
-          if (typeof idx === 'number' && idx >= 0) {
-            localStorage.setItem(STORAGE_KEY_TRACK_INDEX, String(idx));
-          }
-        }
       } catch (e) {}
-    }, 1000);
+    }, 750);
   }
 
   function stopTrackingProgress() {
@@ -1481,65 +1533,79 @@ if (typeof module !== 'undefined' && module.exports) {
     try {
       if (typeof ytPlayer.getCurrentTime === 'function') {
         const t = ytPlayer.getCurrentTime();
-        if (typeof t === 'number') localStorage.setItem(STORAGE_KEY_TRACK_TIME, String(Math.floor(t)));
-      }
-      if (typeof ytPlayer.getPlaylistIndex === 'function') {
-        const idx = ytPlayer.getPlaylistIndex();
-        if (typeof idx === 'number') localStorage.setItem(STORAGE_KEY_TRACK_INDEX, String(idx));
+        if (typeof t === 'number' && t >= 0) {
+          localStorage.setItem(STORAGE_KEY_TRACK_TIME, String(Math.floor(t)));
+        }
       }
     } catch (e) {}
   }
 
+  // Persist exact playback seconds across all page unload / visibility changes
   window.addEventListener('beforeunload', saveCurrentPosition);
+  window.addEventListener('pagehide', saveCurrentPosition);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveCurrentPosition();
+  });
 
+  /**
+   * Resumes playback of the persisted track at the exact saved second,
+   * preserving seamless audio across navigation without re-shuffling or restarting.
+   */
   function resumeOrStartMusic() {
     if (!ytPlayer || !ytReady) return;
     try {
       ytPlayer.setVolume(35);
-      const savedIndex = localStorage.getItem(STORAGE_KEY_TRACK_INDEX);
-      const savedTime = localStorage.getItem(STORAGE_KEY_TRACK_TIME);
-      const idx = savedIndex !== null ? parseInt(savedIndex, 10) : -1;
-      const sec = savedTime !== null ? parseInt(savedTime, 10) : 0;
+      const { videoId, startSeconds } = getActiveTrackConfig();
 
-      if (idx >= 0) {
-        ytPlayer.playVideoAt(idx);
-        if (sec > 5) {
-          setTimeout(() => {
-            try {
-              if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
-                ytPlayer.seekTo(sec, true);
-              }
-            } catch (e) {}
-          }, 450);
-        }
-      } else {
-        startRandomTrack();
+      if (typeof ytPlayer.loadVideoById === 'function') {
+        ytPlayer.loadVideoById({
+          videoId: videoId,
+          startSeconds: startSeconds
+        });
+      } else if (typeof ytPlayer.playVideo === 'function') {
+        ytPlayer.playVideo();
       }
+
       isPlaying = true;
       updateMusicUI(true);
+      startTrackingProgress();
     } catch (err) {
       console.warn('Vox-Caster resume exception, falling back to random:', err);
-      startRandomTrack();
+      playNextRandomTrack();
     }
   }
 
-  function startRandomTrack() {
+  /**
+   * Selects a 100% truly random track from the 20-track ambient playlist,
+   * avoiding repeating the currently active track if more than 1 track exists.
+   */
+  function playNextRandomTrack() {
     if (!ytPlayer || !ytReady) return;
     try {
-      ytPlayer.setShuffle(true);
-      const playlist = ytPlayer.getPlaylist();
-      if (Array.isArray(playlist) && playlist.length > 0) {
-        const randIdx = Math.floor(Math.random() * playlist.length);
-        ytPlayer.playVideoAt(randIdx);
-      } else {
-        const fallbackIdx = Math.floor(Math.random() * 20);
-        ytPlayer.playVideoAt(fallbackIdx);
+      const currentId = localStorage.getItem(STORAGE_KEY_TRACK_ID);
+      const candidateList = VOX_TRACK_IDS.filter(id => id !== currentId);
+      const pool = candidateList.length > 0 ? candidateList : VOX_TRACK_IDS;
+      const nextIndex = Math.floor(Math.random() * pool.length);
+      const nextId = pool[nextIndex];
+
+      const fullListIndex = VOX_TRACK_IDS.indexOf(nextId);
+      localStorage.setItem(STORAGE_KEY_TRACK_ID, nextId);
+      localStorage.setItem(STORAGE_KEY_TRACK_INDEX, String(fullListIndex >= 0 ? fullListIndex : 0));
+      localStorage.setItem(STORAGE_KEY_TRACK_TIME, '0');
+
+      if (typeof ytPlayer.loadVideoById === 'function') {
+        ytPlayer.loadVideoById({
+          videoId: nextId,
+          startSeconds: 0
+        });
       }
+
       ytPlayer.setVolume(35);
       isPlaying = true;
       updateMusicUI(true);
+      startTrackingProgress();
     } catch (err) {
-      console.warn('Vox-Caster playlist start warning:', err);
+      console.warn('Vox-Caster playlist randomizer warning:', err);
     }
   }
 
@@ -1574,4 +1640,5 @@ if (typeof module !== 'undefined' && module.exports) {
     injectNavToggle();
   }
 })();
+
 ````

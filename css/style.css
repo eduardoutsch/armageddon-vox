@@ -67,6 +67,89 @@ body {
 }
 
 /* ==========================================================================
+   VOX-TERMINAL PASSIVE AMBIENT BLUE CORNER GLOW
+   Subtle breathing cathode-phosphor vignette in viewport corners
+   Lightweight and non-obstructive to maintain crystal-clear terminal readability
+   ========================================================================== */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background:
+    radial-gradient(ellipse 32vw 32vh at 0% 0%, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 75%),
+    radial-gradient(ellipse 32vw 32vh at 100% 0%, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 75%),
+    radial-gradient(ellipse 32vw 32vh at 0% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 75%),
+    radial-gradient(ellipse 32vw 32vh at 100% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 75%);
+  animation: voxPassiveCornerGlow 8s ease-in-out infinite alternate;
+}
+
+@keyframes voxPassiveCornerGlow {
+  0% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+
+/* Centering & Symmetry Utilities */
+.text-center {
+  text-align: center !important;
+}
+
+.flex-center {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.welcome-btn-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.welcome-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin: 18px 0 10px 0;
+  text-align: center;
+}
+
+.welcome-quick-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px 12px;
+  background: linear-gradient(180deg, #1b1815 0%, #12100e 100%);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--gold);
+  clip-path: var(--clip-card);
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.welcome-quick-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-bright);
+  box-shadow: 0 8px 24px rgba(212, 163, 73, 0.2);
+  color: #fff;
+}
+
+/* ==========================================================================
    1. TOP NAVIGATION BAR (.suite-nav) & VOX-CASTER MUSIC MODULE
    ========================================================================== */
 .suite-nav {

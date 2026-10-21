@@ -15,6 +15,9 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   assert.ok(code.includes('soa_vox_music_enabled_v1'), 'Must configure localStorage key for music state persistence');
   assert.ok(code.includes('soa_vox_track_index_v1'), 'Must persist track index for seamless tab switching');
   assert.ok(code.includes('soa_vox_track_time_v1'), 'Must persist track timestamp for seamless tab switching');
+  assert.ok(code.includes('soa_vox_track_id_v1'), 'Must persist exact video ID for true seamless track continuity');
+  assert.ok(code.includes('VOX_TRACK_IDS'), 'Must define curated ambient 40K track array');
+  assert.ok(code.includes('playNextRandomTrack'), 'Must implement 100% random track selection');
 
   // Verify Web Audio button clank synthesizer and sound variety
   assert.ok(code.includes('playTerminalClank') || code.includes('playTerminalSound'), 'Must define terminal sound synthesis');
@@ -28,3 +31,4 @@ test('js/vox-audio.js exists and implements the 40K Vox-Caster ambient playlist 
   assert.ok(code.includes('voxMusicToggle'), 'Must create voxMusicToggle top-nav button');
   assert.ok(code.includes('voxMusicSkip'), 'Must create voxMusicSkip button');
 });
+
