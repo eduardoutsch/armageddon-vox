@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getBracketInfo, calculateRollDown, pickSyncedUnitFromBracket } = require('../js/spawner.js');
-const { mulberry32 } = require('../js/rng.js');
+const { getBracketInfo, calculateRollDown, pickSyncedUnitFromBracket } = require('../../js/spawner.js');
+const { mulberry32 } = require('../../js/rng.js');
 
 test('getBracketInfo: unmod 2 always results in No Spawn', () => {
   // Even if modified roll is high (e.g., +12 bonus), unmod 2 is No Spawn
