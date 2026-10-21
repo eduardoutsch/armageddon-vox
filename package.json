@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Warhammer 40,000 Horde Mode Suite // Spawner, PvP Wastes, Rogue AI Sector & Rosters",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "keywords": [
     "warhammer-40k",
