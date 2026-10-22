@@ -38,7 +38,7 @@ function resolveServiceKey(env = process.env) {
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://dsfvhjjalexqpbzqoaqb.supabase.co').trim();
 const SERVICE_KEY = resolveServiceKey();
 
-const ALPHA_THREAD_URL = (process.env.ALPHA_THREAD_URL || 'https://gemini.google.com/app/e834be114b163dea').trim();
+const ALPHA_THREAD_URL = (process.env.ALPHA_THREAD_URL || 'https://gemini.google.com/app/b15649e0813ab99a').trim();
 const BETA_THREAD_URL = (process.env.BETA_THREAD_URL || 'https://gemini.google.com/app/0c0b15a075182321').trim();
 
 logGreen('----------------------------------------------------------------');
@@ -162,13 +162,27 @@ function scrubArtifacts(str) {
 }
 
 async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) {
-  const maxWaitMs = 110000;
+  const maxWaitMs = 120000;
   const start = Date.now();
 
   logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> (Previous count:${prevState.count})...`);
 
+  // Helper: returns true if text is just Gemini's "Conectando a Gemini Notebook" tool spinner
+  const isToolLoadingBanner = (t) => {
+    if (!t || t.length < 80) {
+      if (/conectando|connecting|thinking|pensando|analisando|searching|buscando|loading|carregando/i.test(t || '')) {
+        return true;
+      }
+      // A real Imperial dispatch is always >80 chars and starts with +++ or <DIRECT_REPLY>
+      if (!/<DIRECT_REPLY|\+{3}|REF-ID/i.test(t || '')) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   let newResponseStarted = false;
-  while (Date.now() - start < 45000) {
+  while (Date.now() - start < 60000) {
     await page.waitForTimeout(1000);
     const curr = await extractCleanLastModelResponse(page);
 
@@ -183,7 +197,7 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
   }
 
   if (!newResponseStarted) {
-    logGreen(`[WARNING // ${channelTag}] No new <model-response> detected within 45s! Aborting to prevent stale read.`);
+    logGreen(`[WARNING // ${channelTag}] No new <model-response> detected within 60s! Aborting to prevent stale read.`);
     return '';
   }
 
@@ -197,14 +211,23 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
 
     if (!text || text === prevState.text) continue;
 
+    // CRITICAL FIX: Never count "Conectando a Gemini Notebook" or tool spinners as a finished reply!
+    if (isToolLoadingBanner(text)) {
+      logGreen(`[WAITING // ${channelTag}] Gemini is accessing Notebook tools ("${text.slice(0, 40)}")... waiting for actual reply...`);
+      stableTicks = 0;
+      lastText = text;
+      continue;
+    }
+
     const hasClosingTag = /<\/DIRECT_REPLY>/i.test(text);
     const hasOpenIntercept = /<INTERCEPT/i.test(text);
     const hasCloseIntercept = /<\/INTERCEPT>/i.test(text);
     const tagsComplete = hasClosingTag && (!hasOpenIntercept || hasCloseIntercept);
 
-    if (text === lastText && text.length > 30) {
+    if (text === lastText && text.length > 80) {
       stableTicks++;
-      if ((tagsComplete && stableTicks >= 2) || stableTicks >= 4) {
+      // If closing tags are present, 2 stable ticks (2.8s) is enough; otherwise require 5 ticks (7s)
+      if ((tagsComplete && stableTicks >= 2) || stableTicks >= 5) {
         return text;
       }
     } else {
