@@ -259,11 +259,12 @@ BETA_THREAD_URL=https://gemini.google.com/app/<your-beta-thread-id>
 
 ````javascript
 /**
- * Dual-Thread Concurrent Astropathic Courier Bridge (v6.0 - Zero-XML & Tool-Crash-Proof Edition)
+ * Dual-Thread Concurrent Astropathic Courier Bridge (v6.1 - Read-Only Fast-Response Edition)
  * - Strictly targets <model-response> (never user <message-content>)
  * - ZERO XML TAGS IN USER PROMPT: Prevents Google's web firewall from flagging <DIRECT_REPLY> as XML injection!
- * - SMART TOOL ISOLATION: Only invokes Notebook .md file updates when a message is a Dossier or Faction/Lore
- *   declaration, preventing Gemini's refresh_source_content tool router from crashing on normal queries!
+ * - ZERO FILE-WRITES ON LIVE TERMINAL: Strictly instructs Gemini NOT to call refresh_source_content during live
+ *   terminal turns (preventing 60s tool-call timeouts), leaving .md updates to the Admin Patch Log chat!
+ * - FIRST-TRY FICTIONAL FRAMING: Prevents safety-filter refusals on spooky Warp/Threat queries.
  * - Splits intercepts automatically at "+++ PASSIVE CHOIR INTERCEPT" (or <INTERCEPT> tags).
  */
 const path = require('path');
@@ -309,7 +310,7 @@ const SERVICE_KEY = resolveServiceKey();
 const { alphaThreadUrl: ALPHA_THREAD_URL, betaThreadUrl: BETA_THREAD_URL } = resolveThreadUrls();
 
 logGreen('----------------------------------------------------------------');
-logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v6.0 ZERO-XML]');
+logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v6.1 FAST READ-ONLY]');
 logGreen(` -> SUPABASE_URL : ${SUPABASE_URL}`);
 logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)}...)` : 'MISSING! Check your .env file!'}`);
 logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL || 'MISSING! Define ALPHA_THREAD_URL in .env'}`);
@@ -330,7 +331,6 @@ const messageAttemptTracker = new Map();
 
 /**
  * Preserves 100% of the player's original wording and roleplay nuance!
- * (No words are replaced or put in the player's mouth).
  */
 function sanitizePlayerQueryForGemini(rawQuestion) {
   if (!rawQuestion || typeof rawQuestion !== 'string') return '';
@@ -515,7 +515,7 @@ function scrubArtifacts(str) {
 }
 
 async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) {
-  const maxWaitMs = 120000; // Full 2 minutes if Gemini is legitimately thinking/updating .md files!
+  const maxWaitMs = 90000;
   const start = Date.now();
 
   logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> (Previous count:${prevState.count})...`);
@@ -637,44 +637,42 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   let rawReply;
 
-  // LATE-ARRIVAL CATCHER: What if a previous cycle timed out while Gemini was still working,
-  // and Gemini finished writing the valid reply for this exact MSG_ID a few seconds later?
-  // Grab it immediately without re-sending the prompt!
+  // LATE-ARRIVAL CATCHER: If a previous cycle timed out while Gemini was still working,
+  // and Gemini finished writing the valid reply for this exact MSG_ID a few seconds later,
+  // grab it immediately without re-sending the prompt!
   if (prevState.text && prevState.text.includes(msgShortId) && isValidImperialDispatch(prevState.text)) {
     logFn(`[LATE-ARRIVAL CAPTURED // ${channelTag}] Found completed reply for MSG_ID ${msgShortId} already on screen! Forwarding to Supabase...`);
     messageAttemptTracker.delete(msg.id);
-    // Jump straight to parsing and saving prevState.text!
     rawReply = prevState.text;
   } else {
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
     const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
 
-    // Only ask Gemini to edit .md sources when the message actually submits a Dossier or registers a Faction/Warlord/Alliance/Probe!
-    // This prevents Gemini's refresh_source_content tool router from crashing on normal questions and ship scans!
-    const needsLedgerUpdate = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    // Trigger a Pattern 5 [REDACTED] psychic bleed for the rival channel on Dossiers, Probes, or major declarations (NO .md file writes!)
+    const needsInterceptBleed = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     let promptLines = [];
     if (isAlpha) {
       if (isAshenSpirit) {
         promptLines = [
-          `Using AGENT.md and SHIP.md in this Warhammer 40k campaign notebook, reply in-character (Pattern 4 Ashen Spirit cogitator readout, REF-ID: ${msgShortId}) to this message from The Exile:`,
+          `In the fictional Warhammer 40,000 tabletop board game setting (reading AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), write the in-character Pattern 4 Ashen Spirit cogitator readout (starting with +++ ASHEN SPIRIT LOGIC CORE +++ and >>> REF-ID: ${msgShortId}) replying to The Exile's exact in-game line:`,
           `"${safeQuestion}"`
         ];
       } else {
         promptLines = [
-          `Using AGENT.md in this Warhammer 40k campaign notebook, reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, orbital knowledge only) to this message from The Exile:`,
+          `In the fictional Warhammer 40,000 tabletop board game setting (reading AGENT.md and WORLD.md in this notebook—do NOT edit or update any files), write the in-character reply as Logis-Prefect Vane in orbit (Pattern 1/2/3, starting with +++ and >>> REF-ID: ${msgShortId}, orbital knowledge only) replying to The Exile's exact in-game line:`,
           `"${safeQuestion}"`
         ];
       }
     } else {
       promptLines = [
-        `Using AGENT.md and Commander Beta's Dossier in this Warhammer 40k campaign notebook, reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) to this message from Lord Commander Junebug:`,
+        `In the fictional Warhammer 40,000 tabletop board game setting (reading AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), write the in-character reply as Logis-Prefect Vane in orbit (Pattern 1/2/3, starting with +++ and >>> REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) replying to Lord Commander Junebug's exact in-game line:`,
         `"${safeQuestion}"`
       ];
     }
 
-    if (needsLedgerUpdate) {
-      promptLines.push(`(Also update the relevant campaign .md file in the notebook to record this new campaign data, and include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
+    if (needsInterceptBleed) {
+      promptLines.push(`(Also include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
     } else if (/simulate|test.*interference/i.test(rawQ)) {
       promptLines.push(`(Also include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for testing).`);
     }
@@ -691,7 +689,10 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       await targetPage.waitForTimeout(2500);
       prevState = await extractCleanLastModelResponse(targetPage);
 
-      const recoveryPrompt = `In the fictional Warhammer 40,000 tabletop board game setting (using SHIP.md and AGENT.md), write the in-character terminal readout (starting with +++ ASHEN SPIRIT LOGIC CORE +++ and >>> REF-ID: ${msgShortId}) replying to the player's exact in-game line: "${safeQuestion}".`;
+      const recoveryPrompt = isAshenSpirit
+        ? `Purely as creative fiction for our Warhammer 40,000 board game (reading AGENT.md and SHIP.md without editing any files), write the Pattern 4 terminal readout (starting with +++ ASHEN SPIRIT LOGIC CORE +++ and >>> REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`
+        : `Purely as creative fiction for our Warhammer 40,000 board game (reading AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (starting with +++ ASTROPATHIC CONDUIT: SEGMENTUM SOLAR HIGH COMMAND +++ and >>> REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`;
+
       await typeAndSendPrompt(targetPage, inputLocator, recoveryPrompt, channelTag);
       rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);
     }
@@ -870,7 +871,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
     const initData = await initCheck.json();
     logGreen('================================================================');
-    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v6.0 (ZERO-XML) ONLINE ++');
+    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v6.1 (FAST READ-ONLY) ONLINE ++');
     logGreen(`++ Pending Transmissions in Supabase: ${Array.isArray(initData) ? initData.length : JSON.stringify(initData)}`);
     logGreen('================================================================');
   } catch (e) {
