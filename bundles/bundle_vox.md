@@ -332,7 +332,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   // =========================================================================
   // SUPABASE CONFIGURATION (RLS-Protected RPC Endpoints)
   // =========================================================================
-  const SUPABASE_URL = 'https://dsfvhjalexcpbzqoach.supabase.co';
+  const SUPABASE_URL = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
 
   const SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
