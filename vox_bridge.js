@@ -1,8 +1,9 @@
 /**
- * Dual-Thread Concurrent Astropathic Courier Bridge (v5 - Crisp Paragraph & Line Spacing)
+ * Dual-Thread Concurrent Astropathic Courier Bridge (v5.1 - Bulletproof + Smart Intercept Routing)
  * - Strictly targets <model-response> (never user <message-content>)
  * - Preserves full paragraph (\n\n), line-break (\n), and bullet-point spacing
  * - Strips all Gemini Notebook citation chips ("MD", "+ 2", "+ 4", "")
+ * - Routes test/simulated interferences to sender's own screen (and catches missing opening <INTERCEPT> tags)
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -41,7 +42,7 @@ const ALPHA_THREAD_URL = (process.env.ALPHA_THREAD_URL || 'https://gemini.google
 const BETA_THREAD_URL = (process.env.BETA_THREAD_URL || 'https://gemini.google.com/app/0c0b15a075182321').trim();
 
 logGreen('----------------------------------------------------------------');
-logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v5 BULLETPROOF]');
+logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v5.1 BULLETPROOF]');
 logGreen(` -> SUPABASE_URL : ${SUPABASE_URL}`);
 logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)}...)` : 'MISSING! Check your .env file!'}`);
 logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL}`);
@@ -197,7 +198,7 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
     if (!text || text === prevState.text) continue;
 
     const hasClosingTag = /<\/DIRECT_REPLY>/i.test(text);
-    const hasOpenIntercept = /<INTERCEPT>/i.test(text);
+    const hasOpenIntercept = /<INTERCEPT/i.test(text);
     const hasCloseIntercept = /<\/INTERCEPT>/i.test(text);
     const tagsComplete = hasClosingTag && (!hasOpenIntercept || hasCloseIntercept);
 
@@ -231,7 +232,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     : 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)';
   const msgShortId = msg.id ? msg.id.slice(0, 8) : '00000000';
 
-  logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} | From:${msg.sender || 'Unknown'}`);
+  logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} \vert{} From:${msg.sender || 'Unknown'}`);
   logFn(`   Payload: "${(msg.question || '').slice(0, 90)}..."`);
 
   const inputLocator = targetPage.locator(CHAT_INPUT_SELECTOR).first();
@@ -268,7 +269,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     channelSpecificRules,
     `3. NEVER name-drop "The 3rd Alliance" or "Horde AI" (refer only to raw sensor anomalies/tremors), and NEVER leak unmapped Node 1-7 Hegemony numbers.`,
     `4. Reply inside <DIRECT_REPLY>...</DIRECT_REPLY> tags. If this is a Master Post-Battle or Nemesis Dossier, christen custom in-universe Lore Names & Backstories for every attached Upgrade, Relic, and Scar and update the relevant .md source!`,
-    `5. If warranted, also include an <INTERCEPT>...</INTERCEPT> block with a cryptic, heavily redacted snippet (using [REDACTED]) for ${otherChannel.toUpperCase()}'s Interferences window.`
+    `5. If warranted, also include an <INTERCEPT>...</INTERCEPT> block (with both opening <INTERCEPT> and closing </INTERCEPT> tags!) containing a cryptic, heavily redacted snippet (using [REDACTED]) for ${otherChannel.toUpperCase()}'s Interferences window.`
   ].join('\n');
 
   await (typingLock = typingLock.then(async () => {
@@ -301,7 +302,10 @@ async function processSingleMessage(msg, targetPage, options = {}) {
   }
 
   const directMatch = rawReply.match(/<DIRECT_REPLY[^>]*>([\s\S]*?)<\/DIRECT_REPLY>/i);
-  const interceptMatch = rawReply.match(/<INTERCEPT[^>]*>([\s\S]*?)<\/INTERCEPT>/i);
+  // Match standard <INTERCEPT>...</INTERCEPT>, OR fallback to text between </DIRECT_REPLY> and </INTERCEPT> if opening tag was omitted!
+  const interceptMatch =
+    rawReply.match(/<INTERCEPT([^>]*)>([\s\S]*?)<\/INTERCEPT>/i) ||
+    rawReply.match(/<\/DIRECT_REPLY>\s*([\s\S]*?)<\/INTERCEPT>/i);
 
   const finalDirectReply = scrubArtifacts(directMatch ? directMatch[1] : rawReply);
 
@@ -325,18 +329,37 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     return false;
   }
 
-  if (interceptMatch && interceptMatch[1].trim()) {
-    const cleanIntercept = scrubArtifacts(interceptMatch[1]);
+  const rawInterceptBody = interceptMatch
+    ? (interceptMatch[2] !== undefined ? interceptMatch[2] : interceptMatch[1])
+    : '';
+
+  if (rawInterceptBody && rawInterceptBody.trim()) {
+    const cleanIntercept = scrubArtifacts(rawInterceptBody);
+    const interceptAttrs = (interceptMatch[2] !== undefined ? interceptMatch[1] : '') || '';
+
+    // If the player asked to simulate/test an interference (or tag has target="self"), route to the sender's own Interferences tab!
+    const isSelfTest =
+      /simulate|test.*interference/i.test(msg.question || '') ||
+      /target=["']?(self|same)/i.test(interceptAttrs);
+
+    let destChannel = isSelfTest ? msg.channel : otherChannel;
+    if (/target=["']?alpha/i.test(interceptAttrs)) destChannel = 'alpha';
+    if (/target=["']?beta/i.test(interceptAttrs)) destChannel = 'beta';
+
+    const destOriginLabel = isSelfTest
+      ? 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK'
+      : originLabel;
+
     await fetchFn(`${supabaseUrl}/rest/v1/vox_interferences`, {
       method: 'POST',
       headers: reqHeaders,
       body: JSON.stringify({
-        target_channel: otherChannel,
-        origin_hint: originLabel,
+        target_channel: destChannel,
+        origin_hint: destOriginLabel,
         redacted_text: cleanIntercept
       })
     });
-    logFn(`[INTERCEPT // ${channelTag}] Redacted psychic bleed transmitted to ${otherChannel.toUpperCase()}!`);
+    logFn(`[INTERCEPT // ${channelTag}] Redacted psychic bleed transmitted to ${destChannel.toUpperCase()}!`);
   }
 
   logFn(`[DELIVERED // ${channelTag}] Verified reply for MSG_ID ${msgShortId} streamed to CRT terminal!`);
@@ -421,7 +444,7 @@ async function runDualThreadCourier() {
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
     const initData = await initCheck.json();
     logGreen('================================================================');
-    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v5 (CRISP SPACING) ONLINE ++');
+    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v5.1 (SMART INTERCEPT) ONLINE ++');
     logGreen(`++ Pending Transmissions in Supabase: ${Array.isArray(initData) ? initData.length : JSON.stringify(initData)}`);
     logGreen('================================================================');
   } catch (e) {
