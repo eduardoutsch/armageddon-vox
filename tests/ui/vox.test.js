@@ -159,6 +159,7 @@ const evalFn = new Function(
     streamTextIntoElement,
     formatRedactedHtml,
     switchSubWindow,
+    extractDynamicReplyCardMeta,
     refreshTerminal,
     toggleOlderMessages,
     toggleOlderInterferences,
@@ -375,5 +376,73 @@ test('vox: refreshTerminal hides old interferences by default and toggles on dem
   assert.equal(vox.getShowAllOlderInterferences(), false);
   assert.equal(mockElements.interferencesBox.children.length, 4, 'Must collapse back to 3 interferences + toggle bar');
 });
+
+test('vox: extractDynamicReplyCardMeta parses explicit titles, banner headers, mid-text keywords, and fallbacks', () => {
+  const fallback = '++ CAMPAIGN MASTER // SEGMENTUM SOLAR COMMAND ++';
+
+  // 1. Null / undefined / empty
+  assert.deepEqual(vox.extractDynamicReplyCardMeta(null), { cardTitle: fallback, cleanBody: '' });
+  assert.deepEqual(vox.extractDynamicReplyCardMeta(''), { cardTitle: fallback, cleanBody: '' });
+
+  // 2. Explicit [CARD_TITLE: ...]
+  const explicitRes = vox.extractDynamicReplyCardMeta('[CARD_TITLE: Logis-Prefect Vane]\n+++ HULL INTEGRITY: 100% +++');
+  assert.equal(explicitRes.cardTitle, '++ LOGIS-PREFECT VANE ++');
+  assert.equal(explicitRes.cleanBody, '+++ HULL INTEGRITY: 100% +++');
+
+  // 3. Canonical +++ BANNER +++ on first line
+  const bannerRes = vox.extractDynamicReplyCardMeta('+++ ASTROPATHIC CONDUIT: HIGH COMMAND +++\n\nRouting verified. State query.');
+  assert.equal(bannerRes.cardTitle, '++ ASTROPATHIC CONDUIT: HIGH COMMAND ++');
+  assert.equal(bannerRes.cleanBody, 'Routing verified. State query.');
+
+  // 4. Canonical ++ BANNER ++ on first line
+  const doublePlusRes = vox.extractDynamicReplyCardMeta('++ COGITATOR DECK-44 ++\n\nSystems operational.');
+  assert.equal(doublePlusRes.cardTitle, '++ COGITATOR DECK-44 ++');
+  assert.equal(doublePlusRes.cleanBody, 'Systems operational.');
+
+  // 5. Mid-text fallback inference for Ashen Spirit / MU-TH-UR / Deck 44
+  const midTextRes = vox.extractDynamicReplyCardMeta('The Ashen Spirit stirs beneath the bulkheads...');
+  assert.equal(midTextRes.cardTitle, '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++');
+  assert.equal(midTextRes.cleanBody, 'The Ashen Spirit stirs beneath the bulkheads...');
+
+  // 6. Generic prose without banners
+  const genericRes = vox.extractDynamicReplyCardMeta('Standard battlefield communique received.');
+  assert.equal(genericRes.cardTitle, fallback);
+  assert.equal(genericRes.cleanBody, 'Standard battlefield communique received.');
+});
+
+test('vox: refreshTerminal uses dynamic reply card title and avoids duplicating banner in body', async () => {
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  mockMessages = [
+    {
+      id: 'm_dyn_1',
+      channel: 'alpha',
+      sender: 'The Exile',
+      question: 'Status report',
+      reply: '+++ ORBITAL LOGIS SCAN +++\nPerimeter is secure across Sector 0.',
+      status: 'answered'
+    }
+  ];
+
+  await vox.refreshTerminal(false);
+  // Reset signature and refresh so seenToken causes immediate synchronous textContent assignment
+  mockElements.directMessagesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  // Exchange wrap contains 1 player card + 1 reply card
+  const exchangeWrap = mockElements.directMessagesBox.children[0];
+  assert.equal(exchangeWrap.children.length, 2);
+
+  const replyCard = exchangeWrap.children[1];
+  assert.ok(replyCard.className.includes('crt-reply-card'));
+  assert.ok(replyCard.innerHTML.includes('++ ORBITAL LOGIS SCAN ++'), 'Must render extracted dynamic title');
+  assert.ok(!replyCard.innerHTML.includes('SEGMENTUM SOLAR COMMAND'), 'Must not use fallback title when banner is present');
+
+  const rBody = replyCard.children[0];
+  assert.ok(rBody.textContent.includes('Perimeter is secure across Sector 0.'));
+  assert.ok(!rBody.textContent.includes('+++ ORBITAL LOGIS SCAN +++'), 'Must strip first header banner line from clean body');
+});
+
 
 

@@ -759,6 +759,48 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
     );
   }
 
+  /**
+   * Dynamically extracts the speaker/card title from the first +++ ... +++ banner
+   * (or [CARD_TITLE: ...]) of the Supabase reply, and strips that first line from
+   * the body so the title appears cleanly at the top of the CRT card without repeating!
+   */
+  function extractDynamicReplyCardMeta(rawReply) {
+    const fallbackTitle = '++ CAMPAIGN MASTER // SEGMENTUM SOLAR COMMAND ++';
+    if (!rawReply || typeof rawReply !== 'string') {
+      return { cardTitle: fallbackTitle, cleanBody: rawReply || '' };
+    }
+
+    const trimmed = rawReply.trim();
+
+    // 1. Check for explicit [CARD_TITLE: ...] override if present
+    const explicitMatch = trimmed.match(/^\[CARD_TITLE:\s*([^\]]+)\]\s*\n?/i);
+    if (explicitMatch) {
+      return {
+        cardTitle: `++ ${explicitMatch[1].trim().toUpperCase()} ++`,
+        cleanBody: trimmed.slice(explicitMatch[0].length).trim()
+      };
+    }
+
+    // 2. Check if the first line is a canonical +++ HEADER BANNER +++
+    const bannerMatch = trimmed.match(/^\+{2,}\s*([^\n+]+?)\s*\+{2,}[ \t]*\n+/);
+    if (bannerMatch) {
+      return {
+        cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
+        cleanBody: trimmed.slice(bannerMatch[0].length).trim()
+      };
+    }
+
+    // 3. Fallback inference if +++ banner was mid-text
+    if (/ASHEN SPIRIT|MU-TH-UR|DECK 44/i.test(trimmed)) {
+      return {
+        cardTitle: '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++',
+        cleanBody: trimmed
+      };
+    }
+
+    return { cardTitle: fallbackTitle, cleanBody: trimmed };
+  }
+
   async function refreshTerminal(forceScroll = false) {
     if (!activePassphrase) return;
     try {
@@ -841,24 +883,26 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
 
             // 2. Campaign Master Reply Card (Emerald CRT Phosphor) or Pending Line
             if (m.status === 'answered' && m.reply) {
+              const { cardTitle, cleanBody } = extractDynamicReplyCardMeta(m.reply);
+
               const repCard = document.createElement('div');
-              repCard.className = 'crt-reply-card';
+              repCard.className = 'crt-reply-card crt-msg-card reply';
               const ansTime = m.answered_at ? new Date(m.answered_at).toLocaleTimeString() : 'DECRYPTED';
               repCard.innerHTML = `
-                <div class="crt-reply-header">
-                  <span>++ CAMPAIGN MASTER // SEGMENTUM SOLAR COMMAND ++</span>
+                <div class="crt-reply-header crt-msg-meta">
+                  <span>${escapeHtml(cardTitle)}</span>
                   <span>${escapeHtml(ansTime)}</span>
                 </div>
-                <div class="crt-r-body"></div>
+                <div class="crt-r-body crt-msg-body"></div>
               `;
               const rBody = repCard.querySelector('.crt-r-body');
               const rToken = `r_${m.id}`;
 
               if (!seenTokens.has(rToken)) {
                 markTokenSeen(rToken);
-                streamTextIntoElement(rBody, m.reply, false, 2500);
+                streamTextIntoElement(rBody, cleanBody, false, 2500);
               } else {
-                rBody.textContent = m.reply;
+                rBody.textContent = cleanBody;
               }
               wrap.appendChild(repCard);
             } else {
