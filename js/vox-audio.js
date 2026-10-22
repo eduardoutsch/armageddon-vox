@@ -79,11 +79,9 @@
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Micro-pitch randomization (+-6%) so repeated clicks never sound robotic
     const detune = 1 + (Math.random() * 0.12 - 0.06);
 
     if (profile === 'heavy' || profile === true) {
-      // 1. Heavy blast-door clank
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
@@ -98,7 +96,6 @@
       osc.start(now);
       osc.stop(now + 0.1);
 
-      // Sub-metallic resonance ring
       const ringOsc = ctx.createOscillator();
       const ringGain = ctx.createGain();
       ringOsc.type = 'triangle';
@@ -114,7 +111,6 @@
       ringOsc.stop(now + 0.07);
 
     } else if (profile === 'auspex') {
-      // 2. Auspex CRT scanner chirrup & phosphor pulse
       const chirpOsc = ctx.createOscillator();
       const chirpGain = ctx.createGain();
       chirpOsc.type = 'sine';
@@ -131,7 +127,6 @@
       chirpOsc.stop(now + 0.05);
 
     } else if (profile === 'pneumatic') {
-      // 3. Pneumatic solenoid tap / valve pressure click
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'square';
@@ -147,7 +142,6 @@
       osc.stop(now + 0.03);
 
     } else if (profile === 'card') {
-      // 4. Data-slate card mechanical latch
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
@@ -162,7 +156,6 @@
       osc.start(now);
       osc.stop(now + 0.045);
 
-      // Micro snap
       const snap = ctx.createOscillator();
       const snapGain = ctx.createGain();
       snap.type = 'square';
@@ -178,7 +171,6 @@
       snap.stop(now + 0.018);
 
     } else {
-      // 5. Standard Imperial copper relay switch ('relay')
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'triangle';
@@ -209,14 +201,216 @@
     }
   }
 
-  // Global listener: contextually triggers sound profiles
-  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-    document.addEventListener('click', (e) => {
+  /**
+   * 1. CRT Teletype / Keyboard Typing Micro-Tick
+   * @param {'type'|'stream'|'redact'} mode
+   */
+  function playTeletypeTick(mode = 'stream') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const jitter = 1 + (Math.random() * 0.18 - 0.09);
+
+    if (mode === 'redact') {
+      // Static burst for [REDACTED] bars
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(160 * jitter, now);
+      osc.frequency.linearRampToValueAtTime(75, now + 0.045);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.052);
+      return;
+    }
+
+    const baseFreq = mode === 'type' ? 980 : 1320;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = mode === 'type' ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(baseFreq * jitter, now);
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.012);
+
+    gain.gain.setValueAtTime(mode === 'type' ? 0.065 : 0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.014);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.015);
+  }
+
+  /**
+   * 2. Ceramite Dice Clatter (Cascading multi-bounce roll sound)
+   */
+  function playDiceClatter() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const offsets = [0, 0.045, 0.095, 0.155, 0.225, 0.305];
+    offsets.forEach((offset, idx) => {
+      const t = ctx.currentTime + offset;
+      const pitch = (620 - idx * 55) * (0.92 + Math.random() * 0.16);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(110, t + 0.028);
+
+      const vol = Math.max(0.04, 0.16 - idx * 0.02);
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.032);
+    });
+  }
+
+  /**
+   * 3. Master-Artificer Forge Anvil Strike (For Battle Traits & Weapon Mods)
+   */
+  function playForgeAnvil() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Metallic hammer impact
+    const impact = ctx.createOscillator();
+    const impGain = ctx.createGain();
+    impact.type = 'sawtooth';
+    impact.frequency.setValueAtTime(240, now);
+    impact.frequency.exponentialRampToValueAtTime(52, now + 0.11);
+    impGain.gain.setValueAtTime(0.24, now);
+    impGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    impact.connect(impGain);
+    impGain.connect(ctx.destination);
+    impact.start(now);
+    impact.stop(now + 0.13);
+
+    // High anvil harmonic ring (587Hz + 880Hz)
+    [587.33, 880, 1174.66].forEach((freq, i) => {
+      const ring = ctx.createOscillator();
+      const rGain = ctx.createGain();
+      ring.type = 'sine';
+      ring.frequency.setValueAtTime(freq, now);
+      rGain.gain.setValueAtTime(0.11 / (i + 1), now);
+      rGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.48);
+      ring.connect(rGain);
+      rGain.connect(ctx.destination);
+      ring.start(now);
+      ring.stop(now + 0.5);
+    });
+  }
+
+  /**
+   * 4. Sacred Stasis-Reliquary Choir Chord (For Crusade Relics)
+   */
+  function playRelicChoir() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Resonant golden fifths & octave shimmer
+    const freqs = [220, 329.63, 440, 659.25];
+    freqs.forEach((f, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(f * 0.997, now);
+      osc.frequency.linearRampToValueAtTime(f * 1.003, now + 0.75);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.075 / (idx * 0.5 + 1), now + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.85);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.88);
+    });
+  }
+
+  /**
+   * 5. Medicae / Auspex Scar Hazard Klaxon (For Out of Action Failures & Scars)
+   */
+  function playScarHazard() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    [0, 0.16].forEach((offset, idx) => {
+      const t = now + offset;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(idx === 0 ? 155 : 122, t);
+      osc.frequency.linearRampToValueAtTime(idx === 0 ? 98 : 58, t + 0.14);
+
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.16);
+    });
+  }
+
+  /**
+   * 6. Inquisitorial Dossier Wax-Seal Stamp & Astropathic Burst
+   */
+  function playDossierStamp() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    // Heavy pneumatic double-thud
+    [0, 0.08].forEach((offset, i) => {
+      const t = now + offset;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(i === 0 ? 160 : 125, t);
+      osc.frequency.exponentialRampToValueAtTime(34, t + 0.075);
+      gain.gain.setValueAtTime(0.24, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.085);
+    });
+
+    // High-speed astropathic telemetry chirp
+    [1480, 1920, 2480].forEach((freq, idx) => {
+      const t = now + 0.16 + idx * 0.035;
+      const chirp = ctx.createOscillator();
+      const cGain = ctx.createGain();
+      chirp.type = 'sine';
+      chirp.frequency.setValueAtTime(freq, t);
+      cGain.gain.setValueAtTime(0.08, t);
+      cGain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+      chirp.connect(cGain);
+      cGain.connect(ctx.destination);
+      chirp.start(t);
+      chirp.stop(t + 0.032);
+    });
+  }
+
+  // Global listener: contextually triggers sound profiles on clicks
+  document.addEventListener('click', (e) => {
     const target = e.target.closest(
       'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn, .fs-pill-btn, .mini-btn'
     );
     if (target) {
-      if (target.matches('.launch-btn, .gate-btn, .btn-red, .unlock-btn, .terminal-link-btn')) {
+      if (target.dataset && target.dataset.sfx === 'custom') {
+        // Handled explicitly by upgrade roller / stamp functions
+      } else if (target.matches('.launch-btn, .gate-btn, .btn-red, .unlock-btn, .terminal-link-btn')) {
         playTerminalClank('heavy');
       } else if (
         target.matches('.auspex-btn, .auspex-toolbar-btn, .fs-pill-btn, .map-node-group, #zoomBtn1, #zoomBtn15, #zoomBtn22, #fullscreenMapBtn, #fsToggleDetailsBtn')
@@ -231,12 +425,18 @@
       }
     }
 
-    // Auto-resume audio on first user gesture if browser blocked unmuted autoplay
     if (wantMusic && ytReady && !isPlaying && !e.target.closest('#voxMusicToggle')) {
       resumeOrStartMusic();
     }
   });
-  }
+
+  // Global listener: plays CRT teletype click whenever player types in an input or textarea
+  document.addEventListener('keydown', (e) => {
+    const el = e.target;
+    if (!el || !el.matches('input[type="text"], input[type="password"], textarea')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || e.key === 'Shift' || e.key === 'Tab' || e.key === 'CapsLock') return;
+    playTeletypeTick('type');
+  });
 
   // =========================================================================
   // PART 2: TOP-NAV YOUTUBE AMBIENT PLAYLIST RANDOMIZER WITH CONTINUITY
@@ -259,7 +459,6 @@
     `;
     nav.appendChild(wrap);
 
-    // Hidden container for YouTube IFrame API player
     const ytHost = document.createElement('div');
     ytHost.id = 'soaHiddenYtPlayer';
     ytHost.style.cssText = 'position:fixed;bottom:-10px;right:-10px;width:1px;height:1px;opacity:0.01;pointer-events:none;z-index:-1;';
@@ -308,11 +507,6 @@
     };
   }
 
-  /**
-   * Resolves the current track ID to play:
-   * If a track ID is already saved in localStorage from a previous page or session,
-   * reuse it for 100% seamless continuity. Otherwise, pick a 100% random track.
-   */
   function getActiveTrackConfig() {
     let savedId = null;
     let savedTime = 0;
@@ -323,7 +517,6 @@
     } catch (e) {}
 
     if (!savedId || !VOX_TRACK_IDS.includes(savedId)) {
-      // 100% random initial selection
       const randIdx = Math.floor(Math.random() * VOX_TRACK_IDS.length);
       savedId = VOX_TRACK_IDS[randIdx];
       savedTime = 0;
@@ -370,11 +563,8 @@
             updateMusicUI(true);
             startTrackingProgress();
           } else if (event.data === YT.PlayerState.ENDED) {
-            // Track naturally completed: pick a fresh 100% random track
             playNextRandomTrack();
-          } else if (
-            event.data === YT.PlayerState.PAUSED
-          ) {
+          } else if (event.data === YT.PlayerState.PAUSED) {
             if (!wantMusic) {
               isPlaying = false;
               updateMusicUI(false);
@@ -420,17 +610,12 @@
     } catch (e) {}
   }
 
-  // Persist exact playback seconds across all page unload / visibility changes
   window.addEventListener('beforeunload', saveCurrentPosition);
   window.addEventListener('pagehide', saveCurrentPosition);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) saveCurrentPosition();
   });
 
-  /**
-   * Resumes playback of the persisted track at the exact saved second,
-   * preserving seamless audio across navigation without re-shuffling or restarting.
-   */
   function resumeOrStartMusic() {
     if (!ytPlayer || !ytReady) return;
     try {
@@ -455,10 +640,6 @@
     }
   }
 
-  /**
-   * Selects a 100% truly random track from the 20-track ambient playlist,
-   * avoiding repeating the currently active track if more than 1 track exists.
-   */
   function playNextRandomTrack() {
     if (!ytPlayer || !ytReady) return;
     try {
@@ -524,7 +705,6 @@
     isNavigating = true;
 
     try {
-      // 1. Save current page state before leaving
       if (typeof saveSessionState === 'function' && (document.getElementById('setupScreen') || document.getElementById('gameScreen'))) {
         try { saveSessionState(); } catch (e) {}
       }
@@ -539,7 +719,6 @@
       }
       saveCurrentPosition();
 
-      // 2. Fetch destination page HTML
       const resp = await fetch(targetUrl);
       if (!resp.ok) {
         window.location.href = targetUrl;
@@ -549,12 +728,10 @@
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, 'text/html');
 
-      // 3. Update Document Title
       if (doc.title) {
         document.title = doc.title;
       }
 
-      // 4. Locate and swap main content shell
       const targetShellSelector = '.app-shell, .briefing-shell, .container';
       const currentShell = document.querySelector(targetShellSelector);
       const newShell = doc.querySelector(targetShellSelector);
@@ -566,7 +743,6 @@
         return;
       }
 
-      // 5. Update suite navigation links and active state
       const currentNav = document.querySelector('.suite-nav');
       const newNav = doc.querySelector('.suite-nav');
       if (currentNav && newNav) {
@@ -584,15 +760,12 @@
         });
       }
 
-      // 6. Update browser address bar / history
       if (push && window.location.href !== targetUrl) {
         window.history.pushState({}, '', targetUrl);
       }
 
-      // 7. Instant scroll to top
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 
-      // 8. Dynamically load any missing external scripts
       const externalScripts = Array.from(doc.querySelectorAll('script[src]'));
       for (const s of externalScripts) {
         const src = s.getAttribute('src');
@@ -609,7 +782,6 @@
         }
       }
 
-      // 9. Execute inline scripts from destination page
       const inlineScripts = doc.querySelectorAll('script:not([src])');
       inlineScripts.forEach(s => {
         const scriptEl = document.createElement('script');
@@ -617,7 +789,6 @@
         document.body.appendChild(scriptEl);
       });
 
-      // 10. Re-trigger mode-specific setup routines
       if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
         const hordeSel = document.getElementById('hordeFactionSelect');
         if (hordeSel && typeof HORDE_FACTIONS !== 'undefined') {
@@ -637,7 +808,6 @@
         restoreRogueState();
       }
 
-      // 11. Dispatch navigation events
       document.dispatchEvent(new Event('DOMContentLoaded'));
       window.dispatchEvent(new Event('vox:page-swapped'));
 
@@ -649,55 +819,80 @@
     }
   }
 
-  // Intercept all internal navigation link clicks
-  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-    document.addEventListener('click', (e) => {
-      // Only handle standard left clicks without modifier keys
-      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+  /**
+   * Queues a compiled Dossier payload into sessionStorage, plays the Inquisitorial
+   * Dossier Stamp SFX, and routes the user directly to pages/vox.html!
+   */
+  function transmitToVox(channel, payloadText) {
+    playDossierStamp();
+    try {
+      sessionStorage.setItem(
+        'foa_pending_vox_payload',
+        JSON.stringify({
+          channel: channel || 'alpha',
+          text: payloadText,
+          queuedAt: Date.now()
+        })
+      );
+    } catch (e) {}
 
-      const link = e.target.closest('a[href]');
-      if (!link) return;
+    const inPagesDir = window.location.pathname.includes('/pages/');
+    const targetPath = inPagesDir ? 'vox.html' : 'pages/vox.html';
+    const fullUrl = new URL(targetPath, window.location.href).href;
 
-      const hrefAttr = link.getAttribute('href');
-      if (!hrefAttr || hrefAttr.startsWith('#') || hrefAttr.startsWith('javascript:') || hrefAttr.startsWith('mailto:')) return;
-      if (link.target && link.target !== '_self') return;
+    setTimeout(() => {
+      navigateSeamlessly(fullUrl, true);
+    }, 260);
+  }
 
-      try {
-        const url = new URL(link.href, window.location.href);
-        // Only intercept internal same-origin links
-        if (url.origin !== window.location.origin) return;
+  // Expose public audio & routing API for Crusade Rollers, Dossiers & CRT Terminal
+  window.VoxAudio = {
+    playClank: playTerminalClank,
+    playTeletypeTick: playTeletypeTick,
+    playDiceClatter: playDiceClatter,
+    playForgeAnvil: playForgeAnvil,
+    playRelicChoir: playRelicChoir,
+    playScarHazard: playScarHazard,
+    playDossierStamp: playDossierStamp,
+    navigateSeamlessly: navigateSeamlessly,
+    transmitToVox: transmitToVox
+  };
 
-        // If linking to the exact same page path and search, allow normal anchor behavior
-        if (url.pathname === window.location.pathname && url.search === window.location.search) {
-          if (url.hash) return;
-          e.preventDefault();
-          return;
-        }
+  document.addEventListener('click', (e) => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 
-        // Check if it's an html page or directory root
-        if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || !url.pathname.includes('.')) {
-          e.preventDefault();
-          navigateSeamlessly(url.href, true);
-        }
-      } catch (err) {
-        // Allow default navigation if URL parsing fails
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+
+    const hrefAttr = link.getAttribute('href');
+    if (!hrefAttr || hrefAttr.startsWith('#') || hrefAttr.startsWith('javascript:') || hrefAttr.startsWith('mailto:')) return;
+    if (link.target && link.target !== '_self') return;
+
+    try {
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+
+      if (url.pathname === window.location.pathname && url.search === window.location.search) {
+        if (url.hash) return;
+        e.preventDefault();
+        return;
       }
-    });
-  }
 
-  // Handle browser Back / Forward buttons
-  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('popstate', () => {
-      navigateSeamlessly(window.location.href, false);
-    });
-  }
+      if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || !url.pathname.includes('.')) {
+        e.preventDefault();
+        navigateSeamlessly(url.href, true);
+      }
+    } catch (err) {}
+  });
 
-  if (typeof document !== 'undefined') {
-    if (document.readyState === 'loading' && typeof document.addEventListener === 'function') {
-      document.addEventListener('DOMContentLoaded', injectNavToggle);
-    } else {
-      injectNavToggle();
-    }
+  window.addEventListener('popstate', () => {
+    navigateSeamlessly(window.location.href, false);
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectNavToggle);
+  } else {
+    injectNavToggle();
   }
 
   // Dual export for Node.js test runner
@@ -706,10 +901,16 @@
       PLAYLIST_ID,
       VOX_TRACK_IDS,
       playTerminalClank,
+      playTeletypeTick,
+      playDiceClatter,
+      playForgeAnvil,
+      playRelicChoir,
+      playScarHazard,
+      playDossierStamp,
       saveCurrentPosition,
       navigateSeamlessly,
-      injectNavToggle
+      injectNavToggle,
+      transmitToVox
     };
   }
 })();
-

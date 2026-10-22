@@ -30,6 +30,10 @@ class MockAudioParam {
     this.value = val;
     this.events.push({ type: 'ramp', val, time });
   }
+  linearRampToValueAtTime(val, time) {
+    this.value = val;
+    this.events.push({ type: 'linear', val, time });
+  }
 }
 
 class MockOscillator extends MockAudioNode {
@@ -89,9 +93,18 @@ globalThis.localStorage = {
   clear: () => storageStore.clear()
 };
 
+const sessionStore = new Map();
+globalThis.sessionStorage = {
+  getItem: (k) => (sessionStore.has(k) ? sessionStore.get(k) : null),
+  setItem: (k, v) => sessionStore.set(k, String(v)),
+  removeItem: (k) => sessionStore.delete(k),
+  clear: () => sessionStore.clear()
+};
+
 globalThis.window = {
   AudioContext: MockAudioContext,
-  addEventListener: () => {}
+  addEventListener: () => {},
+  location: { href: 'http://localhost/dealer/index.html', pathname: '/dealer/index.html' }
 };
 
 const listeners = {};
@@ -186,3 +199,60 @@ test('vox-audio: saveCurrentPosition safely persists audio telemetry to localSto
   // Since ytPlayer is null in mock env, it handles absent player gracefully without throwing
   assert.equal(storageStore.has('soa_vox_music_enabled_v1'), false);
 });
+
+test('vox-audio: newly added Crusade & CRT sound synthesizers execute without throwing', () => {
+  assert.doesNotThrow(() => {
+    voxModule.playTeletypeTick('stream');
+    voxModule.playTeletypeTick('redact');
+  }, 'playTeletypeTick must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playDiceClatter();
+  }, 'playDiceClatter must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playForgeAnvil();
+  }, 'playForgeAnvil must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playRelicChoir();
+  }, 'playRelicChoir must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playScarHazard();
+  }, 'playScarHazard must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playDossierStamp();
+  }, 'playDossierStamp must execute smoothly');
+});
+
+test('vox-audio: transmitToVox stores pending payload in sessionStorage and routes seamlessly', () => {
+  sessionStore.clear();
+  const testPayload = '+++ TEST MASTER DOSSIER TRANSMISSION +++';
+
+  assert.doesNotThrow(() => {
+    voxModule.transmitToVox('beta', testPayload);
+  });
+
+  const storedRaw = sessionStore.get('foa_pending_vox_payload');
+  assert.ok(storedRaw, 'transmitToVox must persist payload to foa_pending_vox_payload in sessionStorage');
+  const parsed = JSON.parse(storedRaw);
+  assert.equal(parsed.channel, 'beta');
+  assert.equal(parsed.text, testPayload);
+  assert.ok(typeof parsed.queuedAt === 'number');
+});
+
+test('vox-audio: window.VoxAudio exposes complete public API for all game modes', () => {
+  assert.ok(globalThis.window.VoxAudio, 'window.VoxAudio must be defined on window object');
+  assert.equal(typeof globalThis.window.VoxAudio.playClank, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playTeletypeTick, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playDiceClatter, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playForgeAnvil, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playRelicChoir, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playScarHazard, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playDossierStamp, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.navigateSeamlessly, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.transmitToVox, 'function');
+});
+

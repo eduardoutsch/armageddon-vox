@@ -27,8 +27,10 @@ Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impac
     <a href="spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
     <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
     <a href="rogue.html" class="suite-link active">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
-    <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
-    <a href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
+    <a href="roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>
+    <a href="crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>
+    <a href="briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>
+    <a href="vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>
   </nav>
 
   <div class="app-shell">

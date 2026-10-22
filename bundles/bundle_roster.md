@@ -1,6 +1,6 @@
-# 📦 Fires of Armageddon // Bundle: Rosters & Nemesis Ledger
+# 📦 Fires of Armageddon // Bundle: Mode 4 - Hostile Matrix & Nemesis Archive
 
-Complete source code for the Crusade Order of Battle rosters and Cross-Mode Nemesis Ledger (`pages/roster.html`).
+Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Ledger, Nemesis Dossier Induction Compiler, Unbound Datasheets, and Custom Shelf Pool (`pages/roster.html`).
 
 ## 📑 Table of Contents
 - [pages/roster.html](#file-pagesrosterhtml)
@@ -15,136 +15,585 @@ Complete source code for the Crusade Order of Battle rosters and Cross-Mode Neme
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fires of Armageddon // Rosters &amp; Nemesis Ledger</title>
+  <title>Fires of Armageddon // Hostile Threat Matrix &amp; Nemesis Archive</title>
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .datasheet-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--red);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .stat-strip {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      background: #090b10;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 8px;
+      margin: 12px 0;
+      text-align: center;
+    }
+    .stat-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .stat-cell .s-lbl {
+      font-size: 0.68rem;
+      font-weight: 800;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .stat-cell .s-val {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: #fff;
+      margin-top: 2px;
+      font-family: monospace;
+    }
+    .weapon-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin: 10px 0;
+    }
+    .weapon-table th, .weapon-table td {
+      border: 1px solid var(--border);
+      padding: 7px 9px;
+      text-align: left;
+    }
+    .weapon-table th {
+      background: #0b0d13;
+      color: var(--gold);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .dossier-preview-box {
+      background: #040805;
+      border: 1.5px dashed rgba(0, 255, 136, 0.4);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.84rem;
+      color: #66ffb8;
+      text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+      white-space: pre-wrap;
+      margin: 14px 0;
+      line-height: 1.5;
+    }
+  </style>
 </head>
 <body>
 
+  <!-- CAMPAIGN SUITE TOP NAVIGATION -->
   <nav class="suite-nav">
     <a href="../index.html" class="suite-link">📖 Field Codex &amp; Guide</a>
     <a href="spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
     <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
     <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
-    <a href="roster.html" class="suite-link active">🎖️ Rosters &amp; Nemesis Ledger</a>
-    <a href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
+    <a href="roster.html" class="suite-link active">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>
+    <a href="crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>
+    <a href="briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>
+    <a href="vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>
   </nav>
 
-  <div class="container">
-    <div class="hero-banner">
-      <h1>Orders of Battle &amp; Nemesis Ledger</h1>
-      <p>Dramatis Personae, "Scars Are Stories" Chronicles &amp; Cross-Mode Boss Pool</p>
+<div class="app-shell">
+
+  <div class="hero-card" style="margin-bottom:18px;">
+    <div class="hero-header">
+      <div class="status-pill">Ordo Malleus Threat Archive • 3rd Alliance &amp; Enemy Dataslates</div>
+      <h1 class="hero-title">Hostile Threat Matrix &amp; Nemesis Vault</h1>
+      <p class="hero-subtitle">
+        Cross-mode Nemesis Bounty Board, Inquisitorial Nemesis Induction Compiler, Armageddon Unbound Adversary Datasheets, and Horde Mode Faction Threat Brackets.
+      </p>
     </div>
 
-    <!-- PHASE 1 GLOBAL SCOREBOARD -->
-    <div class="scoreboard-bar">
-      <div class="score-card">
-        <div class="score-title">Commander Alpha • The Exile</div>
-        <div class="score-name">The Sanctuary of Ash</div>
-        <div class="score-pts">0 SPts • 1 CPt <span style="font-size:0.75rem; color:var(--blue);">(Ship: 0)</span></div>
-      </div>
-      <div class="score-card beta">
-        <div class="score-title">Commander Beta • JUNEBUG</div>
-        <div class="score-name">High Sanctum / Pending</div>
-        <div class="score-pts" style="color:var(--purple);">0 SPts • 0 CPts</div>
-      </div>
-      <div class="score-card horde">
-        <div class="score-title">3rd Alliance • Origin Unknown</div>
-        <div class="score-name">The Horde Overlord</div>
-        <div class="score-pts" style="color:var(--red);">0 SPts • 0 CPts</div>
-      </div>
+    <!-- 3 SUB-TABS FOR CONCEPT 5 -->
+    <div class="nav-pills" style="margin-bottom:0;">
+      <button id="rosTabBtn1" class="active" onclick="switchRosterTab('nemesis')">💀 1. Nemesis Bounty &amp; Dossier</button>
+      <button id="rosTabBtn2" onclick="switchRosterTab('unbound')">👹 2. Unbound Adversaries Codex</button>
+      <button id="rosTabBtn3" onclick="switchRosterTab('brackets')">🧟 3. Horde Brackets &amp; Shelf Pool</button>
     </div>
-
-    <!-- 1. COMMANDER ALPHA DRAMATIS PERSONAE -->
-    <div class="section-card">
-      <span class="badge">Commander Alpha • Astra Militarum (1,790 / 1,900 Pts)</span>
-      <h2>The Sanctuary of Ash — Dramatis Personae</h2>
-      <p>Tracked on Administratum • 0 RP Remaining • +1 Crusade Point (Lord Marshal Dreir) • <em>Shipboard Slider Rules in Alpha's Briefing Tab</em></p>
-
-      <div class="char-card">
-        <div class="char-header">
-          <span class="char-name">🎖️ The Exile — Rogal Dorn Commander (<em>"Mercy's Delay"</em>)</span>
-          <span class="char-meta">Warlord • 265 Pts • Enhancement: Calm Under Fire</span>
-        </div>
-        <p style="margin:0;">Once a decorated Cadian Shock Officer who survived the Fall of Cadia and emerged unscathed from seven doomed last stands—declared "cursed" by his comrades and claimed by the Krieg as a living indictment. Commands a salvaged Rogal Dorn retrofitted with Krieg siege dozer blades and Sororitas purity seals that burn his skin when touched.</p>
-        <div class="deed-box">
-          <strong>• Special Rule (<em>"Mercy Delayed Again"</em>):</strong> Surviving a Horde Mode Round 6 Final Stand in which 3+ friendly Krieg units were destroyed grants <em>The Exile</em> <strong>+1 bonus XP</strong> and lets one destroyed Krieg Battleline unit swap a failed Out of Action Battle Scar for <strong>"Absolved in Ash"</strong> (<em>Feel No Pain 6+</em> within 6" of <em>The Exile</em>).<br>
-          <strong>• Session 0 Deed (Sector Node 0 — Golgotha Arbor-Basin):</strong> Held the right forest flank during the Sororitas audit before <em>"Mercy's Delay"</em> was disabled in the closing salvos—dragged alive from the smoking wreckage once again.<br>
-          <strong>• Narrative Honours &amp; Scars (<em>"Scars Are Stories"</em>):</strong> <em>None yet (0 XP • Battle-Ready).</em>
-        </div>
-      </div>
-
-      <div class="char-card purple">
-        <div class="char-header">
-          <span class="char-name">⚔️ Lord Marshal Dreir — Epic Hero of Krieg</span>
-          <span class="char-meta" style="color:var(--purple);">Epic Hero • 70 Pts • Inspirational Champion (+1 CrP)</span>
-        </div>
-        <p style="margin:0;">The unyielding cavalry spearhead of the penitentiary column, leading his Death Riders directly into the thickest empyric breaches of the ash wastes.</p>
-        <div class="deed-box">
-          <strong>• Mighty Champion Rule (<em>Inspirational Champion</em>):</strong> Ignore all Battle Scars on the Bodyguard unit Dreir leads, AND select <strong>one additional unit</strong> to be <em>Marked for Greatness (+3 XP)</em> at the end of every battle!<br>
-          <strong>• Session 0 Deed (Golgotha Arbor-Basin):</strong> Led the cavalry charge into the Sororitas lines and fell in the crucible of fire before being recovered by the Krieg Quartermasters.
-        </div>
-      </div>
-
-      <div class="char-card red">
-        <div class="char-header">
-          <span class="char-name">💥 2x Leman Russ Vanquishers — <em>"The Shrine-Breakers"</em></span>
-          <span class="char-meta" style="color:var(--red);">Armored Tank Hunters • 145 Pts Each</span>
-        </div>
-        <p style="margin:0;">Recorded only by cold serial hull-numbers on High Sanctum manifests, speaking their nickname aloud on the upper decks is a flogging offense. Yet down by the corpse-starch vats of the Lower Decks, the troopers only ever call them <strong>"The Shrine-Breakers"</strong>—tapping their shovel-blades twice against their helmets whenever the long-barreled hulls rumble past.</p>
-        <div class="deed-box">
-          <strong>• Session 0 Deed (Golgotha Arbor-Basin):</strong> While 40 Kriegsmen brawled in the central forest clearing, these two Vanquishers calmly locked onto the gilded Sororitas reliquaries and blew <em>every single Sororitas war-machine</em> sky-high in catastrophic, chain-reaction fireballs—creating the permanent <em>Graveyard of Stained Glass</em> at Sector Node 0!<br>
-          <strong>• Session 0 Legacy Perk:</strong> The first time either of the <em>Shrine-Breakers</em> reaches the <strong>Blooded</strong> rank (6 XP), it may re-roll its <em>Weapon Modification</em> or <em>Battle Trait</em> roll for free!
-        </div>
-      </div>
-
-      <div class="char-card blue">
-        <div class="char-header">
-          <span class="char-name">💀 The Unseen Jury &amp; 🔫 Dravik, The Silent Judge</span>
-          <span class="char-meta" style="color:var(--blue);">Krieg Command Squad (65 Pts • Stalwart's Honours) &amp; Commissar (30 Pts)</span>
-        </div>
-        <p style="margin:0;"><em>The Unseen Jury</em> enforces the Sororitas' will through sanctioned purges, leaving spent shell casings in neat rows like rosary beads. <em>Commissar Dravik</em> never raises his voice—executing overly zealous Kriegers with a single shot to the back of the skull for "wasting the Emperor's currency," guided by orders scrawled in blood on the walls of the ship's brig.</p>
-      </div>
-
-      <h3 style="font-size:0.95rem; color:var(--gold); margin:16px 0 8px 0; text-transform:uppercase;">Full Registered Order of Battle (13 Units • 1,820 Pts)</h3>
-      <div class="oob-grid">
-        <div class="oob-item"><strong>Stormlord (460 pts)</strong><br><span style="color:var(--muted);">Super-Heavy Fortress • Disgorged 40 Kriegsmen onto Node 0 Center in S0</span></div>
-        <div class="oob-item"><strong>3x Death Korps of Krieg (130 pts ea)</strong><br><span style="color:var(--muted);">Battleline • Stole Left Forest Bunker in S0 via 8 OC</span></div>
-        <div class="oob-item"><strong>1x Death Riders (70 pts)</strong><br><span style="color:var(--muted);">Mounted Spearhead • Led by Dreir (Scar-Immune)</span></div>
-        <div class="oob-item"><strong>2x Scout Sentinels (55 pts ea)</strong><br><span style="color:var(--muted);">Forward Recon Walkers</span></div>
-        <div class="oob-item"><strong>1x Ogryn Bodyguard (40 pts)</strong><br><span style="color:var(--muted);">Command Slab-Shield</span></div>
-      </div>
-    </div>
-
-    <!-- 2. COMMANDER BETA & NEMESIS LEDGER -->
-    <div class="section-card">
-      <span class="badge red">3rd Alliance Boss Pool &amp; High Sanctum Wardens</span>
-      <h2>Inducted Nemesis Ledger &amp; Commander Beta's Heroes</h2>
-      <p>Slaying any inducted Nemesis on the battlefield grants the killer unit <strong>+2 bonus XP</strong> and scores <strong>+1 Strategic Point</strong> for your Alliance!</p>
-
-      <div class="char-card red">
-        <div class="char-header">
-          <span class="char-name">🪽 Saint Celestine — <em>"The Ashen Seraph of the High Sanctum"</em></span>
-          <span class="char-meta" style="color:var(--red);">Inducted Campaign Nemesis #1 • High Sanctum Warden</span>
-        </div>
-        <p style="margin:0;">After watching the Krieg <em>Shrine-Breakers</em> detonate every Sororitas war-engine in the forest clearing of Sector Node 1 during Session 0, Celestine descended from the ash-clouds directly into the Krieg rear deployment zone—slaughtering the rear guard, wiping out the Krieg officer corps, and stealing the Krieg home objective to clinch a 3-VP Sororitas victory!</p>
-        <div class="deed-box">
-          <strong>• Campaign Role:</strong> Serves as the NPC Warden of the High Sanctum (deploying against Commander Alpha if the Shipboard Slider hits <code>-3 Brig Abyss</code>)—or leads Commander Beta's Adepta Sororitas if Beta chooses to share <em>The Sanctuary of Ash</em>!
-        </div>
-      </div>
-
-      <div class="char-card purple">
-        <div class="char-header">
-          <span class="char-name">🚩 Aestred Thurga &amp; Agathae Dolan — Keepers of the Penitentiary Ledger</span>
-          <span class="char-meta" style="color:var(--purple);">High Sanctum Auditors • Adepta Sororitas</span>
-        </div>
-        <p style="margin:0;">Cut down a forward Krieg Scout Sentinel on the left flank in Round 1 of Session 0 with <em>Devastating Wounds</em> (generating a Miracle Die of 4), then weathered 11 point-blank Krieg shovel attacks without failing a single 3+ armor save—before having the forest bunker stolen out from under them by 4 Kriegsmen flexing 8 OC!</p>
-      </div>
-    </div>
-
   </div>
-  <script src="../js/vox-audio.js"></script>
+
+  <!-- ===================================================================== -->
+  <!-- TAB A: CROSS-MODE NEMESIS BOUNTY BOARD & DIRECT VOX DOSSIER COMPILER  -->
+  <!-- ===================================================================== -->
+  <div id="rosTabNemesis">
+
+    <div class="section-header" style="margin-top:0;">
+      <h3>Active Cross-Mode Nemesis Bounty Ledger</h3>
+      <span class="hud-sub">Bounty Payout: +2 XP to Killer Unit &amp; +1 Strategic Point</span>
+    </div>
+
+    <!-- INDUCTED NEMESIS #1: SAINT CELESTINE -->
+    <div class="datasheet-card" style="border-top-color:var(--gold);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+        <div>
+          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">NEMESIS #01 • SESSION 0 INDUCTION</span>
+          <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🪽 Saint Celestine, <em>"The Ashen Seraph of the High Sanctum"</em></h3>
+          <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (High Sanctum Auditor)</div>
+        </div>
+        <select id="nemStatus1" onchange="saveRosterPageState()" style="padding:6px 10px; font-size:0.8rem; font-weight:700;">
+          <option value="roaming">🟡 Status: Roaming High Orbit</option>
+          <option value="deployed">🔴 Status: Deployed on Surface</option>
+          <option value="slain">🟢 Status: Slain — Bounty Claimed</option>
+        </select>
+      </div>
+      <p class="card-desc" style="margin-top:10px;">
+        <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> After the Krieg Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em>) detonated every Sororitas war-engine around the central Landing Site, Celestine descended from the sulfuric storm-clouds directly into the Krieg rear deployment zone—slaughtering the command echelon and seizing the home objective to clinch a razor-thin 3-VP victory.
+      </p>
+      <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
+        <strong style="color:var(--gold);">Permanent Nemesis Trait — <em>Judgment of the Blackened Glass</em>:</strong> When spawned in Horde Mode (on a natural 12 or at Slider -3) or deployed as an Unbound Adversary Boss, Celestine deep-strikes directly within 9" of the trailing player's home objective and gains <strong>[PRECISION]</strong> on all melee attacks against Characters.
+      </div>
+    </div>
+
+    <!-- INDUCTED NEMESIS #2: AESTRED THURGA & AGATHAE DOLAN -->
+    <div class="datasheet-card" style="border-top-color:var(--purple);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+        <div>
+          <span class="rule-tag" style="border-color:var(--purple); color:var(--purple);">NEMESIS #02 • SESSION 0 INDUCTION</span>
+          <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🚩 Aestred Thurga &amp; Agathae Dolan, <em>"Keepers of the Penitentiary Tapestry"</em></h3>
+          <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (Reliquant &amp; Hagiolater)</div>
+        </div>
+        <select id="nemStatus2" onchange="saveRosterPageState()" style="padding:6px 10px; font-size:0.8rem; font-weight:700;">
+          <option value="roaming">🟡 Status: Auditing from High Sanctum</option>
+          <option value="deployed">🔴 Status: Deployed on Surface</option>
+          <option value="slain">🟢 Status: Slain — Bounty Claimed</option>
+        </select>
+      </div>
+      <p class="card-desc" style="margin-top:10px;">
+        <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> Struck down a forward Krieg Scout Sentinel in Round 1 with <em>Devastating Wounds</em> and weathered 11 point-blank Krieg shovel strikes without failing a single 3+ save, recording every transgression into the Auto-Tapestry of Judgement.
+      </p>
+      <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
+        <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>The Unforgiving Ledger</em>:</strong> Enemy units within 6" of Aestred Thurga cannot re-roll Battle-shock tests and suffer <strong>-1 Objective Control (OC)</strong> (to a minimum of 1).
+      </div>
+    </div>
+
+    <!-- SUBMIT NEW NEMESIS DOSSIER TO CAMPAIGN MASTER -->
+    <div class="card" style="border-left:4px solid var(--red); margin-top:24px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3 style="color:var(--red);">📁 Compile &amp; Transmit New Nemesis Dossier to Campaign Master</h3>
+        <span class="hud-sub">"Vibe-Check" Induction Protocol</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:14px;">
+        Whenever a Horde Warlord survives Round 6, slays a Player's Character, or any enemy Monster/Sergeant performs an unforgettable cinematic feat in Horde, 1v1, or Rogue Sector battles, compile their field folder below and transmit it directly to the Campaign Master via the Astropathic Vox!
+      </p>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">1. Reporting Commander Conduit</label>
+          <select id="nemReportChannel" onchange="updateNemesisPreview()" style="width:100%; padding:10px;">
+            <option value="alpha">🦅 Commander Alpha (Terminal Alpha)</option>
+            <option value="beta">💀 Commander Beta (Terminal Beta)</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">2. Encounter Mode &amp; Sector Node</label>
+          <select id="nemReportSector" onchange="updateNemesisPreview()" style="width:100%; padding:10px;">
+            <option value="Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Horde // Node 0 (Golgotha Jungle)</option>
+            <option value="Mode 1: Horde Breach // Node 1 (Hive Death Mire)">Mode 1: Horde // Node 1 (Hive Death Mire)</option>
+            <option value="Mode 1: Horde Breach // Node 2 (Hive Infernus)">Mode 1: Horde // Node 2 (Hive Infernus)</option>
+            <option value="Mode 2: 1v1 PvP Clash // Unbound Adversary">Mode 2: 1v1 PvP // Unbound Adversary</option>
+            <option value="Mode 3: Rogue Sector Auxiliary Clash">Mode 3: Rogue Sector Auxiliary Clash</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">3. Enemy Faction &amp; Unit Datasheet</label>
+          <input type="text" id="nemReportUnit" oninput="updateNemesisPreview()" placeholder="e.g. Tyranids — Screamer-Killer / Chaos Lord" style="width:100%; padding:10px;">
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">4. Triggering Battlefield Feat</label>
+          <select id="nemReportFeat" onchange="updateNemesisPreview()" style="width:100%; padding:10px;">
+            <option value="Slain a Player Warlord / Character in combat">Slain a Player Warlord / Character</option>
+            <option value="Survived Battle Round 6 (The Final Stand) as Horde Warlord">Survived Round 6 Final Stand (Horde Warlord)</option>
+            <option value="Tanked overwhelming firepower &amp; wiped multiple units">Tanked overwhelming fire &amp; wiped units</option>
+            <option value="Epic cinematic moment / Unbelievable dice streak">Epic cinematic moment / Dice streak</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="hud-label" style="display:block; margin-bottom:4px;">5. Eye-Witness Combat Log (What Happened on the Table?)</label>
+      <textarea id="nemReportNotes" oninput="updateNemesisPreview()" placeholder="Describe how this enemy unit earned its infamy (e.g., 'Spawned in Zone 2, survived two Vanquisher shots on 1 Wound, and ate Dreir's Death Riders in Round 5')..." style="width:100%; min-height:74px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+
+      <div class="dossier-preview-box" id="nemDossierPreview"></div>
+
+      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitNemesisDossier()" style="margin-top:8px;">
+        📡 Transmit Directly via Astropathic Vox →
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB B: UNBOUND ADVERSARIES CODEX (POWER LEVEL 1 TO 4 DATASHEETS)      -->
+  <!-- ===================================================================== -->
+  <div id="rosTabUnbound" class="hidden">
+    <div class="section-header" style="margin-top:0;">
+      <h3>Crusade: Armageddon // Unbound Adversaries Datasheets</h3>
+      <span class="hud-sub">Used in Mode 2 (1v1 PvP) &amp; Mode 3 (AI Sequencer)</span>
+    </div>
+    <p class="card-desc" style="margin-bottom:16px;">
+      Unbound Adversaries have the <strong>UNBOUND ADVERSARIES</strong> faction keyword, a <strong>5+ Invulnerable Save</strong>, and the <strong>Deep Strike</strong> ability. During the Unbound Adversaries turn, roll 2D6 on the Daemonic Surge table before moving and attacking the closest player units.
+    </p>
+
+    <!-- POWER LEVEL 1: WARP-SPAWNED HORRORS / LESSER PACK -->
+    <div class="datasheet-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; color:#fff;">👹 Power Level 1: Unbound Lesser Pack (5 Models)</h3>
+        <span class="rule-tag">5 Models • Infantry • 5+ Invuln</span>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-cell"><span class="s-lbl">M</span><span class="s-val">7"</span></div>
+        <div class="stat-cell"><span class="s-lbl">T</span><span class="s-val">4</span></div>
+        <div class="stat-cell"><span class="s-lbl">SV</span><span class="s-val">5+</span></div>
+        <div class="stat-cell"><span class="s-lbl">W</span><span class="s-val">1</span></div>
+        <div class="stat-cell"><span class="s-lbl">LD</span><span class="s-val">7+</span></div>
+        <div class="stat-cell"><span class="s-lbl">OC</span><span class="s-val">1</span></div>
+      </div>
+      <table class="weapon-table">
+        <thead>
+          <tr><th>Weapon</th><th>Range</th><th>A</th><th>WS/BS</th><th>S</th><th>AP</th><th>D</th><th>Abilities</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Warp-bolt Volley</td><td>18"</td><td>2</td><td>4+</td><td>4</td><td>0</td><td>1</td><td>[ASSAULT]</td></tr>
+          <tr><td>Hellforged Talons &amp; Blades</td><td>Melee</td><td>3</td><td>3+</td><td>4</td><td>-1</td><td>1</td><td>[SUSTAINED HITS 1]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- POWER LEVEL 2: UNBOUND STALKER BEASTS -->
+    <div class="datasheet-card" style="border-top-color:var(--gold);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; color:#fff;">🐗 Power Level 2: Unbound Gore-Stalkers (3 Models)</h3>
+        <span class="rule-tag">3 Models • Beasts / Mounted • 5+ Invuln</span>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-cell"><span class="s-lbl">M</span><span class="s-val">9"</span></div>
+        <div class="stat-cell"><span class="s-lbl">T</span><span class="s-val">5</span></div>
+        <div class="stat-cell"><span class="s-lbl">SV</span><span class="s-val">4+</span></div>
+        <div class="stat-cell"><span class="s-lbl">W</span><span class="s-val">3</span></div>
+        <div class="stat-cell"><span class="s-lbl">LD</span><span class="s-val">7+</span></div>
+        <div class="stat-cell"><span class="s-lbl">OC</span><span class="s-val">2</span></div>
+      </div>
+      <table class="weapon-table">
+        <thead>
+          <tr><th>Weapon</th><th>Range</th><th>A</th><th>WS/BS</th><th>S</th><th>AP</th><th>D</th><th>Abilities</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Corrosive Spittle</td><td>12"</td><td>D6</td><td>N/A</td><td>5</td><td>-1</td><td>1</td><td>[TORRENT, IGNORES COVER]</td></tr>
+          <tr><td>Rending Maw &amp; Horns</td><td>Melee</td><td>4</td><td>3+</td><td>6</td><td>-1</td><td>2</td><td>[LANCE]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- POWER LEVEL 3: UNBOUND ABOMINATION / BRUTE -->
+    <div class="datasheet-card" style="border-top-color:var(--purple);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; color:#fff;">👾 Power Level 3: Unbound Warp-Brute (1 Monster)</h3>
+        <span class="rule-tag">1 Model • Monster • 5+ Invuln • Deadly Demise D3</span>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-cell"><span class="s-lbl">M</span><span class="s-val">8"</span></div>
+        <div class="stat-cell"><span class="s-lbl">T</span><span class="s-val">9</span></div>
+        <div class="stat-cell"><span class="s-lbl">SV</span><span class="s-val">3+</span></div>
+        <div class="stat-cell"><span class="s-lbl">W</span><span class="s-val">10</span></div>
+        <div class="stat-cell"><span class="s-lbl">LD</span><span class="s-val">6+</span></div>
+        <div class="stat-cell"><span class="s-lbl">OC</span><span class="s-val">3</span></div>
+      </div>
+      <table class="weapon-table">
+        <thead>
+          <tr><th>Weapon</th><th>Range</th><th>A</th><th>WS/BS</th><th>S</th><th>AP</th><th>D</th><th>Abilities</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Empyric Cannon</td><td>24"</td><td>D6+1</td><td>3+</td><td>8</td><td>-2</td><td>2</td><td>[BLAST, PSYCHIC]</td></tr>
+          <tr><td>Crushing Claws</td><td>Melee</td><td>6</td><td>3+</td><td>10</td><td>-2</td><td>3</td><td>[DEVASTATING WOUNDS]</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- POWER LEVEL 4: UNBOUND APEX HARBINGER -->
+    <div class="datasheet-card" style="border-top-color:var(--red);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0; color:#fff;">🔥 Power Level 4: Unbound Apex Harbinger (1 Greater Entity)</h3>
+        <span class="rule-tag">1 Model • Monster / Character • 4+ Invuln • Deadly Demise D6</span>
+      </div>
+      <div class="stat-strip">
+        <div class="stat-cell"><span class="s-lbl">M</span><span class="s-val">10"</span></div>
+        <div class="stat-cell"><span class="s-lbl">T</span><span class="s-val">11</span></div>
+        <div class="stat-cell"><span class="s-lbl">SV</span><span class="s-val">3+</span></div>
+        <div class="stat-cell"><span class="s-lbl">W</span><span class="s-val">16</span></div>
+        <div class="stat-cell"><span class="s-lbl">LD</span><span class="s-val">6+</span></div>
+        <div class="stat-cell"><span class="s-lbl">OC</span><span class="s-val">5</span></div>
+      </div>
+      <table class="weapon-table">
+        <thead>
+          <tr><th>Weapon</th><th>Range</th><th>A</th><th>WS/BS</th><th>S</th><th>AP</th><th>D</th><th>Abilities</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Hellfire Scourge</td><td>18"</td><td>2D6</td><td>2+</td><td>7</td><td>-2</td><td>2</td><td>[TORRENT, IGNORES COVER]</td></tr>
+          <tr><td>Great Cleaver of the Gate</td><td>Melee</td><td>7</td><td>2+</td><td>14</td><td>-3</td><td>D6+1</td><td>[LETHAL HITS]</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB C: HORDE THREAT BRACKETS & CUSTOM SHELF BARRACKS                  -->
+  <!-- ===================================================================== -->
+  <div id="rosTabBrackets" class="hidden">
+    <div class="card" style="border-left:4px solid var(--blue); margin-bottom:20px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>1. Custom Shelf Barracks (Synced with Mode 1 Spawner)</h3>
+        <span class="hud-sub">Saved to Browser localStorage</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        Configure the models you own for each threat bracket (comma-separated). Both players can paste the same list so unit names sync deterministically in <code>spawner.html</code>!
+      </p>
+
+      <label class="hud-label">Bracket [3–4] (0–75 pts // Swarms &amp; Chaff)</label>
+      <input type="text" id="rosterPool34" style="width:100%; margin-bottom:10px;" value="10 Hormagaunts, 10 Termagants, 10 Cultists, 3 Nurglings, 5 Barbgaunts">
+
+      <label class="hud-label">Bracket [5–6] (76–150 pts // Line Infantry &amp; Skirmishers)</label>
+      <input type="text" id="rosterPool56" style="width:100%; margin-bottom:10px;" value="10 Bloodletters, 10 Genestealers, 5 Chaos Terminators, 3 Tyranid Warriors, 10 Gargoyles">
+
+      <label class="hud-label">Bracket [7–9] (151–300 pts // Heavy Elites, Walkers &amp; Monsters)</label>
+      <input type="text" id="rosterPool79" style="width:100%; margin-bottom:10px;" value="1 Trygon, 1 Screamer-Killer, 1 Daemon Prince, 1 Chaos Predator, 6 Bloodcrushers">
+
+      <label class="hud-label">Bracket [10+] (301–550 pts // Apex Bosses, Greater Daemons &amp; Titans)</label>
+      <input type="text" id="rosterPool10" style="width:100%; margin-bottom:12px;" value="1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant">
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button type="button" class="btn-blue" onclick="saveShelfBarracks()">💾 Save Shelf Barracks to Spawner</button>
+        <span id="shelfSaveNotice" style="font-size:0.82rem; color:var(--green);" class="hidden">✓ Synced with Mode 1 Spawner!</span>
+      </div>
+    </div>
+
+    <!-- 23-FACTION HORDE SPAWN BRACKET INSPECTOR -->
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>2. Official 11th Ed Horde Mode Faction Spawn Tables</h3>
+        <span class="hud-sub">Expandable 23-Faction Database</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        Select any Horde Faction below to inspect its primary faction rule and threat-bracket unit tables (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10+]</code>).
+      </p>
+
+      <select id="bracketFactionPicker" onchange="renderFactionBracketTable()" style="width:100%; padding:12px; font-weight:700; margin-bottom:14px;"></select>
+
+      <div id="factionBracketDisplay"></div>
+    </div>
+  </div>
+
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/vox-audio.js"></script>
+<script>
+const ROSTER_STATE_KEY = 'foa_roster_matrix_state_v1';
+const CUSTOM_POOL_STORAGE_KEY = 'foa_custom_shelf_pool_v1';
+
+// Expandable 23-Faction Horde Spawn Bracket Table Architecture (Ready for full PDF table values!)
+const HORDE_FACTION_SPAWN_TABLES = {
+  "Space Marines": {
+    b34: ["5 Scout Squad", "5 Assault Intercessors", "5 Infernus Squad", "3 Outriders", "1 Invader ATV"],
+    b56: ["10 Intercessor Squad", "5 Hellblasters", "3 Bladeguard Veterans", "5 Jump Pack Intercessors", "1 Ballistus Dreadnought"],
+    b79: ["5 Terminator Squad + Captain", "6 Aggressor Squad", "1 Redemptor Dreadnought", "1 Gladiator Lancer", "1 Repulsor"],
+    b10: ["1 Land Raider Redeemer + 6 Bladeguard", "10 Terminators + Chaplain", "1 Roboute Guilliman / Chapter Master Retinue"]
+  },
+  "Tyranids": {
+    b34: ["10 Termagants", "10 Hormagaunts", "5 Barbgaunts", "10 Gargoyles", "3 Von Ryan's Leapers"],
+    b56: ["10 Genestealers + Broodlord", "3 Tyranid Warriors", "3 Zoanthropes", "1 Lictor", "1 Biovore + Pyrovores"],
+    b79: ["1 Screamer-Killer", "1 Trygon", "1 Exocrine", "1 Haruspex", "1 Maleceptor"],
+    b10: ["1 Norn Emissary", "1 Hive Tyrant + 3 Tyrant Guard", "1 Tyrannofex + 1 Psychophage"]
+  },
+  "Chaos Daemons": {
+    b34: ["3 Nurglings", "10 Blue Horrors", "5 Flesh Hounds", "3 Screamers", "5 Seekers"],
+    b56: ["10 Bloodletters", "10 Plaguebearers", "10 Daemonettes", "10 Pink Horrors", "3 Flamers"],
+    b79: ["6 Bloodcrushers", "1 Daemon Prince of Chaos", "1 Soul Grinder", "3 Fiends + Contorted Epitome"],
+    b10: ["1 Bloodthirster", "1 Great Unclean One", "1 Lord of Change", "1 Keeper of Secrets"]
+  }
+};
+
+let activeRosterTab = 'nemesis';
+
+function switchRosterTab(tab, persist = true) {
+  activeRosterTab = tab;
+  document.getElementById('rosTabNemesis').classList.toggle('hidden', tab !== 'nemesis');
+  document.getElementById('rosTabUnbound').classList.toggle('hidden', tab !== 'unbound');
+  document.getElementById('rosTabBrackets').classList.toggle('hidden', tab !== 'brackets');
+
+  document.getElementById('rosTabBtn1').classList.toggle('active', tab === 'nemesis');
+  document.getElementById('rosTabBtn2').classList.toggle('active', tab === 'unbound');
+  document.getElementById('rosTabBtn3').classList.toggle('active', tab === 'brackets');
+
+  if (persist) saveRosterPageState();
+}
+
+function buildNemesisDossierString() {
+  const chan = document.getElementById('nemReportChannel').value;
+  const commanderLabel = chan === 'alpha' ? 'COMMANDER ALPHA (THE EXILE)' : 'COMMANDER BETA (JUNEBUG)';
+  const sector = document.getElementById('nemReportSector').value;
+  const unit = (document.getElementById('nemReportUnit').value || '[Unspecified Hostile Entity]').trim();
+  const feat = document.getElementById('nemReportFeat').value;
+  const notes = (document.getElementById('nemReportNotes').value || 'Survived engagement and demonstrated anomalous lethality.').trim();
+
+  return [
+    `+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++`,
+    `• FILING COMMANDER: ${commanderLabel}`,
+    `• THEATRE & MODE: ${sector}`,
+    `• HOSTILE DATASHEET / FACTION: ${unit}`,
+    `• TRIGGERING FEAT: ${feat}`,
+    `• EYE-WITNESS COMBAT LOG: "${notes}"`,
+    `------------------------------------------------`,
+    `REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (AGENT.md) and emit a CRT Vox-Dispatch christening its permanent Name, Title, Lore, and Boss Battle Trait!`
+  ].join('\n');
+}
+
+function updateNemesisPreview() {
+  const box = document.getElementById('nemDossierPreview');
+  if (box) box.textContent = buildNemesisDossierString();
+  saveRosterPageState();
+}
+
+function transmitNemesisDossier() {
+  const chan = document.getElementById('nemReportChannel').value || 'alpha';
+  const payload = buildNemesisDossierString();
+  if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox(chan, payload);
+  }
+}
+
+function saveShelfBarracks() {
+  const poolObj = {
+    b34: document.getElementById('rosterPool34').value,
+    b56: document.getElementById('rosterPool56').value,
+    b79: document.getElementById('rosterPool79').value,
+    b10: document.getElementById('rosterPool10').value
+  };
+  try {
+    localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(poolObj));
+  } catch (e) {}
+  const notice = document.getElementById('shelfSaveNotice');
+  if (notice) {
+    notice.classList.remove('hidden');
+    setTimeout(() => notice.classList.add('hidden'), 3000);
+  }
+  saveRosterPageState();
+}
+
+function renderFactionBracketTable() {
+  const picker = document.getElementById('bracketFactionPicker');
+  const box = document.getElementById('factionBracketDisplay');
+  if (!picker || !box) return;
+
+  const facName = picker.value;
+  const facObj = (typeof HORDE_FACTIONS !== 'undefined')
+    ? HORDE_FACTIONS.find(f => f.name === facName)
+    : null;
+  const tableData = HORDE_FACTION_SPAWN_TABLES[facName] || {
+    b34: ["Standard Faction Chaff / Swarm Units (0–75 pts) — Full PDF values pending import"],
+    b56: ["Standard Faction Battleline / Skirmishers (76–150 pts) — Full PDF values pending import"],
+    b79: ["Standard Faction Elites / Walkers / Transports (151–300 pts) — Full PDF values pending import"],
+    b10: ["Standard Faction Heavy Armor / Monsters / Warlord Retinues (301–550 pts) — Full PDF values pending import"]
+  };
+
+  box.innerHTML = `
+    <div class="card" style="background:#0b0d13; margin-bottom:12px; border-left:4px solid var(--red);">
+      <div style="font-weight:800; color:var(--gold); font-size:0.95rem;">
+        ${facName} — Primary Rule: ${facObj ? facObj.ruleTitle : 'Faction Protocol'}
+      </div>
+      <div style="font-size:0.86rem; color:var(--text); margin-top:4px;">
+        ${facObj ? facObj.ruleDesc : ''}
+      </div>
+    </div>
+    <table class="weapon-table">
+      <thead>
+        <tr>
+          <th style="width:140px;">Spawn Roll Bracket</th>
+          <th>Configured Faction Spawn Units</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${tableData.b34.join(' • ')}</td></tr>
+        <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${tableData.b56.join(' • ')}</td></tr>
+        <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${tableData.b79.join(' • ')}</td></tr>
+        <tr><td><strong>[10+] (301–550 pts)</strong></td><td>${tableData.b10.join(' • ')}</td></tr>
+      </tbody>
+    </table>
+  `;
+}
+
+function saveRosterPageState() {
+  try {
+    const state = {
+      activeRosterTab,
+      nemStatus1: document.getElementById('nemStatus1')?.value || 'roaming',
+      nemStatus2: document.getElementById('nemStatus2')?.value || 'roaming',
+      nemReportChannel: document.getElementById('nemReportChannel')?.value || 'alpha',
+      nemReportSector: document.getElementById('nemReportSector')?.value || '',
+      nemReportUnit: document.getElementById('nemReportUnit')?.value || '',
+      nemReportFeat: document.getElementById('nemReportFeat')?.value || '',
+      nemReportNotes: document.getElementById('nemReportNotes')?.value || ''
+    };
+    localStorage.setItem(ROSTER_STATE_KEY, JSON.stringify(state));
+  } catch (e) {}
+}
+
+function initRosterPage() {
+  const picker = document.getElementById('bracketFactionPicker');
+  if (picker && typeof HORDE_FACTIONS !== 'undefined') {
+    picker.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.group})</option>`).join('');
+  }
+
+  // Load saved custom shelf pool if present
+  try {
+    const savedPool = localStorage.getItem(CUSTOM_POOL_STORAGE_KEY);
+    if (savedPool) {
+      const p = JSON.parse(savedPool);
+      if (p.b34) document.getElementById('rosterPool34').value = p.b34;
+      if (p.b56) document.getElementById('rosterPool56').value = p.b56;
+      if (p.b79) document.getElementById('rosterPool79').value = p.b79;
+      if (p.b10) document.getElementById('rosterPool10').value = p.b10;
+    }
+  } catch (e) {}
+
+  // Restore saved form & tab state
+  try {
+    const raw = localStorage.getItem(ROSTER_STATE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.nemStatus1) document.getElementById('nemStatus1').value = s.nemStatus1;
+      if (s.nemStatus2) document.getElementById('nemStatus2').value = s.nemStatus2;
+      if (s.nemReportChannel) document.getElementById('nemReportChannel').value = s.nemReportChannel;
+      if (s.nemReportSector) document.getElementById('nemReportSector').value = s.nemReportSector;
+      if (s.nemReportUnit) document.getElementById('nemReportUnit').value = s.nemReportUnit;
+      if (s.nemReportFeat) document.getElementById('nemReportFeat').value = s.nemReportFeat;
+      if (s.nemReportNotes) document.getElementById('nemReportNotes').value = s.nemReportNotes;
+      if (s.activeRosterTab) switchRosterTab(s.activeRosterTab, false);
+    }
+  } catch (e) {}
+
+  updateNemesisPreview();
+  renderFactionBracketTable();
+}
+
+window.addEventListener('DOMContentLoaded', initRosterPage);
+window.addEventListener('vox:page-swapped', () => {
+  if (document.getElementById('rosTabNemesis')) initRosterPage();
+});
+</script>
 </body>
 </html>
 ````

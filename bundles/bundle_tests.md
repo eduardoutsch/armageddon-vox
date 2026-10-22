@@ -9,6 +9,12 @@ Unit, boundary, integration, and UI verification test suites for all game modes,
 - [tests/js/app.test.js](#file-testsjsapptestjs)
 - [tests/js/vox-audio.test.js](#file-testsjsvoxaudiotestjs)
 - [tests/ui/pages.test.js](#file-testsuipagestestjs)
+- [tests/ui/briefing.test.js](#file-testsuibriefingtestjs)
+- [tests/ui/pvp.test.js](#file-testsuipvptestjs)
+- [tests/ui/rogue.test.js](#file-testsuiroguetestjs)
+- [tests/ui/roster.test.js](#file-testsuirostertestjs)
+- [tests/ui/crusade.test.js](#file-testsuicrusadetestjs)
+- [tests/ui/vox.test.js](#file-testsuivoxtestjs)
 
 ---
 
@@ -560,6 +566,10 @@ class MockAudioParam {
     this.value = val;
     this.events.push({ type: 'ramp', val, time });
   }
+  linearRampToValueAtTime(val, time) {
+    this.value = val;
+    this.events.push({ type: 'linear', val, time });
+  }
 }
 
 class MockOscillator extends MockAudioNode {
@@ -619,9 +629,18 @@ globalThis.localStorage = {
   clear: () => storageStore.clear()
 };
 
+const sessionStore = new Map();
+globalThis.sessionStorage = {
+  getItem: (k) => (sessionStore.has(k) ? sessionStore.get(k) : null),
+  setItem: (k, v) => sessionStore.set(k, String(v)),
+  removeItem: (k) => sessionStore.delete(k),
+  clear: () => sessionStore.clear()
+};
+
 globalThis.window = {
   AudioContext: MockAudioContext,
-  addEventListener: () => {}
+  addEventListener: () => {},
+  location: { href: 'http://localhost/dealer/index.html', pathname: '/dealer/index.html' }
 };
 
 const listeners = {};
@@ -716,6 +735,63 @@ test('vox-audio: saveCurrentPosition safely persists audio telemetry to localSto
   // Since ytPlayer is null in mock env, it handles absent player gracefully without throwing
   assert.equal(storageStore.has('soa_vox_music_enabled_v1'), false);
 });
+
+test('vox-audio: newly added Crusade & CRT sound synthesizers execute without throwing', () => {
+  assert.doesNotThrow(() => {
+    voxModule.playTeletypeTick('stream');
+    voxModule.playTeletypeTick('redact');
+  }, 'playTeletypeTick must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playDiceClatter();
+  }, 'playDiceClatter must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playForgeAnvil();
+  }, 'playForgeAnvil must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playRelicChoir();
+  }, 'playRelicChoir must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playScarHazard();
+  }, 'playScarHazard must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playDossierStamp();
+  }, 'playDossierStamp must execute smoothly');
+});
+
+test('vox-audio: transmitToVox stores pending payload in sessionStorage and routes seamlessly', () => {
+  sessionStore.clear();
+  const testPayload = '+++ TEST MASTER DOSSIER TRANSMISSION +++';
+
+  assert.doesNotThrow(() => {
+    voxModule.transmitToVox('beta', testPayload);
+  });
+
+  const storedRaw = sessionStore.get('foa_pending_vox_payload');
+  assert.ok(storedRaw, 'transmitToVox must persist payload to foa_pending_vox_payload in sessionStorage');
+  const parsed = JSON.parse(storedRaw);
+  assert.equal(parsed.channel, 'beta');
+  assert.equal(parsed.text, testPayload);
+  assert.ok(typeof parsed.queuedAt === 'number');
+});
+
+test('vox-audio: window.VoxAudio exposes complete public API for all game modes', () => {
+  assert.ok(globalThis.window.VoxAudio, 'window.VoxAudio must be defined on window object');
+  assert.equal(typeof globalThis.window.VoxAudio.playClank, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playTeletypeTick, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playDiceClatter, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playForgeAnvil, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playRelicChoir, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playScarHazard, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playDossierStamp, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.navigateSeamlessly, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.transmitToVox, 'function');
+});
+
 ````
 
 ---
@@ -739,10 +815,12 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
 
   assert.ok(indexHtml.includes('<nav class="suite-nav">'), 'Missing suite navigation bar in index.html');
   assert.ok(indexHtml.includes('href="pages/spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>'));
-  assert.ok(indexHtml.includes('href="pages/briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>'));
-  assert.ok(indexHtml.includes('href="pages/pvp.html"'));
-  assert.ok(indexHtml.includes('href="pages/rogue.html"'));
-  assert.ok(indexHtml.includes('href="pages/roster.html"'));
+  assert.ok(indexHtml.includes('href="pages/pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>'));
+  assert.ok(indexHtml.includes('href="pages/rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>'));
+  assert.ok(indexHtml.includes('href="pages/roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>'));
+  assert.ok(indexHtml.includes('href="pages/crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>'));
+  assert.ok(indexHtml.includes('href="pages/briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>'));
+  assert.ok(indexHtml.includes('href="pages/vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>'));
 
   // Stylesheet and Vox Audio in index.html
   assert.ok(indexHtml.includes('<link rel="stylesheet" href="css/style.css">'));
@@ -758,7 +836,7 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
-  const subpages = ['spawner.html', 'pvp.html', 'rogue.html', 'roster.html', 'briefing.html', 'welcome.html'];
+  const subpages = ['spawner.html', 'pvp.html', 'rogue.html', 'roster.html', 'crusade.html', 'briefing.html', 'vox.html', 'welcome.html'];
   const expectedBriefingSnippet = 'href="briefing.html" class="suite-link';
   const expectedRootIndexSnippet = 'href="../index.html" class="suite-link';
 
@@ -804,7 +882,7 @@ test('All HTML pages link to assets/favicon.svg and apple-touch-icon in /assets'
     'index.html must include <link rel="apple-touch-icon" href="assets/favicon.svg">'
   );
 
-  const subpages = ['pages/spawner.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/welcome.html'];
+  const subpages = ['pages/spawner.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/crusade.html', 'pages/vox.html', 'pages/welcome.html'];
   for (const page of subpages) {
     const html = readPage(page);
     assert.match(
@@ -942,6 +1020,8 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_pvp.md', check: 'pages/pvp.html' },
     { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
     { file: 'bundle_roster.md', check: 'pages/roster.html' },
+    { file: 'bundle_crusade.md', check: 'pages/crusade.html' },
+    { file: 'bundle_vox.md', check: 'pages/vox.html' },
     { file: 'bundle_welcome.md', check: 'pages/welcome.html' },
     { file: 'bundle_css.md', check: 'css/style.css' },
     { file: 'bundle_packages.md', check: 'package.json' }
@@ -1000,4 +1080,1357 @@ test('UI Boundary: index.html serves as the centered Field Codex home launchpad'
 
 
 
+````
+
+---
+
+## File: `tests/ui/briefing.test.js` <a id="file-testsuibriefingtestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const BRIEFING_HTML_PATH = path.join(ROOT_DIR, 'pages/briefing.html');
+
+// Read briefing.html and extract script block
+const briefingHtml = fs.readFileSync(BRIEFING_HTML_PATH, 'utf8');
+const scriptMatches = briefingHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/briefing.html');
+const briefingScriptCode = scriptMatches[1];
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+function createMockElement() {
+  return {
+    classList: {
+      classes: new Set(),
+      toggle(cls, cond) {
+        if (cond === undefined) {
+          if (this.classes.has(cls)) this.classes.delete(cls);
+          else this.classes.add(cls);
+          return this.classes.has(cls);
+        }
+        if (cond) this.classes.add(cls);
+        else this.classes.delete(cls);
+        return cond;
+      },
+      add(cls) { this.classes.add(cls); },
+      remove(cls) { this.classes.delete(cls); },
+      contains(cls) { return this.classes.has(cls); }
+    },
+    textContent: '',
+    innerHTML: '',
+    style: {}
+  };
+}
+
+const mockElements = {
+  dossierAlpha: createMockElement(),
+  dossierBeta: createMockElement(),
+  dossierAtlas: createMockElement(),
+  dossierRules: createMockElement(),
+  btnAlpha: createMockElement(),
+  btnBeta: createMockElement(),
+  btnAtlas: createMockElement(),
+  btnRules: createMockElement(),
+  gateAlpha: createMockElement(),
+  contentAlpha: createMockElement(),
+  gateBeta: createMockElement(),
+  contentBeta: createMockElement(),
+  shipSliderLabel: createMockElement(),
+  sliderDetailBox: createMockElement(),
+  auspexViewport: createMockElement(),
+  auspexMapFrame: createMockElement(),
+  fullscreenMapBtn: createMockElement(),
+  fullscreenQuickHud: createMockElement(),
+  fsHudDetails: createMockElement(),
+  fsToggleDetailsBtn: createMockElement(),
+  atlasInspectorName: createMockElement(),
+  atlasInspectorDominance: createMockElement(),
+  atlasInspectorReward: createMockElement(),
+  fsHudName: createMockElement(),
+  fsHudDominance: createMockElement(),
+  fsHudRule: createMockElement(),
+  hegBarAlpha: createMockElement(),
+  hegBarBeta: createMockElement(),
+  hegBarHorde: createMockElement(),
+  fsHegBarAlpha: createMockElement(),
+  fsHegBarBeta: createMockElement(),
+  fsHegBarHorde: createMockElement()
+};
+
+for (let i = -3; i <= 3; i++) {
+  mockElements['sliderBtn' + i] = createMockElement();
+  mockElements['node' + i] = createMockElement();
+}
+['1', '15', '22'].forEach(k => {
+  mockElements['zoomBtn' + k] = createMockElement();
+});
+for (let i = 0; i <= 7; i++) {
+  mockElements['map-node-' + i] = createMockElement();
+}
+
+globalThis.document = {
+  getElementById: (id) => mockElements[id] || null,
+  querySelectorAll: () => []
+};
+
+globalThis.window = {
+  location: { hash: '' },
+  addEventListener: () => {}
+};
+
+// Evaluate script in mock environment
+const fn = new Function('document', 'window', 'localStorage', 'console', `${briefingScriptCode}; return {
+  BRIEFING_STORAGE_KEY,
+  SHIP_SLIDER_DATA,
+  ATLAS_NODES,
+  getBriefingState: () => briefingState,
+  saveBriefingState,
+  restoreBriefingState,
+  showDossier,
+  unlockTab,
+  lockTab,
+  selectSlider,
+  setAuspexZoom,
+  toggleAuspexFullscreen,
+  toggleFsHudDetails,
+  getDominanceText,
+  selectAtlasNode
+};`);
+
+const briefing = fn(globalThis.document, globalThis.window, globalThis.localStorage, console);
+
+test('briefing: ATLAS_NODES and SHIP_SLIDER_DATA have complete schemas', () => {
+  const nodeKeys = Object.keys(briefing.ATLAS_NODES);
+  assert.equal(nodeKeys.length, 8, 'Sector Map must define 8 tactical nodes');
+  assert.ok(briefing.SHIP_SLIDER_DATA['-3'] && briefing.SHIP_SLIDER_DATA['3'], 'Ship power slider must span from -3 to +3');
+
+  nodeKeys.forEach((key) => {
+    const n = briefing.ATLAS_NODES[key];
+    assert.ok(n.title, `Node ${key} must have a title`);
+    assert.ok(n.rule, `Node ${key} must have tactical rule / strategic intelligence`);
+  });
+});
+
+test('briefing: showDossier switches active dossier and updates buttons', () => {
+  briefing.showDossier('atlas', true);
+
+  assert.equal(briefing.getBriefingState().activeDossier, 'atlas');
+  assert.equal(mockElements.dossierAtlas.classList.contains('hidden'), false);
+  assert.equal(mockElements.btnAtlas.classList.contains('active'), true);
+  assert.equal(mockElements.dossierBeta.classList.contains('hidden'), true);
+  assert.equal(mockElements.btnBeta.classList.contains('active'), false);
+
+  const raw = localStorage.getItem(briefing.BRIEFING_STORAGE_KEY);
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.activeDossier, 'atlas');
+});
+
+test('briefing: unlockTab and lockTab manage clearance gates and persist states', () => {
+  briefing.unlockTab('Beta', true);
+  assert.equal(mockElements.gateBeta.classList.contains('hidden'), true);
+  assert.equal(mockElements.contentBeta.classList.contains('hidden'), false);
+  assert.equal(briefing.getBriefingState().unlockedBeta, true);
+
+  briefing.lockTab('Beta', true);
+  assert.equal(mockElements.gateBeta.classList.contains('hidden'), false);
+  assert.equal(mockElements.contentBeta.classList.contains('hidden'), true);
+  assert.equal(briefing.getBriefingState().unlockedBeta, false);
+});
+
+test('briefing: selectSlider updates active node and description', () => {
+  briefing.selectSlider(2, true);
+
+  assert.equal(briefing.getBriefingState().shipSlider, 2);
+  assert.equal(mockElements['sliderBtn2'].classList.contains('active'), true);
+  assert.equal(mockElements['sliderBtn0'].classList.contains('active'), false);
+  assert.ok(mockElements.shipSliderLabel.textContent.includes('Current State:'));
+});
+
+test('briefing: setAuspexZoom toggles zoom levels (1x, 15x, 22x)', () => {
+  briefing.setAuspexZoom('15x');
+  assert.equal(mockElements.auspexViewport.classList.contains('zoom-15x'), true);
+  assert.equal(mockElements.auspexViewport.classList.contains('zoom-1x'), false);
+  assert.equal(mockElements.zoomBtn15.classList.contains('active'), true);
+  assert.equal(mockElements.zoomBtn1.classList.contains('active'), false);
+
+  briefing.setAuspexZoom('22x');
+  assert.equal(mockElements.auspexViewport.classList.contains('zoom-22x'), true);
+  assert.equal(mockElements.zoomBtn22.classList.contains('active'), true);
+});
+
+test('briefing: toggleAuspexFullscreen and toggleFsHudDetails toggle UI states', () => {
+  mockElements.auspexMapFrame.classList.remove('hololith-fullscreen');
+  briefing.toggleAuspexFullscreen();
+  assert.equal(mockElements.auspexMapFrame.classList.contains('hololith-fullscreen'), true);
+  assert.equal(mockElements.fullscreenMapBtn.textContent, '✕ Exit Fullscreen');
+
+  mockElements.fsHudDetails.classList.remove('hidden-details');
+  briefing.toggleFsHudDetails();
+  assert.equal(mockElements.fsHudDetails.classList.contains('hidden-details'), true);
+  assert.equal(mockElements.fsToggleDetailsBtn.textContent, '▾ Show Telemetry');
+});
+
+test('briefing: getDominanceText accurately computes hegemony status', () => {
+  // Fog of war
+  assert.ok(briefing.getDominanceText({ alphaHP: 0, betaHP: 0, hordeHP: null }).includes('Fog of War'));
+
+  // Beta leading
+  assert.ok(briefing.getDominanceText({ alphaHP: 2, betaHP: 5, hordeHP: 1 }).includes('Commander Beta Leading'));
+
+  // Alpha leading
+  assert.ok(briefing.getDominanceText({ alphaHP: 6, betaHP: 2, hordeHP: 1 }).includes('Commander Alpha Leading'));
+
+  // Tied
+  assert.ok(briefing.getDominanceText({ alphaHP: 3, betaHP: 3, hordeHP: 2 }).includes('Contested Stalemate'));
+});
+
+test('briefing: saveBriefingState guards against saving when not on briefing page', () => {
+  storageStore.clear();
+  storageStore.set(briefing.BRIEFING_STORAGE_KEY, JSON.stringify({ activeDossier: 'rules', custom: true }));
+
+  const origBeta = mockElements.dossierBeta;
+  delete mockElements.dossierBeta;
+
+  briefing.saveBriefingState();
+
+  const after = JSON.parse(localStorage.getItem(briefing.BRIEFING_STORAGE_KEY));
+  assert.equal(after.custom, true, 'Must not overwrite state when dossierBeta is missing from DOM');
+
+  mockElements.dossierBeta = origBeta;
+});
+
+test('briefing: restoreBriefingState restores all user choices from localStorage', () => {
+  localStorage.setItem(briefing.BRIEFING_STORAGE_KEY, JSON.stringify({
+    activeDossier: 'atlas',
+    unlockedAlpha: false,
+    unlockedBeta: true,
+    shipSlider: -1,
+    selectedNode: 3
+  }));
+
+  briefing.restoreBriefingState();
+
+  assert.equal(briefing.getBriefingState().activeDossier, 'atlas');
+  assert.equal(briefing.getBriefingState().unlockedBeta, true);
+  assert.equal(briefing.getBriefingState().shipSlider, -1);
+  assert.equal(briefing.getBriefingState().selectedNode, 3);
+});
+````
+
+---
+
+## File: `tests/ui/pvp.test.js` <a id="file-testsuipvptestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const PVP_HTML_PATH = path.join(ROOT_DIR, 'pages/pvp.html');
+
+// Read pvp.html and extract script block
+const pvpHtml = fs.readFileSync(PVP_HTML_PATH, 'utf8');
+const scriptMatches = pvpHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/pvp.html');
+const pvpScriptCode = scriptMatches[1];
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+const mockElements = {
+  hellscapeSelect: { value: '0' },
+  hellscapeDesc: { innerHTML: '', innerText: '' },
+  warpIntensity: { value: 'major' },
+  anomalyResultBox: { innerHTML: '' },
+  vultureKillCheck: { checked: false },
+  vulturePts: { innerText: '3 SPts' },
+  unboundResult: { innerHTML: '' }
+};
+
+globalThis.document = {
+  getElementById: (id) => mockElements[id] || null
+};
+
+// Evaluate script in mock environment
+const pvpEnv = {};
+const fn = new Function('document', 'localStorage', 'console', `${pvpScriptCode}; return {
+  HELLSCAPES,
+  ANOMALIES,
+  UNBOUND_UNITS,
+  STORAGE_KEY_PVP,
+  savePvpState,
+  restorePvpState,
+  renderHellscape,
+  rollRandomHellscape,
+  rollWarpAnomaly,
+  updateVulture,
+  rollUnboundAdversary
+};`);
+
+const pvp = fn(globalThis.document, globalThis.localStorage, console);
+
+test('pvp: HELLSCAPES, ANOMALIES, and UNBOUND_UNITS contain valid crusade content', () => {
+  assert.equal(pvp.HELLSCAPES.length, 6, 'Must define 6 Hellscape environments');
+  assert.equal(pvp.ANOMALIES.length, 6, 'Must define 6 Warp Anomalies');
+  assert.equal(pvp.UNBOUND_UNITS.length, 4, 'Must define 4 Unbound Adversary power levels');
+
+  pvp.HELLSCAPES.forEach((h, idx) => {
+    assert.equal(typeof h, 'string');
+    assert.ok(h.includes('<strong>'), `Hellscape ${idx} must include bold rule title`);
+  });
+});
+
+test('pvp: renderHellscape updates description and saves state to localStorage', () => {
+  mockElements.hellscapeSelect.value = '2';
+  pvp.renderHellscape(true);
+
+  assert.equal(mockElements.hellscapeDesc.innerHTML, pvp.HELLSCAPES[2]);
+
+  const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
+  assert.ok(raw);
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.hellscapeIdx, 2);
+});
+
+test('pvp: updateVulture calculates 3 SPts base or 4 SPts with player kill bonus', () => {
+  mockElements.vultureKillCheck.checked = false;
+  pvp.updateVulture(true);
+  assert.equal(mockElements.vulturePts.innerText, '3 SPts');
+
+  mockElements.vultureKillCheck.checked = true;
+  pvp.updateVulture(true);
+  assert.equal(mockElements.vulturePts.innerText, '4 SPts');
+
+  const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.vultureKilled, true);
+});
+
+test('pvp: rollWarpAnomaly triggers surges based on intensity thresholds', () => {
+  mockElements.warpIntensity.value = 'major';
+  pvp.rollWarpAnomaly();
+
+  assert.ok(mockElements.anomalyResultBox.innerHTML.includes('Rolled'));
+
+  const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
+  const parsed = JSON.parse(raw);
+  assert.ok(parsed.anomalyHtml.includes('Rolled'));
+});
+
+test('pvp: rollUnboundAdversary picks an unbound unit and persists output', () => {
+  pvp.rollUnboundAdversary();
+
+  assert.ok(mockElements.unboundResult.innerHTML.includes('Power Level'));
+
+  const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
+  const parsed = JSON.parse(raw);
+  assert.ok(parsed.unboundHtml.includes('Power Level'));
+});
+
+test('pvp: savePvpState ignores save when hellscapeSelect element is absent', () => {
+  storageStore.clear();
+  storageStore.set(pvp.STORAGE_KEY_PVP, JSON.stringify({ hellscapeIdx: 4, custom: true }));
+
+  const origSelect = mockElements.hellscapeSelect;
+  delete mockElements.hellscapeSelect;
+
+  pvp.savePvpState();
+
+  const after = JSON.parse(localStorage.getItem(pvp.STORAGE_KEY_PVP));
+  assert.equal(after.custom, true, 'Must not overwrite stored state when hellscapeSelect is missing from DOM');
+
+  // Restore mock
+  mockElements.hellscapeSelect = origSelect;
+});
+
+test('pvp: restorePvpState faithfully reconstructs UI state from localStorage', () => {
+  localStorage.setItem(pvp.STORAGE_KEY_PVP, JSON.stringify({
+    hellscapeIdx: 5,
+    warpIntensity: 'minor',
+    anomalyHtml: '<span class="test-surge">Warp Fluke</span>',
+    vultureKilled: true,
+    unboundHtml: '<p>Daemonic Beast</p>'
+  }));
+
+  pvp.restorePvpState();
+
+  assert.equal(String(mockElements.hellscapeSelect.value), '5');
+  assert.equal(mockElements.warpIntensity.value, 'minor');
+  assert.equal(mockElements.anomalyResultBox.innerHTML, '<span class="test-surge">Warp Fluke</span>');
+  assert.equal(mockElements.vultureKillCheck.checked, true);
+  assert.equal(mockElements.vulturePts.innerText, '4 SPts');
+  assert.equal(mockElements.unboundResult.innerHTML, '<p>Daemonic Beast</p>');
+});
+````
+
+---
+
+## File: `tests/ui/rogue.test.js` <a id="file-testsuiroguetestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const ROGUE_HTML_PATH = path.join(ROOT_DIR, 'pages/rogue.html');
+
+// Read rogue.html and extract script block
+const rogueHtml = fs.readFileSync(ROGUE_HTML_PATH, 'utf8');
+const scriptMatches = rogueHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/rogue.html');
+const rogueScriptCode = scriptMatches[1];
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+function createMockAiStep() {
+  const span = { innerText: '' };
+  return {
+    classList: {
+      classes: new Set(),
+      toggle(cls, cond) {
+        if (cond) this.classes.add(cls);
+        else this.classes.delete(cls);
+      },
+      contains(cls) { return this.classes.has(cls); }
+    },
+    querySelector: (sel) => (sel.includes('span:last-child') ? span : null),
+    span
+  };
+}
+
+const mockElements = {
+  aiStep0: createMockAiStep(),
+  aiStep1: createMockAiStep(),
+  aiStep2: createMockAiStep()
+};
+
+globalThis.document = {
+  getElementById: (id) => mockElements[id] || null
+};
+
+// Evaluate script in mock environment
+const fn = new Function('document', 'localStorage', 'console', `${rogueScriptCode}; return {
+  STORAGE_KEY_ROGUE,
+  getCurrentAiStep: () => currentAiStep,
+  setAiStep,
+  nextAiStep,
+  saveRogueState,
+  restoreRogueState
+};`);
+
+const rogue = fn(globalThis.document, globalThis.localStorage, console);
+
+test('rogue: setAiStep updates DOM classes, badge text, and persists state', () => {
+  rogue.setAiStep(1, true);
+
+  assert.equal(rogue.getCurrentAiStep(), 1);
+  assert.equal(mockElements.aiStep1.classList.contains('active-step'), true);
+  assert.equal(mockElements.aiStep0.classList.contains('active-step'), false);
+  assert.equal(mockElements.aiStep2.classList.contains('active-step'), false);
+
+  assert.equal(mockElements.aiStep1.span.innerText, '[Active]');
+  assert.equal(mockElements.aiStep0.span.innerText, '');
+  assert.equal(mockElements.aiStep2.span.innerText, '');
+
+  const raw = localStorage.getItem(rogue.STORAGE_KEY_ROGUE);
+  assert.ok(raw);
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.currentAiStep, 1);
+});
+
+test('rogue: nextAiStep cycles predictably through phases 0 -> 1 -> 2 -> 0', () => {
+  rogue.setAiStep(0, false);
+  assert.equal(rogue.getCurrentAiStep(), 0);
+
+  rogue.nextAiStep();
+  assert.equal(rogue.getCurrentAiStep(), 1);
+
+  rogue.nextAiStep();
+  assert.equal(rogue.getCurrentAiStep(), 2);
+
+  rogue.nextAiStep();
+  assert.equal(rogue.getCurrentAiStep(), 0);
+});
+
+test('rogue: saveRogueState ignores save when aiStep0 element is absent', () => {
+  storageStore.clear();
+  storageStore.set(rogue.STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep: 2, custom: true }));
+
+  const origStep0 = mockElements.aiStep0;
+  delete mockElements.aiStep0;
+
+  rogue.saveRogueState();
+
+  const after = JSON.parse(localStorage.getItem(rogue.STORAGE_KEY_ROGUE));
+  assert.equal(after.custom, true, 'Must not overwrite stored state when aiStep0 is missing from DOM');
+
+  // Restore mock
+  mockElements.aiStep0 = origStep0;
+});
+
+test('rogue: restoreRogueState faithfully restores active phase from localStorage', () => {
+  localStorage.setItem(rogue.STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep: 2 }));
+
+  rogue.restoreRogueState();
+
+  assert.equal(rogue.getCurrentAiStep(), 2);
+  assert.equal(mockElements.aiStep2.classList.contains('active-step'), true);
+  assert.equal(mockElements.aiStep2.span.innerText, '[Active]');
+});
+````
+
+---
+
+## File: `tests/ui/roster.test.js` <a id="file-testsuirostertestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const ROSTER_HTML_PATH = path.join(ROOT_DIR, 'pages/roster.html');
+const DATA_JS_PATH = path.join(ROOT_DIR, 'js/data.js');
+
+// Load HORDE_FACTIONS from js/data.js
+const dataJsCode = fs.readFileSync(DATA_JS_PATH, 'utf8');
+const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS };`);
+const { HORDE_FACTIONS } = dataFn();
+
+// Read roster.html and extract script block
+const rosterHtml = fs.readFileSync(ROSTER_HTML_PATH, 'utf8');
+const scriptMatches = rosterHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/roster.html');
+const rosterScriptCode = scriptMatches[1];
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+const mockLocalStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+function createMockClassList() {
+  const classes = new Set();
+  return {
+    add: (c) => classes.add(c),
+    remove: (c) => classes.delete(c),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) classes.delete(c);
+        else classes.add(c);
+      } else if (force) {
+        classes.add(c);
+      } else {
+        classes.delete(c);
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
+const mockElements = {
+  rosTabNemesis: { classList: createMockClassList() },
+  rosTabUnbound: { classList: createMockClassList() },
+  rosTabBrackets: { classList: createMockClassList() },
+  rosTabBtn1: { classList: createMockClassList() },
+  rosTabBtn2: { classList: createMockClassList() },
+  rosTabBtn3: { classList: createMockClassList() },
+  nemStatus1: { value: 'roaming' },
+  nemStatus2: { value: 'roaming' },
+  nemReportChannel: { value: 'alpha' },
+  nemReportSector: { value: 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)' },
+  nemReportUnit: { value: 'Tyranids — Screamer-Killer' },
+  nemReportFeat: { value: 'Slain a Player Warlord / Character in combat' },
+  nemReportNotes: { value: 'Survived two Vanquisher shots and wiped Krieg squad.' },
+  nemDossierPreview: { textContent: '' },
+  rosterPool34: { value: '10 Hormagaunts, 10 Termagants' },
+  rosterPool56: { value: '10 Genestealers, 5 Chaos Terminators' },
+  rosterPool79: { value: '1 Screamer-Killer, 1 Trygon' },
+  rosterPool10: { value: '1 Norn Emissary, 1 Hive Tyrant' },
+  shelfSaveNotice: { classList: createMockClassList() },
+  bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
+  factionBracketDisplay: { innerHTML: '' }
+};
+
+const mockDocument = {
+  getElementById: (id) => mockElements[id] || null
+};
+
+let transmittedChannel = null;
+let transmittedPayload = null;
+
+const mockWindow = {
+  addEventListener: () => {},
+  VoxAudio: {
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
+// Evaluate script in mock environment
+const evalFn = new Function(
+  'document',
+  'window',
+  'localStorage',
+  'HORDE_FACTIONS',
+  'console',
+  `${rosterScriptCode}; return {
+    ROSTER_STATE_KEY,
+    CUSTOM_POOL_STORAGE_KEY,
+    HORDE_FACTION_SPAWN_TABLES,
+    switchRosterTab,
+    buildNemesisDossierString,
+    updateNemesisPreview,
+    transmitNemesisDossier,
+    saveShelfBarracks,
+    renderFactionBracketTable,
+    saveRosterPageState,
+    initRosterPage
+  };`
+);
+
+const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console);
+
+test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for factions', () => {
+  assert.ok(roster.HORDE_FACTION_SPAWN_TABLES, 'Must define HORDE_FACTION_SPAWN_TABLES');
+  const sm = roster.HORDE_FACTION_SPAWN_TABLES['Space Marines'];
+  assert.ok(sm, 'Must define Space Marines table');
+  assert.ok(Array.isArray(sm.b34) && sm.b34.length > 0, 'Space Marines must have bracket [3-4]');
+  assert.ok(Array.isArray(sm.b56) && sm.b56.length > 0, 'Space Marines must have bracket [5-6]');
+  assert.ok(Array.isArray(sm.b79) && sm.b79.length > 0, 'Space Marines must have bracket [7-9]');
+  assert.ok(Array.isArray(sm.b10) && sm.b10.length > 0, 'Space Marines must have bracket [10+]');
+});
+
+test('roster: switchRosterTab toggles active tab and DOM visibility classes', () => {
+  roster.switchRosterTab('unbound', false);
+  assert.equal(mockElements.rosTabNemesis.classList.contains('hidden'), true);
+  assert.equal(mockElements.rosTabUnbound.classList.contains('hidden'), false);
+  assert.equal(mockElements.rosTabBrackets.classList.contains('hidden'), true);
+  assert.equal(mockElements.rosTabBtn2.classList.contains('active'), true);
+  assert.equal(mockElements.rosTabBtn1.classList.contains('active'), false);
+
+  roster.switchRosterTab('brackets', false);
+  assert.equal(mockElements.rosTabBrackets.classList.contains('hidden'), false);
+  assert.equal(mockElements.rosTabBtn3.classList.contains('active'), true);
+
+  roster.switchRosterTab('nemesis', false);
+  assert.equal(mockElements.rosTabNemesis.classList.contains('hidden'), false);
+  assert.equal(mockElements.rosTabBtn1.classList.contains('active'), true);
+});
+
+test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Campaign Master', () => {
+  mockElements.nemReportChannel.value = 'alpha';
+  mockElements.nemReportUnit.value = 'Tyranids — Screamer-Killer';
+  mockElements.nemReportNotes.value = 'Survived two Vanquisher shots on 1 Wound and slaughtered Death Riders.';
+
+  const str = roster.buildNemesisDossierString();
+  assert.ok(str.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(str.includes('• FILING COMMANDER: COMMANDER ALPHA (THE EXILE)'));
+  assert.ok(str.includes('• HOSTILE DATASHEET / FACTION: Tyranids — Screamer-Killer'));
+  assert.ok(str.includes('slaughtered Death Riders'));
+
+  mockElements.nemReportChannel.value = 'beta';
+  const strBeta = roster.buildNemesisDossierString();
+  assert.ok(strBeta.includes('• FILING COMMANDER: COMMANDER BETA (JUNEBUG)'));
+});
+
+test('roster: updateNemesisPreview populates preview box and saves state', () => {
+  roster.updateNemesisPreview();
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('ORDO MALLEUS'));
+
+  const rawState = mockLocalStorage.getItem(roster.ROSTER_STATE_KEY);
+  assert.ok(rawState, 'Must persist roster state to localStorage');
+  const state = JSON.parse(rawState);
+  assert.equal(state.nemReportUnit, 'Tyranids — Screamer-Killer');
+});
+
+test('roster: transmitNemesisDossier triggers window.VoxAudio.transmitToVox with compiled payload', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.nemReportChannel.value = 'beta';
+
+  roster.transmitNemesisDossier();
+  assert.equal(transmittedChannel, 'beta');
+  assert.ok(transmittedPayload.includes('COMMANDER BETA (JUNEBUG)'));
+  assert.ok(transmittedPayload.includes('ORDO MALLEUS'));
+});
+
+test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
+  mockElements.rosterPool34.value = '20 Termagants';
+  mockElements.rosterPool56.value = '5 Tyranid Warriors';
+  mockElements.rosterPool79.value = '1 Maleceptor';
+  mockElements.rosterPool10.value = '1 Tyrannofex';
+
+  roster.saveShelfBarracks();
+
+  const saved = mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY);
+  assert.ok(saved, 'Must persist custom shelf pool to localStorage');
+  const pool = JSON.parse(saved);
+  assert.equal(pool.b34, '20 Termagants');
+  assert.equal(pool.b56, '5 Tyranid Warriors');
+  assert.equal(pool.b79, '1 Maleceptor');
+  assert.equal(pool.b10, '1 Tyrannofex');
+});
+
+test('roster: renderFactionBracketTable displays faction rules and bracket units', () => {
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  roster.renderFactionBracketTable();
+
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Tyranids'));
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Neurons Activated'));
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('10 Termagants'));
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Norn Emissary'));
+});
+
+test('roster: saveRosterPageState and initRosterPage preserve and restore form and tab state', () => {
+  mockLocalStorage.clear();
+  mockLocalStorage.setItem(roster.ROSTER_STATE_KEY, JSON.stringify({
+    activeRosterTab: 'unbound',
+    nemStatus1: 'slain',
+    nemStatus2: 'deployed',
+    nemReportChannel: 'beta',
+    nemReportSector: 'Mode 2: 1v1 PvP // Unbound Adversary',
+    nemReportUnit: 'Chaos Lord in Terminator Armour',
+    nemReportFeat: 'Slain a Player Warlord / Character in combat',
+    nemReportNotes: 'Struck down Commander Alpha in heroic intervention.'
+  }));
+
+  mockLocalStorage.setItem(roster.CUSTOM_POOL_STORAGE_KEY, JSON.stringify({
+    b34: 'Custom Chaff A, B',
+    b56: 'Custom Elites C',
+    b79: 'Custom Heavy D',
+    b10: 'Custom Super-Heavy E'
+  }));
+
+  roster.initRosterPage();
+
+  assert.equal(mockElements.nemStatus1.value, 'slain');
+  assert.equal(mockElements.nemStatus2.value, 'deployed');
+  assert.equal(mockElements.nemReportChannel.value, 'beta');
+  assert.equal(mockElements.nemReportUnit.value, 'Chaos Lord in Terminator Armour');
+  assert.equal(mockElements.rosterPool34.value, 'Custom Chaff A, B');
+  assert.equal(mockElements.rosterPool10.value, 'Custom Super-Heavy E');
+});
+````
+
+---
+
+## File: `tests/ui/crusade.test.js` <a id="file-testsuicrusadetestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const CRUSADE_HTML_PATH = path.join(ROOT_DIR, 'pages/crusade.html');
+
+// Read crusade.html and extract script block
+const crusadeHtml = fs.readFileSync(CRUSADE_HTML_PATH, 'utf8');
+const scriptMatches = crusadeHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/crusade.html');
+const crusadeScriptCode = scriptMatches[1];
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+const mockLocalStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+function createMockClassList() {
+  const classes = new Set();
+  return {
+    add: (c) => classes.add(c),
+    remove: (c) => classes.delete(c),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) classes.delete(c);
+        else classes.add(c);
+      } else if (force) {
+        classes.add(c);
+      } else {
+        classes.delete(c);
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
+const mockElements = {
+  cruTabBoard: { classList: createMockClassList() },
+  cruTabForge: { classList: createMockClassList() },
+  cruTabBtn1: { classList: createMockClassList() },
+  cruTabBtn2: { classList: createMockClassList() },
+  treeBtnGate: { classList: createMockClassList() },
+  treeBtnDes: { classList: createMockClassList() },
+  treeBtnMar: { classList: createMockClassList() },
+  allianceTreeBox: { innerHTML: '' },
+  alphaSP: { textContent: '0' },
+  alphaCP: { textContent: '0' },
+  alphaCacheCount: { textContent: '0' },
+  betaSP: { textContent: '0' },
+  betaCP: { textContent: '0' },
+  betaCacheCount: { textContent: '0' },
+  hordeSP: { textContent: '0' },
+  hordeCP: { textContent: '0' },
+  forgeSourcePool: { value: 'Armageddon' },
+  rollerUnitName: { value: "Mercy's Delay" },
+  rollerUnitContext: { value: 'Held the landing zone bunker against three swarm waves.' },
+  traitUnitType: { value: 'Infantry' },
+  traitResultBox: { innerHTML: '' },
+  weaponResultBox: { innerHTML: '' },
+  relicTierSelect: { value: 'Artificer' },
+  relicResultBox: { innerHTML: '' },
+  scarResultBox: { innerHTML: '' },
+  dossierChannel: { value: 'alpha' },
+  dossierModeNode: { value: 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)' },
+  dossierOutcome: { value: 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)' },
+  dossierSecretCode: { value: 'A9F' },
+  dossierSecretTag: { value: 'Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)' },
+  dossierLeftoverSp: { value: '3 Leftover SP → Bank 1v1 Supply Cache Token' },
+  dossierBattleNotes: { value: 'Krieg Vanquishers eliminated the enemy heavy armor in round 2.' },
+  fortHosp: { checked: true },
+  fortAmmo: { checked: false },
+  fortTrench: { checked: true },
+  fortFob: { checked: false },
+  queuedCountLabel: { textContent: '0' },
+  queuedRollsContainer: { innerHTML: '' },
+  masterDossierPreviewBox: { textContent: '' }
+};
+
+const mockDocument = {
+  getElementById: (id) => mockElements[id] || null
+};
+
+let transmittedChannel = null;
+let transmittedPayload = null;
+
+const mockWindow = {
+  addEventListener: () => {},
+  VoxAudio: {
+    playClank: () => {},
+    playDiceClatter: () => {},
+    playForgeAnvil: () => {},
+    playRelicChoir: () => {},
+    playScarHazard: () => {},
+    playDossierStamp: () => {},
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
+// Evaluate script in mock environment
+const evalFn = new Function(
+  'document',
+  'window',
+  'localStorage',
+  'console',
+  `${crusadeScriptCode}; return {
+    CRUSADE_STATE_KEY,
+    ALLIANCE_TREES,
+    BATTLE_TRAIT_TABLES,
+    WEAPON_MOD_TABLE,
+    CRUSADE_RELIC_VAULT,
+    BATTLE_SCAR_TABLE,
+    getCrusadeState: () => crusadeState,
+    lastRolledItem,
+    switchCrusadeTab,
+    adjScore,
+    selectAllianceTree,
+    rollRandomBattleTrait,
+    rollRandomWeaponMod,
+    rollRandomRelic,
+    rollOutOfActionTest,
+    rollRandomBattleScar,
+    attachRollToDossier,
+    removeQueuedRoll,
+    clearQueuedRolls,
+    renderQueuedRolls,
+    buildMasterDossierString,
+    updateMasterDossierPreview,
+    transmitMasterBattleDossier,
+    saveCrusadeState,
+    initCrusadePage
+  };`
+);
+
+const crusade = evalFn(mockDocument, mockWindow, mockLocalStorage, console);
+
+test('crusade: ALLIANCE_TREES, tables, and vaults have complete schemas and 11th Ed crusade rules', () => {
+  assert.ok(crusade.ALLIANCE_TREES.Gatebreakers, 'Must define Gatebreakers alliance tree');
+  assert.ok(crusade.ALLIANCE_TREES.Desecrators, 'Must define Desecrators alliance tree');
+  assert.ok(crusade.ALLIANCE_TREES.Marauders, 'Must define Marauders alliance tree');
+
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.Infantry.length, 6, 'Must define 6 Infantry traits');
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.Mounted.length, 6, 'Must define 6 Mounted traits');
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.MonsterVehicle.length, 6, 'Must define 6 Monster/Vehicle traits');
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.Character.length, 6, 'Must define 6 Character traits');
+
+  assert.equal(crusade.WEAPON_MOD_TABLE.length, 6, 'Must define 6 Weapon Modifications');
+  assert.ok(crusade.CRUSADE_RELIC_VAULT.Artificer.length > 0, 'Must define Artificer relics');
+  assert.ok(crusade.CRUSADE_RELIC_VAULT.Antiquity.length > 0, 'Must define Antiquity relics');
+  assert.ok(crusade.CRUSADE_RELIC_VAULT.Legendary.length > 0, 'Must define Legendary relics');
+
+  assert.equal(crusade.BATTLE_SCAR_TABLE.length, 6, 'Must define 6 Battle Scars');
+});
+
+test('crusade: switchCrusadeTab switches tabs and persists state', () => {
+  crusade.switchCrusadeTab('forge', false);
+  assert.equal(mockElements.cruTabBoard.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabForge.classList.contains('hidden'), false);
+  assert.equal(mockElements.cruTabBtn2.classList.contains('active'), true);
+  assert.equal(mockElements.cruTabBtn1.classList.contains('active'), false);
+
+  crusade.switchCrusadeTab('board', false);
+  assert.equal(mockElements.cruTabBoard.classList.contains('hidden'), false);
+  assert.equal(mockElements.cruTabForge.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabBtn1.classList.contains('active'), true);
+});
+
+test('crusade: adjScore modifies alliance Strategic & Campaign Points without going below 0', () => {
+  crusade.adjScore('alphaSP', 5);
+  assert.equal(crusade.getCrusadeState().alphaSP, 5);
+  assert.equal(String(mockElements.alphaSP.textContent), '5');
+
+  crusade.adjScore('alphaSP', -2);
+  assert.equal(crusade.getCrusadeState().alphaSP, 3);
+  assert.equal(String(mockElements.alphaSP.textContent), '3');
+
+  // Should floor at 0
+  crusade.adjScore('alphaSP', -10);
+  assert.equal(crusade.getCrusadeState().alphaSP, 0);
+  assert.equal(String(mockElements.alphaSP.textContent), '0');
+
+  crusade.adjScore('betaCP', 2);
+  assert.equal(crusade.getCrusadeState().betaCP, 2);
+  assert.equal(String(mockElements.betaCP.textContent), '2');
+});
+
+test('crusade: selectAllianceTree renders branching phase goals, success and failure paths', () => {
+  crusade.selectAllianceTree('Gatebreakers', false);
+  assert.ok(mockElements.allianceTreeBox.innerHTML.includes('Stabilising the Front'));
+  assert.ok(mockElements.allianceTreeBox.innerHTML.includes('Reclaim the Lost Hives'));
+  assert.equal(mockElements.treeBtnGate.classList.contains('active'), true);
+
+  crusade.selectAllianceTree('Desecrators', false);
+  assert.ok(mockElements.allianceTreeBox.innerHTML.includes('Planetfall'));
+  assert.equal(mockElements.treeBtnDes.classList.contains('active'), true);
+
+  crusade.selectAllianceTree('Marauders', false);
+  assert.ok(mockElements.allianceTreeBox.innerHTML.includes('Drawn to the Fight'));
+  assert.equal(mockElements.treeBtnMar.classList.contains('active'), true);
+});
+
+test('crusade: upgrade rollers generate valid traits, weapon mods, relics, and scars', () => {
+  // 1. Battle Trait
+  mockElements.traitUnitType.value = 'Character';
+  crusade.rollRandomBattleTrait();
+  assert.ok(crusade.lastRolledItem.trait, 'Must store last rolled trait');
+  assert.equal(crusade.lastRolledItem.trait.category, 'Battle Trait (Character)');
+  assert.ok(crusade.lastRolledItem.trait.name);
+
+  // 2. Weapon Mod
+  crusade.rollRandomWeaponMod();
+  assert.ok(crusade.lastRolledItem.weapon, 'Must store last rolled weapon mod');
+  assert.ok(crusade.lastRolledItem.weapon.name.includes('+'));
+
+  // 3. Relic
+  mockElements.relicTierSelect.value = 'Legendary';
+  crusade.rollRandomRelic();
+  assert.ok(crusade.lastRolledItem.relic, 'Must store last rolled relic');
+  assert.equal(crusade.lastRolledItem.relic.category, 'Crusade Relic (Legendary)');
+
+  // 4. Battle Scar
+  crusade.rollRandomBattleScar();
+  assert.ok(crusade.lastRolledItem.scar, 'Must store last rolled scar');
+  assert.equal(crusade.lastRolledItem.scar.category, 'Battle Scar');
+});
+
+test('crusade: attachRollToDossier queues rolled items and clearQueuedRolls resets list', () => {
+  crusade.clearQueuedRolls();
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 0);
+
+  mockElements.rollerUnitName.value = 'Krieg Leman Russ #1';
+  mockElements.rollerUnitContext.value = 'Survived 2 rounds under heavy fire.';
+  crusade.attachRollToDossier('trait');
+
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 1);
+  assert.equal(crusade.getCrusadeState().queuedRolls[0].unit, 'Krieg Leman Russ #1');
+  assert.equal(mockElements.queuedCountLabel.textContent, '1');
+
+  // Attach another item
+  mockElements.rollerUnitName.value = 'Watchmaster Dreir';
+  mockElements.rollerUnitContext.value = 'Took devastating blow in melee.';
+  crusade.attachRollToDossier('scar');
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 2);
+
+  // Remove first item
+  crusade.removeQueuedRoll(0);
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 1);
+  assert.equal(crusade.getCrusadeState().queuedRolls[0].unit, 'Watchmaster Dreir');
+
+  // Clear list
+  crusade.clearQueuedRolls();
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 0);
+  assert.equal(mockElements.queuedCountLabel.textContent, '0');
+});
+
+test('crusade: buildMasterDossierString compiles comprehensive battle and unit progression dossier', () => {
+  mockElements.dossierChannel.value = 'alpha';
+  mockElements.dossierModeNode.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  mockElements.dossierOutcome.value = 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)';
+  mockElements.dossierSecretCode.value = 'A9F';
+  mockElements.dossierBattleNotes.value = 'Held the frontline and extracted with full supply cache.';
+
+  crusade.clearQueuedRolls();
+  mockElements.rollerUnitName.value = "Mercy's Delay";
+  mockElements.rollerUnitContext.value = 'Held the center';
+  crusade.attachRollToDossier('relic');
+
+  const dossierStr = crusade.buildMasterDossierString();
+  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
+  assert.ok(dossierStr.includes('COMMANDER ALPHA (THE SANCTUARY OF ASH)'));
+  assert.ok(dossierStr.includes('Golgotha Arbor-Basin'));
+  assert.ok(dossierStr.includes('SECRET OBJECTIVE CODE: [A9F]'));
+  assert.ok(dossierStr.includes("Mercy's Delay"));
+  assert.ok(dossierStr.includes('Held the frontline'));
+});
+
+test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.dossierChannel.value = 'alpha';
+
+  crusade.transmitMasterBattleDossier();
+  assert.equal(transmittedChannel, 'alpha');
+  assert.ok(transmittedPayload.includes('MASTER POST-BATTLE'));
+  assert.ok(transmittedPayload.includes('THE SANCTUARY OF ASH'));
+});
+
+test('crusade: saveCrusadeState and initCrusadePage restore state across tab navigation', () => {
+  mockLocalStorage.clear();
+  mockLocalStorage.setItem(crusade.CRUSADE_STATE_KEY, JSON.stringify({
+    activeTab: 'forge',
+    selectedTree: 'Desecrators',
+    alphaSP: 12,
+    alphaCP: 4,
+    betaSP: 9,
+    betaCP: 3,
+    hordeSP: 6,
+    hordeCP: 2,
+    queuedRolls: [
+      { unit: 'Krieg Sentinel', context: 'Scouted forward', category: 'Battle Trait (Mounted)', name: 'Outriders', roll: 'D6 = 2', desc: 'Fast move' }
+    ]
+  }));
+
+  crusade.initCrusadePage();
+
+  assert.equal(crusade.getCrusadeState().alphaSP, 12);
+  assert.equal(crusade.getCrusadeState().betaSP, 9);
+  assert.equal(crusade.getCrusadeState().hordeSP, 6);
+  assert.equal(mockElements.alphaSP.textContent, '12');
+  assert.equal(mockElements.betaSP.textContent, '9');
+  assert.equal(mockElements.hordeSP.textContent, '6');
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 1);
+  assert.equal(mockElements.queuedCountLabel.textContent, '1');
+});
+````
+
+---
+
+## File: `tests/ui/vox.test.js` <a id="file-testsuivoxtestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const VOX_HTML_PATH = path.join(ROOT_DIR, 'pages/vox.html');
+
+// Read vox.html and extract script block
+const voxHtml = fs.readFileSync(VOX_HTML_PATH, 'utf8');
+const scriptMatches = voxHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/vox.html');
+const voxScriptCode = scriptMatches[1];
+
+// Set up mock DOM and sessionStorage environment
+const sessionStore = new Map();
+const mockSessionStorage = {
+  getItem: (k) => (sessionStore.has(k) ? sessionStore.get(k) : null),
+  setItem: (k, v) => sessionStore.set(k, String(v)),
+  removeItem: (k) => sessionStore.delete(k),
+  clear: () => sessionStore.clear()
+};
+
+function createMockClassList() {
+  const classes = new Set();
+  return {
+    add: (c) => classes.add(c),
+    remove: (c) => classes.delete(c),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) classes.delete(c);
+        else classes.add(c);
+      } else if (force) {
+        classes.add(c);
+      } else {
+        classes.delete(c);
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
+const mockElements = {
+  authScreen: { classList: createMockClassList() },
+  terminalScreen: { classList: createMockClassList() },
+  sealStatusBadge: { innerHTML: '', textContent: '' },
+  sealSubtitle: { innerHTML: '', textContent: '' },
+  passLabel: { textContent: '' },
+  sealActionBtn: { textContent: '' },
+  cardAlpha: { classList: createMockClassList() },
+  cardBeta: { classList: createMockClassList() },
+  passInput: { value: '' },
+  authErrorMsg: { textContent: '', classList: createMockClassList() },
+  activeConduitLabel: { textContent: '' },
+  pendingDossierNotice: { classList: createMockClassList() },
+  subWinDirect: { classList: createMockClassList() },
+  subWinInterferences: { classList: createMockClassList() },
+  winBtn1: { classList: createMockClassList() },
+  winBtn2: { classList: createMockClassList() },
+  directMessagesBox: { innerHTML: '', dataset: {}, scrollTop: 0, scrollHeight: 100 },
+  interferencesBox: { innerHTML: '', dataset: {}, scrollTop: 0, scrollHeight: 100 },
+  interferenceCountBadge: { textContent: '' },
+  questionInput: { value: '' }
+};
+
+const mockDocument = {
+  getElementById: (id) => mockElements[id] || null,
+  createElement: (tag) => {
+    let _text = '';
+    const el = {
+      tagName: tag.toUpperCase(),
+      className: '',
+      get textContent() { return _text; },
+      set textContent(v) { _text = v; this.innerHTML = v; },
+      innerHTML: '',
+      children: [],
+      classList: createMockClassList(),
+      appendChild: (c) => { el.children.push(c); return c; },
+      querySelector: (sel) => el.children[0] || null,
+      closest: () => ({ scrollTop: 0, scrollHeight: 100 })
+    };
+    return el;
+  }
+};
+
+let tickEvents = [];
+let stampPlayed = false;
+
+const mockWindow = {
+  addEventListener: () => {},
+  VoxAudio: {
+    playTeletypeTick: (mode) => tickEvents.push(mode),
+    playDossierStamp: () => { stampPlayed = true; },
+    playScarHazard: () => {}
+  }
+};
+
+// RPC mock results
+const rpcCalls = [];
+let mockRpcHandler = async (fnName, params) => {
+  rpcCalls.push({ fnName, params });
+  if (fnName === 'check_channel_seal') return true;
+  if (fnName === 'unlock_or_seal_channel') return { ok: true };
+  if (fnName === 'send_vox_message') return { ok: true };
+  if (fnName === 'get_vox_terminal_data') return { ok: true, messages: [], interferences: [] };
+  return null;
+};
+
+// Evaluate script in mock environment
+const evalFn = new Function(
+  'document',
+  'window',
+  'sessionStorage',
+  'fetch',
+  'console',
+  'setInterval',
+  'clearInterval',
+  `${voxScriptCode}; return {
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    SEEN_IDS_STORAGE_KEY,
+    SESSION_AUTH_KEY,
+    checkPendingDossierBuffer,
+    selectConduit,
+    handleSealAction,
+    flushPendingDossierIfAny,
+    streamTextIntoElement,
+    formatRedactedHtml,
+    switchSubWindow,
+    lockTerminal,
+    getSelectedChannel: () => selectedChannel,
+    getActivePassphrase: () => activePassphrase
+  };`
+);
+
+const vox = evalFn(
+  mockDocument,
+  mockWindow,
+  mockSessionStorage,
+  async (url, opts) => {
+    const parts = url.split('/rpc/');
+    const fnName = parts[1];
+    const params = opts && opts.body ? JSON.parse(opts.body) : {};
+    const res = await mockRpcHandler(fnName, params);
+    return {
+      ok: true,
+      json: async () => res
+    };
+  },
+  console,
+  (fn, ms) => 1234,
+  (id) => {}
+);
+
+test('vox: checkPendingDossierBuffer detects pending dossier payload from sessionStorage', () => {
+  sessionStore.clear();
+  assert.equal(vox.checkPendingDossierBuffer(), null);
+  assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), true);
+
+  const payload = {
+    channel: 'beta',
+    text: '+++ ORDO MALLEUS DOSSIER TRANSMISSION +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(payload));
+
+  const detected = vox.checkPendingDossierBuffer();
+  assert.ok(detected, 'Must detect pending dossier from sessionStorage');
+  assert.equal(detected.channel, 'beta');
+  assert.equal(detected.text, payload.text);
+  assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), false);
+});
+
+test('vox: selectConduit toggles selected channel and updates UI elements', async () => {
+  await vox.selectConduit('beta');
+  assert.equal(vox.getSelectedChannel(), 'beta');
+  assert.equal(mockElements.cardBeta.classList.contains('selected'), true);
+  assert.equal(mockElements.cardAlpha.classList.contains('selected'), false);
+
+  await vox.selectConduit('alpha');
+  assert.equal(vox.getSelectedChannel(), 'alpha');
+  assert.equal(mockElements.cardAlpha.classList.contains('selected'), true);
+  assert.equal(mockElements.cardBeta.classList.contains('selected'), false);
+});
+
+test('vox: switchSubWindow toggles Direct vs Interferences monitors', () => {
+  vox.switchSubWindow('interferences');
+  assert.equal(mockElements.subWinDirect.classList.contains('hidden'), true);
+  assert.equal(mockElements.subWinInterferences.classList.contains('hidden'), false);
+  assert.equal(mockElements.winBtn2.classList.contains('active'), true);
+  assert.equal(mockElements.winBtn1.classList.contains('active'), false);
+
+  vox.switchSubWindow('direct');
+  assert.equal(mockElements.subWinDirect.classList.contains('hidden'), false);
+  assert.equal(mockElements.subWinInterferences.classList.contains('hidden'), true);
+  assert.equal(mockElements.winBtn1.classList.contains('active'), true);
+  assert.equal(mockElements.winBtn2.classList.contains('active'), false);
+});
+
+test('vox: formatRedactedHtml replaces [REDACTED] with styled censor-bar', () => {
+  const input = 'Hostile intercepted near [REDACTED] hive node.';
+  const output = vox.formatRedactedHtml(input);
+  assert.ok(output.includes('<span class="censor-bar">▓▓REDACTED▓▓</span>'));
+  assert.ok(!output.includes('[REDACTED]'));
+});
+
+test('vox: handleSealAction validates passphrase, authenticates, and unlocks terminal', async () => {
+  mockElements.passInput.value = 'ab'; // Too short
+  await vox.handleSealAction();
+  assert.equal(mockElements.authErrorMsg.textContent, 'Passphrase must be at least 3 characters.');
+  assert.equal(mockElements.authErrorMsg.classList.contains('hidden'), false);
+
+  // Valid passphrase
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  assert.equal(vox.getActivePassphrase(), 'VermilionKey99');
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), true);
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), false);
+
+  const storedAuth = sessionStore.get(vox.SESSION_AUTH_KEY);
+  assert.ok(storedAuth, 'Must store active session in sessionStorage');
+  assert.equal(JSON.parse(storedAuth).pass, 'VermilionKey99');
+});
+
+test('vox: flushPendingDossierIfAny transmits queued payload and clears sessionStorage buffer', async () => {
+  sessionStore.clear();
+  const testPayload = {
+    channel: 'alpha',
+    text: '+++ COMPILER TRANSMISSION TO CAMPAIGN MASTER +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(testPayload));
+
+  rpcCalls.length = 0;
+  await vox.flushPendingDossierIfAny();
+
+  assert.equal(sessionStore.has('foa_pending_vox_payload'), false, 'Must clear pending payload buffer');
+  const sendCall = rpcCalls.find(c => c.fnName === 'send_vox_message');
+  assert.ok(sendCall, 'Must invoke send_vox_message RPC endpoint');
+  assert.equal(sendCall.params.p_channel, 'alpha');
+  assert.equal(sendCall.params.p_question, testPayload.text);
+});
+
+test('vox: lockTerminal clears passphrase and hides terminal screen', () => {
+  vox.lockTerminal();
+  assert.equal(vox.getActivePassphrase(), null);
+  assert.equal(sessionStore.has(vox.SESSION_AUTH_KEY), false);
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), true);
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), false);
+});
 ````

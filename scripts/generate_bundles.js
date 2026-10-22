@@ -98,7 +98,13 @@ const TEST_FILES = [
   'tests/js/spawner.test.js',
   'tests/js/app.test.js',
   'tests/js/vox-audio.test.js',
-  'tests/ui/pages.test.js'
+  'tests/ui/pages.test.js',
+  'tests/ui/briefing.test.js',
+  'tests/ui/pvp.test.js',
+  'tests/ui/rogue.test.js',
+  'tests/ui/roster.test.js',
+  'tests/ui/crusade.test.js',
+  'tests/ui/vox.test.js'
 ];
 
 compileBundle(
@@ -132,15 +138,31 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_rogue.md')
 );
 
-// 7. PAGE 5: Rosters & Nemesis Ledger
+// 7. PAGE 5: Mode 4 Hostile Threat Matrix & Nemeses
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Rosters & Nemesis Ledger',
-  'Complete source code for the Crusade Order of Battle rosters and Cross-Mode Nemesis Ledger (`pages/roster.html`).',
+  '📦 Fires of Armageddon // Bundle: Mode 4 - Hostile Matrix & Nemesis Archive',
+  'Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Ledger, Nemesis Dossier Induction Compiler, Unbound Datasheets, and Custom Shelf Pool (`pages/roster.html`).',
   ['pages/roster.html'],
   path.join(BUNDLES_DIR, 'bundle_roster.md')
 );
 
-// 8. PAGE 6: Field Codex & Tutorials
+// 8. PAGE 6: Mode 5 Crusade Quartermaster
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Command & Quartermaster',
+  'Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrative Trees, Random Upgrade Rollers (Traits, Mods, Relics, Scars), and Master Battle Dossier Compiler (`pages/crusade.html`).',
+  ['pages/crusade.html'],
+  path.join(BUNDLES_DIR, 'bundle_crusade.md')
+);
+
+// 9. PAGE 7: Mode 7 Astropath Vox
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Mode 7 - Astropathic CRT Vox-Terminal',
+  'Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Security, Real-Time Teletype Audio Streaming, and Interferences Array (`pages/vox.html`).',
+  ['pages/vox.html'],
+  path.join(BUNDLES_DIR, 'bundle_vox.md')
+);
+
+// 10. PAGE 8: Field Codex & Tutorials
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Field Codex & Quickstart Tutorials',
   'Complete source code for the introductory tutorial and field operations manual (`pages/welcome.html`).',
@@ -148,7 +170,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_welcome.md')
 );
 
-// 9. TACTICAL STYLESHEET & ASSETS
+// 11. TACTICAL STYLESHEET & ASSETS
 const CSS_FILES = [
   'css/style.css',
   'assets/favicon.svg'
@@ -161,7 +183,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_css.md')
 );
 
-// 10. PACKAGES, CONFIGURATION & DOCUMENTATION
+// 12. PACKAGES, CONFIGURATION & DOCUMENTATION
 const PACKAGE_FILES = [
   'package.json',
   'wrangler.jsonc',
@@ -177,7 +199,7 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_packages.md')
 );
 
-// 11. BUNDLES DIRECTORY README
+// 13. BUNDLES DIRECTORY README
 const bundlesReadme = `# 📦 Modular Codebase Bundles
 
 This directory contains standalone, page-by-page and component-focused Markdown bundles designed for targeted NotebookLM and Gemini context ingestion.
@@ -186,11 +208,13 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 | :--- | :--- | :--- |
 | [\`bundle_index.md\`](bundle_index.md) | **Home Launchpad & Mode 1 Spawner** | \`index.html\`, \`pages/spawner.html\` |
 | [\`bundle_javascript.md\`](bundle_javascript.md) | **JavaScript Engine & Audio** | \`js/data.js\`, \`js/rng.js\`, \`js/spawner.js\`, \`js/app.js\`, \`js/vox-audio.js\` |
-| [\`bundle_tests.md\`](bundle_tests.md) | **Test Suites & Verification** | \`tests/js/*.test.js\`, \`tests/ui/pages.test.js\` |
+| [\`bundle_tests.md\`](bundle_tests.md) | **Test Suites & Verification** | \`tests/**/*.test.js\` |
 | [\`bundle_briefing.md\`](bundle_briefing.md) | **Briefings, Ship Slider & Atlas** | \`pages/briefing.html\` |
 | [\`bundle_pvp.md\`](bundle_pvp.md) | **Mode 2: 1v1 Ash Wastes PvP** | \`pages/pvp.html\` |
 | [\`bundle_rogue.md\`](bundle_rogue.md) | **Mode 3: Rogue Sector & AI Tracker** | \`pages/rogue.html\` |
-| [\`bundle_roster.md\`](bundle_roster.md) | **Rosters & Nemesis Ledger** | \`pages/roster.html\` |
+| [\`bundle_roster.md\`](bundle_roster.md) | **Mode 4: Hostile Matrix & Nemeses** | \`pages/roster.html\` |
+| [\`bundle_crusade.md\`](bundle_crusade.md) | **Mode 5: Crusade Quartermaster** | \`pages/crusade.html\` |
+| [\`bundle_vox.md\`](bundle_vox.md) | **Mode 7: Astropath Vox-Terminal** | \`pages/vox.html\` |
 | [\`bundle_welcome.md\`](bundle_welcome.md) | **Field Codex & Tutorials** | \`pages/welcome.html\` |
 | [\`bundle_css.md\`](bundle_css.md) | **Sanctuary-Noctis Stylesheet & Assets** | \`css/style.css\`, \`assets/favicon.svg\` |
 | [\`bundle_packages.md\`](bundle_packages.md) | **Packages, Config & Documentation** | \`package.json\`, \`wrangler.jsonc\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\` |
@@ -199,3 +223,4 @@ This directory contains standalone, page-by-page and component-focused Markdown 
 
 fs.writeFileSync(path.join(BUNDLES_DIR, 'README.md'), bundlesReadme, 'utf8');
 console.log('Generated bundles/README.md');
+

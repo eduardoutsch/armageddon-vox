@@ -14,10 +14,12 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
 
   assert.ok(indexHtml.includes('<nav class="suite-nav">'), 'Missing suite navigation bar in index.html');
   assert.ok(indexHtml.includes('href="pages/spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>'));
-  assert.ok(indexHtml.includes('href="pages/briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>'));
-  assert.ok(indexHtml.includes('href="pages/pvp.html"'));
-  assert.ok(indexHtml.includes('href="pages/rogue.html"'));
-  assert.ok(indexHtml.includes('href="pages/roster.html"'));
+  assert.ok(indexHtml.includes('href="pages/pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>'));
+  assert.ok(indexHtml.includes('href="pages/rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>'));
+  assert.ok(indexHtml.includes('href="pages/roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>'));
+  assert.ok(indexHtml.includes('href="pages/crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>'));
+  assert.ok(indexHtml.includes('href="pages/briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>'));
+  assert.ok(indexHtml.includes('href="pages/vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>'));
 
   // Stylesheet and Vox Audio in index.html
   assert.ok(indexHtml.includes('<link rel="stylesheet" href="css/style.css">'));
@@ -33,7 +35,7 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
-  const subpages = ['spawner.html', 'pvp.html', 'rogue.html', 'roster.html', 'briefing.html', 'welcome.html'];
+  const subpages = ['spawner.html', 'pvp.html', 'rogue.html', 'roster.html', 'crusade.html', 'briefing.html', 'vox.html', 'welcome.html'];
   const expectedBriefingSnippet = 'href="briefing.html" class="suite-link';
   const expectedRootIndexSnippet = 'href="../index.html" class="suite-link';
 
@@ -79,7 +81,7 @@ test('All HTML pages link to assets/favicon.svg and apple-touch-icon in /assets'
     'index.html must include <link rel="apple-touch-icon" href="assets/favicon.svg">'
   );
 
-  const subpages = ['pages/spawner.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/welcome.html'];
+  const subpages = ['pages/spawner.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/crusade.html', 'pages/vox.html', 'pages/welcome.html'];
   for (const page of subpages) {
     const html = readPage(page);
     assert.match(
@@ -217,6 +219,8 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_pvp.md', check: 'pages/pvp.html' },
     { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
     { file: 'bundle_roster.md', check: 'pages/roster.html' },
+    { file: 'bundle_crusade.md', check: 'pages/crusade.html' },
+    { file: 'bundle_vox.md', check: 'pages/vox.html' },
     { file: 'bundle_welcome.md', check: 'pages/welcome.html' },
     { file: 'bundle_css.md', check: 'css/style.css' },
     { file: 'bundle_packages.md', check: 'package.json' }

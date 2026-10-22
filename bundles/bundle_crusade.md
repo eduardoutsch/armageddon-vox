@@ -1,0 +1,926 @@
+# 📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Command & Quartermaster
+
+Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrative Trees, Random Upgrade Rollers (Traits, Mods, Relics, Scars), and Master Battle Dossier Compiler (`pages/crusade.html`).
+
+## 📑 Table of Contents
+- [pages/crusade.html](#file-pagescrusadehtml)
+
+---
+
+## File: `pages/crusade.html` <a id="file-pagescrusadehtml"></a>
+
+````html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fires of Armageddon // Crusade Command &amp; Quartermaster</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="apple-touch-icon" href="../assets/favicon.svg">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .scoreboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .alliance-score-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 4px solid var(--gold);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .alliance-score-card.beta-card { border-top-color: var(--blue); }
+    .alliance-score-card.horde-card { border-top-color: var(--red); }
+
+    .roller-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .roller-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    }
+    .dice-result-box {
+      background: #07090e;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      min-height: 92px;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+    .dice-pip-badge {
+      display: inline-block;
+      background: var(--gold);
+      color: #000;
+      font-family: monospace;
+      font-weight: 900;
+      font-size: 0.85rem;
+      padding: 2px 8px;
+      border-radius: 5px;
+      margin-right: 6px;
+    }
+    .queued-item-pill {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: #0b0d13;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 0.85rem;
+    }
+    .master-dossier-preview {
+      background: #030805;
+      border: 1.5px dashed rgba(0, 255, 136, 0.45);
+      border-radius: 10px;
+      padding: 15px;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.84rem;
+      color: #66ffb8;
+      text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+      white-space: pre-wrap;
+      line-height: 1.52;
+      margin: 14px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CAMPAIGN SUITE TOP NAVIGATION -->
+  <nav class="suite-nav">
+    <a href="../index.html" class="suite-link">📖 Field Codex &amp; Guide</a>
+    <a href="spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
+    <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
+    <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
+    <a href="roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>
+    <a href="crusade.html" class="suite-link active">🏆 Mode 5: Crusade Quartermaster</a>
+    <a href="briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>
+    <a href="vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>
+  </nav>
+
+<div class="app-shell">
+
+  <div class="hero-card" style="margin-bottom:18px;">
+    <div class="hero-header">
+      <div class="status-pill">Global Theatre Command • Phase Standings &amp; Post-Battle Forge</div>
+      <h1 class="hero-title">Crusade Command &amp; Quartermaster</h1>
+      <p class="hero-subtitle">
+        Track the 3-Way Alliance War across all 4 Campaign Phases, roll random Battle Traits, Weapon Modifications, Crusade Relics &amp; Battle Scars, and transmit your fused Master Battle Dossier directly to the Campaign Master.
+      </p>
+    </div>
+
+    <div class="nav-pills" style="margin-bottom:0;">
+      <button id="cruTabBtn1" class="active" onclick="switchCrusadeTab('board')">🏆 1. Global Scoreboard &amp; Phase Tree</button>
+      <button id="cruTabBtn2" onclick="switchCrusadeTab('forge')">🎲 2. Upgrade Rollers &amp; Master Battle Dossier</button>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 1: GLOBAL 3-WAY ALLIANCE COMMAND BOARD & PHASE 1-4 TREE (CONCEPT 4)-->
+  <!-- ===================================================================== -->
+  <div id="cruTabBoard">
+
+    <div class="section-header" style="margin-top:0;">
+      <h3>Active Campaign Phase: Phase 1 of 4 (Planetfall &amp; Opening Offensives)</h3>
+      <span class="hud-sub">Most SPts at Phase End = +1 Campaign Point &amp; Success Path</span>
+    </div>
+
+    <!-- 3-WAY ALLIANCE SCOREBOARD -->
+    <div class="scoreboard-grid">
+      <!-- ALPHA -->
+      <div class="alliance-score-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">🛡️ GATEBREAKERS</span>
+          <span class="hud-sub">Supply Cache Tokens: <strong id="alphaCacheCount">0</strong></span>
+        </div>
+        <h3 style="margin:8px 0 2px 0; color:#fff;">🦅 Commander Alpha</h3>
+        <div style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">The Sanctuary of Ash (Astra Militarum)</div>
+
+        <div style="display:flex; justify-content:space-between; background:#090b10; padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
+          <div>
+            <span class="hud-label">STRATEGIC PTS</span>
+            <div class="hud-val-row" style="margin-top:4px;">
+              <button class="mini-btn" onclick="adjScore('alphaSP', -1)">−</button>
+              <span class="hud-num" id="alphaSP" style="color:var(--gold);">0</span>
+              <button class="mini-btn" onclick="adjScore('alphaSP', 1)">+</button>
+            </div>
+          </div>
+          <div>
+            <span class="hud-label">CAMPAIGN PTS</span>
+            <div class="hud-val-row" style="margin-top:4px;">
+              <button class="mini-btn" onclick="adjScore('alphaCP', -1)">−</button>
+              <span class="hud-num" id="alphaCP" style="color:#fff;">0</span>
+              <button class="mini-btn" onclick="adjScore('alphaCP', 1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BETA -->
+      <div class="alliance-score-card beta-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="rule-tag" style="border-color:var(--blue); color:var(--blue);">⚔️ ALLIANCE PENDING</span>
+          <span class="hud-sub">Supply Cache Tokens: <strong id="betaCacheCount">0</strong></span>
+        </div>
+        <h3 style="margin:8px 0 2px 0; color:#fff;">💀 Commander Beta</h3>
+        <div style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">JUNEBUG (Awaiting Phase 1 Roster)</div>
+
+        <div style="display:flex; justify-content:space-between; background:#090b10; padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
+          <div>
+            <span class="hud-label">STRATEGIC PTS</span>
+            <div class="hud-val-row" style="margin-top:4px;">
+              <button class="mini-btn" onclick="adjScore('betaSP', -1)">−</button>
+              <span class="hud-num" id="betaSP" style="color:var(--blue);">0</span>
+              <button class="mini-btn" onclick="adjScore('betaSP', 1)">+</button>
+            </div>
+          </div>
+          <div>
+            <span class="hud-label">CAMPAIGN PTS</span>
+            <div class="hud-val-row" style="margin-top:4px;">
+              <button class="mini-btn" onclick="adjScore('betaCP', -1)">−</button>
+              <span class="hud-num" id="betaCP" style="color:#fff;">0</span>
+              <button class="mini-btn" onclick="adjScore('betaCP', 1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3RD ALLIANCE (HORDE OVERLORD) -->
+      <div class="alliance-score-card horde-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="rule-tag" style="border-color:var(--red); color:var(--red);">👁️‍🗨️ UNCHOSEN 3RD BANNER</span>
+          <span class="hud-sub">Origin: Unknown</span>
+        </div>
+        <h3 style="margin:8px 0 2px 0; color:#fff;">🔥 3rd Alliance Overlord</h3>
+        <div style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">Campaign Master (Horde &amp; Unbound AI)</div>
+
+        <div style="display:flex; justify-content:space-between; background:#090b10; padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
+          <div>
+            <span class="hud-label">STRATEGIC PTS</span>
+            <div class="hud-val-row" style="margin-top:4px;">
+              <button class="mini-btn" onclick="adjScore('hordeSP', -1)">−</button>
+              <span class="hud-num" id="hordeSP" style="color:var(--red);">0</span>
+              <button class="mini-btn" onclick="adjScore('hordeSP', 1)">+</button>
+            </div>
+          </div>
+          <div>
+            <span class="hud-label">CAMPAIGN PTS</span>
+            <div class="hud-val-row" style="margin-top:4px;">
+              <button class="mini-btn" onclick="adjScore('hordeCP', -1)">−</button>
+              <span class="hud-num" id="hordeCP" style="color:#fff;">0</span>
+              <button class="mini-btn" onclick="adjScore('hordeCP', 1)">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE 4-PHASE ALLIANCE BRANCHING TREE INSPECTOR -->
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>Armageddon 4-Phase Narrative Goal &amp; Buff Tree</h3>
+        <span class="hud-sub">Inspect Success vs. Failure Branching Paths</span>
+      </div>
+      <div class="filter-bar" style="margin-bottom:14px;">
+        <button type="button" class="chip active" id="treeBtnGate" onclick="selectAllianceTree('Gatebreakers')">🛡️ Gatebreakers Path</button>
+        <button type="button" class="chip" id="treeBtnDes" onclick="selectAllianceTree('Desecrators')">💀 Desecrators Path</button>
+        <button type="button" class="chip" id="treeBtnMar" onclick="selectAllianceTree('Marauders')">⚔️ Marauders Path</button>
+      </div>
+      <div id="allianceTreeBox"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 2: PURE RANDOM UPGRADE ROLLERS & FUSED MASTER BATTLE DOSSIER      -->
+  <!-- ===================================================================== -->
+  <div id="cruTabForge" class="hidden">
+
+    <!-- PART A: PURE RANDOM UPGRADE, RELIC & BATTLE SCAR ROLLERS -->
+    <div class="card" style="border-left:4px solid var(--purple); margin-bottom:20px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>1. The Quartermaster's Random Upgrade, Relic &amp; Scar Rollers</h3>
+        <span class="hud-sub">"Upgrades &amp; Scars Have Stories"</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:14px;">
+        Whenever a unit ranks up or fails an Out of Action test, enter the unit's name and what it did in battle below, roll the dice, and click <strong>➕ Attach Rolled Result to Master Dossier</strong> so the Campaign Master can christen its custom lore name over the CRT Vox!
+      </p>
+
+      <!-- SOURCE POOL SELECTOR & UNIT CONTEXT BAR -->
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Rulebook Table Pool</label>
+          <select id="forgeSourcePool" onchange="saveCrusadeState()" style="width:100%; padding:10px; font-weight:700;">
+            <option value="Armageddon">🌋 Crusade: Armageddon Theatre (Universal — Active)</option>
+            <option value="AlphaCodex">🦅 Astra Militarum Codex (Ready for Codex Import)</option>
+            <option value="BetaCodex">💀 Commander Beta Faction Codex (Ready for Codex Import)</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Target Unit Name (For Dossier Story)</label>
+          <input type="text" id="rollerUnitName" placeholder="e.g. 'Mercy's Delay' / Krieg Squad II / Shrine-Breaker #1" style="width:100%; padding:10px;">
+        </div>
+      </div>
+
+      <label class="hud-label" style="display:block; margin-bottom:4px;">Brief Battlefield Context (How did this unit earn this upgrade/scar?)</label>
+      <input type="text" id="rollerUnitContext" placeholder="e.g. 'Held the center bunker on 1 wound against 3 waves' or 'Blown up by a Melta bomb in Round 4'" style="width:100%; padding:10px; margin-bottom:16px;">
+
+      <!-- 4 PURE RANDOM ROLLER CARDS -->
+      <div class="roller-grid">
+
+        <!-- ROLLER 1: BATTLE TRAITS (D6) -->
+        <div class="roller-card" style="border-top:3px solid var(--gold);">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="color:var(--gold); font-size:1rem;">⚔️ Battle Traits (1D6)</strong>
+              <select id="traitUnitType" style="padding:4px 8px; font-size:0.78rem;">
+                <option value="Infantry">Infantry Units</option>
+                <option value="Mounted">Mounted Units</option>
+                <option value="MonsterVehicle">Monster / Vehicle</option>
+                <option value="Character">Character Units</option>
+              </select>
+            </div>
+            <div id="traitResultBox" class="dice-result-box">
+              <span style="color:var(--muted);">Select unit category and roll 1D6 on the Battle Traits table...</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-gold" data-sfx="custom" onclick="rollRandomBattleTrait()" style="flex:1;">🎲 Roll Trait (D6)</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="attachRollToDossier('trait')">➕ Attach</button>
+          </div>
+        </div>
+
+        <!-- ROLLER 2: WEAPON MODIFICATIONS (2x D6) -->
+        <div class="roller-card" style="border-top:3px solid var(--blue);">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="color:var(--blue); font-size:1rem;">🔧 Weapon Modifications (2x D6)</strong>
+              <span class="hud-sub">+1 Crusade Pt</span>
+            </div>
+            <div id="weaponResultBox" class="dice-result-box">
+              <span style="color:var(--muted);">Rolls 2 distinct D6 results on the 11th Ed Weapon Modifications table...</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-blue" data-sfx="custom" onclick="rollRandomWeaponMod()" style="flex:1;">🎲 Roll 2x D6 Mods</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="attachRollToDossier('weapon')">➕ Attach</button>
+          </div>
+        </div>
+
+        <!-- ROLLER 3: CRUSADE RELICS RANDOMIZER -->
+        <div class="roller-card" style="border-top:3px solid var(--purple);">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="color:var(--purple); font-size:1rem;">⚱️ Crusade Relics (Character)</strong>
+              <select id="relicTierSelect" style="padding:4px 8px; font-size:0.78rem;">
+                <option value="Artificer">Artificer (+1 CrP)</option>
+                <option value="Antiquity">Antiquity (+2 CrP)</option>
+                <option value="Legendary">Legendary (+3 CrP)</option>
+              </select>
+            </div>
+            <div id="relicResultBox" class="dice-result-box">
+              <span style="color:var(--muted);">Select Relic tier and draw from the Armageddon Reliquary Vault...</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-gold" data-sfx="custom" onclick="rollRandomRelic()" style="flex:1; background:linear-gradient(135deg,#9d5cff,#6b2cf5); color:#fff;">🎲 Roll Relic</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="attachRollToDossier('relic')">➕ Attach</button>
+          </div>
+        </div>
+
+        <!-- ROLLER 4: OUT OF ACTION & BATTLE SCARS (D6) -->
+        <div class="roller-card" style="border-top:3px solid var(--red);">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <strong style="color:var(--red); font-size:1rem;">💀 Out of Action &amp; Scars (D6)</strong>
+              <span class="hud-sub">Fail on 1</span>
+            </div>
+            <div id="scarResultBox" class="dice-result-box">
+              <span style="color:var(--muted);">Roll Out of Action (D6) for a destroyed unit, or roll directly on the Battle Scars table...</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-ghost btn-sm" data-sfx="custom" onclick="rollOutOfActionTest()" style="flex:1;">🎲 Out of Action</button>
+            <button type="button" class="btn-red btn-sm" data-sfx="custom" onclick="rollRandomBattleScar()" style="flex:1;">🎲 Roll Scar (D6)</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="attachRollToDossier('scar')">➕ Attach</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PART B: FUSED POST-BATTLE SPOILS & MASTER DOSSIER COMPILER -->
+    <div class="card" style="border-left:4px solid var(--green);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>2. Fused Master Battle Report, Spoils &amp; Unit Lore Dossier</h3>
+        <span class="hud-sub">Transmits Directly to Astropathic CRT Vox</span>
+      </div>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Reporting Commander Conduit</label>
+          <select id="dossierChannel" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
+            <option value="alpha">🦅 Commander Alpha (Terminal Alpha — The Sanctuary of Ash)</option>
+            <option value="beta">💀 Commander Beta (Terminal Beta — JUNEBUG)</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Mode &amp; Sector Node Fought</label>
+          <select id="dossierModeNode" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
+            <option value="Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Co-op Horde // Node 0 (Golgotha Jungle)</option>
+            <option value="Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Solo Horde // Node 0 (Golgotha Jungle)</option>
+            <option value="Mode 1: Horde Breach // Node 1 (Hive Death Mire — Recon)">Mode 1: Horde // Node 1 (Hive Death Mire — Recon)</option>
+            <option value="Mode 1: Horde Breach // Node 2 (Hive Infernus — Recon)">Mode 1: Horde // Node 2 (Hive Infernus — Recon)</option>
+            <option value="Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)">Mode 2: 1v1 PvP // Node 0 (Golgotha Jungle)</option>
+            <option value="Mode 3: Rogue Sector Auxiliary Clash">Mode 3: Rogue Sector Auxiliary Clash</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Battle Outcome &amp; Survival</label>
+          <select id="dossierOutcome" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
+            <option value="Survived Round 6 Final Stand &amp; Completed Secret Objective (+5 SPts)">Horde: Survived Round 6 &amp; Completed Secret (+5 SPts)</option>
+            <option value="Survived Round 6 Final Stand, Failed Secret Objective">Horde: Survived Round 6, Failed Secret Objective</option>
+            <option value="Wiped Out in Horde Mode, Completed Early-Reveal Secret (+5 SPts)">Horde: Wiped Out, Completed Early Secret (+5 SPts)</option>
+            <option value="Wiped Out in Horde Mode &amp; Failed Secret Objective">Horde: Wiped Out &amp; Failed Secret Objective</option>
+            <option value="1v1 PvP Victory &amp; Achieved Phase Narrative Goal (+5 SPts)">1v1 PvP: Victory &amp; Achieved Phase Goal (+5 SPts)</option>
+            <option value="1v1 PvP Defeat">1v1 PvP: Defeat</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Secret Obj Code &amp; Tag (If Horde Mode)</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="dossierSecretCode" oninput="updateMasterDossierPreview()" placeholder="Code (e.g. A9F)" style="width:110px; padding:10px; text-transform:uppercase;">
+            <select id="dossierSecretTag" onchange="updateMasterDossierPreview()" style="flex:1; padding:10px;">
+              <option value="None / 1v1 Match">No Secret / 1v1 Match</option>
+              <option value="Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)">Action / Relic Tag (Free Honour/Relic)</option>
+              <option value="Kill / Combat Tag (+1 Extra Marked for Greatness [+3 XP])">Kill / Combat Tag (+1 Marked for Greatness)</option>
+              <option value="Support / Fortify / Extraction Tag (Free 0-RP Scar Heal)">Support / Fortify Tag (Free 0-RP Scar Heal)</option>
+              <option value="TRAITOR TAG (Double Bounty: Steal 1 RP/2 SPts +200 Supply Limit + Free Relic/Honour)">TRAITOR TAG (Double Bounty Payout!)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORTIFICATIONS & LEFTOVER SP -->
+      <div class="choice-grid" style="margin-bottom:14px;">
+        <div class="card" style="background:#0b0d13; margin:0; padding:12px;">
+          <span class="hud-label" style="display:block; margin-bottom:6px;">Fortifications Controlled at Round 6 End</span>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:0.82rem;">
+            <label><input type="checkbox" id="fortHosp" onchange="updateMasterDossierPreview()"> Field Hospital (Auto-Pass OOA)</label>
+            <label><input type="checkbox" id="fortAmmo" onchange="updateMasterDossierPreview()"> Ammo Dump (Free Weapon Mod)</label>
+            <label><input type="checkbox" id="fortTrench" onchange="updateMasterDossierPreview()"> War Trench (+1 XP Infantry)</label>
+            <label><input type="checkbox" id="fortFob" onchange="updateMasterDossierPreview()"> FOB (+1 SPt &amp; +1 Hegemony)</label>
+          </div>
+        </div>
+        <div class="card" style="background:#0b0d13; margin:0; padding:12px;">
+          <span class="hud-label" style="display:block; margin-bottom:6px;">Leftover SP Salvage &amp; Ship Directives</span>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="dossierLeftoverSp" onchange="updateMasterDossierPreview()" style="flex:1; padding:8px; font-size:0.82rem;">
+              <option value="0 Leftover SP">0–1 Leftover SP</option>
+              <option value="2 Leftover SP → Orbital Auspex Recon Probe (Reveal Adjacent Node)">2 SP → Auspex Recon Probe</option>
+              <option value="3 Leftover SP → Bank 1v1 Supply Cache Token">3 SP → Bank Supply Cache Token</option>
+              <option value="5 Leftover SP → +2 XP to Surviving Unit">5 SP → +2 XP to Surviving Unit</option>
+              <option value="8 Leftover SP → +1 RP or +100 pts Supply Limit">8 SP → +1 RP or +100 Supply Limit</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUEUED UNIT UPGRADES, RELICS & SCARS LIST -->
+      <div class="section-header" style="margin-top:8px;">
+        <h4 style="margin:0; color:var(--gold);">Attached Unit Upgrades, Relics &amp; Battle Scars (<span id="queuedCountLabel">0</span>)</h4>
+        <button type="button" class="btn-ghost btn-sm" onclick="clearQueuedRolls()">Clear List</button>
+      </div>
+      <div id="queuedRollsContainer" style="margin-bottom:12px;"></div>
+
+      <label class="hud-label" style="display:block; margin-bottom:4px;">Brief Battle Narrative Summary (Key Moments, Heroes, or Betrayals)</label>
+      <textarea id="dossierBattleNotes" oninput="updateMasterDossierPreview()" placeholder="Summarize the highlights of the match so the Campaign Master can chronicle it and christen your units' upgrades and scars..." style="width:100%; min-height:70px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+
+      <!-- LIVE MASTER DOSSIER PREVIEW -->
+      <div class="master-dossier-preview" id="masterDossierPreviewBox"></div>
+
+      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitMasterBattleDossier()">
+        📡 Transmit Directly via Astropathic Vox →
+      </button>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="../js/vox-audio.js"></script>
+<script>
+const CRUSADE_STATE_KEY = 'foa_crusade_quartermaster_v1';
+
+// =========================================================================
+// ARMAGEDDON 4-PHASE ALLIANCE BRANCHING TREES
+// =========================================================================
+const ALLIANCE_TREES = {
+  Gatebreakers: [
+    {
+      phase: "Phase 1: Stabilising the Front",
+      goal: "At the end of each battle, if you are the victor, gain +5 Strategic Points.",
+      success: "SUCCESS (Resurgent Morale → Reclaim the Lost Hives): Each time you purchase Increase Supply Limit, increase Supply Limit by +250 pts instead of +200 pts.",
+      failure: "FAILURE (Grim Determination → Strengthen the Imperator Line): In each battle, the first time a unit from your Crusade army fails a Battle-shock test, it automatically passes instead."
+    },
+    {
+      phase: "Phase 2A (Success Path): Reclaim the Lost Hives",
+      goal: "End of battle: if 2+ non-Aircraft, non-Battle-shocked units are wholly within opponent's deployment zone, gain +5 SPts.",
+      success: "SUCCESS (Commanding Grasp → Raze the Monoliths): In your 2nd Reinforcement step, set up 1 Strategic Reserve unit as if it were Battle Round 3.",
+      failure: "FAILURE (Staged Withdrawal → Light in the Dark): Select 1 INFANTRY or BATTLELINE unit at Declare Battle Formations to gain Scouts 6\"."
+    },
+    {
+      phase: "Phase 2B (Failure Path): Strengthen the Imperator Line",
+      goal: "End of battle: if points value of destroyed enemy units exceeds yours, gain +5 SPts.",
+      success: "SUCCESS (Faith Rekindled → Shatter the Red Angel's Gate): Attacks targeting units with 1+ Warp Counters re-roll Hit rolls of 1 and Wound rolls of 1.",
+      failure: "FAILURE (Forlorn Hope → Shatter the Red Angel's Gate): Once per turn, re-roll one Charge roll made for a unit in your Crusade army."
+    }
+  ],
+  Desecrators: [
+    {
+      phase: "Phase 1: Planetfall",
+      goal: "At the end of each battle, if you are the victor, gain +5 Strategic Points.",
+      success: "SUCCESS (Momentum Unchecked → The Red Angel'sSummons): Add +1 to Advance and Charge rolls for units with 1+ Warp Counters.",
+      failure: "FAILURE (Spreading Corruption → Regroup in the Fire Wastes): If 3+ units end wholly within 9\" of different battlefield edges, gain +5 SPts."
+    },
+    {
+      phase: "Phase 2: Feed the Storm / The Dark Gods Demand",
+      goal: "Sacrifice or corrupt objective markers with Warp Rites and slaughter enemy Champions.",
+      success: "SUCCESS: While controlling more objectives in No Man's Land, re-roll one result on the Anomalies table each round.",
+      failure: "FAILURE (Fully Committed): Each time you spend 1+ CP on a Stratagem, roll a D6: on a 5+, refund 1 CP."
+    }
+  ],
+  Marauders: [
+    {
+      phase: "Phase 1: Drawn to the Fight",
+      goal: "At the end of each battle, if you are the victor, gain +5 Strategic Points.",
+      success: "SUCCESS (Spoils of Victory → Forgotten Relics): Whenever a CHARACTER gains a Crusade Relic, it can select an Antiquity Relic regardless of its Rank!",
+      failure: "FAILURE (Blunted Momentum → Escalation): After any battle you do not win, your first Increase Supply Limit Requisition costs 1 fewer RP."
+    },
+    {
+      phase: "Phase 2A (Success Path): Forgotten Relics",
+      goal: "Select your highest-XP unit at start of Round 1; if it destroys 1+ enemy units this battle, gain +5 SPts.",
+      success: "SUCCESS (Alpha Strike → Decapitation): Whenever the enemy Warlord is destroyed, all enemy units on the battlefield must take a Battle-shock test.",
+      failure: "FAILURE (Guerrilla Warfare → Bloodied but Unbowed): When you are the Attacker, select 1 INFANTRY unit to gain the Infiltrators ability."
+    },
+    {
+      phase: "Phase 2B (Failure Path): Escalation",
+      goal: "End of battle: if 3+ units are each wholly within a different battlefield quarter, gain +5 SPts.",
+      success: "SUCCESS (Overwhelming Numbers → Decapitation): At the end of each battle, each surviving BATTLELINE unit on the battlefield gains +1 bonus XP.",
+      failure: "FAILURE (Spiteful Onslaught → Bloodied but Unbowed): CHARACTER units from your Crusade army can re-roll Charge rolls."
+    }
+  ]
+};
+
+// =========================================================================
+// 11TH ED CRUSADE & ARMAGEDDON RANDOM ROLLER TABLES
+// =========================================================================
+const BATTLE_TRAIT_TABLES = {
+  Infantry: [
+    { d6: 1, name: "Fortune's Favoured", desc: "Once per battle, you can re-roll one Hit roll, one Wound roll, or one Saving throw made for this unit." },
+    { d6: 2, name: "Hellsape Veterans", desc: "Models in this unit have Feel No Pain 5+ against Mortal Wounds and Anomaly effects." },
+    { d6: 3, name: "Ash-Waste Stalkers", desc: "Models in this unit have the Stealth ability during Battle Round 1, and ignore negative Move modifiers from terrain." },
+    { d6: 4, name: "Zealous Purge", desc: "Each time a model in this unit makes a melee attack against a unit within range of an objective marker, re-roll a Hit roll of 1." },
+    { d6: 5, name: "Hardened to the Warp", desc: "While this unit has 1+ Warp Counters, add +1 to its Leadership and Objective Control characteristics." },
+    { d6: 6, name: "Bane of the Unbound", desc: "Weapons equipped by models in this unit have the [ANTI-UNBOUND ADVERSARIES 4+] ability." }
+  ],
+  Mounted: [
+    { d6: 1, name: "Thunderous Impact", desc: "Each time this unit ends a Charge move, select 1 enemy unit within Engagement Range; on a 4+, it suffers D3 Mortal Wounds." },
+    { d6: 2, name: "Outriders of the Wastes", desc: "Add +1\" to the Move characteristic of models in this unit and re-roll Advance rolls." },
+    { d6: 3, name: "Relentless Lancers", desc: "Melee weapons equipped by models in this unit have the [LANCE] ability on turns in which they charged." },
+    { d6: 4, name: "Hit-and-Run Raiders", desc: "This unit is eligible to declare a Charge in a turn in which it Fell Back." },
+    { d6: 5, name: "Empyric Stride", desc: "While this unit has 1+ Warp Counters, it can move through enemy models and terrain when making Normal, Advance, or Fall Back moves." },
+    { d6: 6, name: "Apex Hunters", desc: "Each time this unit targets a MONSTER or VEHICLE, re-roll Wound rolls of 1." }
+  ],
+  MonsterVehicle: [
+    { d6: 1, name: "Armoured Behemoth", desc: "Once per battle round, reduce the AP characteristic of one attack allocated to this model by 1." },
+    { d6: 2, name: "Machine-Spirit Resolute", desc: "Ignore modifiers to this model's Move characteristic and to Hit rolls when this model is bracketed." },
+    { d6: 3, name: "Juggernaut of the Wastes", desc: "Add +2 to Tank Shock / monstrous impact dice rolled for this model." },
+    { d6: 4, name: "Searing Promethium Vent", desc: "At the end of the Fight phase, roll 1D6 for each enemy Infantry unit within Engagement Range; on a 4+, it suffers D3 Mortal Wounds." },
+    { d6: 5, name: "Sanctified Hull", desc: "This model has Feel No Pain 5+ against Psychic Attacks and Mortal Wounds." },
+    { d6: 6, name: "Titan-Killer Calibration", desc: "Each time this model makes a ranged attack targeting a MONSTER or VEHICLE, re-roll a Hit roll of 1." }
+  ],
+  Character: [
+    { d6: 1, name: "Inspiring Commander", desc: "While this model is leading a unit, add +1 to the Leadership characteristic of models in that unit and once per battle clear Battle-shock." },
+    { d6: 2, name: "Slayer of Champions", desc: "Melee weapons equipped by this model gain the [PRECISION] ability and re-roll Wound rolls of 1 against Characters." },
+    { d6: 3, name: "Tactical Acumen", desc: "Once per battle, target this model's unit with a Stratagem for 1 fewer CP (if not already modified)." },
+    { d6: 4, name: "Ward of the Gate", desc: "This model's unit has a 4+ Feel No Pain save against Mortal Wounds caused by Anomalies and Warp Counters." },
+    { d6: 5, name: "Unyielding Paragon", desc: "Add +1 to the Wounds characteristic of this Character model." },
+    { d6: 6, name: "Scourge of the Warp", desc: "While leading a unit, weapons in that unit gain [LETHAL HITS] when targeting units with 1+ Warp Counters or Unbound Adversaries." }
+  ]
+};
+
+const WEAPON_MOD_TABLE = [
+  { d6: 1, name: "Finely Balanced", desc: "Improve this weapon's Ballistic Skill or Weapon Skill characteristic by 1 (to a maximum of 2+)." },
+  { d6: 2, name: "Brutal", desc: "Add +1 to this weapon's Strength characteristic." },
+  { d6: 3, name: "Armour Piercing", desc: "Improve this weapon's Armour Penetration (AP) characteristic by 1." },
+  { d6: 4, name: "Master-Worked", desc: "Add +1 to this weapon's Damage characteristic." },
+  { d6: 5, name: "Heirloom", desc: "Add +1 to this weapon's Attacks characteristic." },
+  { d6: 6, name: "Precise", desc: "Each time a Critical Wound is scored for an attack made with this weapon, that attack has the [PRECISION] ability." }
+];
+
+const CRUSADE_RELIC_VAULT = {
+  Artificer: [
+    { name: "Periapt of the Righteous (Artificer • +1 CrP)", desc: "Add +2 to bearer's Wounds. In your Command phase, you can remove 1 Warp Counter from bearer's unit; if you do, bearer regains up to D3 lost wounds." },
+    { name: "Tartarine Cuirass (Artificer • +1 CrP)", desc: "Each time an attack is allocated to the bearer, subtract 1 from the Damage characteristic of that attack." },
+    { name: "Grimoire Abjuratis (Artificer • +1 CrP)", desc: "Subtract 1 from Wound rolls for BEAST/MONSTER attacks targeting bearer's unit (and subtract 1 from Hit rolls if attacker is UNBOUND ADVERSARIES)." },
+    { name: "Cowl of Vehemence (Artificer • +1 CrP)", desc: "PSYKER only. Re-roll Wound rolls of 1 on Psychic Attacks (or re-roll all Wound rolls while bearer's unit has 1+ Warp Counters)." }
+  ],
+  Antiquity: [
+    { name: "Riftwalker's Astrolabe (Antiquity • +2 CrP)", desc: "The bearer—and all models in the unit the bearer is leading—gain the Deep Strike ability!" },
+    { name: "Weapon of Renown (Antiquity • +2 CrP)", desc: "Select 1 melee weapon equipped by bearer; it gains [ANTI-UNBOUND ADVERSARIES 4+] and [DEVASTATING WOUNDS]." },
+    { name: "Beast-Ward Barbute / Empyric Blade (Antiquity • +2 CrP)", desc: "INFANTRY/MOUNTED only. Select 1 melee weapon: +1 Attacks, +1 Strength, +1 Damage. When selected to fight, remove up to 3 Warp Counters for an extra +1 A & +1 S per counter!" },
+    { name: "Exorcist's Thurible (Antiquity • +2 CrP)", desc: "Enemy units within 6\" of the bearer suffer -1 Leadership and cannot perform Warp Rites Actions." }
+  ],
+  Legendary: [
+    { name: "Vengeance Totem (Legendary • +3 CrP)", desc: "When bearer's unit is destroyed, roll 1D6 for each enemy unit within 6\": on a 4+, D3 Mortal Wounds. Then spawn an Unbound Adversaries unit with Power Level equal to bearer's Warp Counters!" },
+    { name: "Empyromancer's Focus (Legendary • +3 CrP)", desc: "Once per battle round, manipulate or trigger a localized Warp Anomaly within 18\" of the bearer and add +1 to all Psychic & melee Damage." }
+  ]
+};
+
+const BATTLE_SCAR_TABLE = [
+  { d6: 1, name: "Crippling Damage", desc: "Subtract 1\" from the Move characteristic of models in this unit, and you cannot use Advance or Charge re-rolls for this unit." },
+  { d6: 2, name: "Battle-Weary", desc: "Each time this unit takes a Battle-shock, Leadership, or Out of Action test, subtract 1 from the roll." },
+  { d6: 3, name: "Fatigued", desc: "Subtract 1 from the Objective Control (OC) characteristic of models in this unit (to a minimum of 0), and this unit never receives the benefit of Cover." },
+  { d6: 4, name: "Disgraced", desc: "You cannot use any Stratagems to affect this unit, and this unit cannot be Marked for Greatness." },
+  { d6: 5, name: "Mark of Shame", desc: "This unit cannot form an Attached unit, is unaffected by friendly Aura abilities, and cannot be selected for Marked for Greatness." },
+  { d6: 6, name: "Deep Scars", desc: "Each time a Critical Wound is scored against this unit, that attack's AP is improved by 1." }
+];
+
+let crusadeState = {
+  activeTab: 'board',
+  selectedTree: 'Gatebreakers',
+  alphaSP: 0,
+  alphaCP: 0,
+  alphaCacheCount: 0,
+  betaSP: 0,
+  betaCP: 0,
+  betaCacheCount: 0,
+  hordeSP: 0,
+  hordeCP: 0,
+  queuedRolls: []
+};
+
+let lastRolledItem = {
+  trait: null,
+  weapon: null,
+  relic: null,
+  scar: null
+};
+
+function switchCrusadeTab(which, persist = true) {
+  crusadeState.activeTab = which;
+  document.getElementById('cruTabBoard').classList.toggle('hidden', which !== 'board');
+  document.getElementById('cruTabForge').classList.toggle('hidden', which !== 'forge');
+  document.getElementById('cruTabBtn1').classList.toggle('active', which === 'board');
+  document.getElementById('cruTabBtn2').classList.toggle('active', which === 'forge');
+  if (persist) saveCrusadeState();
+}
+
+function adjScore(field, delta) {
+  crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
+  const el = document.getElementById(field);
+  if (el) el.textContent = crusadeState[field];
+  saveCrusadeState();
+}
+
+function selectAllianceTree(alliance, persist = true) {
+  crusadeState.selectedTree = alliance;
+  document.getElementById('treeBtnGate').classList.toggle('active', alliance === 'Gatebreakers');
+  document.getElementById('treeBtnDes').classList.toggle('active', alliance === 'Desecrators');
+  document.getElementById('treeBtnMar').classList.toggle('active', alliance === 'Marauders');
+
+  const phases = ALLIANCE_TREES[alliance] || ALLIANCE_TREES.Gatebreakers;
+  const box = document.getElementById('allianceTreeBox');
+  box.innerHTML = phases.map(p => `
+    <div class="card" style="background:#0b0d13; margin-bottom:10px;">
+      <div style="font-weight:800; color:var(--gold); font-size:0.95rem; margin-bottom:4px;">${p.phase}</div>
+      <div style="font-size:0.86rem; color:#fff; margin-bottom:8px;"><strong>Narrative Goal:</strong> ${p.goal}</div>
+      <div style="font-size:0.82rem; color:var(--green); margin-bottom:4px;">✓ ${p.success}</div>
+      <div style="font-size:0.82rem; color:var(--red);">✗ ${p.failure}</div>
+    </div>
+  `).join('');
+
+  if (persist) saveCrusadeState();
+}
+
+// --- PURE RANDOM ROLLERS WITH CUSTOM WEB AUDIO SFX ---
+function rollRandomBattleTrait() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const uType = document.getElementById('traitUnitType').value || 'Infantry';
+  const table = BATTLE_TRAIT_TABLES[uType] || BATTLE_TRAIT_TABLES.Infantry;
+  const pick = table[Math.floor(Math.random() * table.length)];
+  lastRolledItem.trait = {
+    category: `Battle Trait (${uType})`,
+    roll: `D6 = ${pick.d6}`,
+    name: pick.name,
+    desc: pick.desc
+  };
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playForgeAnvil();
+    document.getElementById('traitResultBox').innerHTML = `
+      <div><span class="dice-pip-badge">D6: ${pick.d6}</span> <strong style="color:var(--gold);">${pick.name}</strong></div>
+      <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">${pick.desc}</div>
+    `;
+  }, 260);
+}
+
+function rollRandomWeaponMod() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const idx1 = Math.floor(Math.random() * WEAPON_MOD_TABLE.length);
+  let idx2 = Math.floor(Math.random() * WEAPON_MOD_TABLE.length);
+  while (idx2 === idx1) {
+    idx2 = Math.floor(Math.random() * WEAPON_MOD_TABLE.length);
+  }
+  const m1 = WEAPON_MOD_TABLE[idx1];
+  const m2 = WEAPON_MOD_TABLE[idx2];
+
+  lastRolledItem.weapon = {
+    category: `Weapon Modification (2x D6)`,
+    roll: `D6 = ${m1.d6} & ${m2.d6}`,
+    name: `${m1.name} + ${m2.name}`,
+    desc: `[${m1.name}: ${m1.desc}] + [${m2.name}: ${m2.desc}]`
+  };
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playForgeAnvil();
+    document.getElementById('weaponResultBox').innerHTML = `
+      <div><span class="dice-pip-badge">D6: ${m1.d6} &amp; ${m2.d6}</span> <strong style="color:var(--blue);">${m1.name} + ${m2.name}</strong></div>
+      <div style="margin-top:6px; font-size:0.81rem; color:var(--text);">• <strong>${m1.name}:</strong> ${m1.desc}<br>• <strong>${m2.name}:</strong> ${m2.desc}</div>
+    `;
+  }, 260);
+}
+
+function rollRandomRelic() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const tier = document.getElementById('relicTierSelect').value || 'Artificer';
+  const pool = CRUSADE_RELIC_VAULT[tier] || CRUSADE_RELIC_VAULT.Artificer;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+
+  lastRolledItem.relic = {
+    category: `Crusade Relic (${tier})`,
+    roll: `Vault Draw`,
+    name: pick.name,
+    desc: pick.desc
+  };
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playRelicChoir();
+    document.getElementById('relicResultBox').innerHTML = `
+      <div><span class="dice-pip-badge" style="background:var(--purple); color:#fff;">${tier.toUpperCase()}</span> <strong style="color:#d8b4fe;">${pick.name}</strong></div>
+      <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">${pick.desc}</div>
+    `;
+  }, 260);
+}
+
+function rollOutOfActionTest() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const d6 = Math.floor(Math.random() * 6) + 1;
+
+  setTimeout(() => {
+    if (d6 === 1) {
+      if (window.VoxAudio) window.VoxAudio.playScarHazard();
+      document.getElementById('scarResultBox').innerHTML = `
+        <div><span class="dice-pip-badge" style="background:var(--red); color:#fff;">D6: 1 (FAILED!)</span> <strong style="color:var(--red);">Out of Action Test Failed!</strong></div>
+        <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">Choose <strong>Devastating Blow</strong> (-1 Battle Honour) OR click <strong>🎲 Roll Scar (D6)</strong> below to roll a Battle Scar!</div>
+      `;
+    } else {
+      if (window.VoxAudio) window.VoxAudio.playForgeAnvil();
+      document.getElementById('scarResultBox').innerHTML = `
+        <div><span class="dice-pip-badge" style="background:var(--green); color:#000;">D6: ${d6} (PASSED)</span> <strong style="color:var(--green);">Unit Recovered Unscathed!</strong></div>
+        <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">No Battle Scar suffered. Unit returns to Order of Battle at full strength.</div>
+      `;
+    }
+  }, 260);
+}
+
+function rollRandomBattleScar() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const pick = BATTLE_SCAR_TABLE[Math.floor(Math.random() * BATTLE_SCAR_TABLE.length)];
+
+  lastRolledItem.scar = {
+    category: `Battle Scar`,
+    roll: `D6 = ${pick.d6}`,
+    name: pick.name,
+    desc: pick.desc
+  };
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playScarHazard();
+    document.getElementById('scarResultBox').innerHTML = `
+      <div><span class="dice-pip-badge" style="background:var(--red); color:#fff;">SCAR D6: ${pick.d6}</span> <strong style="color:var(--red);">${pick.name}</strong></div>
+      <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">${pick.desc}</div>
+    `;
+  }, 260);
+}
+
+function attachRollToDossier(kind) {
+  const item = lastRolledItem[kind];
+  if (!item) {
+    alert('Roll the dice on this card first before attaching it to the Master Dossier!');
+    return;
+  }
+  const unitName = (document.getElementById('rollerUnitName').value || '[Unnamed Unit]').trim();
+  const unitCtx = (document.getElementById('rollerUnitContext').value || 'Fielded in battle').trim();
+
+  crusadeState.queuedRolls.push({
+    unit: unitName,
+    context: unitCtx,
+    category: item.category,
+    roll: item.roll,
+    name: item.name,
+    desc: item.desc
+  });
+
+  if (window.VoxAudio) window.VoxAudio.playClank('card');
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
+function removeQueuedRoll(idx) {
+  crusadeState.queuedRolls.splice(idx, 1);
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
+function clearQueuedRolls() {
+  crusadeState.queuedRolls = [];
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
+function renderQueuedRolls() {
+  const countEl = document.getElementById('queuedCountLabel');
+  const box = document.getElementById('queuedRollsContainer');
+  if (countEl) countEl.textContent = String(crusadeState.queuedRolls.length);
+  if (!box) return;
+
+  if (crusadeState.queuedRolls.length === 0) {
+    box.innerHTML = `<div style="font-size:0.82rem; color:var(--muted); font-style:italic;">No unit upgrades, relics, or scars attached yet. Roll on any table above and click "➕ Attach" to include them in your Master Battle Dossier!</div>`;
+    return;
+  }
+
+  box.innerHTML = crusadeState.queuedRolls.map((q, idx) => `
+    <div class="queued-item-pill">
+      <div>
+        <strong style="color:var(--gold);">${q.unit}</strong> — <span style="color:#fff; font-weight:700;">${q.category}: ${q.name}</span> (${q.roll})<br>
+        <span style="color:var(--muted); font-size:0.78rem;">Context: "${q.context}"</span>
+      </div>
+      <button type="button" class="mini-btn" onclick="removeQueuedRoll(${idx})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+function buildMasterDossierString() {
+  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
+  const cmdr = chan === 'alpha' ? 'COMMANDER ALPHA (THE SANCTUARY OF ASH)' : 'COMMANDER BETA (JUNEBUG)';
+  const modeNode = document.getElementById('dossierModeNode')?.value || '';
+  const outcome = document.getElementById('dossierOutcome')?.value || '';
+  const secCode = (document.getElementById('dossierSecretCode')?.value || 'N/A').trim().toUpperCase();
+  const secTag = document.getElementById('dossierSecretTag')?.value || 'None';
+  const leftover = document.getElementById('dossierLeftoverSp')?.value || '0 Leftover SP';
+  const notes = (document.getElementById('dossierBattleNotes')?.value || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
+
+  const forts = [];
+  if (document.getElementById('fortHosp')?.checked) forts.push('Field Hospital (Auto-Pass OOA)');
+  if (document.getElementById('fortAmmo')?.checked) forts.push('Ammo Dump (Free Weapon Mod)');
+  if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
+  if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
+  const fortStr = forts.length > 0 ? forts.join(', ') : 'None';
+
+  const unitLines = crusadeState.queuedRolls.length > 0
+    ? crusadeState.queuedRolls.map((q, i) =>
+        `  ${i + 1}. [${q.unit}] → ${q.category}: ${q.name} (${q.roll})\n     • Battlefield Context: "${q.context}"`
+      ).join('\n')
+    : '  • None attached this battle.';
+
+  return [
+    `+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++`,
+    `• REPORTING COMMANDER: ${cmdr}`,
+    `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
+    `• OUTCOME & SURVIVAL: ${outcome}`,
+    `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
+    `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
+    `• LEFTOVER SP SALVAGE: ${leftover}`,
+    `------------------------------------------------`,
+    `• ROLLED UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES FOR EVERY SCAR & HONOUR"):`,
+    unitLines,
+    `------------------------------------------------`,
+    `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
+    `------------------------------------------------`,
+    `REQUEST FOR CAMPAIGN MASTER: Please update AGENT.md / Commander Dossiers, adjust Sector Hegemony & Alliance SPts, and emit a personalized CRT Vox-Dispatch christening custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, and Battle Scar!`
+  ].join('\n');
+}
+
+function updateMasterDossierPreview() {
+  const box = document.getElementById('masterDossierPreviewBox');
+  if (box) box.textContent = buildMasterDossierString();
+  saveCrusadeState();
+}
+
+function transmitMasterBattleDossier() {
+  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
+  const payload = buildMasterDossierString();
+  if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox(chan, payload);
+  }
+}
+
+function saveCrusadeState() {
+  try {
+    localStorage.setItem(CRUSADE_STATE_KEY, JSON.stringify(crusadeState));
+  } catch (e) {}
+}
+
+function initCrusadePage() {
+  try {
+    const raw = localStorage.getItem(CRUSADE_STATE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      crusadeState = { ...crusadeState, ...parsed };
+    }
+  } catch (e) {}
+
+  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP'].forEach(k => {
+    const el = document.getElementById(k);
+    if (el && typeof crusadeState[k] === 'number') el.textContent = String(crusadeState[k]);
+  });
+
+  switchCrusadeTab(crusadeState.activeTab || 'board', false);
+  selectAllianceTree(crusadeState.selectedTree || 'Gatebreakers', false);
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+}
+
+window.addEventListener('DOMContentLoaded', initCrusadePage);
+window.addEventListener('vox:page-swapped', () => {
+  if (document.getElementById('cruTabBoard')) initCrusadePage();
+});
+</script>
+</body>
+</html>
+````

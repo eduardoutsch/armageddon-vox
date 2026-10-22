@@ -1,0 +1,251 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const VOX_HTML_PATH = path.join(ROOT_DIR, 'pages/vox.html');
+
+// Read vox.html and extract script block
+const voxHtml = fs.readFileSync(VOX_HTML_PATH, 'utf8');
+const scriptMatches = voxHtml.match(/<script>([\s\S]*?)<\/script>/);
+assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/vox.html');
+const voxScriptCode = scriptMatches[1];
+
+// Set up mock DOM and sessionStorage environment
+const sessionStore = new Map();
+const mockSessionStorage = {
+  getItem: (k) => (sessionStore.has(k) ? sessionStore.get(k) : null),
+  setItem: (k, v) => sessionStore.set(k, String(v)),
+  removeItem: (k) => sessionStore.delete(k),
+  clear: () => sessionStore.clear()
+};
+
+function createMockClassList() {
+  const classes = new Set();
+  return {
+    add: (c) => classes.add(c),
+    remove: (c) => classes.delete(c),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) classes.delete(c);
+        else classes.add(c);
+      } else if (force) {
+        classes.add(c);
+      } else {
+        classes.delete(c);
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
+const mockElements = {
+  authScreen: { classList: createMockClassList() },
+  terminalScreen: { classList: createMockClassList() },
+  sealStatusBadge: { innerHTML: '', textContent: '' },
+  sealSubtitle: { innerHTML: '', textContent: '' },
+  passLabel: { textContent: '' },
+  sealActionBtn: { textContent: '' },
+  cardAlpha: { classList: createMockClassList() },
+  cardBeta: { classList: createMockClassList() },
+  passInput: { value: '' },
+  authErrorMsg: { textContent: '', classList: createMockClassList() },
+  activeConduitLabel: { textContent: '' },
+  pendingDossierNotice: { classList: createMockClassList() },
+  subWinDirect: { classList: createMockClassList() },
+  subWinInterferences: { classList: createMockClassList() },
+  winBtn1: { classList: createMockClassList() },
+  winBtn2: { classList: createMockClassList() },
+  directMessagesBox: { innerHTML: '', dataset: {}, scrollTop: 0, scrollHeight: 100 },
+  interferencesBox: { innerHTML: '', dataset: {}, scrollTop: 0, scrollHeight: 100 },
+  interferenceCountBadge: { textContent: '' },
+  questionInput: { value: '' }
+};
+
+const mockDocument = {
+  getElementById: (id) => mockElements[id] || null,
+  createElement: (tag) => {
+    let _text = '';
+    const el = {
+      tagName: tag.toUpperCase(),
+      className: '',
+      get textContent() { return _text; },
+      set textContent(v) { _text = v; this.innerHTML = v; },
+      innerHTML: '',
+      children: [],
+      classList: createMockClassList(),
+      appendChild: (c) => { el.children.push(c); return c; },
+      querySelector: (sel) => el.children[0] || null,
+      closest: () => ({ scrollTop: 0, scrollHeight: 100 })
+    };
+    return el;
+  }
+};
+
+let tickEvents = [];
+let stampPlayed = false;
+
+const mockWindow = {
+  addEventListener: () => {},
+  VoxAudio: {
+    playTeletypeTick: (mode) => tickEvents.push(mode),
+    playDossierStamp: () => { stampPlayed = true; },
+    playScarHazard: () => {}
+  }
+};
+
+// RPC mock results
+const rpcCalls = [];
+let mockRpcHandler = async (fnName, params) => {
+  rpcCalls.push({ fnName, params });
+  if (fnName === 'check_channel_seal') return true;
+  if (fnName === 'unlock_or_seal_channel') return { ok: true };
+  if (fnName === 'send_vox_message') return { ok: true };
+  if (fnName === 'get_vox_terminal_data') return { ok: true, messages: [], interferences: [] };
+  return null;
+};
+
+// Evaluate script in mock environment
+const evalFn = new Function(
+  'document',
+  'window',
+  'sessionStorage',
+  'fetch',
+  'console',
+  'setInterval',
+  'clearInterval',
+  `${voxScriptCode}; return {
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    SEEN_IDS_STORAGE_KEY,
+    SESSION_AUTH_KEY,
+    checkPendingDossierBuffer,
+    selectConduit,
+    handleSealAction,
+    flushPendingDossierIfAny,
+    streamTextIntoElement,
+    formatRedactedHtml,
+    switchSubWindow,
+    lockTerminal,
+    getSelectedChannel: () => selectedChannel,
+    getActivePassphrase: () => activePassphrase
+  };`
+);
+
+const vox = evalFn(
+  mockDocument,
+  mockWindow,
+  mockSessionStorage,
+  async (url, opts) => {
+    const parts = url.split('/rpc/');
+    const fnName = parts[1];
+    const params = opts && opts.body ? JSON.parse(opts.body) : {};
+    const res = await mockRpcHandler(fnName, params);
+    return {
+      ok: true,
+      json: async () => res
+    };
+  },
+  console,
+  (fn, ms) => 1234,
+  (id) => {}
+);
+
+test('vox: checkPendingDossierBuffer detects pending dossier payload from sessionStorage', () => {
+  sessionStore.clear();
+  assert.equal(vox.checkPendingDossierBuffer(), null);
+  assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), true);
+
+  const payload = {
+    channel: 'beta',
+    text: '+++ ORDO MALLEUS DOSSIER TRANSMISSION +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(payload));
+
+  const detected = vox.checkPendingDossierBuffer();
+  assert.ok(detected, 'Must detect pending dossier from sessionStorage');
+  assert.equal(detected.channel, 'beta');
+  assert.equal(detected.text, payload.text);
+  assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), false);
+});
+
+test('vox: selectConduit toggles selected channel and updates UI elements', async () => {
+  await vox.selectConduit('beta');
+  assert.equal(vox.getSelectedChannel(), 'beta');
+  assert.equal(mockElements.cardBeta.classList.contains('selected'), true);
+  assert.equal(mockElements.cardAlpha.classList.contains('selected'), false);
+
+  await vox.selectConduit('alpha');
+  assert.equal(vox.getSelectedChannel(), 'alpha');
+  assert.equal(mockElements.cardAlpha.classList.contains('selected'), true);
+  assert.equal(mockElements.cardBeta.classList.contains('selected'), false);
+});
+
+test('vox: switchSubWindow toggles Direct vs Interferences monitors', () => {
+  vox.switchSubWindow('interferences');
+  assert.equal(mockElements.subWinDirect.classList.contains('hidden'), true);
+  assert.equal(mockElements.subWinInterferences.classList.contains('hidden'), false);
+  assert.equal(mockElements.winBtn2.classList.contains('active'), true);
+  assert.equal(mockElements.winBtn1.classList.contains('active'), false);
+
+  vox.switchSubWindow('direct');
+  assert.equal(mockElements.subWinDirect.classList.contains('hidden'), false);
+  assert.equal(mockElements.subWinInterferences.classList.contains('hidden'), true);
+  assert.equal(mockElements.winBtn1.classList.contains('active'), true);
+  assert.equal(mockElements.winBtn2.classList.contains('active'), false);
+});
+
+test('vox: formatRedactedHtml replaces [REDACTED] with styled censor-bar', () => {
+  const input = 'Hostile intercepted near [REDACTED] hive node.';
+  const output = vox.formatRedactedHtml(input);
+  assert.ok(output.includes('<span class="censor-bar">▓▓REDACTED▓▓</span>'));
+  assert.ok(!output.includes('[REDACTED]'));
+});
+
+test('vox: handleSealAction validates passphrase, authenticates, and unlocks terminal', async () => {
+  mockElements.passInput.value = 'ab'; // Too short
+  await vox.handleSealAction();
+  assert.equal(mockElements.authErrorMsg.textContent, 'Passphrase must be at least 3 characters.');
+  assert.equal(mockElements.authErrorMsg.classList.contains('hidden'), false);
+
+  // Valid passphrase
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  assert.equal(vox.getActivePassphrase(), 'VermilionKey99');
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), true);
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), false);
+
+  const storedAuth = sessionStore.get(vox.SESSION_AUTH_KEY);
+  assert.ok(storedAuth, 'Must store active session in sessionStorage');
+  assert.equal(JSON.parse(storedAuth).pass, 'VermilionKey99');
+});
+
+test('vox: flushPendingDossierIfAny transmits queued payload and clears sessionStorage buffer', async () => {
+  sessionStore.clear();
+  const testPayload = {
+    channel: 'alpha',
+    text: '+++ COMPILER TRANSMISSION TO CAMPAIGN MASTER +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(testPayload));
+
+  rpcCalls.length = 0;
+  await vox.flushPendingDossierIfAny();
+
+  assert.equal(sessionStore.has('foa_pending_vox_payload'), false, 'Must clear pending payload buffer');
+  const sendCall = rpcCalls.find(c => c.fnName === 'send_vox_message');
+  assert.ok(sendCall, 'Must invoke send_vox_message RPC endpoint');
+  assert.equal(sendCall.params.p_channel, 'alpha');
+  assert.equal(sendCall.params.p_question, testPayload.text);
+});
+
+test('vox: lockTerminal clears passphrase and hides terminal screen', () => {
+  vox.lockTerminal();
+  assert.equal(vox.getActivePassphrase(), null);
+  assert.equal(sessionStore.has(vox.SESSION_AUTH_KEY), false);
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), true);
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), false);
+});

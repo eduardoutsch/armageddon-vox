@@ -29,8 +29,10 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     <a href="pages/spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
     <a href="pages/pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
     <a href="pages/rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
-    <a href="pages/roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
-    <a href="pages/briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
+    <a href="pages/roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>
+    <a href="pages/crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>
+    <a href="pages/briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>
+    <a href="pages/vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>
   </nav>
 
   <div class="container">
@@ -62,13 +64,23 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         </a>
         <a href="pages/roster.html" class="welcome-quick-card">
           <span style="font-size:1.6rem; margin-bottom:6px;">🎖️</span>
-          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 4: Rosters</strong>
-          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Ledger &amp; Persistent Nemeses</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 4: Threat Matrix</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Ledger, Nemeses &amp; Brackets</span>
+        </a>
+        <a href="pages/crusade.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">🏆</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 5: Crusade</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Quartermaster &amp; Rollers</span>
         </a>
         <a href="pages/briefing.html" class="welcome-quick-card">
           <span style="font-size:1.6rem; margin-bottom:6px;">📜</span>
-          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 5: Briefings</strong>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 6: Briefings</strong>
           <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Ship Slider &amp; Sector Atlas</span>
+        </a>
+        <a href="pages/vox.html" class="welcome-quick-card">
+          <span style="font-size:1.6rem; margin-bottom:6px;">📡</span>
+          <strong style="color:var(--gold-bright); font-size:0.92rem; text-transform:uppercase;">Mode 7: Vox-Sanctum</strong>
+          <span style="font-size:0.78rem; color:var(--muted); margin-top:4px;">Astropathic CRT Terminal</span>
         </a>
       </div>
     </div>
@@ -276,8 +288,10 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     <a href="spawner.html" class="suite-link active">🧟 Mode 1: Horde Command &amp; Spawner</a>
     <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
     <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
-    <a href="roster.html" class="suite-link">🎖️ Rosters &amp; Nemesis Ledger</a>
-    <a href="briefing.html" class="suite-link">📜 Briefings, Ship &amp; Atlas</a>
+    <a href="roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>
+    <a href="crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>
+    <a href="briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>
+    <a href="vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>
   </nav>
 
 <div class="app-shell">
