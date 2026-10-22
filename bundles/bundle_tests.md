@@ -989,6 +989,63 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
   assert.ok(interceptCall.body.redacted_text.includes('[REDACTED]'));
 });
 
+test('processSingleMessage: late-arrival catcher captures pre-existing response without re-typing prompt', async () => {
+  const dispatchedText = [];
+  const testMsg = {
+    id: '87654321-late-arrival',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: 'Report status'
+  };
+
+  const mockPage = {
+    url: () => 'https://gemini.google.com/test',
+    evaluate: async () => ({
+      count: 1,
+      text: '<DIRECT_REPLY>REF-ID: 87654321\n+++ STATUS NOMINAL +++\nImmediate report inscribed.</DIRECT_REPLY>'
+    }),
+    locator: () => ({
+      first: () => ({
+        waitFor: async () => true,
+        click: async () => {}
+      })
+    }),
+    bringToFront: async () => {},
+    waitForTimeout: async () => {},
+    keyboard: {
+      press: async () => {},
+      insertText: async (txt) => { dispatchedText.push(txt); }
+    }
+  };
+
+  const fetchCalls = [];
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({})
+    };
+  };
+
+  const logged = [];
+  const success = await processSingleMessage(testMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    logFn: (msg) => logged.push(msg)
+  });
+
+  assert.equal(success, true, 'processSingleMessage must succeed via late-arrival catcher');
+  assert.equal(dispatchedText.length, 0, 'Must NOT re-type prompt when late reply is already present');
+  assert.ok(logged.some(m => m.includes('LATE-ARRIVAL CAPTURED')), 'Must log late-arrival capture notice');
+
+  const patchCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_messages?id=eq.87654321-late-arrival'));
+  assert.ok(patchCall, 'Must patch Supabase with the late-arrival reply');
+  assert.ok(patchCall.body.reply.includes('STATUS NOMINAL'));
+  assert.equal(patchCall.body.status, 'answered');
+});
+
 test('drainChannelQueue: handles empty queue and missing service key gracefully', async () => {
   // Test missing service key
   const logged = [];
@@ -2594,6 +2651,7 @@ let mockRpcHandler = async (fnName, params) => {
   if (fnName === 'check_channel_seal') return true;
   if (fnName === 'unlock_or_seal_channel') return { ok: true };
   if (fnName === 'send_vox_message') return { ok: true };
+  if (fnName === 'delete_vox_entry') return { ok: true };
   if (fnName === 'get_vox_terminal_data') return { ok: true, messages: mockMessages, interferences: mockInterferences };
   return null;
 };
@@ -2620,6 +2678,8 @@ const evalFn = new Function(
     formatRedactedHtml,
     switchSubWindow,
     extractDynamicReplyCardMeta,
+    formatTime,
+    purgeVoxEntry,
     refreshTerminal,
     toggleOlderMessages,
     toggleOlderInterferences,
@@ -2902,6 +2962,77 @@ test('vox: refreshTerminal uses dynamic reply card title and avoids duplicating 
   const rBody = replyCard.children[0];
   assert.ok(rBody.textContent.includes('Perimeter is secure across Sector 0.'));
   assert.ok(!rBody.textContent.includes('+++ ORBITAL LOGIS SCAN +++'), 'Must strip first header banner line from clean body');
+});
+
+test('vox: cards render [ ✕ PURGE ] button in meta bar for direct messages, replies, and interferences', async () => {
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  mockMessages = [
+    {
+      id: 'm_purge_1',
+      channel: 'alpha',
+      sender: 'The Exile',
+      question: 'Testing purge button visibility',
+      reply: '+++ HIGH COMMAND +++\nOrders acknowledged.',
+      status: 'answered',
+      created_at: '2026-10-22T10:00:00Z',
+      answered_at: '2026-10-22T10:01:00Z'
+    }
+  ];
+
+  mockInterferences = [
+    {
+      id: 'int_purge_1',
+      target_channel: 'alpha',
+      origin_hint: 'RIVAL PSYCHIC ECHO',
+      redacted_text: 'Secret warband moving toward [REDACTED]',
+      created_at: '2026-10-22T10:05:00Z'
+    }
+  ];
+
+  mockElements.directMessagesBox.dataset.sig = '';
+  mockElements.interferencesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  const exchangeWrap = mockElements.directMessagesBox.children[0];
+  assert.ok(exchangeWrap, 'Direct messages box must contain exchange wrap');
+  const msgCard = exchangeWrap.children[0];
+  assert.ok(msgCard.innerHTML.includes('crt-purge-btn'), 'Direct message must include crt-purge-btn');
+  assert.ok(msgCard.innerHTML.includes("purgeVoxEntry('m_purge_1', 'message')"), 'Direct message card must wire onclick to purgeVoxEntry');
+  assert.ok(msgCard.innerHTML.includes('✕ PURGE'), 'Must render purge button label');
+
+  const replyCard = exchangeWrap.children[1];
+  assert.ok(replyCard.innerHTML.includes('crt-purge-btn'), 'Reply card must include crt-purge-btn');
+  assert.ok(replyCard.innerHTML.includes("purgeVoxEntry('m_purge_1', 'message')"), 'Reply card must wire onclick to purgeVoxEntry');
+
+  const intCard = mockElements.interferencesBox.children[0];
+  assert.ok(intCard, 'Interferences box must contain intercept card');
+  assert.ok(intCard.innerHTML.includes('crt-purge-btn'), 'Interferences must include crt-purge-btn');
+  assert.ok(intCard.innerHTML.includes("purgeVoxEntry('int_purge_1', 'interference')"), 'Interference card must wire onclick to purgeVoxEntry');
+});
+
+test('vox: purgeVoxEntry confirms, triggers SFX, calls delete_vox_entry RPC, and refreshes terminal', async () => {
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  rpcCalls.length = 0;
+  mockWindow.confirm = () => true;
+
+  await vox.purgeVoxEntry('m_purge_1', 'message');
+
+  const deleteRpc = rpcCalls.find(c => c.fnName === 'delete_vox_entry');
+  assert.ok(deleteRpc, 'Must invoke delete_vox_entry RPC');
+  assert.equal(deleteRpc.params.p_channel, 'alpha');
+  assert.equal(deleteRpc.params.p_passphrase, 'VermilionKey99');
+  assert.equal(deleteRpc.params.p_entry_id, 'm_purge_1');
+  assert.equal(deleteRpc.params.p_entry_type, 'message');
+
+  // Verify refusal / cancel in confirm prompt aborts RPC
+  rpcCalls.length = 0;
+  mockWindow.confirm = () => false;
+  await vox.purgeVoxEntry('int_purge_2', 'interference');
+  assert.equal(rpcCalls.some(c => c.fnName === 'delete_vox_entry'), false, 'Cancelled confirm must not trigger RPC');
 });
 
 

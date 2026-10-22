@@ -171,6 +171,63 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
   assert.ok(interceptCall.body.redacted_text.includes('[REDACTED]'));
 });
 
+test('processSingleMessage: late-arrival catcher captures pre-existing response without re-typing prompt', async () => {
+  const dispatchedText = [];
+  const testMsg = {
+    id: '87654321-late-arrival',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: 'Report status'
+  };
+
+  const mockPage = {
+    url: () => 'https://gemini.google.com/test',
+    evaluate: async () => ({
+      count: 1,
+      text: '<DIRECT_REPLY>REF-ID: 87654321\n+++ STATUS NOMINAL +++\nImmediate report inscribed.</DIRECT_REPLY>'
+    }),
+    locator: () => ({
+      first: () => ({
+        waitFor: async () => true,
+        click: async () => {}
+      })
+    }),
+    bringToFront: async () => {},
+    waitForTimeout: async () => {},
+    keyboard: {
+      press: async () => {},
+      insertText: async (txt) => { dispatchedText.push(txt); }
+    }
+  };
+
+  const fetchCalls = [];
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({})
+    };
+  };
+
+  const logged = [];
+  const success = await processSingleMessage(testMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    logFn: (msg) => logged.push(msg)
+  });
+
+  assert.equal(success, true, 'processSingleMessage must succeed via late-arrival catcher');
+  assert.equal(dispatchedText.length, 0, 'Must NOT re-type prompt when late reply is already present');
+  assert.ok(logged.some(m => m.includes('LATE-ARRIVAL CAPTURED')), 'Must log late-arrival capture notice');
+
+  const patchCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_messages?id=eq.87654321-late-arrival'));
+  assert.ok(patchCall, 'Must patch Supabase with the late-arrival reply');
+  assert.ok(patchCall.body.reply.includes('STATUS NOMINAL'));
+  assert.equal(patchCall.body.status, 'answered');
+});
+
 test('drainChannelQueue: handles empty queue and missing service key gracefully', async () => {
   // Test missing service key
   const logged = [];

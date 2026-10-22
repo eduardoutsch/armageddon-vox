@@ -177,6 +177,27 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       font-weight: 800;
     }
 
+    .crt-purge-btn {
+      background: rgba(255, 71, 87, 0.1);
+      border: 1px solid rgba(255, 71, 87, 0.4);
+      color: #ff6b81;
+      font-family: 'Courier New', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+      letter-spacing: 0.5px;
+      transition: all 0.15s ease;
+    }
+    .crt-purge-btn:hover {
+      background: rgba(255, 71, 87, 0.28);
+      border-color: #ff4757;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(255, 71, 87, 0.45);
+    }
+
     .crt-pending-line {
       margin-top: 10px;
       padding-top: 8px;
@@ -801,6 +822,49 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
     return { cardTitle: fallbackTitle, cleanBody: trimmed };
   }
 
+  const callRpc = rpcCall;
+
+  function formatTime(isoStr) {
+    if (!isoStr) return 'VOX-LOG';
+    try {
+      const d = new Date(isoStr);
+      return isNaN(d.getTime()) ? 'VOX-LOG' : d.toLocaleTimeString();
+    } catch (e) {
+      return 'VOX-LOG';
+    }
+  }
+
+  async function purgeVoxEntry(entryId, entryType = 'message') {
+    if (!activePassphrase || !entryId) return;
+
+    const label = entryType === 'interference'
+      ? 'Purge this intercepted psychic bleed from the cogitator log?'
+      : 'Purge this transmission exchange from the cogitator log?';
+
+    if (typeof window.confirm === 'function' && !window.confirm(label)) {
+      return;
+    }
+
+    if (window.VoxAudio) window.VoxAudio.playScarHazard();
+
+    const res = await callRpc('delete_vox_entry', {
+      p_channel: selectedChannel,
+      p_passphrase: activePassphrase,
+      p_entry_id: entryId,
+      p_entry_type: entryType
+    });
+
+    if (res && res.ok) {
+      // Clear render cache signatures so the terminal redraws immediately
+      const directBox = document.getElementById('directMessagesBox');
+      const intBox = document.getElementById('interferencesBox');
+      if (directBox && directBox.dataset) directBox.dataset.sig = '';
+      if (intBox && intBox.dataset) intBox.dataset.sig = '';
+      await refreshTerminal(false);
+    }
+  }
+  window.purgeVoxEntry = purgeVoxEntry;
+
   async function refreshTerminal(forceScroll = false) {
     if (!activePassphrase) return;
     try {
@@ -862,13 +926,15 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
             // 1. Player Outgoing Message Card (Amber CRT Phosphor)
             const msgCard = document.createElement('div');
             msgCard.className = 'crt-msg-card';
-            const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString() : 'VOX-LOG';
             msgCard.innerHTML = `
-              <div class="crt-msg-header">
-                <strong>📡 ${escapeHtml(m.sender)}</strong>
-                <span>${escapeHtml(timeStr)}</span>
+              <div class="crt-msg-header crt-msg-meta">
+                <span>📡 ${escapeHtml(m.sender || 'COMMANDER')}</span>
+                <span>
+                  ${formatTime(m.created_at)}
+                  <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(m.id)}', 'message')" title="Purge Transmission from Log">✕ PURGE</button>
+                </span>
               </div>
-              <div class="crt-q-body"></div>
+              <div class="crt-q-body crt-msg-body"></div>
             `;
             const qBody = msgCard.querySelector('.crt-q-body');
             const qToken = `q_${m.id}`;
@@ -887,11 +953,13 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
 
               const repCard = document.createElement('div');
               repCard.className = 'crt-reply-card crt-msg-card reply';
-              const ansTime = m.answered_at ? new Date(m.answered_at).toLocaleTimeString() : 'DECRYPTED';
               repCard.innerHTML = `
                 <div class="crt-reply-header crt-msg-meta">
                   <span>${escapeHtml(cardTitle)}</span>
-                  <span>${escapeHtml(ansTime)}</span>
+                  <span>
+                    ${formatTime(m.answered_at)}
+                    <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(m.id)}', 'message')" title="Purge Transmission from Log">✕ PURGE</button>
+                  </span>
                 </div>
                 <div class="crt-r-body crt-msg-body"></div>
               `;
@@ -963,13 +1031,15 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
           visibleInts.forEach(ix => {
             const card = document.createElement('div');
             card.className = 'crt-intercept-card';
-            const tStr = ix.created_at ? new Date(ix.created_at).toLocaleTimeString() : 'WARP-ECHO';
             card.innerHTML = `
-              <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:#ff4757; border-bottom:1px dashed rgba(255,71,87,0.3); padding-bottom:5px; margin-bottom:8px;">
-                <strong>⚡ ${escapeHtml(ix.origin_hint || 'ASTROPATHIC BLEED')}</strong>
-                <span>${escapeHtml(tStr)}</span>
+              <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:#ff4757; border-bottom:1px dashed rgba(255,71,87,0.3); padding-bottom:5px; margin-bottom:8px;">
+                <span>⚡ INTERCEPT // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>
+                <span>
+                  ${formatTime(ix.created_at)}
+                  <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(ix.id)}', 'interference')" title="Purge Intercept from Log">✕ PURGE</button>
+                </span>
               </div>
-              <div class="crt-int-body"></div>
+              <div class="crt-int-body crt-msg-body"></div>
             `;
             const bodyEl = card.querySelector('.crt-int-body');
             const iToken = `int_${ix.id}`;

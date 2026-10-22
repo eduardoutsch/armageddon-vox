@@ -259,11 +259,12 @@ BETA_THREAD_URL=https://gemini.google.com/app/<your-beta-thread-id>
 
 ````javascript
 /**
- * Dual-Thread Concurrent Astropathic Courier Bridge (v5.1 - Bulletproof + Smart Intercept Routing)
+ * Dual-Thread Concurrent Astropathic Courier Bridge (v6.0 - Zero-XML & Tool-Crash-Proof Edition)
  * - Strictly targets <model-response> (never user <message-content>)
- * - Preserves full paragraph (\n\n), line-break (\n), and bullet-point spacing
- * - Strips all Gemini Notebook citation chips ("MD", "+ 2", "+ 4", "")
- * - Routes test/simulated interferences to sender's own screen (and catches missing opening <INTERCEPT> tags)
+ * - ZERO XML TAGS IN USER PROMPT: Prevents Google's web firewall from flagging <DIRECT_REPLY> as XML injection!
+ * - SMART TOOL ISOLATION: Only invokes Notebook .md file updates when a message is a Dossier or Faction/Lore
+ *   declaration, preventing Gemini's refresh_source_content tool router from crashing on normal queries!
+ * - Splits intercepts automatically at "+++ PASSIVE CHOIR INTERCEPT" (or <INTERCEPT> tags).
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -295,12 +296,6 @@ function resolveServiceKey(env = process.env) {
   return '';
 }
 
-/**
- * Resolves the Astropathic Courier thread URLs for Alpha and Beta channels strictly from environment variables.
- *
- * @param {object} [env=process.env] - The environment dictionary.
- * @returns {{ alphaThreadUrl: string, betaThreadUrl: string }} The resolved URLs.
- */
 function resolveThreadUrls(env = process.env) {
   return {
     alphaThreadUrl: (env && typeof env.ALPHA_THREAD_URL === 'string' ? env.ALPHA_THREAD_URL : '').trim(),
@@ -314,7 +309,7 @@ const SERVICE_KEY = resolveServiceKey();
 const { alphaThreadUrl: ALPHA_THREAD_URL, betaThreadUrl: BETA_THREAD_URL } = resolveThreadUrls();
 
 logGreen('----------------------------------------------------------------');
-logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v5.1 BULLETPROOF]');
+logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v6.0 ZERO-XML]');
 logGreen(` -> SUPABASE_URL : ${SUPABASE_URL}`);
 logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)}...)` : 'MISSING! Check your .env file!'}`);
 logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL || 'MISSING! Define ALPHA_THREAD_URL in .env'}`);
@@ -331,12 +326,112 @@ const SEND_BUTTON_SELECTOR = 'button.send-button, button[aria-label*="Send"], bu
 const MODEL_TURN_SELECTOR = 'model-response';
 
 let typingLock = Promise.resolve();
+const messageAttemptTracker = new Map();
 
 /**
- * Extracts clean text from the last <model-response> element in the browser,
- * removing all Notebook source citation badges ("MD", "+ 2", etc.) AND
- * preserving exact paragraph (\n\n), line-break (\n), and bullet spacing!
+ * Preserves 100% of the player's original wording and roleplay nuance!
+ * (No words are replaced or put in the player's mouth).
  */
+function sanitizePlayerQueryForGemini(rawQuestion) {
+  if (!rawQuestion || typeof rawQuestion !== 'string') return '';
+  return rawQuestion.trim();
+}
+
+/**
+ * Returns true if the text is ANY Gemini error banner or canned refusal:
+ * - "I seem to be encountering an error. Can I try something else for you?"
+ * - "I'm having a hard time fulfilling your request. Can I help you with something else instead?"
+ * - "Não fui programado para fazer isso. Só consigo gerar texto."
+ * - "Sou apenas um modelo de linguagem. Não posso ajudar com isso."
+ * - "I encountered an error doing what you asked. Could you try again?"
+ * - "Sorry, something went wrong. Please try your request again."
+ */
+function isGeminiErrorBanner(text) {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 450) {
+    if (/seem to be encountering an error|try something else for you|hard time fulfilling|something else instead|não fui programado|só consigo gerar texto|encountered an error|doing what you asked|could you try again|something went wrong|try your request again|algo deu errado|tente novamente|ocorreu um erro|couldn't generate|não foi possível gerar/i.test(trimmed)) {
+      return true;
+    }
+    if (/não (posso|consigo) (te )?ajudar|sou (apenas |só )?um modelo de linguagem|modelo de linguagem|não tenho (essas informações|capacidade)|i cannot help with that|i'm just a language model|as an ai|cannot fulfill this request/i.test(trimmed)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns true ONLY if the text contains a genuine Imperial Dispatch marker (<DIRECT_REPLY>, +++, or REF-ID)
+ * and is NOT a refusal or error banner.
+ */
+function isValidImperialDispatch(text) {
+  if (!text || typeof text !== 'string') return false;
+  if (isGeminiErrorBanner(text)) return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 25) return false;
+  return /<DIRECT_REPLY|\+{2,}\s*[A-Z0-9]|REF-ID\s*:/i.test(trimmed);
+}
+
+/**
+ * Returns true if the text is still loading ("Conectando a Gemini Notebook") or hasn't output a valid dispatch header yet.
+ */
+function isToolLoadingBanner(text) {
+  if (!text || typeof text !== 'string') return true;
+  if (isGeminiErrorBanner(text)) return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 95 && /conectando|connecting|thinking|pensando|analisando|searching|buscando|loading|carregando/i.test(trimmed)) {
+    return true;
+  }
+  if (!isValidImperialDispatch(trimmed)) {
+    return true;
+  }
+  return false;
+}
+
+async function clickGeminiRetryButton(page, channelTag, logFn = logGreen) {
+  if (!page || typeof page.evaluate !== 'function') return false;
+  try {
+    const clicked = await page.evaluate(() => {
+      const models = document.querySelectorAll('model-response');
+      if (!models || models.length === 0) return false;
+      const lastModel = models[models.length - 1];
+
+      const buttons = Array.from(lastModel.querySelectorAll('button'));
+      for (const btn of buttons) {
+        const label = (
+          (btn.getAttribute('aria-label') || '') + ' ' +
+          (btn.getAttribute('mattooltip') || '') + ' ' +
+          (btn.getAttribute('title') || '') + ' ' +
+          (btn.textContent || '')
+        ).toLowerCase();
+        if (/retry|try again|regenerate|refresh|tentar|novamente|atualizar|replay/.test(label)) {
+          btn.click();
+          return true;
+        }
+        const icon = btn.querySelector('mat-icon, .google-symbols, .material-icons');
+        if (icon && /refresh|replay|autorenew|sync/i.test(icon.textContent || '')) {
+          btn.click();
+          return true;
+        }
+      }
+
+      if (buttons.length >= 3) {
+        buttons[2].click();
+        return true;
+      }
+      return false;
+    });
+
+    if (clicked) {
+      logFn(`[SELF-HEAL // ${channelTag}] Clicked Gemini '↻' Retry button automatically!`);
+      return true;
+    }
+  } catch (err) {
+    logFn(`[WARNING // ${channelTag}] Could not click Retry button: ${err.message}`);
+  }
+  return false;
+}
+
 async function extractCleanLastModelResponse(page) {
   const raw = await page.evaluate((sel) => {
     const nodes = document.querySelectorAll(sel);
@@ -344,7 +439,6 @@ async function extractCleanLastModelResponse(page) {
     const lastNode = nodes[nodes.length - 1];
     const clone = lastNode.cloneNode(true);
 
-    // 1. Remove Gemini Notebook source citation badge elements & buttons
     const junkSelectors = [
       'source-footnote',
       'sources-carousel',
@@ -358,24 +452,24 @@ async function extractCleanLastModelResponse(page) {
       '.citation',
       '.source-chip',
       'mat-chip',
-      'model-thoughts'
+      'model-thoughts',
+      '.sr-only',
+      '.visually-hidden',
+      '.cdk-visually-hidden'
     ];
     junkSelectors.forEach(s => {
       clone.querySelectorAll(s).forEach(el => el.remove());
     });
 
-    // 2. Remove any small inline pill/button whose text is just "MD" or "+ 2"
-    clone.querySelectorAll('button, span, a, div').forEach(el => {
+    clone.querySelectorAll('button, span, a, div, h1, h2, h3, h4, p').forEach(el => {
       if (el.children.length === 0) {
         const t = (el.textContent || '').trim();
-        if (/^(MD|\+\s*\d+)$/.test(t)) {
+        if (/^(MD|\+\s*\d+|O Gemini disse:?|Gemini said:?)$/i.test(t)) {
           el.remove();
         }
       }
     });
 
-    // 3. Explicitly inject newlines into the detached clone so <p>, <br>, <li>, etc.
-    // never glue together when reading textContent/innerText!
     clone.querySelectorAll('br').forEach(br => {
       br.replaceWith('\n');
     });
@@ -402,59 +496,32 @@ async function extractCleanLastModelResponse(page) {
   };
 }
 
-/**
- * Secondary regex scrubber & paragraph formatter:
- * - Strips any remaining citation tags
- * - Guarantees clean spacing around +++ banners, [HEADERS]:, and bullet points
- */
 function scrubArtifacts(str) {
   if (!str) return '';
   return str
-    // Remove "[cite: 1, 2]" style tags if any appear
+    .replace(/^\s*(?:O Gemini disse|Gemini said)\s*:?\s*/gi, '')
     .replace(/\[cite:\s*[\d,\s]+\]/gi, '')
-    // Remove standalone "MD" followed by optional "+ N"
     .replace(/[ \t]*\bMD\b(?:\s*\+\s*\d+)?/g, '')
-    // Remove standalone "+ 1", "+ 2", "+ 4" lines left by citation counters
     .replace(/^\s*\+\s*\d+\s*$/gm, '')
-    // Ensure a newline after closing "+++" header banners if glued to next word
+    .replace(/<\/?(?:DIRECT_REPLY|INTERCEPT)[^>]*>/gi, '')
     .replace(/(\+{3})([A-Za-z\[])/g, '$1\n\n$2')
-    // Ensure a blank line before closing/opening "+++" banners if glued to a period
     .replace(/([.!?])\s*(\+{3})/g, '$1\n\n$2')
-    // Ensure a blank line before bracketed section headers like "[CONDUIT LOG]:"
     .replace(/([.!?])\s*(\[[A-Z0-9\s&//\-_]+\]:)/g, '$1\n\n$2')
-    // Ensure a newline before bullet points if glued
     .replace(/([^\n])\s*(•\s+)/g, '$1\n$2')
-    // Clean up duplicate bullets "• • " if Gemini already had a bullet inside <li>
     .replace(/•\s*[•\-*]\s*/g, '• ')
-    // Clean up trailing spaces before newlines
     .replace(/[ \t]+\n/g, '\n')
-    // Collapse 3+ consecutive newlines into a clean double-newline paragraph break
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
 async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) {
-  const maxWaitMs = 120000;
+  const maxWaitMs = 120000; // Full 2 minutes if Gemini is legitimately thinking/updating .md files!
   const start = Date.now();
 
   logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> (Previous count:${prevState.count})...`);
 
-  // Helper: returns true if text is just Gemini's "Conectando a Gemini Notebook" tool spinner
-  const isToolLoadingBanner = (t) => {
-    if (!t || t.length < 80) {
-      if (/conectando|connecting|thinking|pensando|analisando|searching|buscando|loading|carregando/i.test(t || '')) {
-        return true;
-      }
-      // A real Imperial dispatch is always >80 chars and starts with +++ or <DIRECT_REPLY>
-      if (!/<DIRECT_REPLY|\+{3}|REF-ID/i.test(t || '')) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   let newResponseStarted = false;
-  while (Date.now() - start < 60000) {
+  while (Date.now() - start < 45000) {
     await page.waitForTimeout(1000);
     const curr = await extractCleanLastModelResponse(page);
 
@@ -469,7 +536,7 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
   }
 
   if (!newResponseStarted) {
-    logGreen(`[WARNING // ${channelTag}] No new <model-response> detected within 60s! Aborting to prevent stale read.`);
+    logGreen(`[WARNING // ${channelTag}] No new <model-response> detected within 45s! Aborting to prevent stale read.`);
     return '';
   }
 
@@ -477,29 +544,29 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
   let stableTicks = 0;
 
   while (Date.now() - start < maxWaitMs) {
-    await page.waitForTimeout(1400);
+    await page.waitForTimeout(1300);
     const curr = await extractCleanLastModelResponse(page);
     const text = curr.text;
 
     if (!text || text === prevState.text) continue;
 
-    // CRITICAL FIX: Never count "Conectando a Gemini Notebook" or tool spinners as a finished reply!
+    if (isGeminiErrorBanner(text)) {
+      logGreen(`[ERROR/REFUSAL BLOCKED // ${channelTag}] Gemini output: "${text.slice(0, 80)}"`);
+      return '__GEMINI_REFUSAL__';
+    }
+
     if (isToolLoadingBanner(text)) {
-      logGreen(`[WAITING // ${channelTag}] Gemini is accessing Notebook tools ("${text.slice(0, 40)}")... waiting for actual reply...`);
+      logGreen(`[WAITING // ${channelTag}] Gemini is reading Notebook ("${text.slice(0, 38)}")...`);
       stableTicks = 0;
       lastText = text;
       continue;
     }
 
-    const hasClosingTag = /<\/DIRECT_REPLY>/i.test(text);
-    const hasOpenIntercept = /<INTERCEPT/i.test(text);
-    const hasCloseIntercept = /<\/INTERCEPT>/i.test(text);
-    const tagsComplete = hasClosingTag && (!hasOpenIntercept || hasCloseIntercept);
+    const hasEndBanner = /\+{2,}\s*(?:END COGITATOR|TRANSMISSION|LEDGER INSCRIBED|WARRANT SEALED)/i.test(text) || /<\/DIRECT_REPLY>/i.test(text);
 
-    if (text === lastText && text.length > 80) {
+    if (text === lastText && isValidImperialDispatch(text)) {
       stableTicks++;
-      // If closing tags are present, 2 stable ticks (2.8s) is enough; otherwise require 5 ticks (7s)
-      if ((tagsComplete && stableTicks >= 2) || stableTicks >= 5) {
+      if ((hasEndBanner && stableTicks >= 2) || stableTicks >= 4) {
         return text;
       }
     } else {
@@ -508,8 +575,35 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
     }
   }
 
-  logGreen(`[WARNING // ${channelTag}] Stream max wait reached; returning captured text.`);
+  if (!isValidImperialDispatch(lastText)) {
+    logGreen(`[WARNING // ${channelTag}] Stream timed out without valid Imperial Dispatch markers. Rejecting capture.`);
+    return '';
+  }
+
+  logGreen(`[WARNING // ${channelTag}] Stream max wait reached; returning verified text.`);
   return lastText;
+}
+
+async function typeAndSendPrompt(targetPage, inputLocator, promptText, channelTag) {
+  await (typingLock = typingLock.then(async () => {
+    await targetPage.bringToFront();
+    await targetPage.waitForTimeout(200);
+    await inputLocator.click({ force: true });
+    await targetPage.waitForTimeout(120);
+
+    await targetPage.keyboard.press('Control+A');
+    await targetPage.keyboard.press('Backspace');
+    await targetPage.keyboard.insertText(promptText);
+    await targetPage.waitForTimeout(300);
+
+    const sendBtn = targetPage.locator(SEND_BUTTON_SELECTOR).first();
+    if (await sendBtn.count() > 0 && await sendBtn.isEnabled().catch(() => false)) {
+      await sendBtn.click();
+    } else {
+      await targetPage.keyboard.press('Enter');
+    }
+    await targetPage.waitForTimeout(250);
+  }).catch(err => logGreen(`[ERROR // ${channelTag}] Typing error:${err.message}`)));
 }
 
 async function processSingleMessage(msg, targetPage, options = {}) {
@@ -527,7 +621,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     : 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)';
   const msgShortId = msg.id ? msg.id.slice(0, 8) : '00000000';
 
-  logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} \vert{} From:${msg.sender || 'Unknown'}`);
+  logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} | From:${msg.sender || 'Unknown'}`);
   logFn(`   Payload: "${(msg.question || '').slice(0, 90)}..."`);
 
   const inputLocator = targetPage.locator(CHAT_INPUT_SELECTOR).first();
@@ -538,71 +632,107 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     return false;
   }
 
-  const prevState = await extractCleanLastModelResponse(targetPage);
+  const rawQ = msg.question || '';
+  let prevState = await extractCleanLastModelResponse(targetPage);
 
-  const channelSpecificRules = isAlpha
-    ? [
-      `   - FOR CHANNEL ALPHA (THE EXILE):`,
-      `     * If the player is speaking to HIGH COMMAND (Logis-Prefect Vane): Vane sits in ORBIT. He ONLY knows official Administratum serial manifests and orbital augur scans. He DOES NOT KNOW internal ship details, the -3 to +3 Ship Slider, corpse-starch vats, Cell 09 / Dravik's resurrection or bleeding walls, or underground troop nicknames like "The Shrine-Breakers" (call them "your Leman Russ Vanquisher squadron" or "Vanquisher Hulls #44-V1 and #44-V2"!).`,
-      `     * ONLY if the player explicitly addresses the Ship / "Ashen Spirit" / "Machine-Spirit" directly: Use PATTERN 4 and reply in a 100% COLD, ROBOTIC, CLINICAL MU-TH-UR 6000 / COGITATOR TELEMETRY VOICE (zero conversational prose—only raw sensor readouts, percentages, hull equilibrium index [-3 to +3], Cell 09 bio-sensors, and subroutine statuses).`
-    ].join('\n')
-    : [
-      `   - FOR CHANNEL BETA (LORD COMMANDER JUNEBUG):`,
-      `     * ZERO CROSS-PLAYER LEAKS: Treat Commander Alpha's dossier and SHIP.md as NON-EXISTENT. Never mention The Sanctuary of Ash's internal lore (unless he chooses to share ship in the future), The Exile, Dreir, Dravik, or "The Shrine-Breakers".`,
-      `     * NO FACTION ASSUMPTIONS: Junebug will tell you his faction when he decides to play. This is an early game problem.`,
-      `     * ORBITAL PERSPECTIVE ONLY: High Command (Logis-Prefect Vane) does NOT know what happens inside JUNEBUG's flagship corridors unless JUNEBUG explicitly tells High Command in his message!`
-    ].join('\n');
+  let rawReply;
 
-  const prompt = [
-    `[PRIVATE TERMINAL CONDUIT: ${msg.channel.toUpperCase()} // SENDER: ${msg.sender} // MSG_ID:${msgShortId}]`,
-    `Transmission Payload:`,
-    `${msg.question}`,
-    ``,
-    `CAMPAIGN MASTER DIRECTIVES (MANDATORY AUTONOMOUS COMPLIANCE):`,
-    `1. Follow the 5 Canonical Imperial CRT Dispatch Patterns in Section 2.B of AGENT.md (include ">>> REF-ID: ${msgShortId}" in the header and put clean blank lines between paragraphs/sections).`,
-    `2. EXECUTE PRE-RESPONSE EPISTEMIC AUDIT (CRITICAL — DO NOT USE OMNISCIENT .MD LORE UNLESS THIS SPEAKER KNOWS IT IN-UNIVERSE):`,
-    channelSpecificRules,
-    `3. NEVER name-drop "The 3rd Alliance" or "Horde AI" (refer only to raw sensor anomalies/tremors), and NEVER leak unmapped Node 1-7 Hegemony numbers.`,
-    `4. Reply inside <DIRECT_REPLY>...</DIRECT_REPLY> tags. If this is a Master Post-Battle or Nemesis Dossier, christen custom in-universe Lore Names & Backstories for every attached Upgrade, Relic, and Scar and update the relevant .md source!`,
-    `5. If warranted, also include an <INTERCEPT>...</INTERCEPT> block (with both opening <INTERCEPT> and closing </INTERCEPT> tags!) containing a cryptic, heavily redacted snippet (using [REDACTED]) for ${otherChannel.toUpperCase()}'s Interferences window.`
-  ].join('\n');
+  // LATE-ARRIVAL CATCHER: What if a previous cycle timed out while Gemini was still working,
+  // and Gemini finished writing the valid reply for this exact MSG_ID a few seconds later?
+  // Grab it immediately without re-sending the prompt!
+  if (prevState.text && prevState.text.includes(msgShortId) && isValidImperialDispatch(prevState.text)) {
+    logFn(`[LATE-ARRIVAL CAPTURED // ${channelTag}] Found completed reply for MSG_ID ${msgShortId} already on screen! Forwarding to Supabase...`);
+    messageAttemptTracker.delete(msg.id);
+    // Jump straight to parsing and saving prevState.text!
+    rawReply = prevState.text;
+  } else {
+    const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
+    const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
 
-  await (typingLock = typingLock.then(async () => {
-    await targetPage.bringToFront();
-    await targetPage.waitForTimeout(250);
-    await inputLocator.click({ force: true });
-    await targetPage.waitForTimeout(150);
+    // Only ask Gemini to edit .md sources when the message actually submits a Dossier or registers a Faction/Warlord/Alliance/Probe!
+    // This prevents Gemini's refresh_source_content tool router from crashing on normal questions and ship scans!
+    const needsLedgerUpdate = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
-    await targetPage.keyboard.press('Control+A');
-    await targetPage.keyboard.press('Backspace');
-    await targetPage.keyboard.insertText(prompt);
-    await targetPage.waitForTimeout(400);
-
-    const sendBtn = targetPage.locator(SEND_BUTTON_SELECTOR).first();
-    if (await sendBtn.count() > 0 && await sendBtn.isEnabled().catch(() => false)) {
-      await sendBtn.click();
+    let promptLines = [];
+    if (isAlpha) {
+      if (isAshenSpirit) {
+        promptLines = [
+          `Using AGENT.md and SHIP.md in this Warhammer 40k campaign notebook, reply in-character (Pattern 4 Ashen Spirit cogitator readout, REF-ID: ${msgShortId}) to this message from The Exile:`,
+          `"${safeQuestion}"`
+        ];
+      } else {
+        promptLines = [
+          `Using AGENT.md in this Warhammer 40k campaign notebook, reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, orbital knowledge only) to this message from The Exile:`,
+          `"${safeQuestion}"`
+        ];
+      }
     } else {
-      await targetPage.keyboard.press('Enter');
+      promptLines = [
+        `Using AGENT.md and Commander Beta's Dossier in this Warhammer 40k campaign notebook, reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) to this message from Lord Commander Junebug:`,
+        `"${safeQuestion}"`
+      ];
     }
-    await targetPage.waitForTimeout(300);
-  }).catch(err => logGreen(`[ERROR // ${channelTag}] Typing error:${err.message}`)));
 
-  logGreen(`[DISPATCHED // ${channelTag}] Prompt sent (MSG_ID:${msgShortId}). Awaiting Campaign Master decree...`);
+    if (needsLedgerUpdate) {
+      promptLines.push(`(Also update the relevant campaign .md file in the notebook to record this new campaign data, and include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
+    } else if (/simulate|test.*interference/i.test(rawQ)) {
+      promptLines.push(`(Also include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for testing).`);
+    }
 
-  const rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);
+    const prompt = promptLines.join('\n');
 
-  if (!rawReply || rawReply === prevState.text) {
-    logGreen(`[ERROR // ${channelTag}] No valid new response captured yet. Keeping MSG_ID ${msgShortId} in queue.`);
-    return false;
+    await typeAndSendPrompt(targetPage, inputLocator, prompt, channelTag);
+    logFn(`[DISPATCHED // ${channelTag}] Prompt sent (MSG_ID:${msgShortId}). Awaiting Campaign Master decree...`);
+
+    rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);
+
+    if (rawReply === '__GEMINI_REFUSAL__') {
+      logFn(`[SELF-HEAL // ${channelTag}] Sending pure creative-writing fallback for MSG_ID ${msgShortId}...`);
+      await targetPage.waitForTimeout(2500);
+      prevState = await extractCleanLastModelResponse(targetPage);
+
+      const recoveryPrompt = `In the fictional Warhammer 40,000 tabletop board game setting (using SHIP.md and AGENT.md), write the in-character terminal readout (starting with +++ ASHEN SPIRIT LOGIC CORE +++ and >>> REF-ID: ${msgShortId}) replying to the player's exact in-game line: "${safeQuestion}".`;
+      await typeAndSendPrompt(targetPage, inputLocator, recoveryPrompt, channelTag);
+      rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);
+    }
+
+    if (!rawReply || rawReply === prevState.text || !isValidImperialDispatch(rawReply)) {
+      logFn(`[BLOCKED // ${channelTag}] Reply did not pass Imperial Dispatch whitelist check. Keeping MSG_ID ${msgShortId} pending.`);
+      return false;
+    }
   }
 
-  const directMatch = rawReply.match(/<DIRECT_REPLY[^>]*>([\s\S]*?)<\/DIRECT_REPLY>/i);
-  // Match standard <INTERCEPT>...</INTERCEPT>, OR fallback to text between </DIRECT_REPLY> and </INTERCEPT> if opening tag was omitted!
-  const interceptMatch =
+  // Parse <DIRECT_REPLY> / <INTERCEPT> tags if present, OR split automatically at "+++ PASSIVE CHOIR INTERCEPT"
+  let directPart = rawReply;
+  let interceptPart = '';
+  let interceptAttrs = '';
+
+  const directTagMatch = rawReply.match(/<DIRECT_REPLY[^>]*>([\s\S]*?)<\/DIRECT_REPLY>/i);
+  const interceptTagMatch =
     rawReply.match(/<INTERCEPT([^>]*)>([\s\S]*?)<\/INTERCEPT>/i) ||
     rawReply.match(/<\/DIRECT_REPLY>\s*([\s\S]*?)<\/INTERCEPT>/i);
 
-  const finalDirectReply = scrubArtifacts(directMatch ? directMatch[1] : rawReply);
+  if (directTagMatch) {
+    directPart = directTagMatch[1];
+  }
+  if (interceptTagMatch) {
+    interceptAttrs = (interceptTagMatch[2] !== undefined ? interceptTagMatch[1] : '') || '';
+    interceptPart = interceptTagMatch[2] !== undefined ? interceptTagMatch[2] : interceptTagMatch[1];
+  } else {
+    // Check if Gemini wrote a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT" block at the bottom without XML tags
+    const splitIdx = directPart.search(/\+{2,}\s*PASSIVE CHOIR INTERCEPT/i);
+    if (splitIdx > 20) {
+      interceptPart = directPart.slice(splitIdx);
+      directPart = directPart.slice(0, splitIdx);
+    }
+  }
+
+  const finalDirectReply = scrubArtifacts(directPart);
+
+  if (isGeminiErrorBanner(finalDirectReply) || !isValidImperialDispatch(finalDirectReply)) {
+    logFn(`[BLOCKED // ${channelTag}] Extracted body failed validation. Keeping MSG_ID ${msgShortId} pending.`);
+    return false;
+  }
 
   const reqHeaders = {
     'Content-Type': 'application/json',
@@ -624,17 +754,11 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     return false;
   }
 
-  const rawInterceptBody = interceptMatch
-    ? (interceptMatch[2] !== undefined ? interceptMatch[2] : interceptMatch[1])
-    : '';
+  if (interceptPart && interceptPart.trim()) {
+    const cleanIntercept = scrubArtifacts(interceptPart);
 
-  if (rawInterceptBody && rawInterceptBody.trim()) {
-    const cleanIntercept = scrubArtifacts(rawInterceptBody);
-    const interceptAttrs = (interceptMatch[2] !== undefined ? interceptMatch[1] : '') || '';
-
-    // If the player asked to simulate/test an interference (or tag has target="self"), route to the sender's own Interferences tab!
     const isSelfTest =
-      /simulate|test.*interference/i.test(msg.question || '') ||
+      /simulate|test.*interference/i.test(rawQ) ||
       /target=["']?(self|same)/i.test(interceptAttrs);
 
     let destChannel = isSelfTest ? msg.channel : otherChannel;
@@ -746,7 +870,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
     const initData = await initCheck.json();
     logGreen('================================================================');
-    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v5.1 (SMART INTERCEPT) ONLINE ++');
+    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v6.0 (ZERO-XML) ONLINE ++');
     logGreen(`++ Pending Transmissions in Supabase: ${Array.isArray(initData) ? initData.length : JSON.stringify(initData)}`);
     logGreen('================================================================');
   } catch (e) {
@@ -776,12 +900,18 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
 module.exports = {
   resolveServiceKey,
   resolveThreadUrls,
+  sanitizePlayerQueryForGemini,
   scrubArtifacts,
+  isGeminiErrorBanner,
+  isValidImperialDispatch,
+  isToolLoadingBanner,
+  clickGeminiRetryButton,
   extractCleanLastModelResponse,
   waitForBulletproofReply,
   processSingleMessage,
   drainChannelQueue,
-  runDualThreadCourier
+  runDualThreadCourier,
+  messageAttemptTracker
 };
 
 if (require.main === module) {
