@@ -679,7 +679,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
    * Streams text character-by-character into a target DOM node with a blinking
    * phosphor block cursor and CRT teletype sound ticks!
    */
-  function streamTextIntoElement(targetEl, fullText, isRedactedMode = false) {
+  function streamTextIntoElement(targetEl, fullText, isRedactedMode = false, cursorLingerMs = 0) {
     targetEl.innerHTML = '';
     const textSpan = document.createElement('span');
     const cursorSpan = document.createElement('span');
@@ -700,6 +700,18 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
           targetEl.innerHTML = formatRedactedHtml(fullText);
         } else {
           textSpan.textContent = fullText;
+        }
+        if (cursorLingerMs > 0) {
+          const lingerTimer = setTimeout(() => {
+            if (cursorSpan && cursorSpan.parentNode) {
+              cursorSpan.remove();
+            }
+          }, cursorLingerMs);
+          activeStreamTimers.push(lingerTimer);
+        } else {
+          if (cursorSpan && cursorSpan.parentNode) {
+            cursorSpan.remove();
+          }
         }
         return;
       }
@@ -836,12 +848,9 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
 
               if (!seenTokens.has(rToken)) {
                 markTokenSeen(rToken);
-                streamTextIntoElement(rBody, m.reply, false);
+                streamTextIntoElement(rBody, m.reply, false, 2500);
               } else {
                 rBody.textContent = m.reply;
-                const cursor = document.createElement('span');
-                cursor.className = 'crt-cursor';
-                rBody.appendChild(cursor);
               }
               wrap.appendChild(repCard);
             } else {
@@ -889,7 +898,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
             const iToken = `int_${ix.id}`;
             if (!seenTokens.has(iToken)) {
               markTokenSeen(iToken);
-              streamTextIntoElement(bodyEl, ix.redacted_text || '', true);
+              streamTextIntoElement(bodyEl, ix.redacted_text || '', true, 2000);
             } else {
               bodyEl.innerHTML = formatRedactedHtml(ix.redacted_text || '');
             }
