@@ -30,6 +30,11 @@
   --blue: #3898a6;        /* Oxidized Hololith Verdigris / Cathode Cyan */
   --green: #10b981;       /* CRT Auspex Phosphor / Necron Gauss Emerald */
 
+  /* Lateral Auspex Perimeter Glow (Cathode Hololith Cyan / Void Cobalt) */
+  --side-glow-line: rgba(56, 189, 248, 0.70);
+  --side-glow-bloom: rgba(14, 165, 233, 0.32);
+  --side-glow-deep: rgba(2, 132, 199, 0.10);
+
   /* Font Stacks */
   --font-gothic: 'Cinzel', Georgia, serif;
   --font-ui: 'Chakra Petch', system-ui, -apple-system, sans-serif;
@@ -67,9 +72,9 @@ body {
 }
 
 /* ==========================================================================
-   VOX-TERMINAL PASSIVE AMBIENT BLUE CORNER GLOW
-   Subtle breathing cathode-phosphor vignette in viewport corners
-   Lightweight and non-obstructive to maintain crystal-clear terminal readability
+   LATERAL AUSPEX HOLOLITH PERIMETER GLOW
+   Graceful vertical side-edge energy beam & soft lateral diffusion.
+   Excludes the top navigation bar and bottom viewport to protect all text.
    ========================================================================== */
 body::before {
   content: "";
@@ -78,22 +83,32 @@ body::before {
   pointer-events: none;
   z-index: 9999;
   background:
-    radial-gradient(ellipse 32vw 32vh at 0% 0%, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 75%),
-    radial-gradient(ellipse 32vw 32vh at 100% 0%, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 75%),
-    radial-gradient(ellipse 32vw 32vh at 0% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 75%),
-    radial-gradient(ellipse 32vw 32vh at 100% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 75%);
-  animation: voxPassiveCornerGlow 8s ease-in-out infinite alternate;
+    /* Left Vertical Razor-Edge Beam */
+    linear-gradient(to right, var(--side-glow-line) 0px, var(--side-glow-bloom) 2px, transparent 18px),
+    /* Left Lateral Diffusion Bloom */
+    radial-gradient(ellipse 90px 75vh at 0% 50%, var(--side-glow-bloom) 0%, var(--side-glow-deep) 55%, transparent 100%),
+    /* Right Vertical Razor-Edge Beam */
+    linear-gradient(to left, var(--side-glow-line) 0px, var(--side-glow-bloom) 2px, transparent 18px),
+    /* Right Lateral Diffusion Bloom */
+    radial-gradient(ellipse 90px 75vh at 100% 50%, var(--side-glow-bloom) 0%, var(--side-glow-deep) 55%, transparent 100%);
+  /* Softly tapers off at the top (under top nav) and at the bottom edge */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.35) 8%, black 18%, black 82%, rgba(0, 0, 0, 0.35) 92%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.35) 8%, black 18%, black 82%, rgba(0, 0, 0, 0.35) 92%, transparent 100%);
+  animation: voxLateralEdgePulse 7s ease-in-out infinite alternate;
 }
 
-@keyframes voxPassiveCornerGlow {
+@keyframes voxLateralEdgePulse {
   0% {
-    opacity: 0.35;
+    opacity: 0.60;
+    filter: drop-shadow(0 0 6px rgba(14, 165, 233, 0.35));
   }
   50% {
-    opacity: 0.85;
+    opacity: 0.98;
+    filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.60));
   }
   100% {
-    opacity: 0.45;
+    opacity: 0.75;
+    filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.40));
   }
 }
 

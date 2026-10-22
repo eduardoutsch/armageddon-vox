@@ -2557,12 +2557,13 @@ const mockWindow = {
 // RPC mock results
 const rpcCalls = [];
 let mockMessages = [];
+let mockInterferences = [];
 let mockRpcHandler = async (fnName, params) => {
   rpcCalls.push({ fnName, params });
   if (fnName === 'check_channel_seal') return true;
   if (fnName === 'unlock_or_seal_channel') return { ok: true };
   if (fnName === 'send_vox_message') return { ok: true };
-  if (fnName === 'get_vox_terminal_data') return { ok: true, messages: mockMessages, interferences: [] };
+  if (fnName === 'get_vox_terminal_data') return { ok: true, messages: mockMessages, interferences: mockInterferences };
   return null;
 };
 
@@ -2589,10 +2590,12 @@ const evalFn = new Function(
     switchSubWindow,
     refreshTerminal,
     toggleOlderMessages,
+    toggleOlderInterferences,
     lockTerminal,
     getSelectedChannel: () => selectedChannel,
     getActivePassphrase: () => activePassphrase,
-    getShowAllOlderMessages: () => showAllOlderMessages
+    getShowAllOlderMessages: () => showAllOlderMessages,
+    getShowAllOlderInterferences: () => showAllOlderInterferences
   };`
 );
 
@@ -2760,5 +2763,47 @@ test('vox: refreshTerminal shows only past 3 messages by default and toggles old
   const collapsedToggleBar = mockElements.directMessagesBox.children[0];
   assert.ok(collapsedToggleBar.children[0].textContent.includes('See Older Messages (2 older)'));
 });
+
+test('vox: refreshTerminal hides old interferences by default and toggles on demand', async () => {
+  // Authenticate first
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  // Populate 5 mock interferences
+  mockInterferences = [
+    { id: 'int1', origin_hint: 'SECTOR-1', redacted_text: 'Fragment [REDACTED] alpha', created_at: Date.now() - 50000 },
+    { id: 'int2', origin_hint: 'SECTOR-2', redacted_text: 'Fragment [REDACTED] beta', created_at: Date.now() - 40000 },
+    { id: 'int3 =', origin_hint: 'SECTOR-3', redacted_text: 'Fragment [REDACTED] gamma', created_at: Date.now() - 30000 },
+    { id: 'int4', origin_hint: 'SECTOR-4', redacted_text: 'Fragment [REDACTED] delta', created_at: Date.now() - 20000 },
+    { id: 'int5', origin_hint: 'SECTOR-5', redacted_text: 'Fragment [REDACTED] epsilon', created_at: Date.now() - 10000 }
+  ];
+
+  await vox.refreshTerminal(false);
+
+  // When > 3 interferences exist, should have 1 toggle bar + 3 visible cards
+  assert.equal(vox.getShowAllOlderInterferences(), false);
+  assert.equal(mockElements.interferencesBox.children.length, 4, 'Must render 1 toggle bar + 3 most recent interferences');
+
+  const intToggleBar = mockElements.interferencesBox.children[0];
+  assert.ok(intToggleBar.className.includes('crt-older-bar'));
+  assert.ok(intToggleBar.children[0].textContent.includes('See Older Interferences (2 older)'));
+
+  // Toggle to expand all
+  vox.toggleOlderInterferences();
+  await vox.refreshTerminal(false);
+
+  assert.equal(vox.getShowAllOlderInterferences(), true);
+  assert.equal(mockElements.interferencesBox.children.length, 6, 'Must render all 5 interferences + toggle bar');
+  const expandedBar = mockElements.interferencesBox.children[0];
+  assert.ok(expandedBar.children[0].textContent.includes('Collapse to Recent 3 Psychic Bleeds'));
+
+  // Toggle back to collapse / hide old interferences
+  vox.toggleOlderInterferences();
+  await vox.refreshTerminal(false);
+
+  assert.equal(vox.getShowAllOlderInterferences(), false);
+  assert.equal(mockElements.interferencesBox.children.length, 4, 'Must collapse back to 3 interferences + toggle bar');
+});
+
 
 ````

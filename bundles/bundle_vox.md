@@ -504,11 +504,19 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   let pollTimer = null;
   let activeStreamTimers = [];
   let showAllOlderMessages = false;
+  let showAllOlderInterferences = false;
 
   function toggleOlderMessages() {
     showAllOlderMessages = !showAllOlderMessages;
     const dBox = document.getElementById('directMessagesBox');
     if (dBox) dBox.dataset.sig = '';
+    refreshTerminal(false);
+  }
+
+  function toggleOlderInterferences() {
+    showAllOlderInterferences = !showAllOlderInterferences;
+    const iBox = document.getElementById('interferencesBox');
+    if (iBox) iBox.dataset.sig = '';
     refreshTerminal(false);
   }
 
@@ -878,12 +886,37 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       if (ints.length === 0) {
         iBox.innerHTML = `<p style="color:#fda4af; text-align:center; margin-top:45px; opacity:0.65;">++ NO PSYCHIC BLEED DETECTED IN THE IMMATERIUM ++</p>`;
       } else {
-        const intSig = ints.map(x => x.id).join('|');
+        const totalInts = ints.length;
+        const hasOlderInts = totalInts > 3;
+        const visibleInts = (hasOlderInts && !showAllOlderInterferences) ? ints.slice(-3) : ints;
+
+        const intSig = `${showAllOlderInterferences ? 'all' : 'recent'}_${visibleInts.map(x => x.id).join('|')}`;
         if (iBox.dataset.sig !== intSig) {
           iBox.dataset.sig = intSig;
           iBox.innerHTML = '';
 
-          ints.forEach(ix => {
+          // Render toggle button if more than 3 interferences exist
+          if (hasOlderInts) {
+            const olderBar = document.createElement('div');
+            olderBar.className = 'crt-older-bar';
+
+            const olderBtn = document.createElement('button');
+            olderBtn.type = 'button';
+            olderBtn.id = 'toggleOlderIntsBtn';
+            olderBtn.className = 'btn-ghost btn-sm crt-older-btn';
+            olderBtn.style.color = '#ff4757';
+            olderBtn.style.borderColor = 'rgba(255, 71, 87, 0.45)';
+            olderBtn.style.background = 'rgba(28, 8, 12, 0.8)';
+            olderBtn.textContent = showAllOlderInterferences
+              ? '🔼 Collapse to Recent 3 Psychic Bleeds'
+              : `⚡ See Older Interferences (${totalInts - 3} older)`;
+            olderBtn.onclick = toggleOlderInterferences;
+
+            olderBar.appendChild(olderBtn);
+            iBox.appendChild(olderBar);
+          }
+
+          visibleInts.forEach(ix => {
             const card = document.createElement('div');
             card.className = 'crt-intercept-card';
             const tStr = ix.created_at ? new Date(ix.created_at).toLocaleTimeString() : 'WARP-ECHO';
@@ -944,6 +977,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   function lockTerminal() {
     activePassphrase = null;
     showAllOlderMessages = false;
+    showAllOlderInterferences = false;
     clearStreamTimers();
     if (pollTimer) clearInterval(pollTimer);
     try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (e) {}
