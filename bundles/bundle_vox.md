@@ -704,67 +704,81 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
     activeStreamTimers = [];
   }
 
-  /**
-   * Streams text character-by-character into a target DOM node with a blinking
-   * phosphor block cursor and CRT teletype sound ticks!
-   */
-  function streamTextIntoElement(targetEl, fullText, isRedactedMode = false, cursorLingerMs = 0) {
-    targetEl.innerHTML = '';
+  // Freeze-proof elapsed-time teletype streamer (never stalls on background tab throttling or apostrophes)
+  function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
+    if (!targetEl) return;
+    const rawStr = String(fullString || '');
+    if (!rawStr) {
+      targetEl.textContent = '';
+      return;
+    }
+
+    // Store the full target text on the DOM node so refreshTerminal can auto-complete if interrupted
+    targetEl.dataset.fullText = rawStr;
+    targetEl.dataset.isRedacted = isHtmlRedacted ? '1' : '0';
+    targetEl.dataset.streaming = '1';
+
+    const cursor = document.createElement('span');
+    cursor.className = 'crt-cursor';
+    cursor.textContent = '█';
+
     const textSpan = document.createElement('span');
-    const cursorSpan = document.createElement('span');
-    cursorSpan.className = 'crt-cursor';
-    cursorSpan.textContent = ' ';
+    targetEl.innerHTML = '';
     targetEl.appendChild(textSpan);
-    targetEl.appendChild(cursorSpan);
+    targetEl.appendChild(cursor);
 
-    let idx = 0;
-    const total = fullText.length;
-    // Fast enough to read comfortably, slow enough to feel like a live CRT teletype
-    const stepSize = total > 650 ? 3 : total > 280 ? 2 : 1;
+    const startTime = Date.now();
+    const charsPerSecond = 85; // Crisp, fast Imperial cogitator speed (~11ms per char)
+    let lastIdx = 0;
 
-    const timer = setInterval(() => {
-      if (idx >= total) {
-        clearInterval(timer);
-        if (isRedactedMode) {
-          targetEl.innerHTML = formatRedactedHtml(fullText);
+    function finishStream() {
+      targetEl.dataset.streaming = '0';
+      if (isHtmlRedacted) {
+        targetEl.innerHTML = formatRedactedHtml(rawStr);
+      } else {
+        targetEl.textContent = rawStr;
+      }
+      const scrollParent = targetEl.closest('.crt-messages');
+      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
+    }
+
+    // Allow clicking anywhere on a streaming message card to instantly finish typing it!
+    targetEl.onclick = () => {
+      if (targetEl.dataset.streaming === '1') finishStream();
+    };
+
+    function step() {
+      if (targetEl.dataset.streaming !== '1') return;
+
+      const elapsedMs = Date.now() - startTime;
+      // Calculate how many characters MUST be visible by now (immune to browser tab throttling!)
+      const targetIdx = Math.min(rawStr.length, Math.max(lastIdx + 1, Math.floor((elapsedMs / 1000) * charsPerSecond)));
+
+      if (targetIdx > lastIdx) {
+        const currentSlice = rawStr.slice(0, targetIdx);
+        if (isHtmlRedacted) {
+          textSpan.innerHTML = formatRedactedHtml(currentSlice);
         } else {
-          textSpan.textContent = fullText;
+          textSpan.textContent = currentSlice;
         }
-        if (cursorLingerMs > 0) {
-          const lingerTimer = setTimeout(() => {
-            if (cursorSpan && cursorSpan.parentNode) {
-              cursorSpan.remove();
-            }
-          }, cursorLingerMs);
-          activeStreamTimers.push(lingerTimer);
-        } else {
-          if (cursorSpan && cursorSpan.parentNode) {
-            cursorSpan.remove();
-          }
+
+        if (window.VoxAudio && typeof window.VoxAudio.playTeletypeTick === 'function') {
+          window.VoxAudio.playTeletypeTick('incoming');
         }
-        return;
+
+        const scrollParent = targetEl.closest('.crt-messages');
+        if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
+        lastIdx = targetIdx;
       }
 
-      const nextIdx = Math.min(total, idx + stepSize);
-      const slice = fullText.slice(0, nextIdx);
-      textSpan.textContent = slice;
-
-      // Play subtle teletype tick every few characters
-      if (window.VoxAudio && typeof window.VoxAudio.playTeletypeTick === 'function') {
-        const ch = fullText[idx];
-        if (ch === '▓' || (isRedactedMode && ch === '[')) {
-          window.VoxAudio.playTeletypeTick('redact');
-        } else if (idx % 3 === 0 && ch !== ' ' && ch !== '\n') {
-          window.VoxAudio.playTeletypeTick('stream');
-        }
+      if (lastIdx < rawStr.length) {
+        setTimeout(step, 16);
+      } else {
+        finishStream();
       }
+    }
 
-      idx = nextIdx;
-      const frame = targetEl.closest('.crt-monitor-frame');
-      if (frame) frame.scrollTop = frame.scrollHeight;
-    }, 18);
-
-    activeStreamTimers.push(timer);
+    step();
   }
 
   function escapeHtml(str) {

@@ -88,6 +88,7 @@ const mockDocument = {
       tagName: tag.toUpperCase(),
       className: '',
       style: {},
+      dataset: {},
       get textContent() { return _text; },
       set textContent(v) { _text = v; this.innerHTML = v; },
       innerHTML: '',
@@ -99,6 +100,7 @@ const mockDocument = {
           tagName: 'DIV',
           className: sel.replace('.', ''),
           style: {},
+          dataset: {},
           textContent: '',
           innerHTML: '',
           appendChild: () => ({}),
@@ -148,6 +150,7 @@ const evalFn = new Function(
   'console',
   'setInterval',
   'clearInterval',
+  'setTimeout',
   `${voxScriptCode}; return {
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
@@ -190,7 +193,8 @@ const vox = evalFn(
   },
   console,
   (fn, ms) => 1234,
-  (id) => {}
+  (id) => {},
+  (fn, ms) => 5678
 );
 
 test('vox: checkPendingDossierBuffer detects pending dossier payload from sessionStorage', () => {
@@ -517,6 +521,33 @@ test('vox: purgeVoxEntry confirms, triggers SFX, calls delete_vox_entry RPC, and
   await vox.purgeVoxEntry('int_purge_2', 'interference');
   assert.equal(rpcCalls.some(c => c.fnName === 'delete_vox_entry'), false, 'Cancelled confirm must not trigger RPC');
 });
+
+test('vox: streamTextIntoElement uses elapsed-time teletype engine, sets dataset metadata, and finishes on click', () => {
+  tickEvents = [];
+  const targetEl = mockDocument.createElement('div');
+
+  vox.streamTextIntoElement(targetEl, 'Commander Beta\'s transmission received.', false);
+
+  assert.equal(targetEl.dataset.fullText, 'Commander Beta\'s transmission received.');
+  assert.equal(targetEl.dataset.isRedacted, '0');
+  assert.equal(targetEl.dataset.streaming, '1');
+  assert.ok(tickEvents.includes('incoming'), 'Must trigger incoming teletype tick');
+  assert.equal(typeof targetEl.onclick, 'function', 'Must attach onclick handler to finish streaming on click');
+
+  // Clicking anywhere on the streaming element finishes it immediately
+  targetEl.onclick();
+  assert.equal(targetEl.dataset.streaming, '0');
+  assert.equal(targetEl.textContent, 'Commander Beta\'s transmission received.');
+
+  // Verify redacted mode and click-to-finish
+  const redactedEl = mockDocument.createElement('div');
+  vox.streamTextIntoElement(redactedEl, 'Target: [REDACTED]', true);
+  assert.equal(redactedEl.dataset.isRedacted, '1');
+  redactedEl.onclick();
+  assert.equal(redactedEl.dataset.streaming, '0');
+  assert.ok(redactedEl.innerHTML.includes('censor-bar'), 'Redacted stream finish must render censor-bar HTML');
+});
+
 
 
 
