@@ -14,6 +14,8 @@ node_modules/
 *.log
 .wrangler/
 scratch/
+chrome_vox_profile/
 .env
 .env.*
 !.env.example
+

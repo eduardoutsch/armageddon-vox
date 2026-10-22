@@ -98,6 +98,7 @@ const TEST_FILES = [
   'tests/js/spawner.test.js',
   'tests/js/app.test.js',
   'tests/js/vox-audio.test.js',
+  'tests/vox_bridge.test.js',
   'tests/ui/pages.test.js',
   'tests/ui/briefing.test.js',
   'tests/ui/pvp.test.js',
@@ -189,7 +190,10 @@ const PACKAGE_FILES = [
   'wrangler.jsonc',
   'README.md',
   'AGENTS.md',
-  '.gitignore'
+  '.gitignore',
+  '.env.example',
+  'vox_bridge.js',
+  'vox_autopilot.bat'
 ];
 
 compileBundle(
