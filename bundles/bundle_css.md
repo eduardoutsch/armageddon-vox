@@ -85,11 +85,42 @@ body {
 }
 
 /* ==========================================================================
+   VOX-TERMINAL PASSIVE AMBIENT BLUE CORNER GLOW
+   Subtle breathing cathode-phosphor vignette in all 4 viewport corners.
+   Lightweight and non-obstructive to maintain crystal-clear terminal readability.
+   ========================================================================== */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  background:
+    radial-gradient(ellipse 32vw 32vh at 0% 0%, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 75%),
+    radial-gradient(ellipse 32vw 32vh at 100% 0%, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.05) 50%, transparent 75%),
+    radial-gradient(ellipse 32vw 32vh at 0% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 75%),
+    radial-gradient(ellipse 32vw 32vh at 100% 100%, rgba(56, 189, 248, 0.14) 0%, rgba(14, 165, 233, 0.04) 50%, transparent 75%);
+  animation: voxPassiveCornerGlow 8s ease-in-out infinite alternate;
+}
+
+@keyframes voxPassiveCornerGlow {
+  0% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0.45;
+  }
+}
+
+/* ==========================================================================
    LATERAL AUSPEX HOLOLITH PERIMETER GLOW
    Graceful vertical side-edge energy beam & soft lateral diffusion.
    Excludes the top navigation bar and bottom viewport to protect all text.
    ========================================================================== */
-body::before {
+body::after {
   content: "";
   position: fixed;
   inset: 0;
