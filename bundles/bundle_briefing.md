@@ -19,6 +19,54 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* SHIP.MD READ-ONLY STATUS GAUGE INSIDE ALPHA TAB */
+    .slider-track {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin: 14px 0;
+      user-select: none;
+    }
+    .slider-node {
+      background: var(--surface-alt);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 4px;
+      cursor: default;
+      pointer-events: none; /* Strictly non-interactable status gauge */
+      text-align: center;
+      color: var(--muted);
+      opacity: 0.45;
+    }
+    .slider-node .val { font-size: 1.15rem; font-weight: 800; display: block; }
+    .slider-node .lbl { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.4px; }
+    .slider-node .sweet-spot-tag {
+      font-size: 0.58rem;
+      padding: 2px 4px;
+      margin-top: 4px;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .slider-node.active-brig {
+      background: rgba(255, 71, 87, 0.18); border-color: var(--red); color: #fff;
+      box-shadow: 0 0 14px rgba(255, 71, 87, 0.35);
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+    .slider-node.active-bal {
+      background: rgba(59, 130, 246, 0.18); border-color: var(--blue); color: #fff;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+    .slider-node.active-sanctum {
+      background: rgba(245, 176, 65, 0.18); border-color: var(--gold); color: #fff;
+      box-shadow: 0 0 14px rgba(245, 176, 65, 0.35);
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+  </style>
 </head>
 <body>
 
@@ -85,14 +133,37 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
           Track the internal struggle between the <strong>Lower Decks</strong> (Commissar Dravik's Brig Wall Warrants &amp; Covert Directives) and the <strong>High Sanctum</strong> (Sororitas Wardens). Positions <strong>-1</strong> and <strong>+1</strong> are the tactical Sweet Spots; pushing to <strong>±2</strong> or <strong>±3</strong> triggers severe shipboard quicksand!
         </p>
 
-        <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:6px; margin-bottom:16px;">
-          <button type="button" class="chip" id="sliderBtn-3" onclick="selectSlider(-3)">-3 Abyss</button>
-          <button type="button" class="chip" id="sliderBtn-2" onclick="selectSlider(-2)">-2 Mutiny</button>
-          <button type="button" class="chip" id="sliderBtn-1" onclick="selectSlider(-1)">-1 Sweet Spot</button>
-          <button type="button" class="chip active" id="sliderBtn0" onclick="selectSlider(0)">0 Balanced</button>
-          <button type="button" class="chip" id="sliderBtn1" onclick="selectSlider(1)">+1 Sweet Spot</button>
-          <button type="button" class="chip" id="sliderBtn2" onclick="selectSlider(2)">+2 Penance</button>
-          <button type="button" class="chip" id="sliderBtn3" onclick="selectSlider(3)">+3 Tyranny</button>
+        <div class="slider-track" aria-label="Current Shipboard Balance Gauge (Read-Only)">
+          <div id="node-3" class="slider-node">
+            <span class="val">-3</span>
+            <span class="lbl">Brig Abyss</span>
+          </div>
+          <div id="node-2" class="slider-node">
+            <span class="val">-2</span>
+            <span class="lbl">Quicksand</span>
+          </div>
+          <div id="node-1" class="slider-node active-brig">
+            <span class="val">-1</span>
+            <span class="lbl">Lower Decks</span>
+            <span class="sweet-spot-tag">ACTIVE • Sweet Spot</span>
+          </div>
+          <div id="node0" class="slider-node">
+            <span class="val">0</span>
+            <span class="lbl">Balanced</span>
+          </div>
+          <div id="node1" class="slider-node">
+            <span class="val">+1</span>
+            <span class="lbl">High Sanctum</span>
+            <span class="sweet-spot-tag">Sweet Spot</span>
+          </div>
+          <div id="node2" class="slider-node">
+            <span class="val">+2</span>
+            <span class="lbl">Quicksand</span>
+          </div>
+          <div id="node3" class="slider-node">
+            <span class="val">+3</span>
+            <span class="lbl">Tyranny</span>
+          </div>
         </div>
 
         <div id="sliderDetailBox" class="card" style="background:#0b0d13; margin-bottom:12px;"></div>
@@ -100,14 +171,53 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
         <details>
           <summary style="cursor:pointer; font-weight:700; color:var(--gold);">7-Level Dynamic Phase Reckoning Table (If 3rd Alliance Wins Phase)</summary>
           <div class="drawer-body" style="font-size:0.88rem; line-height:1.55; margin-top:10px;">
-            <p>If the Campaign Master's <strong>3rd Alliance</strong> wins the Campaign Phase, Segmentum Solar High Command audits <em>The Sanctuary of Ash</em> based on where your slider rests:</p>
-            <ul>
-              <li><strong>At -1 or +1 (The Sweet Spots):</strong> Your covert maneuvering masks the failure—no High Command penalty, and you claim the <strong>Phase-End Shipboard Cache (+1 RP or +100 pts Supply Limit)</strong>!</li>
-              <li><strong>At 0 (Balanced Indecision):</strong> Neither deck takes the blame; lose 1 Supply Cache Token (or start next game with -1 CP).</li>
-              <li><strong>At -2 or +2 (Factional Strife):</strong> Internal purges cost you <strong>1 RP</strong> (or 1 unit suffers a automatic Battle Scar).</li>
-              <li><strong>At -3 (Lower Decks Abyss):</strong> High Sanctum unleashes <em>Saint Celestine &amp; Aestred Thurga</em> as hostile Executioners in your next battle!</li>
-              <li><strong>At +3 (High Sanctum Tyranny):</strong> The Sororitas confiscate your Phase-End Cache (+1 RP) and brand <em>The Exile's</em> hull with an automatic Battle Scar on a failed Leadership test (-1)!</li>
-            </ul>
+            <p>If the Campaign Master's <strong>3rd Alliance (Horde AI)</strong> wins a Campaign Phase (or wipes out the strike force in a Phase Finale), the ship suffers a reckoning based on your current Slider Level (used as a severity baseline and dynamically tailored by the Campaign Master to that battle's events):</p>
+            <table class="reckoning-table">
+              <thead>
+                <tr>
+                  <th style="width:95px;">Slider</th>
+                  <th style="width:165px;">Reckoning</th>
+                  <th>Baseline Mechanical &amp; Narrative Punishment</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr id="reckRow-3">
+                  <td><strong>-3 Abyss</strong></td>
+                  <td><strong>"The Red Deck Purge &amp; Hull Breach"</strong></td>
+                  <td><strong>1.</strong> Lose <strong>1 RP</strong> (or -100 pts Supply Limit). <strong>2.</strong> Both <strong>Dravik's Cull</strong> (1 random Krieg squad starts at Half-Strength) AND <strong>Saint Celestine's Purge Strike</strong> trigger in Battle 1 of next Phase! <strong>3.</strong> One Vehicle takes an automatic <strong>Battle Scar</strong> (<em>"Sabotaged by Mutineers"</em>).</td>
+                </tr>
+                <tr id="reckRow-2">
+                  <td><strong>-2 Quicksand</strong></td>
+                  <td><strong>"The Corpse-Vat Famine"</strong></td>
+                  <td><strong>1.</strong> Start Battle 1 of next Phase with <strong>0 CP</strong>. <strong>2.</strong> All <strong>Battleline Infantry</strong> suffer <strong>-1 Leadership and -1 OC</strong> next battle. <strong>3.</strong> Slider is dragged <strong>1 step deeper into -3</strong> unless you sacrifice <strong>3 XP</strong> from a Character!</td>
+                </tr>
+                <tr id="reckRow-1" class="highlight-row">
+                  <td><strong style="color:var(--green);">-1 Sweet Spot</strong></td>
+                  <td><strong>"Dravik's Scapegoat Execution"</strong></td>
+                  <td><strong>Zero RP or CP loss!</strong> Dravik executes a scapegoat junior officer: <strong>1 unit on your Order of Battle loses D3 XP</strong>, and the slider resets to 0.</td>
+                </tr>
+                <tr id="reckRow0">
+                  <td><strong>0 Balanced</strong></td>
+                  <td><strong>"Deadlocked Command Blame-Game"</strong></td>
+                  <td>Both orbital support grids go offline: in Battle 1 of next Phase, your <strong>Hard Mode SP Cap drops from 8 SP/round to 6 SP/round</strong> (or -1 CP in 1v1), AND you cannot buy <code>Strike</code> Resupplies that battle!</td>
+                </tr>
+                <tr id="reckRow1">
+                  <td><strong style="color:var(--green);">+1 Sweet Spot</strong></td>
+                  <td><strong>"The Penitent Lash"</strong></td>
+                  <td><strong>Zero RP or Battle Scar penalties!</strong> Aestred Thurga shields the ship in exchange for a vow of fasting: start Battle 1 of next Phase with <strong>-2 SP</strong> (first 2 SP earned pay off the tithe), and slider resets to 0.</td>
+                </tr>
+                <tr id="reckRow2">
+                  <td><strong>+2 Quicksand</strong></td>
+                  <td><strong>"The Flagellant's Crusade"</strong></td>
+                  <td><strong>1.</strong> One Krieg Infantry squad is converted into <strong>Penitent Flagellants</strong> next battle (cannot perform Actions or Fall Back; must declare a Charge if able). <strong>2.</strong> Lose <strong>1 RP</strong> (or 1 unit takes a Battle Scar). <strong>3.</strong> Slider is dragged <strong>1 step deeper into +3 Tyranny</strong>!</td>
+                </tr>
+                <tr id="reckRow3">
+                  <td><strong>+3 Tyranny</strong></td>
+                  <td><strong>"Decimation of the Condemned"</strong></td>
+                  <td><strong>1.</strong> <strong>The Exile</strong> <em>automatically</em> suffers a permanent <strong>Battle Scar</strong> (no save!). <strong>2.</strong> <strong>Every unit on your Order of Battle loses 1 XP</strong>. <strong>3.</strong> Cannot spend CP on Stratagems during Rounds 1 &amp; 2 of next battle!</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </details>
       </div>
@@ -801,7 +911,7 @@ let briefingState = {
   activeDossier: 'beta',
   unlockedAlpha: false,
   unlockedBeta: false,
-  shipSlider: 0,
+  shipSlider: -1,
   selectedNode: 0
 };
 
@@ -894,9 +1004,19 @@ function selectSlider(val, persist = true) {
     const btn = document.getElementById('sliderBtn' + i);
     if (btn) btn.classList.toggle('active', i === Number(val));
     const nodeEl = document.getElementById('node' + i);
-    if (nodeEl) nodeEl.classList.toggle('active', i === Number(val));
+    if (nodeEl) {
+      nodeEl.classList.toggle('active', i === Number(val));
+      nodeEl.classList.remove('active-brig', 'active-bal', 'active-sanctum');
+      if (i === Number(val)) {
+        if (i < 0) nodeEl.classList.add('active-brig');
+        else if (i === 0) nodeEl.classList.add('active-bal');
+        else nodeEl.classList.add('active-sanctum');
+      }
+    }
+    const row = document.getElementById('reckRow' + i);
+    if (row) row.classList.toggle('highlight-row', i === Number(val));
   }
-  const info = SHIP_SLIDER_DATA[key] || SHIP_SLIDER_DATA["0"];
+  const info = SHIP_SLIDER_DATA[key] || SHIP_SLIDER_DATA["-1"] || SHIP_SLIDER_DATA["0"];
   const label = document.getElementById('shipSliderLabel');
   const box = document.getElementById('sliderDetailBox');
   if (label) label.textContent = `Current State: ${info.title}`;
@@ -1057,6 +1177,10 @@ if (document.readyState === 'loading') {
 } else {
   restoreBriefingState();
 }
+
+// Locked Campaign State (Updated strictly by Campaign Master patches)
+const CURRENT_SHIP_SLIDER = -1;
+selectSlider(CURRENT_SHIP_SLIDER);
 </script>
 <script src="../js/vox-audio.js"></script>
 </body>

@@ -1426,17 +1426,20 @@ details[open] > summary {
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
   margin: 14px 0;
+  user-select: none;
 }
 
 .slider-node {
-  background: var(--crt-bg);
-  border: 1px solid var(--border);
-  clip-path: var(--clip-btn);
+  background: var(--surface-alt);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
   padding: 10px 4px;
-  cursor: pointer;
+  cursor: default;
+  pointer-events: none; /* Strictly non-interactable status gauge */
   text-align: center;
-  transition: all 0.15s ease;
   color: var(--muted);
+  opacity: 0.45;
+  transition: all 0.15s ease;
 }
 
 .slider-node:hover {
@@ -1452,30 +1455,44 @@ details[open] > summary {
 }
 
 .slider-node .lbl {
-  font-size: 0.64rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
+}
+
+.slider-node .sweet-spot-tag {
+  font-size: 0.58rem;
+  padding: 2px 4px;
+  margin-top: 4px;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .slider-node.active-brig {
-  background: rgba(204, 41, 54, 0.22);
-  border-color: var(--red-bright);
+  background: rgba(255, 71, 87, 0.18);
+  border-color: var(--red);
   color: #fff;
-  box-shadow: 0 0 14px rgba(204, 41, 54, 0.35);
+  box-shadow: 0 0 14px rgba(255, 71, 87, 0.35);
+  opacity: 1;
+  transform: translateY(-2px);
 }
 
 .slider-node.active-bal {
-  background: rgba(56, 152, 166, 0.22);
+  background: rgba(59, 130, 246, 0.18);
   border-color: var(--blue);
   color: #fff;
-  box-shadow: 0 0 14px rgba(56, 152, 166, 0.35);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
+  opacity: 1;
+  transform: translateY(-2px);
 }
 
 .slider-node.active-sanctum {
-  background: rgba(212, 163, 73, 0.22);
-  border-color: var(--gold-bright);
+  background: rgba(245, 176, 65, 0.18);
+  border-color: var(--gold);
   color: #fff;
-  box-shadow: 0 0 14px rgba(212, 163, 73, 0.35);
+  box-shadow: 0 0 14px rgba(245, 176, 65, 0.35);
+  opacity: 1;
+  transform: translateY(-2px);
 }
 
 .sector-grid,

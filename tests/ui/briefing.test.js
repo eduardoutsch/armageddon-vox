@@ -83,6 +83,7 @@ const mockElements = {
 for (let i = -3; i <= 3; i++) {
   mockElements['sliderBtn' + i] = createMockElement();
   mockElements['node' + i] = createMockElement();
+  mockElements['reckRow' + i] = createMockElement();
 }
 ['1', '15', '22'].forEach(k => {
   mockElements['zoomBtn' + k] = createMockElement();
@@ -166,6 +167,8 @@ test('briefing: selectSlider updates active node and description', () => {
   assert.equal(briefing.getBriefingState().shipSlider, 2);
   assert.equal(mockElements['sliderBtn2'].classList.contains('active'), true);
   assert.equal(mockElements['sliderBtn0'].classList.contains('active'), false);
+  assert.equal(mockElements['node2'].classList.contains('active-sanctum'), true);
+  assert.equal(mockElements['reckRow2'].classList.contains('highlight-row'), true);
   assert.ok(mockElements.shipSliderLabel.textContent.includes('Current State:'));
 });
 
@@ -238,3 +241,22 @@ test('briefing: restoreBriefingState restores all user choices from localStorage
   assert.equal(briefing.getBriefingState().shipSlider, -1);
   assert.equal(briefing.getBriefingState().selectedNode, 3);
 });
+
+test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
+  // Check read-only styling
+  assert.ok(briefingHtml.includes('pointer-events: none; /* Strictly non-interactable status gauge */'), 'Must define pointer-events none');
+  assert.ok(briefingHtml.includes('aria-label="Current Shipboard Balance Gauge (Read-Only)"'), 'Must define read-only aria-label');
+  
+  // Check -1 active status node
+  assert.ok(briefingHtml.includes('id="node-1" class="slider-node active-brig"'), 'Must render node-1 as active-brig');
+  assert.ok(briefingHtml.includes('ACTIVE • Sweet Spot'), 'Must highlight ACTIVE sweet spot');
+
+  // Check reckRow-1 highlight in Reckoning Table
+  assert.ok(briefingHtml.includes('<tr id="reckRow-1" class="highlight-row">'), 'Must highlight reckRow-1');
+  assert.ok(!briefingHtml.includes('<tr id="reckRow0" class="highlight-row">'), 'reckRow0 must not have highlight-row');
+
+  // Check script locked campaign state
+  assert.ok(briefingHtml.includes('const CURRENT_SHIP_SLIDER = -1;'), 'Must define locked CURRENT_SHIP_SLIDER = -1');
+  assert.ok(briefingHtml.includes('selectSlider(CURRENT_SHIP_SLIDER);'), 'Must invoke selectSlider(CURRENT_SHIP_SLIDER)');
+});
+

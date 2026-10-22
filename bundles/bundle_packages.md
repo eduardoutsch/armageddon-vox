@@ -184,4 +184,7 @@ node_modules/
 *.log
 .wrangler/
 scratch/
+.env
+.env.*
+!.env.example
 ````
