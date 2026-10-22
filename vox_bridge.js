@@ -35,18 +35,30 @@ function resolveServiceKey(env = process.env) {
   return '';
 }
 
+/**
+ * Resolves the Astropathic Courier thread URLs for Alpha and Beta channels strictly from environment variables.
+ *
+ * @param {object} [env=process.env] - The environment dictionary.
+ * @returns {{ alphaThreadUrl: string, betaThreadUrl: string }} The resolved URLs.
+ */
+function resolveThreadUrls(env = process.env) {
+  return {
+    alphaThreadUrl: (env && typeof env.ALPHA_THREAD_URL === 'string' ? env.ALPHA_THREAD_URL : '').trim(),
+    betaThreadUrl: (env && typeof env.BETA_THREAD_URL === 'string' ? env.BETA_THREAD_URL : '').trim()
+  };
+}
+
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://dsfvhjjalexqpbzqoaqb.supabase.co').trim();
 const SERVICE_KEY = resolveServiceKey();
 
-const ALPHA_THREAD_URL = (process.env.ALPHA_THREAD_URL || 'https://gemini.google.com/app/b15649e0813ab99a').trim();
-const BETA_THREAD_URL = (process.env.BETA_THREAD_URL || 'https://gemini.google.com/app/0c0b15a075182321').trim();
+const { alphaThreadUrl: ALPHA_THREAD_URL, betaThreadUrl: BETA_THREAD_URL } = resolveThreadUrls();
 
 logGreen('----------------------------------------------------------------');
 logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v5.1 BULLETPROOF]');
 logGreen(` -> SUPABASE_URL : ${SUPABASE_URL}`);
 logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)}...)` : 'MISSING! Check your .env file!'}`);
-logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL}`);
-logGreen(` -> TAB 2 (JUNE) : ${BETA_THREAD_URL}`);
+logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL || 'MISSING! Define ALPHA_THREAD_URL in .env'}`);
+logGreen(` -> TAB 2 (JUNE) : ${BETA_THREAD_URL || 'MISSING! Define BETA_THREAD_URL in .env'}`);
 logGreen('----------------------------------------------------------------');
 
 const headers = {
@@ -442,7 +454,14 @@ async function drainChannelQueue(channelName, targetPage, options = {}) {
   return processedCount;
 }
 
-async function runDualThreadCourier() {
+async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}) {
+  const { alphaThreadUrl, betaThreadUrl } = resolveThreadUrls(env);
+
+  if (!alphaThreadUrl || !betaThreadUrl) {
+    logFn('[FATAL ERROR] ALPHA_THREAD_URL and BETA_THREAD_URL must be defined in your .env file!');
+    return false;
+  }
+
   const profileDir = path.join(__dirname, 'chrome_vox_profile');
   const context = await chromium.launchPersistentContext(profileDir, {
     headless: false,
@@ -457,11 +476,11 @@ async function runDualThreadCourier() {
 
   const alphaPage = context.pages()[0] || await context.newPage();
   logGreen('>> Opening Tab 1 (Commander Alpha // The Exile)...');
-  await alphaPage.goto(ALPHA_THREAD_URL, { waitUntil: 'domcontentloaded' });
+  await alphaPage.goto(alphaThreadUrl, { waitUntil: 'domcontentloaded' });
 
   const betaPage = await context.newPage();
   logGreen('>> Opening Tab 2 (Commander Beta // JUNEBUG)...');
-  await betaPage.goto(BETA_THREAD_URL, { waitUntil: 'domcontentloaded' });
+  await betaPage.goto(betaThreadUrl, { waitUntil: 'domcontentloaded' });
 
   try {
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
@@ -496,6 +515,7 @@ async function runDualThreadCourier() {
 
 module.exports = {
   resolveServiceKey,
+  resolveThreadUrls,
   scrubArtifacts,
   extractCleanLastModelResponse,
   waitForBulletproofReply,

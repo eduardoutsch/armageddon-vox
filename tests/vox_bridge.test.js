@@ -3,9 +3,11 @@ const assert = require('node:assert/strict');
 
 const {
   resolveServiceKey,
+  resolveThreadUrls,
   scrubArtifacts,
   processSingleMessage,
-  drainChannelQueue
+  drainChannelQueue,
+  runDualThreadCourier
 } = require('../vox_bridge.js');
 
 test('resolveServiceKey: resolves key correctly across standard and fallback env formats', () => {
@@ -192,4 +194,33 @@ test('drainChannelQueue: handles empty queue and missing service key gracefully'
   });
 
   assert.equal(emptyResult, 0, 'Drained message count must be 0 for empty queue');
+});
+
+test('resolveThreadUrls: resolves Alpha and Beta thread URLs cleanly and trims whitespace', () => {
+  // Both defined and trimmed
+  const urls = resolveThreadUrls({
+    ALPHA_THREAD_URL: '  https://gemini.google.com/app/alpha123  ',
+    BETA_THREAD_URL: '  https://gemini.google.com/app/beta456  '
+  });
+  assert.equal(urls.alphaThreadUrl, 'https://gemini.google.com/app/alpha123');
+  assert.equal(urls.betaThreadUrl, 'https://gemini.google.com/app/beta456');
+
+  // Missing or non-string
+  const missing = resolveThreadUrls({});
+  assert.equal(missing.alphaThreadUrl, '');
+  assert.equal(missing.betaThreadUrl, '');
+
+  const partial = resolveThreadUrls({ ALPHA_THREAD_URL: 'https://gemini.google.com/app/alpha123' });
+  assert.equal(partial.alphaThreadUrl, 'https://gemini.google.com/app/alpha123');
+  assert.equal(partial.betaThreadUrl, '');
+});
+
+test('runDualThreadCourier: safely returns false and logs fatal error when thread URLs are missing from env', async () => {
+  const logged = [];
+  const result = await runDualThreadCourier({
+    env: { ALPHA_THREAD_URL: '' },
+    logFn: (msg) => logged.push(msg)
+  });
+  assert.equal(result, false, 'runDualThreadCourier must exit early and return false');
+  assert.ok(logged.some(m => m.includes('[FATAL ERROR] ALPHA_THREAD_URL and BETA_THREAD_URL must be defined in your .env file!')), 'Must log fatal error message');
 });
