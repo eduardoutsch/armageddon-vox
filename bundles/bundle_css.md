@@ -287,6 +287,14 @@ body::before {
   padding: 16px;
 }
 
+.vox-shell {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 20px 48px 20px;
+  box-sizing: border-box;
+}
+
 .container,
 .briefing-shell {
   max-width: 860px;
@@ -2278,6 +2286,108 @@ details[open] > summary {
   font-family: 'Courier New', Consolas, monospace;
   font-size: 0.85rem;
   text-align: center;
+}
+
+/* ========================================================================= */
+/* RESPONSIVE IMPOSING DESKTOP COGITATOR & FLUID MOBILE VIEWPORTS            */
+/* ========================================================================= */
+@media (min-width: 1024px) {
+  .vox-shell {
+    max-width: 1200px;
+    padding: 22px 28px 56px 28px;
+  }
+  .crt-monitor-frame {
+    min-height: 560px;
+    height: clamp(560px, 66vh, 780px);
+    padding: 24px 28px;
+    gap: 18px;
+    border-width: 2.5px;
+    border-radius: 16px;
+    box-shadow:
+      inset 0 0 56px rgba(0, 0, 0, 0.96),
+      inset 0 0 24px rgba(0, 255, 136, 0.1),
+      0 14px 44px rgba(0, 0, 0, 0.85);
+  }
+  .crt-msg-card {
+    padding: 14px 20px;
+    font-size: 0.94rem;
+    line-height: 1.62;
+    border-radius: 10px;
+  }
+  .crt-reply-card {
+    padding: 16px 22px;
+    font-size: 0.96rem;
+    line-height: 1.68;
+    border-radius: 10px;
+  }
+  .crt-msg-header,
+  .crt-reply-header {
+    font-size: 0.78rem;
+    letter-spacing: 1.2px;
+    padding-bottom: 7px;
+    margin-bottom: 10px;
+  }
+  .crt-input-textarea {
+    min-height: 82px;
+    font-size: 0.95rem;
+    padding: 14px 18px;
+    border-radius: 12px;
+  }
+  #subWinDirect button.btn-red {
+    min-width: 160px;
+    font-size: 0.95rem;
+    padding: 12px 20px;
+  }
+  .crt-older-btn {
+    font-size: 0.82rem;
+    padding: 8px 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .vox-shell {
+    padding: 10px 8px 32px 8px;
+  }
+  .crt-monitor-frame {
+    min-height: 380px;
+    height: 56vh;
+    padding: 12px 10px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+  .crt-msg-card {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .crt-reply-card {
+    padding: 12px 14px;
+    font-size: 0.86rem;
+    line-height: 1.52;
+  }
+  .crt-msg-header,
+  .crt-reply-header {
+    font-size: 0.7rem;
+  }
+  .hud-bar {
+    padding: 8px 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .crt-input-textarea {
+    min-height: 60px;
+    font-size: 0.86rem;
+    padding: 10px;
+  }
+  #subWinDirect button.btn-red {
+    min-width: 100px;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+  }
+  .crt-older-btn {
+    font-size: 0.74rem;
+    padding: 6px 12px;
+  }
 }
 
 ````

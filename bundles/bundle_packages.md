@@ -504,15 +504,31 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   const prevState = await extractCleanLastModelResponse(targetPage);
 
+  const channelSpecificRules = isAlpha
+    ? [
+      `   - FOR CHANNEL ALPHA (THE EXILE):`,
+      `     * If the player is speaking to HIGH COMMAND (Logis-Prefect Vane): Vane sits in ORBIT. He ONLY knows official Administratum serial manifests and orbital augur scans. He DOES NOT KNOW internal ship details, the -3 to +3 Ship Slider, corpse-starch vats, Cell 09 / Dravik's resurrection or bleeding walls, or underground troop nicknames like "The Shrine-Breakers" (call them "your Leman Russ Vanquisher squadron" or "Vanquisher Hulls #44-V1 and #44-V2"!).`,
+      `     * ONLY if the player explicitly addresses the Ship / "Ashen Spirit" / "Machine-Spirit" directly: Use PATTERN 4 and reply in a 100% COLD, ROBOTIC, CLINICAL MU-TH-UR 6000 / COGITATOR TELEMETRY VOICE (zero conversational prose—only raw sensor readouts, percentages, hull equilibrium index [-3 to +3], Cell 09 bio-sensors, and subroutine statuses).`
+    ].join('\n')
+    : [
+      `   - FOR CHANNEL BETA (LORD COMMANDER JUNEBUG):`,
+      `     * ZERO CROSS-PLAYER LEAKS: Treat Commander Alpha's dossier and SHIP.md as NON-EXISTENT. Never mention The Sanctuary of Ash's internal lore (unless he chooses to share ship in the future), The Exile, Dreir, Dravik, or "The Shrine-Breakers".`,
+      `     * NO FACTION ASSUMPTIONS: Junebug will tell you his faction when he decides to play. This is an early game problem.`,
+      `     * ORBITAL PERSPECTIVE ONLY: High Command (Logis-Prefect Vane) does NOT know what happens inside JUNEBUG's flagship corridors unless JUNEBUG explicitly tells High Command in his message!`
+    ].join('\n');
+
   const prompt = [
     `[PRIVATE TERMINAL CONDUIT: ${msg.channel.toUpperCase()} // SENDER: ${msg.sender} // MSG_ID:${msgShortId}]`,
     `Transmission Payload:`,
     `${msg.question}`,
     ``,
-    `CAMPAIGN MASTER DIRECTIVES:`,
-    `1. Reply 100% in-character inside <DIRECT_REPLY>...</DIRECT_REPLY> tags (and include "REF-ID: ${msgShortId}" on its own line in the top header). Put blank lines between paragraphs so it reads cleanly on a CRT terminal! If this is a Master Post-Battle Dossier or Nemesis Dossier, christen custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, and Battle Scar!`,
-    `2. Update the relevant Notebook Markdown source (AGENT.md, NEMESIS.md, SHIP.md, or ${msg.sender}'s Dossier.md) if this logs a permanent battle result, Nemesis, or Secret Objective code.`,
-    `3. If deemed relevant, also include an <INTERCEPT>...</INTERCEPT> block with a cryptic, heavily redacted snippet (using [REDACTED]) for ${otherChannel.toUpperCase()}'s Interferences window.`
+    `CAMPAIGN MASTER DIRECTIVES (MANDATORY AUTONOMOUS COMPLIANCE):`,
+    `1. Follow the 5 Canonical Imperial CRT Dispatch Patterns in Section 2.B of AGENT.md (include ">>> REF-ID: ${msgShortId}" in the header and put clean blank lines between paragraphs/sections).`,
+    `2. EXECUTE PRE-RESPONSE EPISTEMIC AUDIT (CRITICAL — DO NOT USE OMNISCIENT .MD LORE UNLESS THIS SPEAKER KNOWS IT IN-UNIVERSE):`,
+    channelSpecificRules,
+    `3. NEVER name-drop "The 3rd Alliance" or "Horde AI" (refer only to raw sensor anomalies/tremors), and NEVER leak unmapped Node 1-7 Hegemony numbers.`,
+    `4. Reply inside <DIRECT_REPLY>...</DIRECT_REPLY> tags. If this is a Master Post-Battle or Nemesis Dossier, christen custom in-universe Lore Names & Backstories for every attached Upgrade, Relic, and Scar and update the relevant .md source!`,
+    `5. If warranted, also include an <INTERCEPT>...</INTERCEPT> block with a cryptic, heavily redacted snippet (using [REDACTED]) for ${otherChannel.toUpperCase()}'s Interferences window.`
   ].join('\n');
 
   await (typingLock = typingLock.then(async () => {

@@ -732,7 +732,7 @@
         document.title = doc.title;
       }
 
-      const targetShellSelector = '.app-shell, .briefing-shell, .container';
+      const targetShellSelector = '.app-shell, .vox-shell, .briefing-shell, .container';
       const currentShell = document.querySelector(targetShellSelector);
       const newShell = doc.querySelector(targetShellSelector);
 
