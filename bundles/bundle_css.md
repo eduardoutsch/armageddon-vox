@@ -2045,6 +2045,241 @@ details[open] > summary {
     margin-left: 0;
   }
 }
+
+/* ========================================================================= */
+/* MODE 7: ASTROPATHIC CRT MONITOR & PHOSPHOR TERMINAL STYLING              */
+/* ========================================================================= */
+.crt-monitor-frame {
+  position: relative;
+  background: #030704;
+  border: 2px solid #1e3a29;
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 480px;
+  height: min(580px, 68vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+  box-shadow:
+    inset 0 0 48px rgba(0, 0, 0, 0.95),
+    inset 0 0 18px rgba(0, 255, 136, 0.08),
+    0 8px 28px rgba(0, 0, 0, 0.75);
+  font-family: 'Courier New', Consolas, monospace;
+}
+
+.crt-monitor-frame::-webkit-scrollbar {
+  width: 8px;
+}
+.crt-monitor-frame::-webkit-scrollbar-track {
+  background: rgba(3, 7, 4, 0.95);
+  border-radius: 4px;
+}
+.crt-monitor-frame::-webkit-scrollbar-thumb {
+  background: #1e3a29;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+.crt-monitor-frame::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
+}
+
+/* Subtle Horizontal CRT Scanlines & Phosphor Vignette */
+.crt-monitor-frame::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.26) 0px,
+    rgba(0, 0, 0, 0.26) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 4;
+}
+
+/* Individual Exchange Container */
+.crt-exchange-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.crt-older-bar {
+  text-align: center;
+  margin-bottom: 14px;
+  padding: 4px 0;
+}
+
+.crt-older-btn {
+  font-family: monospace;
+  font-size: 0.76rem;
+  letter-spacing: 1px;
+  color: #ffb000;
+  border: 1px solid rgba(255, 176, 0, 0.4);
+  background: rgba(26, 16, 4, 0.75);
+  border-radius: 6px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crt-older-btn:hover {
+  background: rgba(255, 176, 0, 0.2);
+  border-color: #ffb000;
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.35);
+}
+
+/* Outgoing Player Transmission (Glowing CRT Amber Phosphor) */
+.crt-msg-card {
+  background: rgba(26, 16, 4, 0.85);
+  border: 1px solid rgba(255, 176, 0, 0.38);
+  border-left: 4px solid #ffb000;
+  border-radius: 8px;
+  padding: 11px 15px;
+  color: #ffcc4d;
+  text-shadow: 0 0 6px rgba(255, 176, 0, 0.42);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.crt-msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ff9900;
+  border-bottom: 1px dashed rgba(255, 176, 0, 0.28);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+}
+
+/* Incoming Campaign Master Dispatch (Glowing CRT Emerald Phosphor) */
+.crt-reply-card {
+  background: rgba(3, 24, 14, 0.9);
+  border: 1px solid rgba(0, 255, 136, 0.38);
+  border-left: 4px solid #00ff88;
+  border-radius: 8px;
+  padding: 13px 16px;
+  color: #66ffb8;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.48);
+  font-size: 0.88rem;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.crt-reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #00ff88;
+  border-bottom: 1px dashed rgba(0, 255, 136, 0.3);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+
+.crt-pending-line {
+  background: rgba(20, 14, 4, 0.65);
+  border: 1px dashed rgba(255, 176, 0, 0.3);
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #ffb000;
+  font-size: 0.82rem;
+  font-style: italic;
+  opacity: 0.95;
+}
+
+/* Blinking Phosphor Block Cursor */
+.crt-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background: currentColor;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  box-shadow: 0 0 8px currentColor;
+  animation: crtBlink 0.75s step-end infinite;
+}
+
+@keyframes crtBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Psychic Interferences (Crimson & Amber Glitch Phosphor) */
+.crt-intercept-card {
+  background: rgba(24, 6, 10, 0.85);
+  border: 1px dashed rgba(255, 71, 87, 0.55);
+  border-left: 4px solid #ff4757;
+  border-radius: 8px;
+  padding: 13px 15px;
+  color: #fda4af;
+  text-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
+  font-size: 0.88rem;
+  line-height: 1.58;
+  white-space: pre-wrap;
+}
+
+.censor-bar {
+  background: #ff4757;
+  color: #160407;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-shadow: none;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.65);
+}
+
+/* CRT Input Box */
+.crt-input-textarea {
+  width: 100%;
+  background: #030805;
+  color: #ffcc4d;
+  text-shadow: 0 0 5px rgba(255, 176, 0, 0.4);
+  border: 1.5px solid #2b4c39;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 68px;
+}
+.crt-input-textarea:focus {
+  outline: none;
+  border-color: #ffb000;
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.25);
+}
+
+.queued-dossier-banner {
+  background: rgba(255, 176, 0, 0.14);
+  border: 1.5px dashed #ffb000;
+  color: #ffcc4d;
+  text-shadow: 0 0 6px rgba(255, 176, 0, 0.4);
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 ````
 
 ---

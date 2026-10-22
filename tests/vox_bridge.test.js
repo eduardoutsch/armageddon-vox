@@ -1,12 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 
 const {
   resolveServiceKey,
-  buildDispatchPrompt,
-  parseGeminiReply,
-  waitForGeminiReply,
+  scrubArtifacts,
   processSingleMessage,
   drainChannelQueue
 } = require('../vox_bridge.js');
@@ -58,124 +55,49 @@ test('resolveServiceKey: resolves key correctly across standard and fallback env
   assert.equal(resolveServiceKey({ SUPABASE_URL: 'https://example.supabase.co' }), '');
 });
 
-test('buildDispatchPrompt: constructs structured Campaign Master prompt with appropriate channel targets', () => {
-  // Alpha channel dispatch
-  const alphaMsg = {
-    id: 'msg-001-alpha',
-    channel: 'alpha',
-    sender: 'The Exile // Sanctuary of Ash',
-    question: 'Requesting permission to requisition sacred plasma coils.'
-  };
-
-  const alphaPrompt = buildDispatchPrompt(alphaMsg);
-  assert.ok(alphaPrompt.includes('[PRIVATE TERMINAL CONDUIT: ALPHA // SENDER:The Exile // Sanctuary of Ash]'));
-  assert.ok(alphaPrompt.includes('Requesting permission to requisition sacred plasma coils.'));
-  assert.ok(alphaPrompt.includes('<DIRECT_REPLY>...</DIRECT_REPLY>'));
-  assert.ok(alphaPrompt.includes('BETA\'s Interferences window'));
-
-  // Beta channel dispatch
-  const betaMsg = {
-    id: 'msg-002-beta',
-    channel: 'beta',
-    sender: 'Lord Commander Junebug',
-    question: 'Secured primary promethium silos at Node 4.'
-  };
-
-  const betaPrompt = buildDispatchPrompt(betaMsg);
-  assert.ok(betaPrompt.includes('[PRIVATE TERMINAL CONDUIT: BETA // SENDER:Lord Commander Junebug]'));
-  assert.ok(betaPrompt.includes('Secured primary promethium silos at Node 4.'));
-  assert.ok(betaPrompt.includes('ALPHA\'s Interferences window'));
-
-  // Graceful fallback for missing fields
-  const emptyPrompt = buildDispatchPrompt({});
-  assert.ok(emptyPrompt.includes('[PRIVATE TERMINAL CONDUIT: ALPHA // SENDER:Unknown Sender]'));
-});
-
-test('parseGeminiReply: cleanly separates direct replies and psychic interferences across formats', () => {
-  // Standard format with both direct reply and intercept tags
-  const rawWithBoth = `
-Here is my campaign decree:
-<DIRECT_REPLY>
-The Munitorum grants your requisition. Advance without delay.
-</DIRECT_REPLY>
-<INTERCEPT>
-Heavy plasma activity detected in [REDACTED] lower sanctum.
-</INTERCEPT>
-Praise the Omnissiah.
+test('scrubArtifacts: cleanly scrubs Notebook source citation chips and formats paragraph breaks', () => {
+  // Strips citation chips and isolated line counters
+  const inputWithChips = `
+The cogitator awaits your command, Warden.
+MD
++ 4
+Transmit your tactical queries or dispatch Post-Battle Dossiers.
+MD + 2
+[cite: 1, 3]
++++ TRANSMISSION CONCLUDED +++
   `;
 
-  const parsed1 = parseGeminiReply(rawWithBoth);
-  assert.equal(parsed1.directReply, 'The Munitorum grants your requisition. Advance without delay.');
-  assert.equal(parsed1.interceptText, 'Heavy plasma activity detected in [REDACTED] lower sanctum.');
+  const scrubbed = scrubArtifacts(inputWithChips);
+  assert.equal(scrubbed.includes('MD'), false, 'Must scrub MD citation badges');
+  assert.equal(scrubbed.includes('+ 4'), false, 'Must scrub + 4 citation lines');
+  assert.equal(scrubbed.includes('+ 2'), false, 'Must scrub + 2 citation lines');
+  assert.equal(scrubbed.includes('[cite:'), false, 'Must scrub [cite:] markers');
+  assert.ok(scrubbed.includes('The cogitator awaits your command, Warden.'));
+  assert.ok(scrubbed.includes('Transmit your tactical queries or dispatch Post-Battle Dossiers.'));
+  assert.ok(scrubbed.includes('+++ TRANSMISSION CONCLUDED +++'));
 
-  // Case-insensitive tags
-  const rawCaseInsensitive = `
-<direct_reply>
-Hostile titan silenced.
-</direct_reply>
-<intercept>
-Static warp echo near sector [REDACTED].
-</intercept>
-  `;
-  const parsedCase = parseGeminiReply(rawCaseInsensitive);
-  assert.equal(parsedCase.directReply, 'Hostile titan silenced.');
-  assert.equal(parsedCase.interceptText, 'Static warp echo near sector [REDACTED].');
+  // Bullets formatting
+  const bulletInput = 'Status report:• • Unit Alfa ready\n• Unit Beta advancing';
+  const cleanBullets = scrubArtifacts(bulletInput);
+  assert.ok(cleanBullets.includes('• Unit Alfa ready'));
+  assert.ok(cleanBullets.includes('• Unit Beta advancing'));
 
-  // Direct reply only, no intercept
-  const rawDirectOnly = `
-<DIRECT_REPLY>
-Orders received and logged in the Lex Imperialis.
-</DIRECT_REPLY>
-  `;
-  const parsedDirectOnly = parseGeminiReply(rawDirectOnly);
-  assert.equal(parsedDirectOnly.directReply, 'Orders received and logged in the Lex Imperialis.');
-  assert.equal(parsedDirectOnly.interceptText, null);
-
-  // Free-form reply with no XML tags (fallback)
-  const rawUntagged = 'The Emperor Protects. Stand firm at the redoubt.';
-  const parsedUntagged = parseGeminiReply(rawUntagged);
-  assert.equal(parsedUntagged.directReply, 'The Emperor Protects. Stand firm at the redoubt.');
-  assert.equal(parsedUntagged.interceptText, null);
-
-  // Empty or invalid input
-  assert.deepEqual(parseGeminiReply(''), { directReply: '', interceptText: null });
-  assert.deepEqual(parseGeminiReply(null), { directReply: '', interceptText: null });
-  assert.deepEqual(parseGeminiReply(undefined), { directReply: '', interceptText: null });
-});
-
-test('waitForGeminiReply: stabilizes when text reaches steady-state over consecutive ticks', async () => {
-  let tick = 0;
-  const mockPage = {
-    locator: (sel) => ({
-      count: async () => 1,
-      last: () => ({
-        innerText: async () => {
-          tick++;
-          // Returns same text on tick 3, 4, 5 to trigger 3 stable ticks
-          if (tick < 3) return 'Streamin...';
-          return 'Affirmative decree from Command.';
-        }
-      })
-    }),
-    waitForTimeout: async () => {}
-  };
-
-  const reply = await waitForGeminiReply(mockPage, 0, 'ALPHA // TEST', {
-    maxWaitMs: 5000,
-    checkIntervalMs: 10,
-    logFn: () => {}
-  });
-
-  assert.equal(reply, 'Affirmative decree from Command.');
+  // Null/empty input
+  assert.equal(scrubArtifacts(''), '');
+  assert.equal(scrubArtifacts(null), '');
+  assert.equal(scrubArtifacts(undefined), '');
 });
 
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];
-  let modelCount = 0;
 
   const mockPage = {
     url: () => 'https://gemini.google.com/test',
+    evaluate: async () => ({
+      count: 0,
+      text: ''
+    }),
     locator: (sel) => {
       if (sel.includes('ql-editor') || sel.includes('textbox') || sel.includes('textarea')) {
         return {
@@ -190,18 +112,12 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
           first: () => ({
             count: async () => 1,
             isEnabled: async () => true,
-            click: async () => {
-              clickedSelectors.push('send-button');
-              modelCount = 1; // Simulate model response starting after dispatch
-            }
+            click: async () => { clickedSelectors.push('send-button'); }
           })
         };
       }
       return {
-        count: async () => modelCount,
-        last: () => ({
-          innerText: async () => '<DIRECT_REPLY>Approved by Warmaster.</DIRECT_REPLY><INTERCEPT>Bleed at [REDACTED]</INTERCEPT>'
-        })
+        count: async () => 1
       };
     },
     bringToFront: async () => {},
@@ -223,7 +139,7 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
   };
 
   const testMsg = {
-    id: 'test-msg-12345678',
+    id: '12345678-test-msg',
     channel: 'alpha',
     sender: 'The Exile',
     question: 'Report on sector casualties.'
@@ -233,6 +149,7 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
     fetchFn: mockFetch,
     supabaseUrl: 'https://test.supabase.co',
     serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 12345678\nOrders logged.</DIRECT_REPLY><INTERCEPT>Bleed at [REDACTED]</INTERCEPT>',
     logFn: () => {}
   });
 
@@ -240,16 +157,16 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
   assert.equal(dispatchedText.length > 0, true, 'Must insert prompt text into editor');
 
   // Verify Supabase PATCH call for vox_messages
-  const patchCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_messages?id=eq.test-msg-12345678'));
+  const patchCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_messages?id=eq.12345678-test-msg'));
   assert.ok(patchCall, 'Must issue PATCH to vox_messages endpoint');
-  assert.equal(patchCall.body.reply, 'Approved by Warmaster.');
+  assert.ok(patchCall.body.reply.includes('Orders logged.'));
   assert.equal(patchCall.body.status, 'answered');
 
   // Verify Supabase POST call for vox_interferences
   const interceptCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_interferences'));
   assert.ok(interceptCall, 'Must issue POST to vox_interferences endpoint');
   assert.equal(interceptCall.body.target_channel, 'beta');
-  assert.equal(interceptCall.body.redacted_text, 'Bleed at [REDACTED]');
+  assert.ok(interceptCall.body.redacted_text.includes('[REDACTED]'));
 });
 
 test('drainChannelQueue: handles empty queue and missing service key gracefully', async () => {

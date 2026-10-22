@@ -743,6 +743,18 @@
         return;
       }
 
+      // Clean up previous seamless page-swapped styles
+      document.querySelectorAll('style[data-seamless-style]').forEach(s => s.remove());
+
+      // Inject any <style> tags from target page head or body
+      const incomingStyles = doc.querySelectorAll('style');
+      incomingStyles.forEach(s => {
+        const styleEl = document.createElement('style');
+        styleEl.setAttribute('data-seamless-style', 'true');
+        styleEl.textContent = s.textContent;
+        document.head.appendChild(styleEl);
+      });
+
       const currentNav = document.querySelector('.suite-nav');
       const newNav = doc.querySelector('.suite-nav');
       if (currentNav && newNav) {

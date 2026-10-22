@@ -17,17 +17,34 @@
       border: 2px solid #1e3a29;
       border-radius: 14px;
       padding: 18px;
-      height: 460px;
+      min-height: 480px;
+      height: min(580px, 68vh);
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
       margin-bottom: 14px;
       box-shadow:
         inset 0 0 48px rgba(0, 0, 0, 0.95),
         inset 0 0 18px rgba(0, 255, 136, 0.08),
         0 8px 28px rgba(0, 0, 0, 0.75);
       font-family: 'Courier New', Consolas, monospace;
+    }
+
+    .crt-monitor-frame::-webkit-scrollbar {
+      width: 8px;
+    }
+    .crt-monitor-frame::-webkit-scrollbar-track {
+      background: rgba(3, 7, 4, 0.95);
+      border-radius: 4px;
+    }
+    .crt-monitor-frame::-webkit-scrollbar-thumb {
+      background: #1e3a29;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 255, 136, 0.25);
+    }
+    .crt-monitor-frame::-webkit-scrollbar-thumb:hover {
+      background: #00ff88;
     }
 
     /* Subtle Horizontal CRT Scanlines & Phosphor Vignette */
@@ -49,13 +66,46 @@
       z-index: 4;
     }
 
+    /* Individual Exchange Container */
+    .crt-exchange-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .crt-older-bar {
+      text-align: center;
+      margin-bottom: 14px;
+      padding: 4px 0;
+    }
+
+    .crt-older-btn {
+      font-family: monospace;
+      font-size: 0.76rem;
+      letter-spacing: 1px;
+      color: #ffb000;
+      border: 1px solid rgba(255, 176, 0, 0.4);
+      background: rgba(26, 16, 4, 0.75);
+      border-radius: 6px;
+      padding: 6px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .crt-older-btn:hover {
+      background: rgba(255, 176, 0, 0.2);
+      border-color: #ffb000;
+      box-shadow: 0 0 10px rgba(255, 176, 0, 0.35);
+    }
+
     /* Outgoing Player Transmission (Glowing CRT Amber Phosphor) */
     .crt-msg-card {
-      background: rgba(20, 14, 4, 0.78);
-      border: 1px solid rgba(255, 176, 0, 0.35);
+      background: rgba(26, 16, 4, 0.85);
+      border: 1px solid rgba(255, 176, 0, 0.38);
       border-left: 4px solid #ffb000;
       border-radius: 8px;
-      padding: 13px 15px;
+      padding: 11px 15px;
       color: #ffcc4d;
       text-shadow: 0 0 6px rgba(255, 176, 0, 0.42);
       font-size: 0.88rem;
@@ -331,6 +381,14 @@
   let isChannelSealed = true;
   let pollTimer = null;
   let activeStreamTimers = [];
+  let showAllOlderMessages = false;
+
+  function toggleOlderMessages() {
+    showAllOlderMessages = !showAllOlderMessages;
+    const dBox = document.getElementById('directMessagesBox');
+    if (dBox) dBox.dataset.sig = '';
+    refreshTerminal(false);
+  }
 
   // Track which message & reply IDs have already animated so they only stream once
   let seenTokens = new Set();
@@ -584,15 +642,38 @@
           }
         }
 
-        // Only rebuild DOM if a new message or new reply arrived
-        const stateSignature = msgs.map(m => `${m.id}:${m.status}`).join('|');
+        const totalCount = msgs.length;
+        const hasOlder = totalCount > 3;
+        const visibleMsgs = (hasOlder && !showAllOlderMessages) ? msgs.slice(-3) : msgs;
+
+        // Only rebuild DOM if a new message, new reply, or toggle state changed
+        const stateSignature = `${showAllOlderMessages ? 'all' : 'recent'}_${visibleMsgs.map(m => `${m.id}:${m.status}`).join('|')}`;
         if (dBox.dataset.sig !== stateSignature) {
           clearStreamTimers();
           dBox.dataset.sig = stateSignature;
           dBox.innerHTML = '';
 
-          msgs.forEach(m => {
+          // Render "See Older Messages" button if more than 3 messages exist
+          if (hasOlder) {
+            const olderBar = document.createElement('div');
+            olderBar.className = 'crt-older-bar';
+
+            const olderBtn = document.createElement('button');
+            olderBtn.type = 'button';
+            olderBtn.id = 'toggleOlderMsgsBtn';
+            olderBtn.className = 'btn-ghost btn-sm crt-older-btn';
+            olderBtn.textContent = showAllOlderMessages
+              ? '🔼 Collapse to Recent 3 Messages'
+              : `📜 See Older Messages (${totalCount - 3} older)`;
+            olderBtn.onclick = toggleOlderMessages;
+
+            olderBar.appendChild(olderBtn);
+            dBox.appendChild(olderBar);
+          }
+
+          visibleMsgs.forEach(m => {
             const wrap = document.createElement('div');
+            wrap.className = 'crt-exchange-wrap';
 
             // 1. Player Outgoing Message Card (Amber CRT Phosphor)
             const msgCard = document.createElement('div');
@@ -614,6 +695,7 @@
             } else {
               qBody.textContent = m.question || '';
             }
+            wrap.appendChild(msgCard);
 
             // 2. Campaign Master Reply Card (Emerald CRT Phosphor) or Pending Line
             if (m.status === 'answered' && m.reply) {
@@ -639,19 +721,20 @@
                 cursor.className = 'crt-cursor';
                 rBody.appendChild(cursor);
               }
-              msgCard.appendChild(repCard);
+              wrap.appendChild(repCard);
             } else {
               const pend = document.createElement('div');
               pend.className = 'crt-pending-line';
               pend.innerHTML = `⏳ Signal traversing the Immaterium... Awaiting Campaign Master decree <span class="crt-cursor"></span>`;
-              msgCard.appendChild(pend);
+              wrap.appendChild(pend);
             }
 
-            wrap.appendChild(msgCard);
             dBox.appendChild(wrap);
           });
 
-          dBox.scrollTop = dBox.scrollHeight;
+          if (!showAllOlderMessages || forceScroll) {
+            dBox.scrollTop = dBox.scrollHeight;
+          }
         }
       }
 
@@ -729,6 +812,7 @@
 
   function lockTerminal() {
     activePassphrase = null;
+    showAllOlderMessages = false;
     clearStreamTimers();
     if (pollTimer) clearInterval(pollTimer);
     try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (e) {}

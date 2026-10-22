@@ -40,6 +40,23 @@ function createMockClassList() {
   };
 }
 
+function createMockBox() {
+  const box = {
+    _innerHTML: '',
+    children: [],
+    dataset: {},
+    scrollTop: 0,
+    scrollHeight: 100,
+    get innerHTML() { return this._innerHTML; },
+    set innerHTML(v) {
+      this._innerHTML = v;
+      if (v === '') this.children = [];
+    },
+    appendChild: (c) => { box.children.push(c); return c; }
+  };
+  return box;
+}
+
 const mockElements = {
   authScreen: { classList: createMockClassList() },
   terminalScreen: { classList: createMockClassList() },
@@ -57,8 +74,8 @@ const mockElements = {
   subWinInterferences: { classList: createMockClassList() },
   winBtn1: { classList: createMockClassList() },
   winBtn2: { classList: createMockClassList() },
-  directMessagesBox: { innerHTML: '', dataset: {}, scrollTop: 0, scrollHeight: 100 },
-  interferencesBox: { innerHTML: '', dataset: {}, scrollTop: 0, scrollHeight: 100 },
+  directMessagesBox: createMockBox(),
+  interferencesBox: createMockBox(),
   interferenceCountBadge: { textContent: '' },
   questionInput: { value: '' }
 };
@@ -70,13 +87,26 @@ const mockDocument = {
     const el = {
       tagName: tag.toUpperCase(),
       className: '',
+      style: {},
       get textContent() { return _text; },
       set textContent(v) { _text = v; this.innerHTML = v; },
       innerHTML: '',
       children: [],
       classList: createMockClassList(),
       appendChild: (c) => { el.children.push(c); return c; },
-      querySelector: (sel) => el.children[0] || null,
+      querySelector: (sel) => {
+        const dummy = {
+          tagName: 'DIV',
+          className: sel.replace('.', ''),
+          style: {},
+          textContent: '',
+          innerHTML: '',
+          appendChild: () => ({}),
+          closest: () => ({ scrollTop: 0, scrollHeight: 100 })
+        };
+        el.children.push(dummy);
+        return dummy;
+      },
       closest: () => ({ scrollTop: 0, scrollHeight: 100 })
     };
     return el;
@@ -97,12 +127,13 @@ const mockWindow = {
 
 // RPC mock results
 const rpcCalls = [];
+let mockMessages = [];
 let mockRpcHandler = async (fnName, params) => {
   rpcCalls.push({ fnName, params });
   if (fnName === 'check_channel_seal') return true;
   if (fnName === 'unlock_or_seal_channel') return { ok: true };
   if (fnName === 'send_vox_message') return { ok: true };
-  if (fnName === 'get_vox_terminal_data') return { ok: true, messages: [], interferences: [] };
+  if (fnName === 'get_vox_terminal_data') return { ok: true, messages: mockMessages, interferences: [] };
   return null;
 };
 
@@ -127,9 +158,12 @@ const evalFn = new Function(
     streamTextIntoElement,
     formatRedactedHtml,
     switchSubWindow,
+    refreshTerminal,
+    toggleOlderMessages,
     lockTerminal,
     getSelectedChannel: () => selectedChannel,
-    getActivePassphrase: () => activePassphrase
+    getActivePassphrase: () => activePassphrase,
+    getShowAllOlderMessages: () => showAllOlderMessages
   };`
 );
 
@@ -248,4 +282,53 @@ test('vox: lockTerminal clears passphrase and hides terminal screen', () => {
   assert.equal(sessionStore.has(vox.SESSION_AUTH_KEY), false);
   assert.equal(mockElements.terminalScreen.classList.contains('hidden'), true);
   assert.equal(mockElements.authScreen.classList.contains('hidden'), false);
+  assert.equal(vox.getShowAllOlderMessages(), false, 'Must reset showAllOlderMessages on lock');
 });
+
+test('vox: refreshTerminal shows only past 3 messages by default and toggles older messages on demand', async () => {
+  // Authenticate first
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  // Populate 5 mock messages
+  mockMessages = [
+    { id: 'm1', channel: 'alpha', sender: 'The Exile', question: 'Q1', reply: 'A1', status: 'answered' },
+    { id: 'm2', channel: 'alpha', sender: 'The Exile', question: 'Q2', reply: 'A2', status: 'answered' },
+    { id: 'm3', channel: 'alpha', sender: 'The Exile', question: 'Q3', reply: 'A3', status: 'answered' },
+    { id: 'm4', channel: 'alpha', sender: 'The Exile', question: 'Q4', reply: 'A4', status: 'answered' },
+    { id: 'm5', channel: 'alpha', sender: 'The Exile', question: 'Q5', reply: 'A5', status: 'answered' }
+  ];
+
+  // Refresh terminal with default settings
+  await vox.refreshTerminal(false);
+
+  // When more than 3 messages exist, children should include the toggle bar + 3 exchange wraps
+  assert.equal(vox.getShowAllOlderMessages(), false);
+  assert.equal(mockElements.directMessagesBox.children.length, 4, 'Must have 1 toggle bar + 3 message wraps');
+
+  // Verify the toggle button text
+  const toggleBar = mockElements.directMessagesBox.children[0];
+  assert.ok(toggleBar.className.includes('crt-older-bar'));
+  const olderBtn = toggleBar.children[0];
+  assert.ok(olderBtn.textContent.includes('See Older Messages (2 older)'));
+
+  // Toggle to expand all messages
+  vox.toggleOlderMessages();
+  await vox.refreshTerminal(false);
+
+  assert.equal(vox.getShowAllOlderMessages(), true);
+  // Now all 5 messages plus the toggle bar should be rendered (1 + 5 = 6)
+  assert.equal(mockElements.directMessagesBox.children.length, 6, 'Must render all 5 messages + toggle bar');
+  const expandedToggleBar = mockElements.directMessagesBox.children[0];
+  assert.ok(expandedToggleBar.children[0].textContent.includes('Collapse to Recent 3 Messages'));
+
+  // Toggle back to collapse
+  vox.toggleOlderMessages();
+  await vox.refreshTerminal(false);
+
+  assert.equal(vox.getShowAllOlderMessages(), false);
+  assert.equal(mockElements.directMessagesBox.children.length, 4, 'Must collapse back to 3 messages + toggle bar');
+  const collapsedToggleBar = mockElements.directMessagesBox.children[0];
+  assert.ok(collapsedToggleBar.children[0].textContent.includes('See Older Messages (2 older)'));
+});
+
