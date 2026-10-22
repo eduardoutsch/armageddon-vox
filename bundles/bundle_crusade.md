@@ -151,7 +151,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
           <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">🛡️ GATEBREAKERS</span>
           <span class="hud-sub">Supply Cache Tokens: <strong id="alphaCacheCount">0</strong></span>
         </div>
-        <h3 style="margin:8px 0 2px 0; color:#fff;">🦅 Commander Alpha</h3>
+        <h3 style="margin:8px 0 2px 0; color:#fff;">🦅 The Exile // Sanctuary of Ash</h3>
         <div style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">The Sanctuary of Ash (Astra Militarum)</div>
 
         <div style="display:flex; justify-content:space-between; background:#090b10; padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
@@ -180,7 +180,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
           <span class="rule-tag" style="border-color:var(--blue); color:var(--blue);">⚔️ ALLIANCE PENDING</span>
           <span class="hud-sub">Supply Cache Tokens: <strong id="betaCacheCount">0</strong></span>
         </div>
-        <h3 style="margin:8px 0 2px 0; color:#fff;">💀 Commander Beta</h3>
+        <h3 style="margin:8px 0 2px 0; color:#fff;">💀 Lord Commander Junebug</h3>
         <div style="font-size:0.8rem; color:var(--muted); margin-bottom:12px;">JUNEBUG (Awaiting Phase 1 Roster)</div>
 
         <div style="display:flex; justify-content:space-between; background:#090b10; padding:10px 12px; border-radius:8px; border:1px solid var(--border);">
@@ -270,7 +270,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
           <select id="forgeSourcePool" onchange="saveCrusadeState()" style="width:100%; padding:10px; font-weight:700;">
             <option value="Armageddon">🌋 Crusade: Armageddon Theatre (Universal — Active)</option>
             <option value="AlphaCodex">🦅 Astra Militarum Codex (Ready for Codex Import)</option>
-            <option value="BetaCodex">💀 Commander Beta Faction Codex (Ready for Codex Import)</option>
+            <option value="BetaCodex">💀 Lord Commander Junebug Faction Codex (Ready for Codex Import)</option>
           </select>
         </div>
         <div>
@@ -377,8 +377,8 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         <div>
           <label class="hud-label" style="display:block; margin-bottom:4px;">Reporting Commander Conduit</label>
           <select id="dossierChannel" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
-            <option value="alpha">🦅 Commander Alpha (Terminal Alpha — The Sanctuary of Ash)</option>
-            <option value="beta">💀 Commander Beta (Terminal Beta — JUNEBUG)</option>
+            <option value="alpha">🦅 The Exile // Sanctuary of Ash (Terminal Alpha)</option>
+            <option value="beta">💀 Lord Commander Junebug (Terminal Beta)</option>
           </select>
         </div>
         <div>
@@ -837,7 +837,7 @@ function renderQueuedRolls() {
 
 function buildMasterDossierString() {
   const chan = document.getElementById('dossierChannel')?.value || 'alpha';
-  const cmdr = chan === 'alpha' ? 'COMMANDER ALPHA (THE SANCTUARY OF ASH)' : 'COMMANDER BETA (JUNEBUG)';
+  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
   const modeNode = document.getElementById('dossierModeNode')?.value || '';
   const outcome = document.getElementById('dossierOutcome')?.value || '';
   const secCode = (document.getElementById('dossierSecretCode')?.value || 'N/A').trim().toUpperCase();

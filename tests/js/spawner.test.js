@@ -23,15 +23,26 @@ test('getBracketInfo: correctly categorizes all standard brackets', () => {
   assert.equal(getBracketInfo(7, 7).key, '7-9');
   assert.equal(getBracketInfo(8, 8).key, '7-9');
   assert.equal(getBracketInfo(9, 9).key, '7-9');
-  assert.equal(getBracketInfo(10, 10).key, '10+');
-  assert.equal(getBracketInfo(12, 12).key, '10+');
-  assert.equal(getBracketInfo(16, 11).key, '10+');
+  assert.equal(getBracketInfo(10, 10).key, '10-12');
+  assert.equal(getBracketInfo(10, 10).pts, '301–550 pts');
+  assert.equal(getBracketInfo(12, 12).key, '10-12');
+  assert.equal(getBracketInfo(13, 11).key, '13+');
+  assert.equal(getBracketInfo(13, 11).pts, '551+ pts');
+  assert.equal(getBracketInfo(16, 11).key, '13+');
 });
 
-test('calculateRollDown: cascades down correctly from 10+ down to 3-4', () => {
-  const step1 = calculateRollDown('10+');
+test('calculateRollDown: cascades down correctly from 13+ to 10-12 down to 3-4', () => {
+  const step0 = calculateRollDown('13+');
+  assert.ok(step0);
+  assert.equal(step0.nextKey, '10-12');
+
+  const step1 = calculateRollDown('10-12');
   assert.ok(step1);
   assert.equal(step1.nextKey, '7-9');
+
+  const step1Legacy = calculateRollDown('10+');
+  assert.ok(step1Legacy);
+  assert.equal(step1Legacy.nextKey, '7-9');
 
   const step2 = calculateRollDown('7-9');
   assert.ok(step2);
@@ -53,7 +64,9 @@ test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully
     '3-4': 'Hormagaunts, Termagants, Cultists',
     '5-6': '',
     '7-9': 'Carnifex',
-    '10+': 'Hive Tyrant'
+    '10-12': 'Hive Tyrant',
+    '10+': 'Hive Tyrant',
+    '13+': 'Hierophant Bio-Titan'
   };
 
   const rng = mulberry32(100);
@@ -65,4 +78,7 @@ test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully
 
   const picked79 = pickSyncedUnitFromBracket('7-9', rng, mockPool);
   assert.equal(picked79, 'Carnifex');
+
+  const picked13 = pickSyncedUnitFromBracket('13+', rng, mockPool);
+  assert.equal(picked13, 'Hierophant Bio-Titan');
 });

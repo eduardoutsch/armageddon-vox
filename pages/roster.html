@@ -181,8 +181,8 @@
         <div>
           <label class="hud-label" style="display:block; margin-bottom:4px;">1. Reporting Commander Conduit</label>
           <select id="nemReportChannel" onchange="updateNemesisPreview()" style="width:100%; padding:10px;">
-            <option value="alpha">🦅 Commander Alpha (Terminal Alpha)</option>
-            <option value="beta">💀 Commander Beta (Terminal Beta)</option>
+            <option value="alpha">🦅 The Exile // Sanctuary of Ash (Terminal Alpha)</option>
+            <option value="beta">💀 Lord Commander Junebug (Terminal Beta)</option>
           </select>
         </div>
         <div>
@@ -359,8 +359,11 @@
       <label class="hud-label">Bracket [7–9] (151–300 pts // Heavy Elites, Walkers &amp; Monsters)</label>
       <input type="text" id="rosterPool79" style="width:100%; margin-bottom:10px;" value="1 Trygon, 1 Screamer-Killer, 1 Daemon Prince, 1 Chaos Predator, 6 Bloodcrushers">
 
-      <label class="hud-label">Bracket [10+] (301–550 pts // Apex Bosses, Greater Daemons &amp; Titans)</label>
-      <input type="text" id="rosterPool10" style="width:100%; margin-bottom:12px;" value="1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant">
+      <label class="hud-label">Bracket [10–12] (301–550 pts // Apex Bosses, Greater Daemons &amp; Heavy Armor)</label>
+      <input type="text" id="rosterPool10" style="width:100%; margin-bottom:10px;" value="1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant">
+
+      <label class="hud-label">Bracket [13+] (551+ pts // Titanic, Super-Heavy &amp; Lords of War)</label>
+      <input type="text" id="rosterPool13" style="width:100%; margin-bottom:12px;" value="1 Baneblade, 1 Knight Castellan, 1 Hierophant Bio-Titan, 1 Lord of Skulls">
 
       <div style="display:flex; gap:10px; align-items:center;">
         <button type="button" class="btn-blue" onclick="saveShelfBarracks()">💾 Save Shelf Barracks to Spawner</button>
@@ -375,7 +378,7 @@
         <span class="hud-sub">Expandable 23-Faction Database</span>
       </div>
       <p class="card-desc" style="margin-bottom:12px;">
-        Select any Horde Faction below to inspect its primary faction rule and threat-bracket unit tables (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10+]</code>).
+        Select any Horde Faction below to inspect its primary faction rule and threat-bracket unit tables (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10–12]</code>, <code>[13+]</code>).
       </p>
 
       <select id="bracketFactionPicker" onchange="renderFactionBracketTable()" style="width:100%; padding:12px; font-weight:700; margin-bottom:14px;"></select>
@@ -398,19 +401,22 @@ const HORDE_FACTION_SPAWN_TABLES = {
     b34: ["5 Scout Squad", "5 Assault Intercessors", "5 Infernus Squad", "3 Outriders", "1 Invader ATV"],
     b56: ["10 Intercessor Squad", "5 Hellblasters", "3 Bladeguard Veterans", "5 Jump Pack Intercessors", "1 Ballistus Dreadnought"],
     b79: ["5 Terminator Squad + Captain", "6 Aggressor Squad", "1 Redemptor Dreadnought", "1 Gladiator Lancer", "1 Repulsor"],
-    b10: ["1 Land Raider Redeemer + 6 Bladeguard", "10 Terminators + Chaplain", "1 Roboute Guilliman / Chapter Master Retinue"]
+    b10: ["1 Land Raider Redeemer + 6 Bladeguard", "10 Terminators + Chaplain", "1 Roboute Guilliman / Chapter Master Retinue"],
+    b13: ["1 Astraeus Super-heavy Tank", "1 Thunderhawk Gunship", "1 Warlord Titan Battlegroup Support"]
   },
   "Tyranids": {
     b34: ["10 Termagants", "10 Hormagaunts", "5 Barbgaunts", "10 Gargoyles", "3 Von Ryan's Leapers"],
     b56: ["10 Genestealers + Broodlord", "3 Tyranid Warriors", "3 Zoanthropes", "1 Lictor", "1 Biovore + Pyrovores"],
     b79: ["1 Screamer-Killer", "1 Trygon", "1 Exocrine", "1 Haruspex", "1 Maleceptor"],
-    b10: ["1 Norn Emissary", "1 Hive Tyrant + 3 Tyrant Guard", "1 Tyrannofex + 1 Psychophage"]
+    b10: ["1 Norn Emissary", "1 Hive Tyrant + 3 Tyrant Guard", "1 Tyrannofex + 1 Psychophage"],
+    b13: ["1 Hierophant Bio-Titan", "1 Harridan Sky-Terror", "1 Scythed Hierodule"]
   },
   "Chaos Daemons": {
     b34: ["3 Nurglings", "10 Blue Horrors", "5 Flesh Hounds", "3 Screamers", "5 Seekers"],
     b56: ["10 Bloodletters", "10 Plaguebearers", "10 Daemonettes", "10 Pink Horrors", "3 Flamers"],
     b79: ["6 Bloodcrushers", "1 Daemon Prince of Chaos", "1 Soul Grinder", "3 Fiends + Contorted Epitome"],
-    b10: ["1 Bloodthirster", "1 Great Unclean One", "1 Lord of Change", "1 Keeper of Secrets"]
+    b10: ["1 Bloodthirster", "1 Great Unclean One", "1 Lord of Change", "1 Keeper of Secrets"],
+    b13: ["1 An'ggrath the Unbound", "1 Scabeiathrax the Bloated", "1 Aetaos'rau'keres", "1 Zarakynel"]
   }
 };
 
@@ -431,7 +437,7 @@ function switchRosterTab(tab, persist = true) {
 
 function buildNemesisDossierString() {
   const chan = document.getElementById('nemReportChannel').value;
-  const commanderLabel = chan === 'alpha' ? 'COMMANDER ALPHA (THE EXILE)' : 'COMMANDER BETA (JUNEBUG)';
+  const commanderLabel = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
   const sector = document.getElementById('nemReportSector').value;
   const unit = (document.getElementById('nemReportUnit').value || '[Unspecified Hostile Entity]').trim();
   const feat = document.getElementById('nemReportFeat').value;
@@ -465,10 +471,11 @@ function transmitNemesisDossier() {
 
 function saveShelfBarracks() {
   const poolObj = {
-    b34: document.getElementById('rosterPool34').value,
-    b56: document.getElementById('rosterPool56').value,
-    b79: document.getElementById('rosterPool79').value,
-    b10: document.getElementById('rosterPool10').value
+    b34: document.getElementById('rosterPool34')?.value || '',
+    b56: document.getElementById('rosterPool56')?.value || '',
+    b79: document.getElementById('rosterPool79')?.value || '',
+    b10: document.getElementById('rosterPool10')?.value || '',
+    b13: document.getElementById('rosterPool13')?.value || ''
   };
   try {
     localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(poolObj));
@@ -494,7 +501,8 @@ function renderFactionBracketTable() {
     b34: ["Standard Faction Chaff / Swarm Units (0–75 pts) — Full PDF values pending import"],
     b56: ["Standard Faction Battleline / Skirmishers (76–150 pts) — Full PDF values pending import"],
     b79: ["Standard Faction Elites / Walkers / Transports (151–300 pts) — Full PDF values pending import"],
-    b10: ["Standard Faction Heavy Armor / Monsters / Warlord Retinues (301–550 pts) — Full PDF values pending import"]
+    b10: ["Standard Faction Heavy Armor / Monsters / Warlord Retinues (301–550 pts) — Full PDF values pending import"],
+    b13: ["Standard Faction Titanic / Super-Heavy / Lords of War (551+ pts) — Full PDF values pending import"]
   };
 
   box.innerHTML = `
@@ -514,10 +522,11 @@ function renderFactionBracketTable() {
         </tr>
       </thead>
       <tbody>
-        <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${tableData.b34.join(' • ')}</td></tr>
-        <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${tableData.b56.join(' • ')}</td></tr>
-        <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${tableData.b79.join(' • ')}</td></tr>
-        <tr><td><strong>[10+] (301–550 pts)</strong></td><td>${tableData.b10.join(' • ')}</td></tr>
+        <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${(tableData.b34 || []).join(' • ')}</td></tr>
+        <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${(tableData.b56 || []).join(' • ')}</td></tr>
+        <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${(tableData.b79 || []).join(' • ')}</td></tr>
+        <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${(tableData.b10 || []).join(' • ')}</td></tr>
+        <tr><td><strong>[13+] (551+ pts)</strong></td><td>${(tableData.b13 || []).join(' • ')}</td></tr>
       </tbody>
     </table>
   `;
@@ -553,7 +562,8 @@ function initRosterPage() {
       if (p.b34) document.getElementById('rosterPool34').value = p.b34;
       if (p.b56) document.getElementById('rosterPool56').value = p.b56;
       if (p.b79) document.getElementById('rosterPool79').value = p.b79;
-      if (p.b10) document.getElementById('rosterPool10').value = p.b10;
+      if (p.b10 && document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = p.b10;
+      if (p.b13 && document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = p.b13;
     }
   } catch (e) {}
 

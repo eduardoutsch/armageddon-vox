@@ -275,7 +275,7 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
 
   const dossierStr = crusade.buildMasterDossierString();
   assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
-  assert.ok(dossierStr.includes('COMMANDER ALPHA (THE SANCTUARY OF ASH)'));
+  assert.ok(dossierStr.includes('THE EXILE // SANCTUARY OF ASH'));
   assert.ok(dossierStr.includes('Golgotha Arbor-Basin'));
   assert.ok(dossierStr.includes('SECRET OBJECTIVE CODE: [A9F]'));
   assert.ok(dossierStr.includes("Mercy's Delay"));
@@ -290,7 +290,7 @@ test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox
   crusade.transmitMasterBattleDossier();
   assert.equal(transmittedChannel, 'alpha');
   assert.ok(transmittedPayload.includes('MASTER POST-BATTLE'));
-  assert.ok(transmittedPayload.includes('THE SANCTUARY OF ASH'));
+  assert.ok(transmittedPayload.includes('SANCTUARY OF ASH'));
 });
 
 test('crusade: saveCrusadeState and initCrusadePage restore state across tab navigation', () => {

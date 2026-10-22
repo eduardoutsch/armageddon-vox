@@ -100,12 +100,12 @@
       <div class="choice-grid">
         <div id="roleCard1" class="choice-card selected" onclick="selectRole('1')">
           <span class="choice-icon">🦅</span>
-          <div class="choice-title">Commander Alpha</div>
+          <div class="choice-title">The Exile // Sanctuary of Ash</div>
           <div class="choice-sub">Player 1 • Upper Deck Pool (No Duplicate Draws)</div>
         </div>
         <div id="roleCard2" class="choice-card" onclick="selectRole('2')">
           <span class="choice-icon">💀</span>
-          <div class="choice-title">Commander Beta</div>
+          <div class="choice-title">Lord Commander Junebug</div>
           <div class="choice-sub">Player 2 • Lower Deck Pool (No Duplicate Draws)</div>
         </div>
       </div>
@@ -345,24 +345,12 @@
         </div>
       </div>
 
-      <!-- CUSTOM COLLECTION POOL BUILDER -->
-      <details>
-        <summary>Customize Your Shelf Pool (Auto-Picks Models You Own)</summary>
-        <div class="drawer-body" style="text-align:left;">
-          <p class="hud-sub" style="margin-bottom:10px;">Enter the units you own for each bracket (comma-separated). Both players can paste the same list so unit names sync too!</p>
-          <label class="hud-label">Bracket [3–4] (0–75 pts)</label>
-          <input type="text" id="pool34" style="width:100%; margin-bottom:10px;" value="10 Hormagaunts, 10 Termagants, 10 Cultists, 3 Nurglings, 5 Barbgaunts">
-          <label class="hud-label">Bracket [5–6] (76–150 pts)</label>
-          <input type="text" id="pool56" style="width:100%; margin-bottom:10px;" value="10 Bloodletters, 10 Genestealers, 5 Chaos Terminators, 3 Tyranid Warriors, 10 Gargoyles">
-          <label class="hud-label">Bracket [7–9] (151–300 pts)</label>
-          <input type="text" id="pool79" style="width:100%; margin-bottom:10px;" value="1 Trygon, 1 Screamer-Killer, 1 Daemon Prince, 1 Chaos Predator, 6 Bloodcrushers">
-          <label class="hud-label">Bracket [10+] (301–550 pts)</label>
-          <input type="text" id="pool10" style="width:100%; margin-bottom:10px;" value="1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant">
-          <div style="text-align:center; margin-top:10px;">
-            <button class="btn-blue btn-sm" onclick="saveCustomPool()">Save Shelf Pool to Browser</button>
-          </div>
-        </div>
-      </details>
+      <!-- CUSTOM COLLECTION POOL LINK (CONFIGURED IN MODE 4) -->
+      <div style="margin-top:14px; text-align:center;">
+        <a href="roster.html#brackets" class="suite-link" style="display:inline-block; font-size:0.84rem; padding:8px 16px;">
+          🎖️ Configure Custom Shelf Pool in Mode 4: Hostile Matrix →
+        </a>
+      </div>
     </div>
 
   </div>

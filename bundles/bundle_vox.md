@@ -244,12 +244,12 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       <div id="cardAlpha" class="choice-card selected" onclick="selectConduit('alpha')">
         <span class="choice-icon">🦅</span>
         <div class="choice-title">Terminal Alpha</div>
-        <div class="choice-sub">Commander Alpha (The Sanctuary of Ash)</div>
+        <div class="choice-sub">The Exile // Sanctuary of Ash</div>
       </div>
       <div id="cardBeta" class="choice-card" onclick="selectConduit('beta')">
         <span class="choice-icon">💀</span>
         <div class="choice-title">Terminal Beta</div>
-        <div class="choice-sub">Commander Beta (JUNEBUG)</div>
+        <div class="choice-sub">Lord Commander Junebug</div>
       </div>
     </div>
 
@@ -416,7 +416,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
         btn.textContent = `🛡️ Inscribe Permanent Seal & Unlock`;
       } else {
         badge.innerHTML = `<span class="pulse-dot"></span> VERMILION SEAL ACTIVE • ENCRYPTED`;
-        sub.textContent = `Conduit sealed to ${chan === 'alpha' ? 'Commander Alpha' : 'Commander Beta'}. Enter your secret passphrase to decrypt.`;
+        sub.textContent = `Conduit sealed to ${chan === 'alpha' ? 'The Exile // Sanctuary of Ash' : 'Lord Commander Junebug'}. Enter your secret passphrase to decrypt.`;
         label.textContent = `2. Enter Secret Vermilion Pass-Seal`;
         btn.textContent = `🔓 Authenticate & Decrypt Conduit`;
       }
@@ -462,7 +462,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('terminalScreen').classList.remove('hidden');
       document.getElementById('activeConduitLabel').textContent =
-        selectedChannel === 'alpha' ? '🦅 TERMINAL ALPHA (LOWER DECKS)' : '💀 TERMINAL BETA (JUNEBUG)';
+        selectedChannel === 'alpha' ? '🦅 THE EXILE // SANCTUARY OF ASH' : '💀 LORD COMMANDER JUNEBUG';
 
       // Check if a compiled Master Battle Dossier or Nemesis Dossier is waiting in sessionStorage!
       await flushPendingDossierIfAny();
@@ -487,8 +487,8 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
 
       if (queued && queued.text && activePassphrase) {
         const senderName = selectedChannel === 'alpha'
-          ? 'Commander Alpha (The Exile)'
-          : 'Commander Beta (JUNEBUG)';
+          ? 'The Exile // Sanctuary of Ash'
+          : 'Lord Commander Junebug';
 
         await rpcCall('send_vox_message', {
           p_channel: selectedChannel,
@@ -718,8 +718,8 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
 
     input.value = '';
     const senderName = selectedChannel === 'alpha'
-      ? 'Commander Alpha (The Exile)'
-      : 'Commander Beta (JUNEBUG)';
+      ? 'The Exile // Sanctuary of Ash'
+      : 'Lord Commander Junebug';
 
     await rpcCall('send_vox_message', {
       p_channel: selectedChannel,

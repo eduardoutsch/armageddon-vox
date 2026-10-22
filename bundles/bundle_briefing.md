@@ -86,37 +86,37 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
 
   <!-- 4-TAB DOSSIER SWITCHER (DEFAULTS TO BETA PER UI BOUNDARY TESTS) -->
   <div class="nav-pills" style="margin-top:8px; margin-bottom:20px;">
-    <button id="btnAlpha" onclick="showDossier('alpha')">🦅 Alpha &amp; Ship</button>
-    <button id="btnBeta" class="active" onclick="showDossier('beta')">💀 Beta Briefing</button>
+    <button id="btnAlpha" onclick="showDossier('alpha')">🦅 The Exile // Sanctuary of Ash &amp; Ship</button>
+    <button id="btnBeta" class="active" onclick="showDossier('beta')">💀 Lord Commander Junebug Briefing</button>
     <button id="btnAtlas" onclick="showDossier('atlas')">🗺️ Sector Atlas</button>
     <button id="btnRules" onclick="showDossier('rules')">⚡ Horde → Crusade Rules</button>
   </div>
 
   <!-- ================================================================= -->
-  <!-- TAB 1: COMMANDER ALPHA (THE SANCTUARY OF ASH & SHIP.MD SLIDER)    -->
+  <!-- TAB 1: THE EXILE // SANCTUARY OF ASH (SHIP.MD SLIDER)             -->
   <!-- ================================================================= -->
   <div id="dossierAlpha" class="hidden">
 
     <!-- CLEARANCE GATE ALPHA -->
     <div id="gateAlpha" class="hero-card" style="text-align:center; padding:36px 24px; border-color:rgba(245, 176, 65, 0.45);">
-      <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion-Alpha • Restricted Dataslate</div>
+      <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion • The Exile // Sanctuary of Ash • Restricted Dataslate</div>
       <h2 class="hero-title" style="font-size:1.6rem;">The Sanctuary of Ash // Command &amp; Ship Slider</h2>
       <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
-        Private operational ledger for <strong>Commander Alpha</strong> (Lower Decks &amp; Shipboard Control Slider). Unauthorized inspection by rival Warlords is prohibited.
+        Private operational ledger for <strong>The Exile // Sanctuary of Ash</strong> (Lower Decks &amp; Shipboard Control Slider). Unauthorized inspection by rival Warlords is prohibited.
       </p>
       <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Alpha')">
-        🔓 Authenticate Commander Alpha
+        🔓 Authenticate The Exile // Sanctuary of Ash
       </button>
     </div>
 
     <!-- UNLOCKED ALPHA CONTENT -->
     <div id="contentAlpha" class="hidden">
       <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-        <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Alpha')">🔒 Lock Alpha Dataslate</button>
+        <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Alpha')">🔒 Lock The Exile Dataslate</button>
       </div>
 
       <div class="hero-card" style="margin-bottom:20px;">
-        <div class="status-pill">Registered Dossier • Commander Alpha • Alliance: Gatebreakers</div>
+        <div class="status-pill">Registered Dossier • The Exile // Sanctuary of Ash • Alliance: Gatebreakers</div>
         <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Sanctuary of Ash</h1>
         <div class="lore-quote">
           "Once, a Sororitas pilgrim vessel named <em>Divine Providence</em> was defiled when heretics slaughtered its crew and used it to bombard holy worlds. After its recapture, the Sororitas decreed it too tainted to exist—until a Krieg regiment, condemned for a 'failure' they did not commit, claimed it as their floating purgatory. The Krieg spent decades reforging it into a hybrid prison-monastery, scrubbing its halls with acid and ash from their own cremated dead. They renamed it <em>The Sanctuary of Ash</em>: a bitter joke, for there is no sanctuary here, only endless war."
@@ -237,16 +237,16 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
   </div>
 
   <!-- ================================================================= -->
-  <!-- TAB 2: COMMANDER BETA (JUNEBUG — DEFAULT VISIBLE TAB)             -->
+  <!-- TAB 2: LORD COMMANDER JUNEBUG (DEFAULT VISIBLE TAB)               -->
   <!-- ================================================================= -->
   <div id="dossierBeta">
 
     <!-- CLEARANCE GATE BETA -->
     <div id="gateBeta" class="hero-card" style="text-align:center; padding:36px 24px; border-color:rgba(255, 71, 87, 0.45);">
-      <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion-Beta • Restricted Dataslate</div>
-      <h2 class="hero-title" style="font-size:1.6rem;">Commander Beta's Sealed Astropathic Dispatch</h2>
+      <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate</div>
+      <h2 class="hero-title" style="font-size:1.6rem;">Lord Commander Junebug's Sealed Astropathic Dispatch</h2>
       <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
-        Encrypted Segmentum Solar High Command transmission routed exclusively to <strong>Commander Beta (JUNEBUG)</strong>.
+        Encrypted Segmentum Solar High Command transmission routed exclusively to <strong>Lord Commander Junebug</strong>.
       </p>
       <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Beta')">
         🔓 Authenticate &amp; Decrypt Dispatch
@@ -256,11 +256,11 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
     <!-- UNLOCKED BETA CONTENT -->
     <div id="contentBeta" class="hidden">
       <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-        <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Beta')">🔒 Lock Beta Dataslate</button>
+        <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Beta')">🔒 Lock Lord Commander Junebug Dataslate</button>
       </div>
 
       <div class="hero-card" style="margin-bottom:20px;">
-        <div class="status-pill">Incoming Vox-Transmission // Recipient: Commander Beta</div>
+        <div class="status-pill">Incoming Vox-Transmission // Recipient: Lord Commander Junebug</div>
         <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Fires of Armageddon</h1>
 
         <div class="lore-quote" style="text-align:left; line-height:1.65;">
@@ -289,11 +289,11 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       <div class="card" style="margin-bottom:20px; border-left:4px solid var(--red);">
         <h2 style="margin-top:0; font-size:1.25rem;">The Voice in the Ash (Your Chronicler &amp; The Third Force)</h2>
         <p class="card-desc">
-          Welcome to our <strong>Warhammer 40,000: Armageddon Crusade</strong>! While you and Commander Alpha track your unit cards on <strong>Administratum</strong>, I serve two roles simultaneously:
+          Welcome to our <strong>Warhammer 40,000: Armageddon Crusade</strong>! While you and The Exile // Sanctuary of Ash track your unit cards on <strong>Administratum</strong>, I serve two roles simultaneously:
         </p>
         <ul style="font-size:0.92rem; line-height:1.6;">
           <li><strong>1. Impartial Chronicler &amp; Campaign Master:</strong> After every battle, I chronicle your Warlord's deeds, name your units' Battle Scars and Honours, manage the 8-Node Planetary Sector Atlas, and bestow thematic <strong>Mighty Champion</strong> abilities upon any <strong>Epic Hero</strong> in your roster.</li>
-          <li><strong>2. Overlord of the Unseen Third Force (The Horde AI):</strong> Armageddon features <strong>three warring Alliances</strong>. Once you and Commander Alpha each claim your banner, <strong>I take direct command of the remaining 3rd Alliance</strong>—competing against you both for Sector Hegemony, Strategic Points, and Campaign Points across all 4 Campaign Phases!</li>
+          <li><strong>2. Overlord of the Unseen Third Force (The Horde AI):</strong> Armageddon features <strong>three warring Alliances</strong>. Once you and The Exile // Sanctuary of Ash each claim your banner, <strong>I take direct command of the remaining 3rd Alliance</strong>—competing against you both for Sector Hegemony, Strategic Points, and Campaign Points across all 4 Campaign Phases!</li>
         </ul>
       </div>
 
@@ -642,7 +642,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
             <div class="fs-hud-title-wrap">
               <span class="fs-node-tag" id="fsHudBadge">ACTIVE ZONE</span>
               <strong id="fsHudTitle" style="color:#ecfdf5; font-size:1.05rem; font-weight:800;">Sector Node 0: Golgotha Arbor-Basin</strong>
-              <div id="fsHudDominance" class="fs-dominance-pill">💀 Commander Beta Leading (2 / 8 HP)</div>
+              <div id="fsHudDominance" class="fs-dominance-pill">💀 Lord Commander Junebug Leading (2 / 8 HP)</div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
               <button type="button" class="auspex-toolbar-btn" id="fsToggleDetailsBtn" onclick="toggleFsHudDetails()">▾ Telemetry Details</button>
@@ -669,14 +669,14 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
             <div class="fs-hud-heg-grid">
               <div class="fs-heg-row">
                 <div class="fs-heg-label">
-                  <span>🦅 Commander Alpha</span>
+                  <span>🦅 The Exile // Sanctuary of Ash</span>
                   <strong id="fs-heg-val-alpha">1 / 8 HP</strong>
                 </div>
                 <div id="fs-heg-bar-alpha" class="fs-heg-bar"></div>
               </div>
               <div class="fs-heg-row">
                 <div class="fs-heg-label">
-                  <span>💀 Commander Beta (JUNEBUG)</span>
+                  <span>💀 Lord Commander Junebug</span>
                   <strong id="fs-heg-val-beta">2 / 8 HP</strong>
                 </div>
                 <div id="fs-heg-bar-beta" class="fs-heg-bar"></div>
@@ -699,7 +699,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
         <h3 id="inspectorNodeTitle">Sector Node 0: Equatorial Jungle // The Golgotha Arbor-Basin</h3>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <span class="status-pill" id="inspectorNodeBadge">DISCOVERED • CONTESTED</span>
-          <span class="fs-dominance-pill" id="inspectorDominance">💀 Commander Beta Leading (2 / 8 HP)</span>
+          <span class="fs-dominance-pill" id="inspectorDominance">💀 Lord Commander Junebug Leading (2 / 8 HP)</span>
         </div>
       </div>
       <p id="inspectorNodeLore" class="card-desc"></p>
@@ -711,7 +711,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
 
       <div style="margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
-          <span>🦅 Commander Alpha</span>
+          <span>🦅 The Exile // Sanctuary of Ash</span>
           <strong id="heg-label-alpha">1 / 8 HP</strong>
         </div>
         <div id="heg-bar-alpha" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
@@ -719,7 +719,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
 
       <div style="margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
-          <span>💀 Commander Beta (JUNEBUG)</span>
+          <span>💀 Lord Commander Junebug</span>
           <strong id="heg-label-beta">2 / 8 HP</strong>
         </div>
         <div id="heg-bar-beta" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
@@ -755,7 +755,7 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       <ul style="font-size:0.9rem; line-height:1.6;">
         <li><strong>Plundered Command Cache:</strong> Steal <strong>1 Requisition Point (RP)</strong> (or <strong>2 Strategic Points</strong>) directly from the betrayed Commander, <strong>AND</strong> expand your Crusade Force's <strong>Supply Limit by +200 pts</strong> for free.</li>
         <li><strong>Forbidden Spoils of Treachery:</strong> Bestow a free <strong>Battle Honour</strong> (or an Armageddon <strong>Antiquity Relic</strong> if a Character) upon your Warlord or the unit that executed the betrayal, <strong>plus +3 bonus XP</strong>.</li>
-        <li><strong>Shipboard Shift (Alpha Only):</strong> Completing a Traitor directive shifts <em>The Sanctuary of Ash</em> Balance Slider <strong>1 step toward the Lower Decks (-1)</strong>.</li>
+        <li><strong>Shipboard Shift (The Exile // Sanctuary of Ash Only):</strong> Completing a Traitor directive shifts <em>The Sanctuary of Ash</em> Balance Slider <strong>1 step toward the Lower Decks (-1)</strong>.</li>
         <li><strong>The Grudge Consequence:</strong> In your next 1v1 PvP clash, the betrayed Commander automatically receives <strong>1 free Armageddon Crusade Blessing</strong> even if they are not the Underdog!</li>
       </ul>
     </div>
@@ -1087,8 +1087,8 @@ function getDominanceText(n) {
   const a = n.alphaHP || 0;
   const b = n.betaHP || 0;
   const h = n.hordeHP || 0;
-  if (b > a && b > h) return `💀 Commander Beta Leading (${b} / 8 HP)`;
-  if (a > b && a > h) return `🦅 Commander Alpha Leading (${a} / 8 HP)`;
+  if (b > a && b > h) return `💀 Lord Commander Junebug Leading (${b} / 8 HP)`;
+  if (a > b && a > h) return `🦅 The Exile // Sanctuary of Ash Leading (${a} / 8 HP)`;
   if (h > a && h > b) return `👁️‍🗨️ 3rd Alliance Leading (${h} / 8 HP)`;
   return `⚔️ Contested Stalemate (Tied at ${Math.max(a, b, h)} HP)`;
 }

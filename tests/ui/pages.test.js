@@ -126,12 +126,12 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
 
   // Verify new sealed Astropathic dispatch and clearance gate
   assert.ok(
-    html.includes("Commander Beta's Sealed Astropathic Dispatch"),
-    'Must include Commander Beta sealed dispatch title'
+    html.includes("Lord Commander Junebug's Sealed Astropathic Dispatch"),
+    'Must include Lord Commander Junebug sealed dispatch title'
   );
   assert.ok(
-    html.includes('Clearance Vermilion-Beta • Restricted Dataslate'),
-    'Must include Vermilion-Beta clearance tag'
+    html.includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
+    'Must include Lord Commander Junebug clearance tag'
   );
   assert.ok(
     html.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||

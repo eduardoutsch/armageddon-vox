@@ -1,12 +1,16 @@
 // Spawner and Bracket Evaluation Engine
 
 const DOWN_MAP = {
+  '13+': '10-12',
+  '10-12': '7-9',
   '10+': '7-9',
   '7-9': '5-6',
   '5-6': '3-4'
 };
 
 const LABEL_MAP = {
+  '10-12': { label: 'Bracket [10–12] (Rolled Down x2)', pts: '301–550 pts each' },
+  '10+': { label: 'Bracket [10–12] (Rolled Down x2)', pts: '301–550 pts each' },
   '7-9': { label: 'Bracket [7–9] (Rolled Down x2)', pts: '151–300 pts each' },
   '5-6': { label: 'Bracket [5–6] (Rolled Down x2)', pts: '76–150 pts each' },
   '3-4': { label: 'Bracket [3–4] (Rolled Down x2)', pts: '0–75 pts each' }
@@ -15,6 +19,7 @@ const LABEL_MAP = {
 /**
  * Evaluates the spawn bracket from the 2D6 roll and modified total.
  * Rules: Unmodified 2 is always No Spawn. Modified <= 2 is No Spawn.
+ * 3–4: 0–75 pts | 5–6: 76–150 pts | 7–9: 151–300 pts | 10–12: 301–550 pts | 13+: 551+ pts
  */
 function getBracketInfo(modRoll, unmodRoll) {
   if (unmodRoll === 2 || modRoll <= 2) {
@@ -23,7 +28,8 @@ function getBracketInfo(modRoll, unmodRoll) {
   if (modRoll <= 4) return { key: '3-4', label: 'Bracket [3–4]', pts: '0–75 pts' };
   if (modRoll <= 6) return { key: '5-6', label: 'Bracket [5–6]', pts: '76–150 pts' };
   if (modRoll <= 9) return { key: '7-9', label: 'Bracket [7–9]', pts: '151–300 pts' };
-  return { key: '10+', label: 'Bracket [10+]', pts: '301–550 pts' };
+  if (modRoll <= 12) return { key: '10-12', label: 'Bracket [10–12]', pts: '301–550 pts' };
+  return { key: '13+', label: 'Bracket [13+]', pts: '551+ pts' };
 }
 
 /**
@@ -44,12 +50,26 @@ function calculateRollDown(bracketKey) {
  * Picks a unit from the shelf pool for a given bracket.
  */
 function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
-  const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10' };
+  const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10', '10-12': 'pool10', '13+': 'pool13' };
   let raw = '';
 
   if (customPoolMap && customPoolMap[bracketKey] !== undefined) {
     raw = customPoolMap[bracketKey];
-  } else if (typeof document !== 'undefined') {
+  } else if (typeof localStorage !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('foa_custom_shelf_pool_v1') || localStorage.getItem('armageddon_horde_pool');
+      if (saved) {
+        const p = JSON.parse(saved);
+        const mapKey = bracketKey === '3-4' ? 'b34'
+          : bracketKey === '5-6' ? 'b56'
+          : bracketKey === '7-9' ? 'b79'
+          : (bracketKey === '10+' || bracketKey === '10-12') ? 'b10'
+          : 'b13';
+        if (p[mapKey]) raw = p[mapKey];
+      }
+    } catch (e) {}
+  }
+  if (!raw && typeof document !== 'undefined') {
     const el = document.getElementById(idMap[bracketKey]);
     raw = el ? (el.value || '') : '';
   }

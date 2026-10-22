@@ -65,6 +65,7 @@ const mockElements = {
   rosterPool56: { value: '10 Genestealers, 5 Chaos Terminators' },
   rosterPool79: { value: '1 Screamer-Killer, 1 Trygon' },
   rosterPool10: { value: '1 Norn Emissary, 1 Hive Tyrant' },
+  rosterPool13: { value: '1 Hierophant Bio-Titan' },
   shelfSaveNotice: { classList: createMockClassList() },
   bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
   factionBracketDisplay: { innerHTML: '' }
@@ -119,6 +120,7 @@ test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for fact
   assert.ok(Array.isArray(sm.b56) && sm.b56.length > 0, 'Space Marines must have bracket [5-6]');
   assert.ok(Array.isArray(sm.b79) && sm.b79.length > 0, 'Space Marines must have bracket [7-9]');
   assert.ok(Array.isArray(sm.b10) && sm.b10.length > 0, 'Space Marines must have bracket [10+]');
+  assert.ok(Array.isArray(sm.b13) && sm.b13.length > 0, 'Space Marines must have bracket [13+]');
 });
 
 test('roster: switchRosterTab toggles active tab and DOM visibility classes', () => {
@@ -145,13 +147,13 @@ test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Ca
 
   const str = roster.buildNemesisDossierString();
   assert.ok(str.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
-  assert.ok(str.includes('• FILING COMMANDER: COMMANDER ALPHA (THE EXILE)'));
+  assert.ok(str.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
   assert.ok(str.includes('• HOSTILE DATASHEET / FACTION: Tyranids — Screamer-Killer'));
   assert.ok(str.includes('slaughtered Death Riders'));
 
   mockElements.nemReportChannel.value = 'beta';
   const strBeta = roster.buildNemesisDossierString();
-  assert.ok(strBeta.includes('• FILING COMMANDER: COMMANDER BETA (JUNEBUG)'));
+  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
 });
 
 test('roster: updateNemesisPreview populates preview box and saves state', () => {
@@ -171,7 +173,7 @@ test('roster: transmitNemesisDossier triggers window.VoxAudio.transmitToVox with
 
   roster.transmitNemesisDossier();
   assert.equal(transmittedChannel, 'beta');
-  assert.ok(transmittedPayload.includes('COMMANDER BETA (JUNEBUG)'));
+  assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
   assert.ok(transmittedPayload.includes('ORDO MALLEUS'));
 });
 
@@ -180,6 +182,7 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   mockElements.rosterPool56.value = '5 Tyranid Warriors';
   mockElements.rosterPool79.value = '1 Maleceptor';
   mockElements.rosterPool10.value = '1 Tyrannofex';
+  mockElements.rosterPool13.value = '1 Hierophant Bio-Titan';
 
   roster.saveShelfBarracks();
 
@@ -190,6 +193,7 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   assert.equal(pool.b56, '5 Tyranid Warriors');
   assert.equal(pool.b79, '1 Maleceptor');
   assert.equal(pool.b10, '1 Tyrannofex');
+  assert.equal(pool.b13, '1 Hierophant Bio-Titan');
 });
 
 test('roster: renderFactionBracketTable displays faction rules and bracket units', () => {

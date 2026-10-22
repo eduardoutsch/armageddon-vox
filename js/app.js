@@ -646,11 +646,14 @@ function renderSharedDecks() {
 
 // --- TAB 4: ROOM-SYNCED HORDE SPAWNER ---
 function saveCustomPool() {
+  const el34 = document.getElementById('pool34');
+  if (!el34) return;
   const pool = {
-    b34: document.getElementById('pool34').value,
-    b56: document.getElementById('pool56').value,
-    b79: document.getElementById('pool79').value,
-    b10: document.getElementById('pool10').value
+    b34: el34.value,
+    b56: document.getElementById('pool56') ? document.getElementById('pool56').value : '',
+    b79: document.getElementById('pool79') ? document.getElementById('pool79').value : '',
+    b10: document.getElementById('pool10') ? document.getElementById('pool10').value : '',
+    b13: document.getElementById('pool13') ? document.getElementById('pool13').value : ''
   };
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('armageddon_horde_pool', JSON.stringify(pool));
@@ -660,14 +663,15 @@ function saveCustomPool() {
 
 function loadCustomPool() {
   if (typeof localStorage === 'undefined') return;
-  const saved = localStorage.getItem('armageddon_horde_pool');
+  const saved = localStorage.getItem('foa_custom_shelf_pool_v1') || localStorage.getItem('armageddon_horde_pool');
   if (!saved) return;
   try {
     const p = JSON.parse(saved);
-    if (p.b34) document.getElementById('pool34').value = p.b34;
-    if (p.b56) document.getElementById('pool56').value = p.b56;
-    if (p.b79) document.getElementById('pool79').value = p.b79;
-    if (p.b10) document.getElementById('pool10').value = p.b10;
+    if (p.b34 && document.getElementById('pool34')) document.getElementById('pool34').value = p.b34;
+    if (p.b56 && document.getElementById('pool56')) document.getElementById('pool56').value = p.b56;
+    if (p.b79 && document.getElementById('pool79')) document.getElementById('pool79').value = p.b79;
+    if (p.b10 && document.getElementById('pool10')) document.getElementById('pool10').value = p.b10;
+    if (p.b13 && document.getElementById('pool13')) document.getElementById('pool13').value = p.b13;
   } catch (e) {}
 }
 

@@ -207,15 +207,26 @@ test('getBracketInfo: correctly categorizes all standard brackets', () => {
   assert.equal(getBracketInfo(7, 7).key, '7-9');
   assert.equal(getBracketInfo(8, 8).key, '7-9');
   assert.equal(getBracketInfo(9, 9).key, '7-9');
-  assert.equal(getBracketInfo(10, 10).key, '10+');
-  assert.equal(getBracketInfo(12, 12).key, '10+');
-  assert.equal(getBracketInfo(16, 11).key, '10+');
+  assert.equal(getBracketInfo(10, 10).key, '10-12');
+  assert.equal(getBracketInfo(10, 10).pts, '301–550 pts');
+  assert.equal(getBracketInfo(12, 12).key, '10-12');
+  assert.equal(getBracketInfo(13, 11).key, '13+');
+  assert.equal(getBracketInfo(13, 11).pts, '551+ pts');
+  assert.equal(getBracketInfo(16, 11).key, '13+');
 });
 
-test('calculateRollDown: cascades down correctly from 10+ down to 3-4', () => {
-  const step1 = calculateRollDown('10+');
+test('calculateRollDown: cascades down correctly from 13+ to 10-12 down to 3-4', () => {
+  const step0 = calculateRollDown('13+');
+  assert.ok(step0);
+  assert.equal(step0.nextKey, '10-12');
+
+  const step1 = calculateRollDown('10-12');
   assert.ok(step1);
   assert.equal(step1.nextKey, '7-9');
+
+  const step1Legacy = calculateRollDown('10+');
+  assert.ok(step1Legacy);
+  assert.equal(step1Legacy.nextKey, '7-9');
 
   const step2 = calculateRollDown('7-9');
   assert.ok(step2);
@@ -237,7 +248,9 @@ test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully
     '3-4': 'Hormagaunts, Termagants, Cultists',
     '5-6': '',
     '7-9': 'Carnifex',
-    '10+': 'Hive Tyrant'
+    '10-12': 'Hive Tyrant',
+    '10+': 'Hive Tyrant',
+    '13+': 'Hierophant Bio-Titan'
   };
 
   const rng = mulberry32(100);
@@ -249,6 +262,9 @@ test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully
 
   const picked79 = pickSyncedUnitFromBracket('7-9', rng, mockPool);
   assert.equal(picked79, 'Carnifex');
+
+  const picked13 = pickSyncedUnitFromBracket('13+', rng, mockPool);
+  assert.equal(picked13, 'Hierophant Bio-Titan');
 });
 ````
 
@@ -927,12 +943,12 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
 
   // Verify new sealed Astropathic dispatch and clearance gate
   assert.ok(
-    html.includes("Commander Beta's Sealed Astropathic Dispatch"),
-    'Must include Commander Beta sealed dispatch title'
+    html.includes("Lord Commander Junebug's Sealed Astropathic Dispatch"),
+    'Must include Lord Commander Junebug sealed dispatch title'
   );
   assert.ok(
-    html.includes('Clearance Vermilion-Beta • Restricted Dataslate'),
-    'Must include Vermilion-Beta clearance tag'
+    html.includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
+    'Must include Lord Commander Junebug clearance tag'
   );
   assert.ok(
     html.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
@@ -1290,10 +1306,10 @@ test('briefing: getDominanceText accurately computes hegemony status', () => {
   assert.ok(briefing.getDominanceText({ alphaHP: 0, betaHP: 0, hordeHP: null }).includes('Fog of War'));
 
   // Beta leading
-  assert.ok(briefing.getDominanceText({ alphaHP: 2, betaHP: 5, hordeHP: 1 }).includes('Commander Beta Leading'));
+  assert.ok(briefing.getDominanceText({ alphaHP: 2, betaHP: 5, hordeHP: 1 }).includes('Lord Commander Junebug Leading'));
 
   // Alpha leading
-  assert.ok(briefing.getDominanceText({ alphaHP: 6, betaHP: 2, hordeHP: 1 }).includes('Commander Alpha Leading'));
+  assert.ok(briefing.getDominanceText({ alphaHP: 6, betaHP: 2, hordeHP: 1 }).includes('The Exile // Sanctuary of Ash Leading'));
 
   // Tied
   assert.ok(briefing.getDominanceText({ alphaHP: 3, betaHP: 3, hordeHP: 2 }).includes('Contested Stalemate'));
@@ -1702,6 +1718,7 @@ const mockElements = {
   rosterPool56: { value: '10 Genestealers, 5 Chaos Terminators' },
   rosterPool79: { value: '1 Screamer-Killer, 1 Trygon' },
   rosterPool10: { value: '1 Norn Emissary, 1 Hive Tyrant' },
+  rosterPool13: { value: '1 Hierophant Bio-Titan' },
   shelfSaveNotice: { classList: createMockClassList() },
   bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
   factionBracketDisplay: { innerHTML: '' }
@@ -1756,6 +1773,7 @@ test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for fact
   assert.ok(Array.isArray(sm.b56) && sm.b56.length > 0, 'Space Marines must have bracket [5-6]');
   assert.ok(Array.isArray(sm.b79) && sm.b79.length > 0, 'Space Marines must have bracket [7-9]');
   assert.ok(Array.isArray(sm.b10) && sm.b10.length > 0, 'Space Marines must have bracket [10+]');
+  assert.ok(Array.isArray(sm.b13) && sm.b13.length > 0, 'Space Marines must have bracket [13+]');
 });
 
 test('roster: switchRosterTab toggles active tab and DOM visibility classes', () => {
@@ -1782,13 +1800,13 @@ test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Ca
 
   const str = roster.buildNemesisDossierString();
   assert.ok(str.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
-  assert.ok(str.includes('• FILING COMMANDER: COMMANDER ALPHA (THE EXILE)'));
+  assert.ok(str.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
   assert.ok(str.includes('• HOSTILE DATASHEET / FACTION: Tyranids — Screamer-Killer'));
   assert.ok(str.includes('slaughtered Death Riders'));
 
   mockElements.nemReportChannel.value = 'beta';
   const strBeta = roster.buildNemesisDossierString();
-  assert.ok(strBeta.includes('• FILING COMMANDER: COMMANDER BETA (JUNEBUG)'));
+  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
 });
 
 test('roster: updateNemesisPreview populates preview box and saves state', () => {
@@ -1808,7 +1826,7 @@ test('roster: transmitNemesisDossier triggers window.VoxAudio.transmitToVox with
 
   roster.transmitNemesisDossier();
   assert.equal(transmittedChannel, 'beta');
-  assert.ok(transmittedPayload.includes('COMMANDER BETA (JUNEBUG)'));
+  assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
   assert.ok(transmittedPayload.includes('ORDO MALLEUS'));
 });
 
@@ -1817,6 +1835,7 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   mockElements.rosterPool56.value = '5 Tyranid Warriors';
   mockElements.rosterPool79.value = '1 Maleceptor';
   mockElements.rosterPool10.value = '1 Tyrannofex';
+  mockElements.rosterPool13.value = '1 Hierophant Bio-Titan';
 
   roster.saveShelfBarracks();
 
@@ -1827,6 +1846,7 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   assert.equal(pool.b56, '5 Tyranid Warriors');
   assert.equal(pool.b79, '1 Maleceptor');
   assert.equal(pool.b10, '1 Tyrannofex');
+  assert.equal(pool.b13, '1 Hierophant Bio-Titan');
 });
 
 test('roster: renderFactionBracketTable displays faction rules and bracket units', () => {
@@ -2152,7 +2172,7 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
 
   const dossierStr = crusade.buildMasterDossierString();
   assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
-  assert.ok(dossierStr.includes('COMMANDER ALPHA (THE SANCTUARY OF ASH)'));
+  assert.ok(dossierStr.includes('THE EXILE // SANCTUARY OF ASH'));
   assert.ok(dossierStr.includes('Golgotha Arbor-Basin'));
   assert.ok(dossierStr.includes('SECRET OBJECTIVE CODE: [A9F]'));
   assert.ok(dossierStr.includes("Mercy's Delay"));
@@ -2167,7 +2187,7 @@ test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox
   crusade.transmitMasterBattleDossier();
   assert.equal(transmittedChannel, 'alpha');
   assert.ok(transmittedPayload.includes('MASTER POST-BATTLE'));
-  assert.ok(transmittedPayload.includes('THE SANCTUARY OF ASH'));
+  assert.ok(transmittedPayload.includes('SANCTUARY OF ASH'));
 });
 
 test('crusade: saveCrusadeState and initCrusadePage restore state across tab navigation', () => {
