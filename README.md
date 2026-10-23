@@ -16,13 +16,13 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
   Competitive wasteland skirmish rules, hazardous environmental effects, dynamic primary and secondary objectives.
 
 - **🎲 Mode 3: Rogue Sector & AI Tracker (`pages/rogue.html`)**  
-  Co-op and solo automated AI decision engine, behavioral priority trees, and target acquisition rules for non-player units.
+  Co-op and solo automated AI decision engine, behavioral priority trees, target acquisition rules for non-player units, off-roster planetary consequence tracking, and one-click Astropathic Vox Battle Report transmitter.
 
 - **🎖️ Mode 4: Hostile Matrix & Nemesis Archive (`pages/roster.html`)**  
   Enemy roster configurations across threat brackets, nemesis tracking, custom shelf barracks, and one-click Nemesis Dossier induction compiler.
 
 - **🏆 Mode 5: Crusade Command & Quartermaster (`pages/crusade.html`)**  
-  3-Way Alliance Scoreboard (Imperium, Chaos, Xenos), 4-Phase Branching Narrative Trees, Random Upgrade Rollers (Traits, Mods, Relics, Scars), and Master Post-Battle Dossier Compiler.
+  3-Way Alliance Scoreboard (Imperium, Chaos, Xenos), 4-Phase Branching Narrative Trees, Random Upgrade Rollers (Traits, Mods, Relics, Scars), and Master Post-Battle Dossier Compiler supporting all modes (Horde, 1v1 PvP, and Mode 3 Rogue Sector Auxiliary Clashes).
 
 - **📜 Mode 6: Briefings, Ship & Atlas (`pages/briefing.html`)**  
   Interactive planetary atlas with 8-node sector SVG map, 3-way Parallel Hegemony Race tracker, narrative lore briefings, and orbital command support assets.

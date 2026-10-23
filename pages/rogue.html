@@ -7,6 +7,21 @@
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .master-dossier-preview {
+      background: #030805;
+      border: 1.5px dashed rgba(0, 255, 136, 0.45);
+      border-radius: 10px;
+      padding: 15px;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: 0.84rem;
+      color: #66ffb8;
+      text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+      white-space: pre-wrap;
+      line-height: 1.52;
+      margin: 14px 0;
+    }
+  </style>
 </head>
 <body>
 
@@ -87,17 +102,134 @@
       </div>
     </div>
 
+    <!-- 3. ROGUE SECTOR BATTLE REPORT & ASTROPATHIC VOX TRANSMITTER -->
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>3. Rogue Sector Battle Report &amp; Astropathic Vox Transmitter</h3>
+        <span class="hud-sub">Transmit Off-Roster Planetary Shifts Directly to the Campaign Master</span>
+      </div>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Reporting Commander Conduit</label>
+          <select id="rogueReportChannel" onchange="updateRogueDossierPreview()" style="width:100%; padding:10px;">
+            <option value="alpha">🦅 The Exile // Sanctuary of Ash (Terminal Alpha)</option>
+            <option value="beta">💀 Lord Commander Junebug (Terminal Beta)</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Sector Theatre &amp; Combatants</label>
+          <input type="text" id="rogueCombatants" oninput="updateRogueDossierPreview()" placeholder="e.g. Imperium (144th Krieg) vs Chaos (World Eaters)" style="width:100%; padding:10px;">
+        </div>
+      </div>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Rogue Battle Outcome</label>
+          <select id="rogueOutcome" onchange="updateRogueDossierPreview()" style="width:100%; padding:10px;">
+            <option value="Imperium Victory">🛡️ Imperium Victory (+1 SPt Gatebreakers • Warp Drops to Minor)</option>
+            <option value="Chaos Victory">💀 Chaos Victory (+1 SPt Desecrators • Warp Escalates to Catastrophic)</option>
+            <option value="Xenos Victory">⚔️ Xenos Victory (+1 SPt Marauders • Triggers Vault Plunder Hellscape)</option>
+            <option value="Contested Draw">⚖️ Contested Draw / Stalemate (Zero Planetary Shift)</option>
+          </select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Nemesis Induction Nominee (Optional)</label>
+          <input type="text" id="rogueNemesisNominee" oninput="updateRogueDossierPreview()" placeholder="e.g. Khorne Champion 'Vorgh the Flayed' (Wiped squad solo)" style="width:100%; padding:10px;">
+        </div>
+      </div>
+
+      <label class="hud-label" style="display:block; margin-bottom:4px;">Eye-Witness Combat Log / Highlights</label>
+      <textarea id="rogueNotes" oninput="updateRogueDossierPreview()" placeholder="Describe key heroic moments, tragic unit wipes, or notable engagements during this auxiliary battle..." style="width:100%; min-height:70px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
+
+      <!-- LIVE DOSSIER PREVIEW -->
+      <div class="master-dossier-preview" id="rogueDossierPreviewBox" style="margin-top:10px;"></div>
+
+      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitRogueDossier()" style="margin-top:12px;">
+        📡 Transmit Rogue Sector Report via Astropathic Vox →
+      </button>
+    </div>
+
   </div>
 
 <script>
 const STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
 let currentAiStep = 0;
 
+function buildRogueDossierString() {
+  const chan = document.getElementById('rogueReportChannel')?.value || 'alpha';
+  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
+  const combatants = (document.getElementById('rogueCombatants')?.value || 'Auxiliary Forces (Unspecified Factions)').trim();
+  const outcome = document.getElementById('rogueOutcome')?.value || 'Imperium Victory';
+  const nominee = (document.getElementById('rogueNemesisNominee')?.value || '').trim();
+  const notes = (document.getElementById('rogueNotes')?.value || 'Auxiliary clash concluded in the disputed zone. Awaiting Campaign Master chronicle.').trim();
+
+  let planetaryImpact = '';
+  let hegemonyImpact = '';
+  if (outcome.includes('Imperium Victory')) {
+    planetaryImpact = 'Stabilizes sector: Next main game Warp Intensity drops to Minor (or -1 to 1st R1 Horde Spawn Roll)';
+    hegemonyImpact = '+1 SPt to Gatebreakers';
+  } else if (outcome.includes('Chaos Victory')) {
+    planetaryImpact = 'Widens breach: Next main game Warp Intensity escalates to Catastrophic (or triggers Banishing Rifts)';
+    hegemonyImpact = '+1 SPt to Desecrators';
+  } else if (outcome.includes('Xenos Victory')) {
+    planetaryImpact = 'Plunders vaults: Triggers Gravitic Nexus or Staggered Time Hellscape next main match';
+    hegemonyImpact = '+1 SPt to Marauders';
+  } else {
+    planetaryImpact = 'Contested / Stalemate: Zero planetary shift on next main engagement';
+    hegemonyImpact = 'Zero SPt shift (Contested)';
+  }
+
+  const lines = [
+    `+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++`,
+    `• REPORTING COMMANDER: ${cmdr}`,
+    `• THEATRE & COMBATANTS: ${combatants}`,
+    `• BATTLE OUTCOME: ${outcome}`,
+    `• PLANETARY SHIFT: ${planetaryImpact}`,
+    `• ALLIANCE HEGEMONY IMPACT: ${hegemonyImpact}`
+  ];
+
+  if (nominee) {
+    lines.push(`• NEMESIS INDUCTION NOMINEE: ${nominee}`);
+  }
+
+  lines.push(
+    `------------------------------------------------`,
+    `• EYE-WITNESS COMBAT LOG: "${notes}"`,
+    `------------------------------------------------`,
+    `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this Rogue Sector battle's planetary consequence on the next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and reviewing any nominated hostile entity for induction into the Cross-Mode Nemesis Ledger!`
+  );
+
+  return lines.join('\n');
+}
+
+function updateRogueDossierPreview() {
+  const box = document.getElementById('rogueDossierPreviewBox');
+  if (box) box.textContent = buildRogueDossierString();
+  saveRogueState();
+}
+
+function transmitRogueDossier() {
+  const chan = document.getElementById('rogueReportChannel')?.value || 'alpha';
+  const payload = buildRogueDossierString();
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox(chan, payload);
+  }
+}
+
 function saveRogueState() {
   if (typeof localStorage === 'undefined') return;
   if (!document.getElementById('aiStep0')) return;
   try {
-    localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep }));
+    const data = {
+      currentAiStep,
+      reportChannel: document.getElementById('rogueReportChannel')?.value || 'alpha',
+      combatants: document.getElementById('rogueCombatants')?.value || '',
+      outcome: document.getElementById('rogueOutcome')?.value || 'Imperium Victory',
+      nemesisNominee: document.getElementById('rogueNemesisNominee')?.value || '',
+      notes: document.getElementById('rogueNotes')?.value || ''
+    };
+    localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify(data));
   } catch (e) {
     console.warn('Could not save rogue state:', e);
   }
@@ -107,11 +239,32 @@ function restoreRogueState() {
   if (typeof localStorage === 'undefined') return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY_ROGUE);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (data && typeof data.currentAiStep === 'number') {
-      setAiStep(data.currentAiStep, false);
+    if (!raw) {
+      updateRogueDossierPreview();
+      return;
     }
+    const data = JSON.parse(raw);
+    if (data) {
+      if (typeof data.currentAiStep === 'number') {
+        setAiStep(data.currentAiStep, false);
+      }
+      if (data.reportChannel && document.getElementById('rogueReportChannel')) {
+        document.getElementById('rogueReportChannel').value = data.reportChannel;
+      }
+      if (data.combatants && document.getElementById('rogueCombatants')) {
+        document.getElementById('rogueCombatants').value = data.combatants;
+      }
+      if (data.outcome && document.getElementById('rogueOutcome')) {
+        document.getElementById('rogueOutcome').value = data.outcome;
+      }
+      if (data.nemesisNominee && document.getElementById('rogueNemesisNominee')) {
+        document.getElementById('rogueNemesisNominee').value = data.nemesisNominee;
+      }
+      if (data.notes && document.getElementById('rogueNotes')) {
+        document.getElementById('rogueNotes').value = data.notes;
+      }
+    }
+    updateRogueDossierPreview();
   } catch (e) {
     console.warn('Could not restore rogue state:', e);
   }
@@ -134,7 +287,20 @@ function nextAiStep() {
   setAiStep((currentAiStep + 1) % 3);
 }
 
+if (typeof window !== 'undefined') {
+  window.buildRogueDossierString = buildRogueDossierString;
+  window.updateRogueDossierPreview = updateRogueDossierPreview;
+  window.transmitRogueDossier = transmitRogueDossier;
+}
+
 restoreRogueState();
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('DOMContentLoaded', restoreRogueState);
+  window.addEventListener('vox:page-swapped', () => {
+    if (document.getElementById('aiStep0')) restoreRogueState();
+  });
+}
 </script>
 <script src="../js/vox-audio.js"></script>
 </body>

@@ -2993,10 +2993,30 @@ function createMockAiStep() {
   };
 }
 
+let transmittedChannel = null;
+let transmittedPayload = null;
+
+globalThis.window = {
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  VoxAudio: {
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
 const mockElements = {
   aiStep0: createMockAiStep(),
   aiStep1: createMockAiStep(),
-  aiStep2: createMockAiStep()
+  aiStep2: createMockAiStep(),
+  rogueReportChannel: { value: 'alpha' },
+  rogueCombatants: { value: 'Imperium (144th Krieg) vs Chaos (World Eaters)' },
+  rogueOutcome: { value: 'Imperium Victory' },
+  rogueNemesisNominee: { value: 'Vorgh the Flayed' },
+  rogueNotes: { value: 'Fierce trench defense at Auxiliary Sector 9.' },
+  rogueDossierPreviewBox: { textContent: '' }
 };
 
 globalThis.document = {
@@ -3004,16 +3024,19 @@ globalThis.document = {
 };
 
 // Evaluate script in mock environment
-const fn = new Function('document', 'localStorage', 'console', `${rogueScriptCode}; return {
+const fn = new Function('document', 'localStorage', 'console', 'window', `${rogueScriptCode}; return {
   STORAGE_KEY_ROGUE,
   getCurrentAiStep: () => currentAiStep,
   setAiStep,
   nextAiStep,
   saveRogueState,
-  restoreRogueState
+  restoreRogueState,
+  buildRogueDossierString,
+  updateRogueDossierPreview,
+  transmitRogueDossier
 };`);
 
-const rogue = fn(globalThis.document, globalThis.localStorage, console);
+const rogue = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
 
 test('rogue: setAiStep updates DOM classes, badge text, and persists state', () => {
   rogue.setAiStep(1, true);
@@ -3072,6 +3095,57 @@ test('rogue: restoreRogueState faithfully restores active phase from localStorag
   assert.equal(mockElements.aiStep2.classList.contains('active-step'), true);
   assert.equal(mockElements.aiStep2.span.innerText, '[Active]');
 });
+
+test('rogue: buildRogueDossierString compiles Mode 3 Rogue Sector Battle Dossier with planetary consequences', () => {
+  mockElements.rogueReportChannel.value = 'alpha';
+  mockElements.rogueCombatants.value = 'Imperium (144th Krieg) vs Chaos (World Eaters)';
+  mockElements.rogueOutcome.value = 'Imperium Victory';
+  mockElements.rogueNemesisNominee.value = 'Vorgh the Flayed';
+  mockElements.rogueNotes.value = 'Fierce trench defense at Auxiliary Sector 9.';
+
+  const str = rogue.buildRogueDossierString();
+  assert.ok(str.includes('+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++'));
+  assert.ok(str.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(str.includes('Imperium (144th Krieg) vs Chaos (World Eaters)'));
+  assert.ok(str.includes('Imperium Victory'));
+  assert.ok(str.includes('PLANETARY SHIFT: Stabilizes sector'));
+  assert.ok(str.includes('ALLIANCE HEGEMONY IMPACT: +1 SPt to Gatebreakers'));
+  assert.ok(str.includes('NEMESIS INDUCTION NOMINEE: Vorgh the Flayed'));
+  assert.ok(str.includes('Fierce trench defense at Auxiliary Sector 9.'));
+});
+
+test('rogue: transmitRogueDossier triggers window.VoxAudio.transmitToVox with compiled payload', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.rogueReportChannel.value = 'beta';
+
+  rogue.transmitRogueDossier();
+  assert.equal(transmittedChannel, 'beta');
+  assert.ok(transmittedPayload.includes('ROGUE SECTOR AUXILIARY BATTLE REPORT'));
+  assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
+});
+
+test('rogue: saveRogueState and restoreRogueState preserve and restore Rogue Dossier form fields', () => {
+  mockElements.rogueCombatants.value = 'Custom Force Alpha vs Xenos';
+  mockElements.rogueOutcome.value = 'Xenos Victory';
+  mockElements.rogueNemesisNominee.value = 'Hive Tyrant Apex';
+  mockElements.rogueNotes.value = 'Spore mines detonated early.';
+
+  rogue.saveRogueState();
+  
+  // Wipe inputs
+  mockElements.rogueCombatants.value = '';
+  mockElements.rogueOutcome.value = '';
+  mockElements.rogueNemesisNominee.value = '';
+  mockElements.rogueNotes.value = '';
+
+  rogue.restoreRogueState();
+  assert.equal(mockElements.rogueCombatants.value, 'Custom Force Alpha vs Xenos');
+  assert.equal(mockElements.rogueOutcome.value, 'Xenos Victory');
+  assert.equal(mockElements.rogueNemesisNominee.value, 'Hive Tyrant Apex');
+  assert.equal(mockElements.rogueNotes.value, 'Spore mines detonated early.');
+});
+
 ````
 
 ---
@@ -3796,6 +3870,21 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
   assert.ok(dossierStr.includes('SECRET OBJECTIVE CODE: [A9F]'));
   assert.ok(dossierStr.includes("Mercy's Delay"));
   assert.ok(dossierStr.includes('Held the frontline'));
+});
+
+test('crusade: buildMasterDossierString formats Mode 3 Rogue Sector Battle with planetary consequences and alliance SPt telemetry', () => {
+  mockElements.dossierChannel.value = 'alpha';
+  mockElements.dossierModeNode.value = 'Mode 3: Rogue Sector Auxiliary Clash';
+  mockElements.dossierOutcome.value = 'Mode 3 Rogue Sector: Imperium Victory (+1 SPt Gatebreakers // Warp Drops to Minor)';
+  mockElements.dossierBattleNotes.value = 'Auxiliary militia secured fuel depot 7 from Chaos raiders.';
+
+  const dossierStr = crusade.buildMasterDossierString();
+  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
+  assert.ok(dossierStr.includes('Mode 3: Rogue Sector Auxiliary Clash'));
+  assert.ok(dossierStr.includes('Imperium Victory'));
+  assert.ok(dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'));
+  assert.ok(dossierStr.includes('Gatebreakers'));
+  assert.ok(dossierStr.includes('Auxiliary militia secured fuel depot 7'));
 });
 
 test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox', () => {
