@@ -64,9 +64,9 @@
 
     <!-- 3. UNBOUND ADVERSARIES (3RD ALLIANCE INTERFERENCE) -->
     <div class="card red">
-      <span class="badge red">3rd Alliance Interference • Unbound Adversaries</span>
+      <span class="badge red">3rd Alliance Interference • Campaign Master Manifestation Pool</span>
       <h3>Unbound Adversaries AI Turn &amp; Vulture Tracker</h3>
-      <p>At the start of each Battle Round, Unbound Adversaries take their turn (Move → Shoot → Charge → Fight closest player unit). While you two fight, the Campaign Master's 3rd Alliance vultures <strong>3 Strategic Points</strong> (+1 extra SPt if Unbound Adversaries destroy at least 1 player unit!).</p>
+      <p>At the start of each Battle Round, Unbound Adversaries take their turn (Move → Shoot → Charge → Fight closest player unit)[cite: 5]. While you two fight, the Campaign Master's 3rd Alliance vultures <strong>3 Strategic Points</strong> (+1 extra SPt if Unbound Adversaries destroy at least 1 player unit!).</p>
       
       <div class="grid-2" style="margin-bottom:12px;">
         <div class="stat-box">
@@ -77,12 +77,12 @@
           </label>
         </div>
         <div class="stat-box">
-          <div style="font-size:0.75rem; color:var(--muted);">SPAWN UNBOUND THREAT</div>
-          <button class="btn-red" style="margin-top:8px; width:100%;" onclick="rollUnboundAdversary()">🎲 Roll Adversary</button>
+          <div style="font-size:0.75rem; color:var(--muted);">SPAWN UNBOUND THREAT (PL 1–4)</div>
+          <button class="btn-red" data-sfx="custom" style="margin-top:8px; width:100%;" onclick="rollUnboundAdversary()">🎲 Roll Adversary</button>
         </div>
       </div>
       <div id="unboundResult" class="stat-box" style="text-align:left;">
-        <p style="margin:0;">Roll above to see which Unbound Adversary datasheet or Roaming Nemesis invades No Man's Land.</p>
+        <p style="margin:0;">Roll above to determine the Unbound Adversary Power Level (PL 1–4), or ping the Campaign Master on the Vox to reveal who emerges from the ash-storm.</p>
       </div>
     </div>
   </div>
@@ -102,7 +102,7 @@ const ANOMALIES = [
   "<strong>Empyric Backlash:</strong> Each unit with a Warp Counter or PSYKER keyword suffers D3 mortal wounds, then gains a 5+ Invulnerable Save this round.",
   "<strong>Ash Storm Blindness:</strong> All units gain the Stealth ability against ranged attacks made from more than 12\" away this round.",
   "<strong>Rift Eruption:</strong> Spawn 1 Unbound Adversary unit within 6\" of the center of the battlefield (>9\" from player units).",
-  "<strong> Choruses of Madness:</strong> All units must subtract 1 from Battle-shock and Leadership tests until the end of the battle round.",
+  "<strong>Choruses of Madness:</strong> All units must subtract 1 from Battle-shock and Leadership tests until the end of the battle round.",
   "<strong>Warp-Surge Empowerment:</strong> Characters add +1 to the Attacks and Strength characteristics of their melee weapons this round."
 ];
 
@@ -110,7 +110,7 @@ const UNBOUND_UNITS = [
   "<strong>Lesser Daemons (Power Level 1):</strong> 10-model Infantry squad (32mm bases) — M6\" T4 Sv5+ Inv4+ W1 | 2A WS3+ S4 AP-1 D1.",
   "<strong>Abominations (Power Level 2):</strong> 2–4 model Infantry/Beast unit (50mm bases) — M8\" T5 Sv4+ FNP5+ W4 | D6+2A WS4+ S5 AP-1 D2.",
   "<strong>Daemonic Beasts (Power Level 3):</strong> 3–6 model Mounted/Beast unit (75mm/90mm oval bases) — M10\" T6 Sv4+ Inv4+ W4 | 4A WS3+ S6 AP-2 D2 (Lance).",
-  "<strong>Greater Daemon / Roaming Nemesis (Power Level 4):</strong> Monster/Walker (100mm+ base) OR an Inducted Campaign Nemesis Character from the Ledger!"
+  "<strong>Greater Daemon / Roaming Nemesis (Power Level 4):</strong> Monster/Walker (100mm+ base) OR [CLASSIFIED APEX ANOMALY — ROLL 1D6 ON LEGACY VAULT]!"
 ];
 
 const STORAGE_KEY_PVP = 'foa_pvp_state_v1';
@@ -201,9 +201,44 @@ function updateVulture(shouldSave = true) {
   if (shouldSave) savePvpState();
 }
 
+function transmitUnboundPing(pl, channel) {
+  const intensity = document.getElementById('warpIntensity')?.value || 'major';
+  const payload = pl === 4
+    ? `+++ EMERGENCY AUSPEX PING: POWER LEVEL 4 APEX ANOMALY DETECTED +++\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level 4 [CLASSIFIED APEX ANOMALY] on Unbound Adversary Table!\n• REQUEST FOR CAMPAIGN MASTER: Please execute the Contextual 3-Tier PL 4 Manifestation Roll (NEMESIS.md) and reveal which entity emerges into No Man's Land!`
+    : `+++ AUSPEX PING: POWER LEVEL ${pl} UNBOUND ADVERSARY DETECTED +++\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level ${pl} on Unbound Adversary Table.\n• REQUEST FOR CAMPAIGN MASTER: Please roll/select our Power Level ${pl} Unbound Adversary (or Active Surface Nemesis) from NEMESIS.md!`;
+
+  if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox(channel, payload);
+  }
+}
+
 function rollUnboundAdversary() {
-  const pick = UNBOUND_UNITS[Math.floor(Math.random() * UNBOUND_UNITS.length)];
-  document.getElementById('unboundResult').innerHTML = `<p style="margin:0;">${pick}</p>`;
+  const idx = Math.floor(Math.random() * UNBOUND_UNITS.length);
+  const pl = idx + 1;
+  const baseDesc = UNBOUND_UNITS[idx];
+
+  if (window.VoxAudio) {
+    if (pl === 4 && window.VoxAudio.playWarpSiren) window.VoxAudio.playWarpSiren();
+    else if (window.VoxAudio.playAuspexLock) window.VoxAudio.playAuspexLock();
+  }
+
+  const pingBanner = pl === 4
+    ? `<div style="margin-top:10px; padding:10px; background:rgba(255,71,87,0.14); border:1px solid var(--red); border-radius:8px;">
+         <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:6px;">
+           ⚠️ [POWER LEVEL 4: CLASSIFIED APEX ANOMALY — CAMPAIGN MASTER ROLL REQUIRED]
+         </div>
+         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+           <button type="button" class="btn-red btn-sm" onclick="transmitUnboundPing(4, 'alpha')">📡 Ping Vox (The Exile)</button>
+           <button type="button" class="btn-blue btn-sm" onclick="transmitUnboundPing(4, 'beta')">📡 Ping Vox (Junebug)</button>
+         </div>
+       </div>`
+    : `<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+         <span style="font-size:0.76rem; color:var(--muted);">Want the Campaign Master to roll the specific PL ${pl} threat on Vox?</span>
+         <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'alpha')">📡 Ping Vox (Exile)</button>
+         <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'beta')">📡 Ping Vox (Junebug)</button>
+       </div>`;
+
+  document.getElementById('unboundResult').innerHTML = `<p style="margin:0;">${baseDesc}</p>${pingBanner}`;
   savePvpState();
 }
 

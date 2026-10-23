@@ -24,7 +24,12 @@ function getOrCreateElement(id) {
       },
       innerText: '',
       innerHTML: '',
-      value: ''
+      textContent: '',
+      value: '',
+      style: {},
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      appendChild: (el) => el
     };
   }
   return mockElements[id];
@@ -41,7 +46,15 @@ globalThis.localStorage = {
 globalThis.document = {
   getElementById: (id) => getOrCreateElement(id),
   querySelectorAll: () => [],
-  addEventListener: () => {}
+  addEventListener: () => {},
+  createElement: (tag) => ({
+    className: '',
+    innerHTML: '',
+    textContent: '',
+    style: {},
+    appendChild: (el) => el,
+    querySelector: () => null
+  })
 };
 globalThis.window = {
   addEventListener: () => {}
@@ -267,4 +280,107 @@ test('app: saveCustomPool and loadCustomPool persist custom units to localStorag
   assert.equal(document.getElementById('pool34').value, '10 Termagants');
   assert.equal(document.getElementById('pool10').value, '1 Hive Tyrant');
 });
+
+test('app: renderLiveSpawnerBracketTable renders table with cloud pool values and intrusion warning', () => {
+  localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify({
+    b34: 'Test Chaff 10',
+    b10: 'Test Greater Daemon'
+  }));
+
+  const windowEl = document.getElementById('liveSpawnerBracketWindow');
+  app.renderLiveSpawnerBracketTable();
+
+  assert.ok(windowEl.innerHTML.includes('Test Chaff 10'));
+  assert.ok(windowEl.innerHTML.includes('Test Greater Daemon'));
+  assert.ok(windowEl.innerHTML.includes('Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)'));
+});
+
+test('app: syncSpawnerPoolFromSupabase pulls cloud pool and updates localStorage and table', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        horde_pool: {
+          b34: 'Cloud Hormagaunts 20',
+          b56: 'Cloud Bloodletters 10',
+          b79: 'Cloud Trygon 1',
+          b10: 'Cloud Bloodthirster 1',
+          b13: 'Cloud Baneblade 1'
+        }
+      })
+    };
+  };
+
+  await app.syncSpawnerPoolFromSupabase();
+
+  const saved = JSON.parse(localStorage.getItem('foa_custom_shelf_pool_v1'));
+  assert.equal(saved.b34, 'Cloud Hormagaunts 20');
+  assert.equal(saved.b10, 'Cloud Bloodthirster 1');
+
+  const windowEl = document.getElementById('liveSpawnerBracketWindow');
+  assert.ok(windowEl.innerHTML.includes('Cloud Bloodthirster 1'));
+
+  globalThis.fetch = origFetch;
+});
+
+test('app: transmitHordeIntrusionPing formats emergency intrusion payload and transmits via VoxAudio', () => {
+  let transmittedChan = null;
+  let transmittedPayload = null;
+
+  globalThis.window.VoxAudio = {
+    transmitToVox: (chan, payload) => {
+      transmittedChan = chan;
+      transmittedPayload = payload;
+    }
+  };
+
+  document.getElementById('seedInput').value = 'HADES-42';
+  document.getElementById('spawnerBtnRound').textContent = '3';
+  document.getElementById('hordeFactionSelect').value = 'Chaos Daemons';
+
+  app.transmitHordeIntrusionPing(2, 'Bracket [10–12]', 'beta');
+
+  assert.equal(transmittedChan, 'beta');
+  assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED'));
+  assert.ok(transmittedPayload.includes('Mode 1 (Horde Breach // Room: HADES-42 // Battle Round 3)'));
+  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
+});
+
+test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusion or clean wave', () => {
+  let sirenTriggered = false;
+  globalThis.window.VoxAudio = {
+    playWarpSiren: () => { sirenTriggered = true; }
+  };
+
+  const container = document.getElementById('spawnResultsContainer');
+  let appended1 = null;
+  let appended2 = null;
+
+  const cardBig = {
+    textContent: 'Spawn Zone 1 • Bracket [10–12] (301–550 pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: (el) => { appended1 = el; }
+  };
+  const cardSmall = {
+    textContent: 'Spawn Zone 2 • Bracket [3–4] (0–75 pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: (el) => { appended2 = el; }
+  };
+
+  container.querySelectorAll = (selector) => {
+    if (selector === '.spawn-zone') return [cardBig, cardSmall];
+    return [];
+  };
+
+  app.evaluateWarpBreachIntrusions();
+
+  assert.ok(appended1, 'Bracket [10–12] must receive an intrusion alert or clean note');
+  assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+});
+
 

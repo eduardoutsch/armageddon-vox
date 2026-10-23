@@ -90,6 +90,29 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
       margin: 14px 0;
       line-height: 1.5;
     }
+    .cloud-sync-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      color: #6ee7b7;
+    }
+    .locked-status-select {
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      pointer-events: none;
+      opacity: 0.92;
+      cursor: default;
+      border: 1px solid var(--gold);
+      background: #090b10;
+      color: var(--gold);
+    }
   </style>
 </head>
 <body>
@@ -110,10 +133,13 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
 
   <div class="hero-card" style="margin-bottom:18px;">
     <div class="hero-header">
-      <div class="status-pill">Ordo Malleus Threat Archive • 3rd Alliance &amp; Enemy Dataslates</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div class="status-pill">Ordo Malleus Threat Archive • Cloud-Synced Spawn Pools</div>
+        <span id="cloudSyncBadge" class="cloud-sync-pill">☁️ Supabase Pool Sync Ready</span>
+      </div>
       <h1 class="hero-title">Hostile Threat Matrix &amp; Nemesis Vault</h1>
       <p class="hero-subtitle">
-        Cross-mode Nemesis Bounty Board, Inquisitorial Nemesis Induction Compiler, Armageddon Unbound Adversary Datasheets, and Horde Mode Faction Threat Brackets.
+        Cross-mode Nemesis Bounty Board, Inquisitorial Nemesis Induction Compiler, Unbound Adversaries Reference Codex, and Cloud-Synced Standard Horde Spawn Brackets.
       </p>
     </div>
 
@@ -121,7 +147,7 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
     <div class="nav-pills" style="margin-bottom:0;">
       <button id="rosTabBtn1" class="active" onclick="switchRosterTab('nemesis')">💀 1. Nemesis Bounty &amp; Dossier</button>
       <button id="rosTabBtn2" onclick="switchRosterTab('unbound')">👹 2. Unbound Adversaries Codex</button>
-      <button id="rosTabBtn3" onclick="switchRosterTab('brackets')">🧟 3. Horde Brackets &amp; Shelf Pool</button>
+      <button id="rosTabBtn3" onclick="switchRosterTab('brackets')">🧟 3. Horde Brackets &amp; Cloud Pool</button>
     </div>
   </div>
 
@@ -132,28 +158,28 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
 
     <div class="section-header" style="margin-top:0;">
       <h3>Active Cross-Mode Nemesis Bounty Ledger</h3>
-      <span class="hud-sub">Bounty Payout: +2 XP to Killer Unit &amp; +1 Strategic Point</span>
+      <span class="hud-sub">Status Locked by Campaign Master • Slaying a Nemesis Awards +2/+3 XP &amp; +1 SPt</span>
     </div>
 
     <!-- INDUCTED NEMESIS #1: SAINT CELESTINE -->
     <div class="datasheet-card" style="border-top-color:var(--gold);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
         <div>
-          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">NEMESIS #01 • SESSION 0 INDUCTION</span>
+          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">NEMESIS #01 • SESSION 0 INDUCTION (PL 4)</span>
           <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🪽 Saint Celestine, <em>"The Ashen Seraph of the High Sanctum"</em></h3>
           <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (High Sanctum Auditor)</div>
         </div>
-        <select id="nemStatus1" onchange="saveRosterPageState()" style="padding:6px 10px; font-size:0.8rem; font-weight:700;">
-          <option value="roaming">🟡 Status: Roaming High Orbit</option>
-          <option value="deployed">🔴 Status: Deployed on Surface</option>
-          <option value="slain">🟢 Status: Slain — Bounty Claimed</option>
+        <select id="nemStatus1" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
+          <option value="roaming">🔒 GM Status: 🟡 Orbiting High Sanctum (Dormant)</option>
+          <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
+          <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Cooldown)</option>
         </select>
       </div>
       <p class="card-desc" style="margin-top:10px;">
         <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> After the Krieg Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em>) detonated every Sororitas war-engine around the central Landing Site, Celestine descended from the sulfuric storm-clouds directly into the Krieg rear deployment zone—slaughtering the command echelon and seizing the home objective to clinch a razor-thin 3-VP victory.
       </p>
       <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
-        <strong style="color:var(--gold);">Permanent Nemesis Trait — <em>Judgment of the Blackened Glass</em>:</strong> When spawned in Horde Mode (on a natural 12 or at Slider -3) or deployed as an Unbound Adversary Boss, Celestine deep-strikes directly within 9" of the trailing player's home objective and gains <strong>[PRECISION]</strong> on all melee attacks against Characters.
+        <strong style="color:var(--gold);">Permanent Nemesis Trait — <em>Judgment of the Blackened Glass</em>:</strong> When deployed on the surface (via Orbital Descent or a Slider -3 Purge Strike), Celestine deep-strikes within 9" of the trailing player's home objective and gains <strong>[PRECISION]</strong> and <strong>[DEVASTATING WOUNDS]</strong> against units carrying Warp Counters.
       </div>
     </div>
 
@@ -161,14 +187,14 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
     <div class="datasheet-card" style="border-top-color:var(--purple);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
         <div>
-          <span class="rule-tag" style="border-color:var(--purple); color:var(--purple);">NEMESIS #02 • SESSION 0 INDUCTION</span>
+          <span class="rule-tag" style="border-color:var(--purple); color:var(--purple);">NEMESIS #02 • SESSION 0 INDUCTION (PL 3)</span>
           <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🚩 Aestred Thurga &amp; Agathae Dolan, <em>"Keepers of the Penitentiary Tapestry"</em></h3>
           <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (Reliquant &amp; Hagiolater)</div>
         </div>
-        <select id="nemStatus2" onchange="saveRosterPageState()" style="padding:6px 10px; font-size:0.8rem; font-weight:700;">
-          <option value="roaming">🟡 Status: Auditing from High Sanctum</option>
-          <option value="deployed">🔴 Status: Deployed on Surface</option>
-          <option value="slain">🟢 Status: Slain — Bounty Claimed</option>
+        <select id="nemStatus2" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
+          <option value="roaming">🔒 GM Status: 🟡 Orbiting High Sanctum (Dormant)</option>
+          <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
+          <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Cooldown)</option>
         </select>
       </div>
       <p class="card-desc" style="margin-top:10px;">
@@ -237,15 +263,15 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
   </div>
 
   <!-- ===================================================================== -->
-  <!-- TAB B: UNBOUND ADVERSARIES CODEX (POWER LEVEL 1 TO 4 DATASHEETS)      -->
+  <!-- TAB B: UNBOUND ADVERSARIES CODEX (POWER LEVELS 1 TO 4)                -->
   <!-- ===================================================================== -->
   <div id="rosTabUnbound" class="hidden">
     <div class="section-header" style="margin-top:0;">
       <h3>Crusade: Armageddon // Unbound Adversaries Datasheets</h3>
-      <span class="hud-sub">Used in Mode 2 (1v1 PvP) &amp; Mode 3 (AI Sequencer)</span>
+      <span class="hud-sub">Live Manifestations Rolled by Campaign Master on Vox</span>
     </div>
     <p class="card-desc" style="margin-bottom:16px;">
-      Unbound Adversaries have the <strong>UNBOUND ADVERSARIES</strong> faction keyword, a <strong>5+ Invulnerable Save</strong>, and the <strong>Deep Strike</strong> ability. During the Unbound Adversaries turn, roll 2D6 on the Daemonic Surge table before moving and attacking the closest player units.
+      Unbound Adversaries have the <strong>UNBOUND ADVERSARIES</strong> faction keyword, a <strong>5+ Invulnerable Save</strong>, and the <strong>Deep Strike</strong> ability. Whenever an Unbound Adversary is triggered in <a href="pvp.html" style="color:var(--gold);">Mode 2: 1v1 PvP</a> or hijacks a <a href="spawner.html" style="color:var(--gold);">Mode 1: Horde Spawn Zone</a> via a <strong>Warp-Breach Intrusion (5+ at [10–12] / [13+])</strong>, transmit a ping to the <strong>Campaign Master</strong> on <code>vox.html</code> to reveal whether a standard Unbound unit, an active Surface Nemesis, or a Classified Apex Anomaly steps out of the ash-storm!
     </p>
 
     <!-- POWER LEVEL 1: WARP-SPAWNED HORRORS / LESSER PACK -->
@@ -326,7 +352,7 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
     <!-- POWER LEVEL 4: UNBOUND APEX HARBINGER -->
     <div class="datasheet-card" style="border-top-color:var(--red);">
       <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3 style="margin:0; color:#fff;">🔥 Power Level 4: Unbound Apex Harbinger (1 Greater Entity)</h3>
+        <h3 style="margin:0; color:#fff;">🔥 Power Level 4: Unbound Apex Harbinger / Classified Anomaly</h3>
         <span class="rule-tag">1 Model • Monster / Character • 4+ Invuln • Deadly Demise D6</span>
       </div>
       <div class="stat-strip">
@@ -350,16 +376,16 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
   </div>
 
   <!-- ===================================================================== -->
-  <!-- TAB C: HORDE THREAT BRACKETS & CUSTOM SHELF BARRACKS                  -->
+  <!-- TAB C: HORDE THREAT BRACKETS & CLOUD-SYNCED SHELF BARRACKS            -->
   <!-- ===================================================================== -->
   <div id="rosTabBrackets" class="hidden">
     <div class="card" style="border-left:4px solid var(--blue); margin-bottom:20px;">
       <div class="section-header" style="margin-top:0;">
-        <h3>1. Custom Shelf Barracks (Synced with Mode 1 Spawner)</h3>
-        <span class="hud-sub">Saved to Browser localStorage</span>
+        <h3>1. Cloud-Synced Horde Shelf Barracks (Standard Pool — Shared Across Devices)</h3>
+        <span class="hud-sub">Synced to Supabase &amp; Mode 1 Spawner</span>
       </div>
       <p class="card-desc" style="margin-bottom:12px;">
-        Configure the models you own for each threat bracket (comma-separated). Both players can paste the same list so unit names sync deterministically in <code>spawner.html</code>!
+        Configure the standard Horde models for each threat bracket (comma-separated). Clicking <strong>☁️ Save &amp; Sync Shelf Barracks to Cloud</strong> stores this pool in Supabase so both players automatically share the exact same standard Horde spawn list on every device!
       </p>
 
       <label class="hud-label">Bracket [3–4] (0–75 pts // Swarms &amp; Chaff)</label>
@@ -377,20 +403,21 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
       <label class="hud-label">Bracket [13+] (551+ pts // Titanic, Super-Heavy &amp; Lords of War)</label>
       <input type="text" id="rosterPool13" style="width:100%; margin-bottom:12px;" value="1 Baneblade, 1 Knight Castellan, 1 Hierophant Bio-Titan, 1 Lord of Skulls">
 
-      <div style="display:flex; gap:10px; align-items:center;">
-        <button type="button" class="btn-blue" onclick="saveShelfBarracks()">💾 Save Shelf Barracks to Spawner</button>
-        <span id="shelfSaveNotice" style="font-size:0.82rem; color:var(--green);" class="hidden">✓ Synced with Mode 1 Spawner!</span>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button type="button" class="btn-blue" onclick="saveShelfBarracks()">☁️ Save &amp; Sync Shelf Barracks to Cloud</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="pullSharedPoolsFromCloud()">🔄 Pull Latest from Cloud</button>
+        <span id="shelfSaveNotice" style="font-size:0.82rem; color:var(--green);" class="hidden">✓ Synced with Supabase Cloud &amp; Mode 1 Spawner!</span>
       </div>
     </div>
 
     <!-- 23-FACTION HORDE SPAWN BRACKET INSPECTOR -->
     <div class="card" style="border-left:4px solid var(--gold);">
       <div class="section-header" style="margin-top:0;">
-        <h3>2. Official 11th Ed Horde Mode Faction Spawn Tables</h3>
-        <span class="hud-sub">Expandable 23-Faction Database</span>
+        <h3>2. Standard 11th Ed Horde Mode Faction Spawn Matrix</h3>
+        <span class="hud-sub">Clean Standard Brackets (No Nemesis Spoilers)</span>
       </div>
       <p class="card-desc" style="margin-bottom:12px;">
-        Select any Horde Faction below to inspect its primary faction rule and threat-bracket unit tables (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10–12]</code>, <code>[13+]</code>).
+        Select any Horde Faction below to inspect its primary faction rule and standard threat-bracket unit possibilities (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10–12]</code>, <code>[13+]</code>).
       </p>
 
       <select id="bracketFactionPicker" onchange="renderFactionBracketTable()" style="width:100%; padding:12px; font-weight:700; margin-bottom:14px;"></select>
@@ -407,7 +434,10 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
 const ROSTER_STATE_KEY = 'foa_roster_matrix_state_v1';
 const CUSTOM_POOL_STORAGE_KEY = 'foa_custom_shelf_pool_v1';
 
-// Expandable 23-Faction Horde Spawn Bracket Table Architecture (Ready for full PDF table values!)
+const SUPABASE_URL = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
+
+// Complete 23-Faction Standard Horde Spawn Bracket Matrix
 const HORDE_FACTION_SPAWN_TABLES = {
   "Space Marines": {
     b34: ["5 Scout Squad", "5 Assault Intercessors", "5 Infernus Squad", "3 Outriders", "1 Invader ATV"],
@@ -429,6 +459,27 @@ const HORDE_FACTION_SPAWN_TABLES = {
     b79: ["6 Bloodcrushers", "1 Daemon Prince of Chaos", "1 Soul Grinder", "3 Fiends + Contorted Epitome"],
     b10: ["1 Bloodthirster", "1 Great Unclean One", "1 Lord of Change", "1 Keeper of Secrets"],
     b13: ["1 An'ggrath the Unbound", "1 Scabeiathrax the Bloated", "1 Aetaos'rau'keres", "1 Zarakynel"]
+  },
+  "Orks": {
+    b34: ["10 Gretchin + Runtherd", "10 Boyz", "5 Stormboyz", "3 Warbikers", "1 Deffkopta"],
+    b56: ["20 Boyz + Warboss", "10 Beast Snagga Boyz", "5 Nobz + Trukk", "3 Meganobz", "1 Deff Dread"],
+    b79: ["1 Battlewagon + 10 Nobz", "1 Kill Rig", "6 Squighog Boyz + Beastboss", "1 Gorkanaut"],
+    b10: ["1 Ghazghkull Thraka + 6 Meganobz", "1 Morkanaut + Mek", "1 Gargantuan Squiggoth"],
+    b13: ["1 Stompa", "2 Stompa Mob", "1 Great Gargant Support"]
+  },
+  "Necrons": {
+    b34: ["10 Necron Warriors", "5 Flayed Ones", "3 Canoptek Scarab Swarms", "5 Deathmarks", "3 Ophydian Destroyers"],
+    b56: ["10 Immortals + Chronomancer", "3 Skorpekh Destroyers", "3 Canoptek Wraiths", "1 Canoptek Doomstalker", "1 Triarch Stalker"],
+    b79: ["10 Lychguard + Overlord", "1 Doomsday Ark", "6 Lokhust Destroyers", "1 C'tan Shard of the Nightbringer"],
+    b10: ["1 Monolith", "1 C'tan Shard of the Void Dragon", "1 Silent King (Szarekh)"],
+    b13: ["1 Tesseract Vault", "1 Seraptek Heavy Construct", "1 Obelisk + Monolith Phalanx"]
+  },
+  "Chaos Space Marines": {
+    b34: ["10 Cultist Mob", "5 Legionaries", "5 Raptors", "8 Accursed Cultists", "3 Chaos Bikers"],
+    b56: ["10 Legionaries + Chaos Lord", "5 Chosen + Rhino", "5 Possessed", "5 Havocs", "1 Helbrute"],
+    b79: ["5 Chaos Terminators + Sorcerer", "1 Forgefiend", "1 Maulerfiend", "1 Venomcrawler + 2 Obliterators"],
+    b10: ["1 Chaos Land Raider + 10 Chosen", "1 Abaddon the Despoiler + 5 Terminators", "1 Vashtorr the Arkifane"],
+    b13: ["1 Khorne Lord of Skulls", "2 Khorne Lords of Skulls", "1 Chaos Warhound Titan"]
   }
 };
 
@@ -492,12 +543,83 @@ function saveShelfBarracks() {
   try {
     localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(poolObj));
   } catch (e) {}
+
   const notice = document.getElementById('shelfSaveNotice');
   if (notice) {
     notice.classList.remove('hidden');
     setTimeout(() => notice.classList.add('hidden'), 3000);
   }
+  if (window.VoxAudio && window.VoxAudio.playCloudSyncChime) window.VoxAudio.playCloudSyncChime();
   saveRosterPageState();
+  syncPoolsToSupabaseCloud(poolObj);
+}
+
+async function syncPoolsToSupabaseCloud(poolObj) {
+  if (typeof fetch !== 'function') return false;
+  try {
+    const hordePool = poolObj || JSON.parse(localStorage.getItem(CUSTOM_POOL_STORAGE_KEY) || '{}');
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_shared_spawn_pools`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        p_horde_pool: hordePool
+      })
+    });
+    if (res && res.ok) {
+      const badge = document.getElementById('cloudSyncBadge');
+      if (badge) badge.textContent = '☁️ Cloud Pool Synced (Live for Both Players)';
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+async function pullSharedPoolsFromCloud() {
+  if (typeof fetch !== 'function') return false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_shared_spawn_pools`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({})
+    });
+    if (!res || !res.ok) return false;
+    const data = await res.json();
+    if (!data || !data.ok) return false;
+
+    if (data.horde_pool && Object.keys(data.horde_pool).length > 0) {
+      localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(data.horde_pool));
+      const p = data.horde_pool;
+      if (p.b34 && document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = p.b34;
+      if (p.b56 && document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = p.b56;
+      if (p.b79 && document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = p.b79;
+      if (p.b10 && document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = p.b10;
+      if (p.b13 && document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = p.b13;
+    }
+
+    if (data.nemesis_status) {
+      if (data.nemesis_status.nem1 && document.getElementById('nemStatus1')) {
+        document.getElementById('nemStatus1').value = data.nemesis_status.nem1;
+      }
+      if (data.nemesis_status.nem2 && document.getElementById('nemStatus2')) {
+        document.getElementById('nemStatus2').value = data.nemesis_status.nem2;
+      }
+      saveRosterPageState();
+    }
+
+    const badge = document.getElementById('cloudSyncBadge');
+    if (badge) badge.textContent = '☁️ Cloud Pool Synced';
+    if (window.VoxAudio && window.VoxAudio.playCloudSyncChime) window.VoxAudio.playCloudSyncChime();
+    return true;
+  } catch (e) {}
+  return false;
 }
 
 function renderFactionBracketTable() {
@@ -510,11 +632,11 @@ function renderFactionBracketTable() {
     ? HORDE_FACTIONS.find(f => f.name === facName)
     : null;
   const tableData = HORDE_FACTION_SPAWN_TABLES[facName] || {
-    b34: ["Standard Faction Chaff / Swarm Units (0–75 pts) — Full PDF values pending import"],
-    b56: ["Standard Faction Battleline / Skirmishers (76–150 pts) — Full PDF values pending import"],
-    b79: ["Standard Faction Elites / Walkers / Transports (151–300 pts) — Full PDF values pending import"],
-    b10: ["Standard Faction Heavy Armor / Monsters / Warlord Retinues (301–550 pts) — Full PDF values pending import"],
-    b13: ["Standard Faction Titanic / Super-Heavy / Lords of War (551+ pts) — Full PDF values pending import"]
+    b34: [`${facName} Chaff / Recon Squads (0–75 pts)`],
+    b56: [`${facName} Battleline Infantry & Skirmishers (76–150 pts)`],
+    b79: [`${facName} Heavy Elites, Walkers & Transports (151–300 pts)`],
+    b10: [`${facName} Heavy Tanks, Monsters & Warlord Retinues (301–550 pts)`],
+    b13: [`${facName} Titanic / Super-Heavy / Lords of War (551+ pts)`]
   };
 
   box.innerHTML = `
@@ -530,7 +652,7 @@ function renderFactionBracketTable() {
       <thead>
         <tr>
           <th style="width:140px;">Spawn Roll Bracket</th>
-          <th>Configured Faction Spawn Units</th>
+          <th>Standard Faction Spawn Units (No Nemeses)</th>
         </tr>
       </thead>
       <tbody>
@@ -571,9 +693,9 @@ function initRosterPage() {
     const savedPool = localStorage.getItem(CUSTOM_POOL_STORAGE_KEY);
     if (savedPool) {
       const p = JSON.parse(savedPool);
-      if (p.b34) document.getElementById('rosterPool34').value = p.b34;
-      if (p.b56) document.getElementById('rosterPool56').value = p.b56;
-      if (p.b79) document.getElementById('rosterPool79').value = p.b79;
+      if (p.b34 && document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = p.b34;
+      if (p.b56 && document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = p.b56;
+      if (p.b79 && document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = p.b79;
       if (p.b10 && document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = p.b10;
       if (p.b13 && document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = p.b13;
     }
@@ -597,6 +719,7 @@ function initRosterPage() {
 
   updateNemesisPreview();
   renderFactionBracketTable();
+  pullSharedPoolsFromCloud();
 }
 
 window.addEventListener('DOMContentLoaded', initRosterPage);

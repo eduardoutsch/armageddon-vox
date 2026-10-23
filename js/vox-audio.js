@@ -203,7 +203,7 @@
 
   /**
    * 1. CRT Teletype / Keyboard Typing Micro-Tick
-   * @param {'type'|'stream'|'redact'} mode
+   * @param {'type'|'stream'|'redact'|'incoming'} mode
    */
   function playTeletypeTick(mode = 'stream') {
     const ctx = getAudioCtx();
@@ -213,7 +213,6 @@
     const jitter = 1 + (Math.random() * 0.18 - 0.09);
 
     if (mode === 'redact') {
-      // Static burst for [REDACTED] bars
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
@@ -280,7 +279,6 @@
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Metallic hammer impact
     const impact = ctx.createOscillator();
     const impGain = ctx.createGain();
     impact.type = 'sawtooth';
@@ -293,7 +291,6 @@
     impact.start(now);
     impact.stop(now + 0.13);
 
-    // High anvil harmonic ring (587Hz + 880Hz)
     [587.33, 880, 1174.66].forEach((freq, i) => {
       const ring = ctx.createOscillator();
       const rGain = ctx.createGain();
@@ -316,7 +313,6 @@
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Resonant golden fifths & octave shimmer
     const freqs = [220, 329.63, 440, 659.25];
     freqs.forEach((f, idx) => {
       const osc = ctx.createOscillator();
@@ -370,7 +366,6 @@
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    // Heavy pneumatic double-thud
     [0, 0.08].forEach((offset, i) => {
       const t = now + offset;
       const osc = ctx.createOscillator();
@@ -386,7 +381,6 @@
       osc.stop(t + 0.085);
     });
 
-    // High-speed astropathic telemetry chirp
     [1480, 1920, 2480].forEach((freq, idx) => {
       const t = now + 0.16 + idx * 0.035;
       const chirp = ctx.createOscillator();
@@ -402,6 +396,105 @@
     });
   }
 
+  /**
+   * 7. Warp-Breach Intrusion & PL 4 Classified Apex Anomaly Siren!
+   *    (Sub-bass Geller-field failure rumble + dual-tritone Imperial void-klaxon)
+   */
+  function playWarpSiren() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Layer A: Deep Geller-field sub-bass rupture (110Hz -> 32Hz)
+    const sub = ctx.createOscillator();
+    const subGain = ctx.createGain();
+    sub.type = 'sawtooth';
+    sub.frequency.setValueAtTime(110, now);
+    sub.frequency.exponentialRampToValueAtTime(32, now + 0.85);
+    subGain.gain.setValueAtTime(0.26, now);
+    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.88);
+    sub.connect(subGain);
+    subGain.connect(ctx.destination);
+    sub.start(now);
+    sub.stop(now + 0.9);
+
+    // Layer B: Dual-pulse dissonant tritone Red Alert klaxon
+    [0, 0.42].forEach((offset) => {
+      const t = now + offset;
+      [440, 622.25].forEach((baseFreq, i) => {
+        const siren = ctx.createOscillator();
+        const sGain = ctx.createGain();
+        siren.type = i === 0 ? 'sawtooth' : 'square';
+        siren.frequency.setValueAtTime(baseFreq * 0.85, t);
+        siren.frequency.linearRampToValueAtTime(baseFreq * 1.35, t + 0.22);
+        siren.frequency.linearRampToValueAtTime(baseFreq * 0.75, t + 0.38);
+
+        sGain.gain.setValueAtTime(0.001, t);
+        sGain.gain.linearRampToValueAtTime(i === 0 ? 0.14 : 0.08, t + 0.04);
+        sGain.gain.exponentialRampToValueAtTime(0.001, t + 0.39);
+
+        siren.connect(sGain);
+        sGain.connect(ctx.destination);
+        siren.start(t);
+        siren.stop(t + 0.4);
+      });
+    });
+  }
+
+  /**
+   * 8. Orbital Auspex Threat Lock (For PL 1-3 Unbound Adversaries & Anomaly Surges)
+   */
+  function playAuspexLock() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const pings = [960, 1280, 1640, 2180];
+    pings.forEach((freq, idx) => {
+      const t = now + idx * 0.065;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.72, t + 0.05);
+
+      gain.gain.setValueAtTime(0.12, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.055);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.058);
+    });
+  }
+
+  /**
+   * 9. Lexmechanicus Cloud Pool Sync Chime (For Supabase Save & Pull)
+   */
+  function playCloudSyncChime() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const notes = [1046.5, 1318.5, 1567.98, 2093.0];
+    notes.forEach((freq, idx) => {
+      const t = now + idx * 0.045;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.09, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    });
+  }
+
   // Global listener: contextually triggers sound profiles on clicks
   document.addEventListener('click', (e) => {
     const target = e.target.closest(
@@ -409,7 +502,7 @@
     );
     if (target) {
       if (target.dataset && target.dataset.sfx === 'custom') {
-        // Handled explicitly by upgrade roller / stamp functions
+        // Handled explicitly by upgrade roller / stamp / siren functions
       } else if (target.matches('.launch-btn, .gate-btn, .btn-red, .unlock-btn, .terminal-link-btn')) {
         playTerminalClank('heavy');
       } else if (
@@ -857,7 +950,7 @@
     }, 260);
   }
 
-  // Expose public audio & routing API for Crusade Rollers, Dossiers & CRT Terminal
+  // Expose public audio & routing API for Crusade Rollers, Dossiers, Spawner & CRT Terminal
   window.VoxAudio = {
     playClank: playTerminalClank,
     playTeletypeTick: playTeletypeTick,
@@ -866,6 +959,9 @@
     playRelicChoir: playRelicChoir,
     playScarHazard: playScarHazard,
     playDossierStamp: playDossierStamp,
+    playWarpSiren: playWarpSiren,
+    playAuspexLock: playAuspexLock,
+    playCloudSyncChime: playCloudSyncChime,
     navigateSeamlessly: navigateSeamlessly,
     transmitToVox: transmitToVox
   };
@@ -919,6 +1015,9 @@
       playRelicChoir,
       playScarHazard,
       playDossierStamp,
+      playWarpSiren,
+      playAuspexLock,
+      playCloudSyncChime,
       saveCurrentPosition,
       navigateSeamlessly,
       injectNavToggle,

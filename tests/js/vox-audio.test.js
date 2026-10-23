@@ -225,6 +225,18 @@ test('vox-audio: newly added Crusade & CRT sound synthesizers execute without th
   assert.doesNotThrow(() => {
     voxModule.playDossierStamp();
   }, 'playDossierStamp must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playWarpSiren();
+  }, 'playWarpSiren must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playAuspexLock();
+  }, 'playAuspexLock must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playCloudSyncChime();
+  }, 'playCloudSyncChime must execute smoothly');
 });
 
 test('vox-audio: transmitToVox stores pending payload in sessionStorage and routes seamlessly', () => {
@@ -252,7 +264,11 @@ test('vox-audio: window.VoxAudio exposes complete public API for all game modes'
   assert.equal(typeof globalThis.window.VoxAudio.playRelicChoir, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playScarHazard, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playDossierStamp, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playWarpSiren, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playAuspexLock, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playCloudSyncChime, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.navigateSeamlessly, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.transmitToVox, 'function');
 });
+
 

@@ -35,9 +35,25 @@ globalThis.document = {
   getElementById: (id) => mockElements[id] || null
 };
 
+let transmittedChannel = null;
+let transmittedPayload = null;
+let warpSirenPlayed = 0;
+let auspexLockPlayed = 0;
+
+globalThis.window = {
+  VoxAudio: {
+    playWarpSiren: () => { warpSirenPlayed++; },
+    playAuspexLock: () => { auspexLockPlayed++; },
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
 // Evaluate script in mock environment
 const pvpEnv = {};
-const fn = new Function('document', 'localStorage', 'console', `${pvpScriptCode}; return {
+const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpScriptCode}; return {
   HELLSCAPES,
   ANOMALIES,
   UNBOUND_UNITS,
@@ -48,15 +64,17 @@ const fn = new Function('document', 'localStorage', 'console', `${pvpScriptCode}
   rollRandomHellscape,
   rollWarpAnomaly,
   updateVulture,
-  rollUnboundAdversary
+  rollUnboundAdversary,
+  transmitUnboundPing
 };`);
 
-const pvp = fn(globalThis.document, globalThis.localStorage, console);
+const pvp = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
 
 test('pvp: HELLSCAPES, ANOMALIES, and UNBOUND_UNITS contain valid crusade content', () => {
   assert.equal(pvp.HELLSCAPES.length, 6, 'Must define 6 Hellscape environments');
   assert.equal(pvp.ANOMALIES.length, 6, 'Must define 6 Warp Anomalies');
   assert.equal(pvp.UNBOUND_UNITS.length, 4, 'Must define 4 Unbound Adversary power levels');
+  assert.ok(pvp.UNBOUND_UNITS[3].includes('CLASSIFIED APEX ANOMALY'), 'PL 4 must reference Classified Apex Anomaly');
 
   pvp.HELLSCAPES.forEach((h, idx) => {
     assert.equal(typeof h, 'string');
@@ -101,14 +119,40 @@ test('pvp: rollWarpAnomaly triggers surges based on intensity thresholds', () =>
   assert.ok(parsed.anomalyHtml.includes('Rolled'));
 });
 
-test('pvp: rollUnboundAdversary picks an unbound unit and persists output', () => {
+test('pvp: rollUnboundAdversary picks an unbound unit, triggers SFX, renders ping buttons, and persists output', () => {
+  warpSirenPlayed = 0;
+  auspexLockPlayed = 0;
+
   pvp.rollUnboundAdversary();
 
   assert.ok(mockElements.unboundResult.innerHTML.includes('Power Level'));
+  assert.ok(mockElements.unboundResult.innerHTML.includes('transmitUnboundPing'), 'Must include Vox ping button callbacks');
+  assert.equal(warpSirenPlayed + auspexLockPlayed > 0, true, 'Must trigger either warp siren or auspex lock SFX');
 
   const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
   const parsed = JSON.parse(raw);
   assert.ok(parsed.unboundHtml.includes('Power Level'));
+});
+
+test('pvp: transmitUnboundPing formats emergency apex payload for PL 4 and standard payload for PL 1-3', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.warpIntensity.value = 'catastrophic';
+
+  // PL 4 Apex Anomaly Ping
+  pvp.transmitUnboundPing(4, 'alpha');
+  assert.equal(transmittedChannel, 'alpha');
+  assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: POWER LEVEL 4 APEX ANOMALY DETECTED'));
+  assert.ok(transmittedPayload.includes('Warp Intensity: CATASTROPHIC'));
+  assert.ok(transmittedPayload.includes('Contextual 3-Tier PL 4 Manifestation Roll'));
+
+  // PL 2 Standard Ping
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitUnboundPing(2, 'beta');
+  assert.equal(transmittedChannel, 'beta');
+  assert.ok(transmittedPayload.includes('AUSPEX PING: POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
+  assert.ok(transmittedPayload.includes('roll/select our Power Level 2 Unbound Adversary'));
 });
 
 test('pvp: savePvpState ignores save when hellscapeSelect element is absent', () => {

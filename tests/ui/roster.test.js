@@ -67,6 +67,7 @@ const mockElements = {
   rosterPool10: { value: '1 Norn Emissary, 1 Hive Tyrant' },
   rosterPool13: { value: '1 Hierophant Bio-Titan' },
   shelfSaveNotice: { classList: createMockClassList() },
+  cloudSyncBadge: { textContent: '' },
   bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
   factionBracketDisplay: { innerHTML: '' }
 };
@@ -77,15 +78,61 @@ const mockDocument = {
 
 let transmittedChannel = null;
 let transmittedPayload = null;
+let cloudSyncChimesPlayed = 0;
 
 const mockWindow = {
   addEventListener: () => {},
   VoxAudio: {
+    playCloudSyncChime: () => {
+      cloudSyncChimesPlayed++;
+    },
     transmitToVox: (chan, payload) => {
       transmittedChannel = chan;
       transmittedPayload = payload;
     }
   }
+};
+
+let enableCloudMock = false;
+let lastFetchUrl = null;
+let lastFetchBody = null;
+
+const mockFetch = async (url, options = {}) => {
+  lastFetchUrl = url;
+  lastFetchBody = options.body ? JSON.parse(options.body) : null;
+
+  if (!enableCloudMock) {
+    return { ok: false };
+  }
+
+  if (url.includes('save_shared_spawn_pools')) {
+    return {
+      ok: true,
+      json: async () => ({ ok: true })
+    };
+  }
+
+  if (url.includes('get_shared_spawn_pools')) {
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        horde_pool: {
+          b34: 'Cloud Gaunts 20',
+          b56: 'Cloud Warriors 5',
+          b79: 'Cloud Carnifex 2',
+          b10: 'Cloud Tyrant 1',
+          b13: 'Cloud Titan 1'
+        },
+        nemesis_status: {
+          nem1: 'deployed',
+          nem2: 'slain'
+        }
+      })
+    };
+  }
+
+  return { ok: false };
 };
 
 // Evaluate script in mock environment
@@ -95,6 +142,7 @@ const evalFn = new Function(
   'localStorage',
   'HORDE_FACTIONS',
   'console',
+  'fetch',
   `${rosterScriptCode}; return {
     ROSTER_STATE_KEY,
     CUSTOM_POOL_STORAGE_KEY,
@@ -104,13 +152,15 @@ const evalFn = new Function(
     updateNemesisPreview,
     transmitNemesisDossier,
     saveShelfBarracks,
+    syncPoolsToSupabaseCloud,
+    pullSharedPoolsFromCloud,
     renderFactionBracketTable,
     saveRosterPageState,
     initRosterPage
   };`
 );
 
-const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console);
+const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console, mockFetch);
 
 test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for factions', () => {
   assert.ok(roster.HORDE_FACTION_SPAWN_TABLES, 'Must define HORDE_FACTION_SPAWN_TABLES');
@@ -184,8 +234,10 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   mockElements.rosterPool10.value = '1 Tyrannofex';
   mockElements.rosterPool13.value = '1 Hierophant Bio-Titan';
 
+  cloudSyncChimesPlayed = 0;
   roster.saveShelfBarracks();
 
+  assert.equal(cloudSyncChimesPlayed, 1, 'saveShelfBarracks must play cloud sync chime');
   const saved = mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY);
   assert.ok(saved, 'Must persist custom shelf pool to localStorage');
   const pool = JSON.parse(saved);
@@ -235,3 +287,46 @@ test('roster: saveRosterPageState and initRosterPage preserve and restore form a
   assert.equal(mockElements.rosterPool34.value, 'Custom Chaff A, B');
   assert.equal(mockElements.rosterPool10.value, 'Custom Super-Heavy E');
 });
+
+test('roster: syncPoolsToSupabaseCloud sends pool payload to Supabase RPC and updates badge', async () => {
+  enableCloudMock = true;
+  lastFetchUrl = null;
+  lastFetchBody = null;
+
+  const testPool = {
+    b34: '10 Hormagaunts',
+    b56: '5 Terminators',
+    b79: '1 Trygon',
+    b10: '1 Norn Emissary',
+    b13: '1 Bio-Titan'
+  };
+
+  const ok = await roster.syncPoolsToSupabaseCloud(testPool);
+  assert.equal(ok, true);
+  assert.ok(lastFetchUrl.includes('save_shared_spawn_pools'));
+  assert.deepEqual(lastFetchBody.p_horde_pool, testPool);
+  assert.ok(mockElements.cloudSyncBadge.textContent.includes('Cloud Pool Synced'));
+
+  enableCloudMock = false;
+});
+
+test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supabase RPC', async () => {
+  enableCloudMock = true;
+  lastFetchUrl = null;
+
+  cloudSyncChimesPlayed = 0;
+  const ok = await roster.pullSharedPoolsFromCloud();
+  assert.equal(ok, true);
+  assert.equal(cloudSyncChimesPlayed, 1, 'pullSharedPoolsFromCloud must play cloud sync chime');
+  assert.ok(lastFetchUrl.includes('get_shared_spawn_pools'));
+  assert.equal(mockElements.rosterPool34.value, 'Cloud Gaunts 20');
+  assert.equal(mockElements.rosterPool56.value, 'Cloud Warriors 5');
+  assert.equal(mockElements.nemStatus1.value, 'deployed');
+  assert.equal(mockElements.nemStatus2.value, 'slain');
+
+  const savedPool = JSON.parse(mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY));
+  assert.equal(savedPool.b34, 'Cloud Gaunts 20');
+
+  enableCloudMock = false;
+});
+

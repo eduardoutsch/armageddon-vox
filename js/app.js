@@ -928,3 +928,193 @@ if (typeof module !== 'undefined' && module.exports) {
     loadCustomPool
   };
 }
+
+// =========================================================================
+// CLOUD-SYNCED STANDARD HORDE POOL & [10+]/[13+] WARP-BREACH INTRUSION HOOK
+// =========================================================================
+(function () {
+  const SUPABASE_URL_SPAWNER = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+  const SUPABASE_ANON_SPAWNER = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
+
+  async function syncSpawnerPoolFromSupabase() {
+    if (typeof fetch !== 'function' || typeof localStorage === 'undefined') return;
+    try {
+      const res = await fetch(`${SUPABASE_URL_SPAWNER}/rest/v1/rpc/get_shared_spawn_pools`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_SPAWNER,
+          'Authorization': `Bearer ${SUPABASE_ANON_SPAWNER}`
+        },
+        body: JSON.stringify({})
+      });
+      if (!res || !res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && data.horde_pool && Object.keys(data.horde_pool).length > 0) {
+        localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(data.horde_pool));
+        renderLiveSpawnerBracketTable();
+      }
+    } catch (e) {}
+  }
+
+  function renderLiveSpawnerBracketTable() {
+    if (typeof document === 'undefined') return;
+    const box = document.getElementById('liveSpawnerBracketWindow');
+    if (!box) return;
+
+    let pool = {
+      b34: '10 Hormagaunts, 10 Termagants, 10 Cultists, 3 Nurglings, 5 Barbgaunts',
+      b56: '10 Bloodletters, 10 Genestealers, 5 Chaos Terminators, 3 Tyranid Warriors, 10 Gargoyles',
+      b79: '1 Trygon, 1 Screamer-Killer, 1 Daemon Prince, 1 Chaos Predator, 6 Bloodcrushers',
+      b10: '1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant',
+      b13: '1 Baneblade, 1 Knight Castellan, 1 Hierophant Bio-Titan, 1 Lord of Skulls'
+    };
+    try {
+      const raw = localStorage.getItem('foa_custom_shelf_pool_v1');
+      if (raw) pool = { ...pool, ...JSON.parse(raw) };
+    } catch (e) {}
+
+    box.innerHTML = `
+      <div style="margin-bottom:6px; color:var(--muted); font-size:0.78rem;">
+        ☁️ <strong>Active Standard Horde Spawn Pool</strong> (Cloud-synced across both players via Supabase &amp; Room Code — excludes classified Nemesis/Adversary intrusions):
+      </div>
+      <table class="bracket-matrix-table">
+        <thead>
+          <tr>
+            <th style="width:145px;">2D6 + Mod Bracket</th>
+            <th>Standard Horde Shelf Units (Rolled Deterministic by Room Seed)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>[2] No Spawn</strong></td><td style="color:var(--muted);">Breach Holds (Unmodified 2 always spawns nothing)</td></tr>
+          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${pool.b34}</td></tr>
+          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${pool.b56}</td></tr>
+          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${pool.b79}</td></tr>
+          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${pool.b10} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${pool.b13} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+        </tbody>
+      </table>
+    `;
+  }
+
+  function transmitHordeIntrusionPing(zoneNum, bracketLabel, channel) {
+    const roomStr = (typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1';
+    const roundStr = (typeof document !== 'undefined' && document.getElementById('spawnerBtnRound')?.textContent) || '1';
+    const facStr = (typeof document !== 'undefined' && document.getElementById('hordeFactionSelect')?.value) || 'Horde';
+
+    const payload = [
+      `+++ EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED +++`,
+      `• MODE & ROOM SEED: Mode 1 (Horde Breach // Room: ${roomStr} // Battle Round ${roundStr})`,
+      `• SPAWN ZONE & BRACKET: Spawn Zone ${zoneNum} rolled ${bracketLabel} + [5+ WARP-BREACH INTRUSION]!`,
+      `• ACTIVE HORDE FACTION: ${facStr}`,
+      `• REQUEST FOR CAMPAIGN MASTER: Please execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and reveal which Unbound Adversary, Active Surface Nemesis, or Classified Legacy Boss hijacks Spawn Zone ${zoneNum}!`
+    ].join('\n');
+
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+      window.VoxAudio.transmitToVox(channel, payload);
+    }
+  }
+
+  function evaluateWarpBreachIntrusions() {
+    if (typeof document === 'undefined') return;
+    const container = document.getElementById('spawnResultsContainer');
+    if (!container) return;
+
+    const cards = container.querySelectorAll('.spawn-zone');
+    if (!cards || cards.length === 0) return;
+
+    const roomStr = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
+    const roundStr = (document.getElementById('spawnerBtnRound')?.textContent || '1').trim();
+    let anyIntrusionTriggered = false;
+
+    cards.forEach((card, idx) => {
+      if (card.querySelector('.warp-intrusion-alert') || card.querySelector('.intrusion-badge-clean')) return;
+      const text = card.textContent || '';
+      const isBigBracket = /Bracket\s*\[(10[–\-]12|10\+|13\+)\]/i.test(text) && !/Rolled Down/i.test(text);
+      if (!isBigBracket) return;
+
+      const zoneNum = idx + 1;
+      const bracketMatch = text.match(/Bracket\s*\[[^\]]+\]/i);
+      const bracketLabel = bracketMatch ? bracketMatch[0] : 'Bracket [10+]';
+
+      // Deterministic 1D6 roll seeded by Room Code + Round + Zone so both players see the exact same result!
+      let intrusionRoll = 1;
+      if (typeof cyrb128 === 'function' && typeof mulberry32 === 'function') {
+        const seedArr = cyrb128(`${roomStr}_INTRUSION_R${roundStr}_Z${zoneNum}`);
+        const rng = mulberry32(seedArr[0]);
+        intrusionRoll = Math.floor(rng() * 6) + 1;
+      } else if (typeof hashString === 'function' && typeof mulberry32 === 'function') {
+        const rng = mulberry32(hashString(`${roomStr}_INTRUSION_R${roundStr}_Z${zoneNum}`));
+        intrusionRoll = Math.floor(rng() * 6) + 1;
+      } else {
+        intrusionRoll = Math.floor(Math.random() * 6) + 1;
+      }
+
+      if (intrusionRoll >= 5) {
+        anyIntrusionTriggered = true;
+        card.style.borderColor = 'var(--red)';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'warp-intrusion-alert';
+        alertDiv.innerHTML = `
+          <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px;">
+            ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${intrusionRoll} (5+) — ADVERSARY / NEMESIS HIJACK!]
+          </div>
+          <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px;">
+            Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'alpha')">📡 Ping Vox (The Exile)</button>
+            <button type="button" class="btn-blue btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'beta')">📡 Ping Vox (Junebug)</button>
+          </div>
+        `;
+        card.appendChild(alertDiv);
+      } else {
+        const cleanNote = document.createElement('div');
+        cleanNote.className = 'intrusion-badge-clean';
+        cleanNote.style.cssText = 'margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace;';
+        cleanNote.textContent = `[Warp-Breach Intrusion Check: D6 = ${intrusionRoll} (Needed 5+) — Standard Horde Wave Holds]`;
+        card.appendChild(cleanNote);
+      }
+    });
+
+    if (anyIntrusionTriggered && typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpSiren === 'function') {
+      window.VoxAudio.playWarpSiren();
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.syncSpawnerPoolFromSupabase = syncSpawnerPoolFromSupabase;
+    window.renderLiveSpawnerBracketTable = renderLiveSpawnerBracketTable;
+    window.transmitHordeIntrusionPing = transmitHordeIntrusionPing;
+    window.evaluateWarpBreachIntrusions = evaluateWarpBreachIntrusions;
+
+    if (typeof window.rollAllSpawnZones === 'function') {
+      const origRollAll = window.rollAllSpawnZones;
+      window.rollAllSpawnZones = function () {
+        const res = origRollAll.apply(this, arguments);
+        evaluateWarpBreachIntrusions();
+        return res;
+      };
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      syncSpawnerPoolFromSupabase();
+      renderLiveSpawnerBracketTable();
+    });
+    window.addEventListener('vox:page-swapped', () => {
+      if (document.getElementById('liveSpawnerBracketWindow')) {
+        syncSpawnerPoolFromSupabase();
+        renderLiveSpawnerBracketTable();
+      }
+    });
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    Object.assign(module.exports, {
+      syncSpawnerPoolFromSupabase,
+      renderLiveSpawnerBracketTable,
+      transmitHordeIntrusionPing,
+      evaluateWarpBreachIntrusions
+    });
+  }
+})();

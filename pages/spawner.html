@@ -7,6 +7,34 @@
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .warp-intrusion-alert {
+      margin-top: 10px;
+      padding: 12px;
+      background: rgba(255, 71, 87, 0.16);
+      border: 1.5px solid var(--red);
+      border-radius: 10px;
+      box-shadow: 0 0 18px rgba(255, 71, 87, 0.3);
+    }
+    .bracket-matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-top: 8px;
+    }
+    .bracket-matrix-table th, .bracket-matrix-table td {
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      text-align: left;
+    }
+    .bracket-matrix-table th {
+      background: #0b0d13;
+      color: var(--gold);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+  </style>
 </head>
 <body>
 
@@ -314,7 +342,7 @@
     <div id="tab4" class="hidden">
       <div class="round-banner" style="padding:16px;">
         <h2>Room-Synced Horde Spawner (n + 1 Zones)</h2>
-        <p style="margin-bottom:12px;">Synchronized by Room Code • Rolls 2D6 + Hard Mode Round Mod + Active Modifiers</p>
+        <p style="margin-bottom:12px;">Synchronized by Room Code &amp; Supabase Cloud Pool • [10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (5+)</p>
 
         <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin-bottom:14px; width:100%; max-width:620px;">
           <select id="spawnZoneCountSelect" style="flex:1; min-width:200px;">
@@ -337,7 +365,7 @@
 
       <div class="section-header">
         <h3>Spawn Zone Results</h3>
-        <span class="hud-sub">Unmodified 2 always spawns nothing</span>
+        <span class="hud-sub">Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (5+)</span>
       </div>
       <div id="spawnResultsContainer">
         <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
@@ -345,10 +373,20 @@
         </div>
       </div>
 
+      <!-- LIVE STANDARD HORDE SPAWN BRACKET MATRIX WINDOW (NO NEMESIS SPOILERS) -->
+      <details style="margin-top:16px;" ontoggle="if(this.open && typeof renderLiveSpawnerBracketTable==='function') renderLiveSpawnerBracketTable()">
+        <summary style="cursor:pointer; font-weight:800; color:var(--gold);">
+          📋 View Active Standard Horde Spawn Brackets ([3–4] to [13+] • Cloud-Synced)
+        </summary>
+        <div class="drawer-body" id="liveSpawnerBracketWindow" style="font-size:0.84rem; line-height:1.5;">
+          Loading active Cloud-Synced Standard Horde Spawn Pool...
+        </div>
+      </details>
+
       <!-- CUSTOM COLLECTION POOL LINK (CONFIGURED IN MODE 4) -->
       <div style="margin-top:14px; text-align:center;">
         <a href="roster.html#brackets" class="suite-link" style="display:inline-block; font-size:0.84rem; padding:8px 16px;">
-          🎖️ Configure Custom Shelf Pool in Mode 4: Hostile Matrix →
+          🎖️ Edit &amp; Cloud-Sync Standard Shelf Pool in Mode 4: Hostile Matrix →
         </a>
       </div>
     </div>

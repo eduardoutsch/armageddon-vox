@@ -300,7 +300,12 @@ function getOrCreateElement(id) {
       },
       innerText: '',
       innerHTML: '',
-      value: ''
+      textContent: '',
+      value: '',
+      style: {},
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      appendChild: (el) => el
     };
   }
   return mockElements[id];
@@ -317,7 +322,15 @@ globalThis.localStorage = {
 globalThis.document = {
   getElementById: (id) => getOrCreateElement(id),
   querySelectorAll: () => [],
-  addEventListener: () => {}
+  addEventListener: () => {},
+  createElement: (tag) => ({
+    className: '',
+    innerHTML: '',
+    textContent: '',
+    style: {},
+    appendChild: (el) => el,
+    querySelector: () => null
+  })
 };
 globalThis.window = {
   addEventListener: () => {}
@@ -543,6 +556,109 @@ test('app: saveCustomPool and loadCustomPool persist custom units to localStorag
   assert.equal(document.getElementById('pool34').value, '10 Termagants');
   assert.equal(document.getElementById('pool10').value, '1 Hive Tyrant');
 });
+
+test('app: renderLiveSpawnerBracketTable renders table with cloud pool values and intrusion warning', () => {
+  localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify({
+    b34: 'Test Chaff 10',
+    b10: 'Test Greater Daemon'
+  }));
+
+  const windowEl = document.getElementById('liveSpawnerBracketWindow');
+  app.renderLiveSpawnerBracketTable();
+
+  assert.ok(windowEl.innerHTML.includes('Test Chaff 10'));
+  assert.ok(windowEl.innerHTML.includes('Test Greater Daemon'));
+  assert.ok(windowEl.innerHTML.includes('Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)'));
+});
+
+test('app: syncSpawnerPoolFromSupabase pulls cloud pool and updates localStorage and table', async () => {
+  const origFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        horde_pool: {
+          b34: 'Cloud Hormagaunts 20',
+          b56: 'Cloud Bloodletters 10',
+          b79: 'Cloud Trygon 1',
+          b10: 'Cloud Bloodthirster 1',
+          b13: 'Cloud Baneblade 1'
+        }
+      })
+    };
+  };
+
+  await app.syncSpawnerPoolFromSupabase();
+
+  const saved = JSON.parse(localStorage.getItem('foa_custom_shelf_pool_v1'));
+  assert.equal(saved.b34, 'Cloud Hormagaunts 20');
+  assert.equal(saved.b10, 'Cloud Bloodthirster 1');
+
+  const windowEl = document.getElementById('liveSpawnerBracketWindow');
+  assert.ok(windowEl.innerHTML.includes('Cloud Bloodthirster 1'));
+
+  globalThis.fetch = origFetch;
+});
+
+test('app: transmitHordeIntrusionPing formats emergency intrusion payload and transmits via VoxAudio', () => {
+  let transmittedChan = null;
+  let transmittedPayload = null;
+
+  globalThis.window.VoxAudio = {
+    transmitToVox: (chan, payload) => {
+      transmittedChan = chan;
+      transmittedPayload = payload;
+    }
+  };
+
+  document.getElementById('seedInput').value = 'HADES-42';
+  document.getElementById('spawnerBtnRound').textContent = '3';
+  document.getElementById('hordeFactionSelect').value = 'Chaos Daemons';
+
+  app.transmitHordeIntrusionPing(2, 'Bracket [10–12]', 'beta');
+
+  assert.equal(transmittedChan, 'beta');
+  assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED'));
+  assert.ok(transmittedPayload.includes('Mode 1 (Horde Breach // Room: HADES-42 // Battle Round 3)'));
+  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
+});
+
+test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusion or clean wave', () => {
+  let sirenTriggered = false;
+  globalThis.window.VoxAudio = {
+    playWarpSiren: () => { sirenTriggered = true; }
+  };
+
+  const container = document.getElementById('spawnResultsContainer');
+  let appended1 = null;
+  let appended2 = null;
+
+  const cardBig = {
+    textContent: 'Spawn Zone 1 • Bracket [10–12] (301–550 pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: (el) => { appended1 = el; }
+  };
+  const cardSmall = {
+    textContent: 'Spawn Zone 2 • Bracket [3–4] (0–75 pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: (el) => { appended2 = el; }
+  };
+
+  container.querySelectorAll = (selector) => {
+    if (selector === '.spawn-zone') return [cardBig, cardSmall];
+    return [];
+  };
+
+  app.evaluateWarpBreachIntrusions();
+
+  assert.ok(appended1, 'Bracket [10–12] must receive an intrusion alert or clean note');
+  assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+});
+
 
 ````
 
@@ -778,6 +894,18 @@ test('vox-audio: newly added Crusade & CRT sound synthesizers execute without th
   assert.doesNotThrow(() => {
     voxModule.playDossierStamp();
   }, 'playDossierStamp must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playWarpSiren();
+  }, 'playWarpSiren must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playAuspexLock();
+  }, 'playAuspexLock must execute smoothly');
+
+  assert.doesNotThrow(() => {
+    voxModule.playCloudSyncChime();
+  }, 'playCloudSyncChime must execute smoothly');
 });
 
 test('vox-audio: transmitToVox stores pending payload in sessionStorage and routes seamlessly', () => {
@@ -805,9 +933,13 @@ test('vox-audio: window.VoxAudio exposes complete public API for all game modes'
   assert.equal(typeof globalThis.window.VoxAudio.playRelicChoir, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playScarHazard, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playDossierStamp, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playWarpSiren, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playAuspexLock, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playCloudSyncChime, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.navigateSeamlessly, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.transmitToVox, 'function');
 });
+
 
 ````
 
@@ -1717,9 +1849,25 @@ globalThis.document = {
   getElementById: (id) => mockElements[id] || null
 };
 
+let transmittedChannel = null;
+let transmittedPayload = null;
+let warpSirenPlayed = 0;
+let auspexLockPlayed = 0;
+
+globalThis.window = {
+  VoxAudio: {
+    playWarpSiren: () => { warpSirenPlayed++; },
+    playAuspexLock: () => { auspexLockPlayed++; },
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
 // Evaluate script in mock environment
 const pvpEnv = {};
-const fn = new Function('document', 'localStorage', 'console', `${pvpScriptCode}; return {
+const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpScriptCode}; return {
   HELLSCAPES,
   ANOMALIES,
   UNBOUND_UNITS,
@@ -1730,15 +1878,17 @@ const fn = new Function('document', 'localStorage', 'console', `${pvpScriptCode}
   rollRandomHellscape,
   rollWarpAnomaly,
   updateVulture,
-  rollUnboundAdversary
+  rollUnboundAdversary,
+  transmitUnboundPing
 };`);
 
-const pvp = fn(globalThis.document, globalThis.localStorage, console);
+const pvp = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
 
 test('pvp: HELLSCAPES, ANOMALIES, and UNBOUND_UNITS contain valid crusade content', () => {
   assert.equal(pvp.HELLSCAPES.length, 6, 'Must define 6 Hellscape environments');
   assert.equal(pvp.ANOMALIES.length, 6, 'Must define 6 Warp Anomalies');
   assert.equal(pvp.UNBOUND_UNITS.length, 4, 'Must define 4 Unbound Adversary power levels');
+  assert.ok(pvp.UNBOUND_UNITS[3].includes('CLASSIFIED APEX ANOMALY'), 'PL 4 must reference Classified Apex Anomaly');
 
   pvp.HELLSCAPES.forEach((h, idx) => {
     assert.equal(typeof h, 'string');
@@ -1783,14 +1933,40 @@ test('pvp: rollWarpAnomaly triggers surges based on intensity thresholds', () =>
   assert.ok(parsed.anomalyHtml.includes('Rolled'));
 });
 
-test('pvp: rollUnboundAdversary picks an unbound unit and persists output', () => {
+test('pvp: rollUnboundAdversary picks an unbound unit, triggers SFX, renders ping buttons, and persists output', () => {
+  warpSirenPlayed = 0;
+  auspexLockPlayed = 0;
+
   pvp.rollUnboundAdversary();
 
   assert.ok(mockElements.unboundResult.innerHTML.includes('Power Level'));
+  assert.ok(mockElements.unboundResult.innerHTML.includes('transmitUnboundPing'), 'Must include Vox ping button callbacks');
+  assert.equal(warpSirenPlayed + auspexLockPlayed > 0, true, 'Must trigger either warp siren or auspex lock SFX');
 
   const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
   const parsed = JSON.parse(raw);
   assert.ok(parsed.unboundHtml.includes('Power Level'));
+});
+
+test('pvp: transmitUnboundPing formats emergency apex payload for PL 4 and standard payload for PL 1-3', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.warpIntensity.value = 'catastrophic';
+
+  // PL 4 Apex Anomaly Ping
+  pvp.transmitUnboundPing(4, 'alpha');
+  assert.equal(transmittedChannel, 'alpha');
+  assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: POWER LEVEL 4 APEX ANOMALY DETECTED'));
+  assert.ok(transmittedPayload.includes('Warp Intensity: CATASTROPHIC'));
+  assert.ok(transmittedPayload.includes('Contextual 3-Tier PL 4 Manifestation Roll'));
+
+  // PL 2 Standard Ping
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitUnboundPing(2, 'beta');
+  assert.equal(transmittedChannel, 'beta');
+  assert.ok(transmittedPayload.includes('AUSPEX PING: POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
+  assert.ok(transmittedPayload.includes('roll/select our Power Level 2 Unbound Adversary'));
 });
 
 test('pvp: savePvpState ignores save when hellscapeSelect element is absent', () => {
@@ -2028,6 +2204,7 @@ const mockElements = {
   rosterPool10: { value: '1 Norn Emissary, 1 Hive Tyrant' },
   rosterPool13: { value: '1 Hierophant Bio-Titan' },
   shelfSaveNotice: { classList: createMockClassList() },
+  cloudSyncBadge: { textContent: '' },
   bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
   factionBracketDisplay: { innerHTML: '' }
 };
@@ -2038,15 +2215,61 @@ const mockDocument = {
 
 let transmittedChannel = null;
 let transmittedPayload = null;
+let cloudSyncChimesPlayed = 0;
 
 const mockWindow = {
   addEventListener: () => {},
   VoxAudio: {
+    playCloudSyncChime: () => {
+      cloudSyncChimesPlayed++;
+    },
     transmitToVox: (chan, payload) => {
       transmittedChannel = chan;
       transmittedPayload = payload;
     }
   }
+};
+
+let enableCloudMock = false;
+let lastFetchUrl = null;
+let lastFetchBody = null;
+
+const mockFetch = async (url, options = {}) => {
+  lastFetchUrl = url;
+  lastFetchBody = options.body ? JSON.parse(options.body) : null;
+
+  if (!enableCloudMock) {
+    return { ok: false };
+  }
+
+  if (url.includes('save_shared_spawn_pools')) {
+    return {
+      ok: true,
+      json: async () => ({ ok: true })
+    };
+  }
+
+  if (url.includes('get_shared_spawn_pools')) {
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        horde_pool: {
+          b34: 'Cloud Gaunts 20',
+          b56: 'Cloud Warriors 5',
+          b79: 'Cloud Carnifex 2',
+          b10: 'Cloud Tyrant 1',
+          b13: 'Cloud Titan 1'
+        },
+        nemesis_status: {
+          nem1: 'deployed',
+          nem2: 'slain'
+        }
+      })
+    };
+  }
+
+  return { ok: false };
 };
 
 // Evaluate script in mock environment
@@ -2056,6 +2279,7 @@ const evalFn = new Function(
   'localStorage',
   'HORDE_FACTIONS',
   'console',
+  'fetch',
   `${rosterScriptCode}; return {
     ROSTER_STATE_KEY,
     CUSTOM_POOL_STORAGE_KEY,
@@ -2065,13 +2289,15 @@ const evalFn = new Function(
     updateNemesisPreview,
     transmitNemesisDossier,
     saveShelfBarracks,
+    syncPoolsToSupabaseCloud,
+    pullSharedPoolsFromCloud,
     renderFactionBracketTable,
     saveRosterPageState,
     initRosterPage
   };`
 );
 
-const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console);
+const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console, mockFetch);
 
 test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for factions', () => {
   assert.ok(roster.HORDE_FACTION_SPAWN_TABLES, 'Must define HORDE_FACTION_SPAWN_TABLES');
@@ -2145,8 +2371,10 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   mockElements.rosterPool10.value = '1 Tyrannofex';
   mockElements.rosterPool13.value = '1 Hierophant Bio-Titan';
 
+  cloudSyncChimesPlayed = 0;
   roster.saveShelfBarracks();
 
+  assert.equal(cloudSyncChimesPlayed, 1, 'saveShelfBarracks must play cloud sync chime');
   const saved = mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY);
   assert.ok(saved, 'Must persist custom shelf pool to localStorage');
   const pool = JSON.parse(saved);
@@ -2196,6 +2424,49 @@ test('roster: saveRosterPageState and initRosterPage preserve and restore form a
   assert.equal(mockElements.rosterPool34.value, 'Custom Chaff A, B');
   assert.equal(mockElements.rosterPool10.value, 'Custom Super-Heavy E');
 });
+
+test('roster: syncPoolsToSupabaseCloud sends pool payload to Supabase RPC and updates badge', async () => {
+  enableCloudMock = true;
+  lastFetchUrl = null;
+  lastFetchBody = null;
+
+  const testPool = {
+    b34: '10 Hormagaunts',
+    b56: '5 Terminators',
+    b79: '1 Trygon',
+    b10: '1 Norn Emissary',
+    b13: '1 Bio-Titan'
+  };
+
+  const ok = await roster.syncPoolsToSupabaseCloud(testPool);
+  assert.equal(ok, true);
+  assert.ok(lastFetchUrl.includes('save_shared_spawn_pools'));
+  assert.deepEqual(lastFetchBody.p_horde_pool, testPool);
+  assert.ok(mockElements.cloudSyncBadge.textContent.includes('Cloud Pool Synced'));
+
+  enableCloudMock = false;
+});
+
+test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supabase RPC', async () => {
+  enableCloudMock = true;
+  lastFetchUrl = null;
+
+  cloudSyncChimesPlayed = 0;
+  const ok = await roster.pullSharedPoolsFromCloud();
+  assert.equal(ok, true);
+  assert.equal(cloudSyncChimesPlayed, 1, 'pullSharedPoolsFromCloud must play cloud sync chime');
+  assert.ok(lastFetchUrl.includes('get_shared_spawn_pools'));
+  assert.equal(mockElements.rosterPool34.value, 'Cloud Gaunts 20');
+  assert.equal(mockElements.rosterPool56.value, 'Cloud Warriors 5');
+  assert.equal(mockElements.nemStatus1.value, 'deployed');
+  assert.equal(mockElements.nemStatus2.value, 'slain');
+
+  const savedPool = JSON.parse(mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY));
+  assert.equal(savedPool.b34, 'Cloud Gaunts 20');
+
+  enableCloudMock = false;
+});
+
 ````
 
 ---
