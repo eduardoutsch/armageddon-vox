@@ -235,19 +235,21 @@ function rollUnboundAdversary() {
   }
 
   const pingBanner = pl === 4
-    ? `<div style="margin-top:10px; padding:10px; background:rgba(255,71,87,0.14); border:1px solid var(--red); border-radius:8px;">
-         <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:6px;">
+    ? `<div style="margin-top:12px; padding:12px 14px; background:rgba(255,71,87,0.14); border:1px solid var(--red); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px;">
+         <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; text-align:center;">
            ⚠️ [POWER LEVEL 4: CLASSIFIED APEX ANOMALY — CAMPAIGN MASTER ROLL REQUIRED]
          </div>
-         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+         <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
            <button type="button" class="btn-red btn-sm" onclick="transmitUnboundPing(4, 'alpha')">📡 Ping Vox (The Exile)</button>
            <button type="button" class="btn-blue btn-sm" onclick="transmitUnboundPing(4, 'beta')">📡 Ping Vox (Junebug)</button>
          </div>
        </div>`
-    : `<div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-         <span style="font-size:0.76rem; color:var(--muted);">Want the Campaign Master to roll the specific PL ${pl} threat on Vox?</span>
-         <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'alpha')">📡 Ping Vox (Exile)</button>
-         <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'beta')">📡 Ping Vox (Junebug)</button>
+    : `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.08); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px;">
+         <span style="font-size:0.78rem; color:var(--muted); text-align:center;">Want the Campaign Master to roll the specific PL ${pl} threat on Vox?</span>
+         <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
+           <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'alpha')">📡 Ping Vox (Exile)</button>
+           <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'beta')">📡 Ping Vox (Junebug)</button>
+         </div>
        </div>`;
 
   document.getElementById('unboundResult').innerHTML = `<p style="margin:0;">${baseDesc}</p>${pingBanner}`;

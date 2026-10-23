@@ -127,6 +127,8 @@ test('pvp: rollUnboundAdversary picks an unbound unit, triggers SFX, renders pin
 
   assert.ok(mockElements.unboundResult.innerHTML.includes('Power Level'));
   assert.ok(mockElements.unboundResult.innerHTML.includes('transmitUnboundPing'), 'Must include Vox ping button callbacks');
+  assert.ok(mockElements.unboundResult.innerHTML.includes('text-align:center'), 'Ping banner must feature centered text alignment');
+  assert.ok(mockElements.unboundResult.innerHTML.includes('justify-content:center'), 'Ping action buttons must be centered');
   assert.equal(warpSirenPlayed + auspexLockPlayed > 0, true, 'Must trigger either warp siren or auspex lock SFX');
 
   const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
