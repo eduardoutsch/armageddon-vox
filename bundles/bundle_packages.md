@@ -520,13 +520,13 @@ function scrubArtifacts(str) {
 }
 
 async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) {
-  const maxWaitMs = 90000;
+  const maxWaitMs = 150000;
   const start = Date.now();
 
   logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> with REF-ID ${msgShortId} (Previous count:${prevState.count})...`);
 
   let newResponseStarted = false;
-  while (Date.now() - start < 45000) {
+  while (Date.now() - start < 80000) {
     await page.waitForTimeout(1000);
     const curr = await extractCleanLastModelResponse(page);
 
@@ -646,7 +646,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       logFn(`[THREAD GUARD // ${channelTag}] Tab drifted to ${currentUrl} — snapping back to ${expectedUrl}...`);
       await targetPage.goto(expectedUrl, { waitUntil: 'domcontentloaded' });
       if (typeof targetPage.waitForSelector === 'function') {
-        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => {});
+        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => { });
       }
       if (typeof targetPage.waitForTimeout === 'function') {
         await targetPage.waitForTimeout(1500);
@@ -889,7 +889,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   logGreen('>> Opening Tab 1 (Commander Alpha // The Exile)...');
   await alphaPage.goto(alphaThreadUrl, { waitUntil: 'domcontentloaded' });
   if (typeof alphaPage.waitForSelector === 'function') {
-    await alphaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => {});
+    await alphaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => { });
   }
   if (typeof alphaPage.waitForTimeout === 'function') {
     await alphaPage.waitForTimeout(2000);
@@ -899,7 +899,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   logGreen('>> Opening Tab 2 (Commander Beta // JUNEBUG)...');
   await betaPage.goto(betaThreadUrl, { waitUntil: 'domcontentloaded' });
   if (typeof betaPage.waitForSelector === 'function') {
-    await betaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => {});
+    await betaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => { });
   }
   if (typeof betaPage.waitForTimeout === 'function') {
     await betaPage.waitForTimeout(2000);

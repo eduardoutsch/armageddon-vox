@@ -439,18 +439,22 @@ REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mo
 <script src="../js/data.js"></script>
 <script src="../js/vox-audio.js"></script>
 <script>
-const ROSTER_STATE_KEY = 'foa_roster_matrix_state_v1';
-const CUSTOM_POOL_STORAGE_KEY = 'foa_custom_shelf_pool_v1';
+var ROSTER_STATE_KEY = 'foa_roster_matrix_state_v1';
+var CUSTOM_POOL_STORAGE_KEY = 'foa_custom_shelf_pool_v1';
 
-const SUPABASE_URL = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
+var SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL)
+  ? window.SUPABASE_URL
+  : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY)
+  ? window.SUPABASE_ANON_KEY
+  : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
 
 // Canonical 23-Faction Standard Horde Spawn Bracket Matrix is loaded from data.js
-const ROSTER_SPAWN_TABLES = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
+var ROSTER_SPAWN_TABLES = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
   ? HORDE_FACTION_SPAWN_TABLES
   : ((typeof window !== 'undefined' && window.HORDE_FACTION_SPAWN_TABLES) ? window.HORDE_FACTION_SPAWN_TABLES : {});
 
-let activeRosterTab = 'nemesis';
+var activeRosterTab = 'nemesis';
 
 function switchRosterTab(tab, persist = true) {
   activeRosterTab = tab;
@@ -735,6 +739,23 @@ function initRosterPage() {
   updateNemesisPreview();
   renderFactionBracketTable();
   pullSharedPoolsFromCloud();
+}
+
+if (typeof window !== 'undefined') {
+  window.switchRosterTab = switchRosterTab;
+  window.buildNemesisDossierString = buildNemesisDossierString;
+  window.updateNemesisPreview = updateNemesisPreview;
+  window.transmitNemesisDossier = transmitNemesisDossier;
+  window.getStoredPoolRoot = getStoredPoolRoot;
+  window.getFactionPoolFromStore = getFactionPoolFromStore;
+  window.loadFactionInputs = loadFactionInputs;
+  window.onFactionPickerChange = onFactionPickerChange;
+  window.saveShelfBarracks = saveShelfBarracks;
+  window.syncPoolsToSupabaseCloud = syncPoolsToSupabaseCloud;
+  window.pullSharedPoolsFromCloud = pullSharedPoolsFromCloud;
+  window.renderFactionBracketTable = renderFactionBracketTable;
+  window.saveRosterPageState = saveRosterPageState;
+  window.initRosterPage = initRosterPage;
 }
 
 window.addEventListener('DOMContentLoaded', initRosterPage);

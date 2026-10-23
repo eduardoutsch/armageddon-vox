@@ -513,19 +513,23 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   // =========================================================================
   // SUPABASE CONFIGURATION (RLS-Protected RPC Endpoints)
   // =========================================================================
-  const SUPABASE_URL = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
+  var SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL)
+    ? window.SUPABASE_URL
+    : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+  var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY)
+    ? window.SUPABASE_ANON_KEY
+    : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
 
-  const SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
-  const SESSION_AUTH_KEY = 'foa_vox_active_session_v1';
+  var SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
+  var SESSION_AUTH_KEY = 'foa_vox_active_session_v1';
 
-  let selectedChannel = 'alpha';
-  let activePassphrase = null;
-  let isChannelSealed = true;
-  let pollTimer = null;
-  let activeStreamTimers = [];
-  let showAllOlderMessages = false;
-  let showAllOlderInterferences = false;
+  var selectedChannel = 'alpha';
+  var activePassphrase = null;
+  var isChannelSealed = true;
+  var pollTimer = null;
+  var activeStreamTimers = [];
+  var showAllOlderMessages = false;
+  var showAllOlderInterferences = false;
 
   function toggleOlderMessages() {
     showAllOlderMessages = !showAllOlderMessages;
@@ -542,7 +546,8 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   }
 
   // Track which message & reply IDs have already animated so they only stream once
-  let seenTokens = new Set();
+  var seenTokens = (typeof window !== 'undefined' && window.seenTokens) ? window.seenTokens : new Set();
+  if (typeof window !== 'undefined') window.seenTokens = seenTokens;
   try {
     const rawSeen = sessionStorage.getItem(SEEN_IDS_STORAGE_KEY);
     if (rawSeen) {
@@ -618,6 +623,8 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       const label = document.getElementById('passLabel');
       const btn = document.getElementById('sealActionBtn');
 
+      if (!badge || !sub || !label || !btn) return;
+
       if (!isChannelSealed) {
         badge.innerHTML = `<span class="pulse-dot"></span> UNSEALED CONDUIT • FIRST-BOOT SETUP`;
         sub.textContent = `This conduit has not been sealed yet. Choose a permanent secret passphrase—once inscribed, it will lock this terminal exclusively to you!`;
@@ -630,7 +637,8 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
         btn.textContent = `🔓 Authenticate & Decrypt Conduit`;
       }
     } catch (err) {
-      document.getElementById('sealStatusBadge').textContent = '⚠️ Configure SUPABASE_URL in pages/vox.html';
+      const errBadge = document.getElementById('sealStatusBadge');
+      if (errBadge) errBadge.textContent = '⚠️ Configure SUPABASE_URL in pages/vox.html';
     }
   }
 
@@ -668,10 +676,15 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       if (passEl) passEl.value = '';
       errEl.classList.add('hidden');
 
-      document.getElementById('authScreen').classList.add('hidden');
-      document.getElementById('terminalScreen').classList.remove('hidden');
-      document.getElementById('activeConduitLabel').textContent =
-        selectedChannel === 'alpha' ? '🦅 THE EXILE // SANCTUARY OF ASH' : '💀 LORD COMMANDER JUNEBUG';
+      const authScreen = document.getElementById('authScreen');
+      const termScreen = document.getElementById('terminalScreen');
+      const conduitLabel = document.getElementById('activeConduitLabel');
+      if (authScreen) authScreen.classList.add('hidden');
+      if (termScreen) termScreen.classList.remove('hidden');
+      if (conduitLabel) {
+        conduitLabel.textContent =
+          selectedChannel === 'alpha' ? '🦅 THE EXILE // SANCTUARY OF ASH' : '💀 LORD COMMANDER JUNEBUG';
+      }
 
       // Check if a compiled Master Battle Dossier or Nemesis Dossier is waiting in sessionStorage!
       await flushPendingDossierIfAny();
@@ -848,7 +861,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
     return { cardTitle: fallbackTitle, cleanBody: trimmed };
   }
 
-  const callRpc = rpcCall;
+  var callRpc = rpcCall;
 
   function formatTime(isoStr) {
     if (!isoStr) return 'VOX-LOG';
@@ -1166,6 +1179,13 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   window.addEventListener('vox:page-swapped', () => {
     if (document.getElementById('authScreen') && document.getElementById('directMessagesBox')) {
       initVoxTerminalPage();
+    } else {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      activeStreamTimers.forEach(t => clearTimeout(t));
+      activeStreamTimers = [];
     }
   });
 </script>

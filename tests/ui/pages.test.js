@@ -422,6 +422,107 @@ test('UI Boundary: pages/roster.html loads with live dossier preview, active tab
   }
 });
 
+test('E2E Integration: seamless router supports multi-page navigation (vox -> roster -> vox -> roster) with zero syntax errors and responsive button interactions', async () => {
+  const http = require('node:http');
+  const server = http.createServer((req, res) => {
+    let reqPath = req.url.split('?')[0];
+    if (reqPath === '/') reqPath = '/index.html';
+    const filePath = path.join(ROOT_DIR, reqPath);
+    if (fs.existsSync(filePath)) {
+      if (filePath.endsWith('.html')) res.setHeader('Content-Type', 'text/html');
+      else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+      else if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
+      res.writeHead(200);
+      res.end(fs.readFileSync(filePath));
+    } else {
+      res.writeHead(404);
+      res.end('Not found');
+    }
+  });
+
+  const port = await new Promise((resolve) => {
+    server.listen(0, () => resolve(server.address().port));
+  });
+
+  let playwright;
+  try {
+    playwright = require('playwright');
+  } catch (e) {
+    server.close();
+    return;
+  }
+
+  const browser = await playwright.chromium.launch();
+  const pageErrors = [];
+
+  try {
+    const page = await browser.newPage();
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+
+    // 1. Initial load on vox.html
+    await page.goto(`http://localhost:${port}/pages/vox.html`);
+    await page.waitForTimeout(300);
+
+    // 2. Seamlessly navigate to roster.html
+    const rosterLink = await page.$('a[href*="roster.html"]');
+    assert.ok(rosterLink, 'Roster link must exist in navigation bar');
+    await rosterLink.click();
+    await page.waitForTimeout(400);
+
+    // 3. Verify roster functions are defined and not aborted by syntax error
+    const switchTabType = await page.evaluate(() => typeof window.switchRosterTab);
+    assert.equal(switchTabType, 'function', 'window.switchRosterTab must be defined on window after seamless navigation');
+
+    // 4. Click Tab 2 (Unbound Adversaries) and verify visibility
+    await page.click('#rosTabBtn2');
+    let isTab2Active = await page.evaluate(() => document.getElementById('rosTabBtn2')?.classList.contains('active'));
+    let isTabUnboundVisible = await page.evaluate(() => !document.getElementById('rosTabUnbound')?.classList.contains('hidden'));
+    assert.equal(isTab2Active, true, 'Tab 2 button must become active after click');
+    assert.equal(isTabUnboundVisible, true, 'Tab Unbound panel must be visible');
+
+    // 5. Click Tab 3 (Horde Brackets)
+    await page.click('#rosTabBtn3');
+    let isTabBracketsVisible = await page.evaluate(() => !document.getElementById('rosTabBrackets')?.classList.contains('hidden'));
+    assert.equal(isTabBracketsVisible, true, 'Tab Brackets panel must be visible');
+
+    // 6. Click Save Shelf Barracks button
+    const saveBtn = await page.$('button[onclick="saveShelfBarracks()"]');
+    assert.ok(saveBtn, 'Save Shelf Barracks button must exist');
+    await saveBtn.click();
+
+    // 7. Navigate back to vox.html
+    const voxLink = await page.$('a[href*="vox.html"]');
+    assert.ok(voxLink, 'Vox link must exist in navigation bar');
+    await voxLink.click();
+    await page.waitForTimeout(400);
+
+    // 8. Re-visit roster.html to verify no re-declaration syntax collision
+    const returnRosterLink = await page.$('a[href*="roster.html"]');
+    await returnRosterLink.click();
+    await page.waitForTimeout(400);
+
+    // 9. Click Tab 2 again on re-visited roster
+    await page.click('#rosTabBtn2');
+    isTab2Active = await page.evaluate(() => document.getElementById('rosTabBtn2')?.classList.contains('active'));
+    isTabUnboundVisible = await page.evaluate(() => !document.getElementById('rosTabUnbound')?.classList.contains('hidden'));
+    assert.equal(isTab2Active, true, 'Tab 2 button must remain responsive on re-visited page');
+    assert.equal(isTabUnboundVisible, true, 'Tab Unbound panel must be visible on re-visited page');
+
+    // 10. Switch back to Tab 1
+    await page.click('#rosTabBtn1');
+    const isTabNemesisVisible = await page.evaluate(() => !document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTabNemesisVisible, true, 'Tab 1 panel must restore visibility on re-visited page');
+
+    // Filter out potential 401 Supabase unauthenticated RPC noise
+    const syntaxErrors = pageErrors.filter((e) => !e.includes('401'));
+    assert.deepEqual(syntaxErrors, [], 'Must encounter 0 page errors or syntax errors during seamless navigation');
+  } finally {
+    await browser.close();
+    server.close();
+  }
+});
+
+
 
 
 

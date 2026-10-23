@@ -2712,9 +2712,16 @@ if (typeof module !== 'undefined' && module.exports) {
 
       const inlineScripts = doc.querySelectorAll('script:not([src])');
       inlineScripts.forEach(s => {
-        const scriptEl = document.createElement('script');
-        scriptEl.textContent = s.textContent;
-        document.body.appendChild(scriptEl);
+        try {
+          const scriptEl = document.createElement('script');
+          // Replace top-level const and let with var so re-entrant seamless navigation
+          // across pages or repeated visits never throws "Identifier has already been declared".
+          const sanitized = s.textContent.replace(/(^|[\n\r;])\s*(const|let)\s+([a-zA-Z0-9_$]+)/g, '$1 var $3');
+          scriptEl.textContent = sanitized;
+          document.body.appendChild(scriptEl);
+        } catch (scriptErr) {
+          console.warn('Seamless inline script execution error:', scriptErr);
+        }
       });
 
       if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
@@ -2735,13 +2742,20 @@ if (typeof module !== 'undefined' && module.exports) {
       if (document.getElementById('aiStep0') && typeof restoreRogueState === 'function') {
         restoreRogueState();
       }
+      if (document.getElementById('rosTabNemesis') && typeof window.initRosterPage === 'function') {
+        window.initRosterPage();
+      }
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
       window.dispatchEvent(new Event('vox:page-swapped'));
 
     } catch (err) {
       console.warn('Seamless router fallback to standard navigation:', err);
-      window.location.href = targetUrl;
+      if (typeof window.location.replace === 'function') {
+        window.location.replace(targetUrl);
+      } else {
+        window.location.href = targetUrl;
+      }
     } finally {
       isNavigating = false;
     }
