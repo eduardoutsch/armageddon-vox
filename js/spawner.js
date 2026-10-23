@@ -51,7 +51,17 @@ function calculateRollDown(bracketKey) {
  */
 function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
   const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10', '10-12': 'pool10', '13+': 'pool13' };
+  const mapKey = bracketKey === '3-4' ? 'b34'
+    : bracketKey === '5-6' ? 'b56'
+    : bracketKey === '7-9' ? 'b79'
+    : (bracketKey === '10+' || bracketKey === '10-12') ? 'b10'
+    : 'b13';
+
   let raw = '';
+  let activeFaction = '';
+  if (typeof document !== 'undefined') {
+    activeFaction = document.getElementById('hordeFactionSelect')?.value || '';
+  }
 
   if (customPoolMap && customPoolMap[bracketKey] !== undefined) {
     raw = customPoolMap[bracketKey];
@@ -60,12 +70,12 @@ function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
       const saved = localStorage.getItem('foa_custom_shelf_pool_v1') || localStorage.getItem('armageddon_horde_pool');
       if (saved) {
         const p = JSON.parse(saved);
-        const mapKey = bracketKey === '3-4' ? 'b34'
-          : bracketKey === '5-6' ? 'b56'
-          : bracketKey === '7-9' ? 'b79'
-          : (bracketKey === '10+' || bracketKey === '10-12') ? 'b10'
-          : 'b13';
-        if (p[mapKey]) raw = p[mapKey];
+        if (activeFaction && p.byFaction) {
+          const facPool = p.byFaction[activeFaction] || {};
+          raw = facPool[mapKey] || '';
+        } else if (!p.byFaction && p[mapKey]) {
+          raw = p[mapKey];
+        }
       }
     } catch (e) {}
   }
@@ -75,7 +85,11 @@ function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
   }
 
   const list = raw.split(',').map(s => s.trim()).filter(Boolean);
-  if (list.length === 0) return "Unit from Bracket [" + bracketKey + "]";
+  if (list.length === 0) {
+    return activeFaction
+      ? `⚠️ ${activeFaction} Pool Empty for Bracket [${bracketKey}] — Configure in Mode 4!`
+      : "Unit from Bracket [" + bracketKey + "]";
+  }
   return list[Math.floor(rng() * list.length)];
 }
 

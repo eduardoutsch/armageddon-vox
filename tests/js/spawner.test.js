@@ -82,3 +82,46 @@ test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully
   const picked13 = pickSyncedUnitFromBracket('13+', rng, mockPool);
   assert.equal(picked13, 'Hierophant Bio-Titan');
 });
+
+test('pickSyncedUnitFromBracket: resolves per-faction pool from byFaction in localStorage with warning when empty', () => {
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v))
+  };
+
+  const poolPayload = {
+    byFaction: {
+      'Orks': {
+        b34: '10 Boyz',
+        b56: '5 Nobz',
+        b79: '1 Battlewagon',
+        b10: '1 Ghazghkull',
+        b13: '1 Stompa'
+      }
+    }
+  };
+  globalThis.localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(poolPayload));
+
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'hordeFactionSelect') return { value: 'Orks' };
+      return null;
+    }
+  };
+
+  const rng = mulberry32(42);
+  const picked = pickSyncedUnitFromBracket('3-4', rng);
+  assert.equal(picked, '10 Boyz');
+
+  // When active faction has no units for a bracket
+  globalThis.document.getElementById = (id) => {
+    if (id === 'hordeFactionSelect') return { value: 'Necrons' };
+    return null;
+  };
+  const emptyRes = pickSyncedUnitFromBracket('5-6', rng);
+  assert.equal(emptyRes, '⚠️ Necrons Pool Empty for Bracket [5-6] — Configure in Mode 4!');
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+});

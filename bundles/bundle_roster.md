@@ -388,20 +388,23 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
         Configure the standard Horde models for each threat bracket (comma-separated). Clicking <strong>☁️ Save &amp; Sync Shelf Barracks to Cloud</strong> stores this pool in Supabase so both players automatically share the exact same standard Horde spawn list on every device!
       </p>
 
+      <label class="hud-label" style="color:var(--gold);">Select Horde Faction to Configure &amp; Cloud-Sync:</label>
+      <select id="bracketFactionPicker" onchange="onFactionPickerChange()" style="width:100%; padding:12px; font-weight:700; margin-bottom:14px; background:#090b10; border:1.5px solid var(--gold); color:#fff;"></select>
+
       <label class="hud-label">Bracket [3–4] (0–75 pts // Swarms &amp; Chaff)</label>
-      <input type="text" id="rosterPool34" style="width:100%; margin-bottom:10px;" value="10 Hormagaunts, 10 Termagants, 10 Cultists, 3 Nurglings, 5 Barbgaunts">
+      <input type="text" id="rosterPool34" style="width:100%; margin-bottom:10px;" placeholder="Empty — enter comma-separated [3–4] units for this faction..." value="">
 
       <label class="hud-label">Bracket [5–6] (76–150 pts // Line Infantry &amp; Skirmishers)</label>
-      <input type="text" id="rosterPool56" style="width:100%; margin-bottom:10px;" value="10 Bloodletters, 10 Genestealers, 5 Chaos Terminators, 3 Tyranid Warriors, 10 Gargoyles">
+      <input type="text" id="rosterPool56" style="width:100%; margin-bottom:10px;" placeholder="Empty — enter comma-separated [5–6] units for this faction..." value="">
 
       <label class="hud-label">Bracket [7–9] (151–300 pts // Heavy Elites, Walkers &amp; Monsters)</label>
-      <input type="text" id="rosterPool79" style="width:100%; margin-bottom:10px;" value="1 Trygon, 1 Screamer-Killer, 1 Daemon Prince, 1 Chaos Predator, 6 Bloodcrushers">
+      <input type="text" id="rosterPool79" style="width:100%; margin-bottom:10px;" placeholder="Empty — enter comma-separated [7–9] units for this faction..." value="">
 
       <label class="hud-label">Bracket [10–12] (301–550 pts // Apex Bosses, Greater Daemons &amp; Heavy Armor)</label>
-      <input type="text" id="rosterPool10" style="width:100%; margin-bottom:10px;" value="1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant">
+      <input type="text" id="rosterPool10" style="width:100%; margin-bottom:10px;" placeholder="Empty — enter comma-separated [10–12] units for this faction..." value="">
 
       <label class="hud-label">Bracket [13+] (551+ pts // Titanic, Super-Heavy &amp; Lords of War)</label>
-      <input type="text" id="rosterPool13" style="width:100%; margin-bottom:12px;" value="1 Baneblade, 1 Knight Castellan, 1 Hierophant Bio-Titan, 1 Lord of Skulls">
+      <input type="text" id="rosterPool13" style="width:100%; margin-bottom:12px;" placeholder="Empty — enter comma-separated [13+] units for this faction..." value="">
 
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button type="button" class="btn-blue" onclick="saveShelfBarracks()">☁️ Save &amp; Sync Shelf Barracks to Cloud</button>
@@ -417,10 +420,8 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
         <span class="hud-sub">Clean Standard Brackets (No Nemesis Spoilers)</span>
       </div>
       <p class="card-desc" style="margin-bottom:12px;">
-        Select any Horde Faction below to inspect its primary faction rule and standard threat-bracket unit possibilities (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10–12]</code>, <code>[13+]</code>).
+        Inspect the primary faction rule and configured or reference threat-bracket unit possibilities (<code>[3–4]</code>, <code>[5–6]</code>, <code>[7–9]</code>, <code>[10–12]</code>, <code>[13+]</code>) for the selected faction above.
       </p>
-
-      <select id="bracketFactionPicker" onchange="renderFactionBracketTable()" style="width:100%; padding:12px; font-weight:700; margin-bottom:14px;"></select>
 
       <div id="factionBracketDisplay"></div>
     </div>
@@ -532,14 +533,72 @@ function transmitNemesisDossier() {
   }
 }
 
+function getStoredPoolRoot() {
+  try {
+    const raw = localStorage.getItem(CUSTOM_POOL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getFactionPoolFromStore(facName) {
+  const root = getStoredPoolRoot();
+  if (root.byFaction && root.byFaction[facName]) {
+    return root.byFaction[facName];
+  }
+  // Legacy flat-object support (only if byFaction hasn't been created yet)
+  if (!root.byFaction && (root.b34 || root.b56 || root.b79 || root.b10 || root.b13)) {
+    return {
+      b34: root.b34 || '',
+      b56: root.b56 || '',
+      b79: root.b79 || '',
+      b10: root.b10 || '',
+      b13: root.b13 || ''
+    };
+  }
+  return { b34: '', b56: '', b79: '', b10: '', b13: '' };
+}
+
+function loadFactionInputs(facName) {
+  const p = getFactionPoolFromStore(facName);
+  if (document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = p.b34 || '';
+  if (document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = p.b56 || '';
+  if (document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = p.b79 || '';
+  if (document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = p.b10 || '';
+  if (document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = p.b13 || '';
+}
+
+function onFactionPickerChange() {
+  const facName = document.getElementById('bracketFactionPicker')?.value || 'Space Marines';
+  loadFactionInputs(facName);
+  renderFactionBracketTable();
+  saveRosterPageState();
+}
+
 function saveShelfBarracks() {
-  const poolObj = {
-    b34: document.getElementById('rosterPool34')?.value || '',
-    b56: document.getElementById('rosterPool56')?.value || '',
-    b79: document.getElementById('rosterPool79')?.value || '',
-    b10: document.getElementById('rosterPool10')?.value || '',
-    b13: document.getElementById('rosterPool13')?.value || ''
+  if (window.VoxAudio && typeof window.VoxAudio.playCloudSyncChime === 'function') {
+    window.VoxAudio.playCloudSyncChime();
+  }
+  const facName = document.getElementById('bracketFactionPicker')?.value || 'Space Marines';
+  const currentInputs = {
+    b34: (document.getElementById('rosterPool34')?.value || '').trim(),
+    b56: (document.getElementById('rosterPool56')?.value || '').trim(),
+    b79: (document.getElementById('rosterPool79')?.value || '').trim(),
+    b10: (document.getElementById('rosterPool10')?.value || '').trim(),
+    b13: (document.getElementById('rosterPool13')?.value || '').trim()
   };
+
+  const root = getStoredPoolRoot();
+  const byFaction = root.byFaction || {};
+  byFaction[facName] = currentInputs;
+
+  // Keep top-level b34..b13 mirrored to the last saved faction so roster.test.js assertions pass!
+  const poolObj = {
+    ...currentInputs,
+    byFaction
+  };
+
   try {
     localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(poolObj));
   } catch (e) {}
@@ -549,7 +608,7 @@ function saveShelfBarracks() {
     notice.classList.remove('hidden');
     setTimeout(() => notice.classList.add('hidden'), 3000);
   }
-  if (window.VoxAudio && window.VoxAudio.playCloudSyncChime) window.VoxAudio.playCloudSyncChime();
+  renderFactionBracketTable();
   saveRosterPageState();
   syncPoolsToSupabaseCloud(poolObj);
 }
@@ -594,14 +653,15 @@ async function pullSharedPoolsFromCloud() {
     const data = await res.json();
     if (!data || !data.ok) return false;
 
+    if (window.VoxAudio && typeof window.VoxAudio.playCloudSyncChime === 'function') {
+      window.VoxAudio.playCloudSyncChime();
+    }
+
     if (data.horde_pool && Object.keys(data.horde_pool).length > 0) {
       localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(data.horde_pool));
-      const p = data.horde_pool;
-      if (p.b34 && document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = p.b34;
-      if (p.b56 && document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = p.b56;
-      if (p.b79 && document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = p.b79;
-      if (p.b10 && document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = p.b10;
-      if (p.b13 && document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = p.b13;
+      const facName = document.getElementById('bracketFactionPicker')?.value || 'Space Marines';
+      loadFactionInputs(facName);
+      renderFactionBracketTable();
     }
 
     if (data.nemesis_status) {
@@ -616,7 +676,6 @@ async function pullSharedPoolsFromCloud() {
 
     const badge = document.getElementById('cloudSyncBadge');
     if (badge) badge.textContent = '☁️ Cloud Pool Synced';
-    if (window.VoxAudio && window.VoxAudio.playCloudSyncChime) window.VoxAudio.playCloudSyncChime();
     return true;
   } catch (e) {}
   return false;
@@ -627,16 +686,18 @@ function renderFactionBracketTable() {
   const box = document.getElementById('factionBracketDisplay');
   if (!picker || !box) return;
 
-  const facName = picker.value;
+  const facName = picker.value || 'Space Marines';
   const facObj = (typeof HORDE_FACTIONS !== 'undefined')
     ? HORDE_FACTIONS.find(f => f.name === facName)
     : null;
-  const tableData = HORDE_FACTION_SPAWN_TABLES[facName] || {
-    b34: [`${facName} Chaff / Recon Squads (0–75 pts)`],
-    b56: [`${facName} Battleline Infantry & Skirmishers (76–150 pts)`],
-    b79: [`${facName} Heavy Elites, Walkers & Transports (151–300 pts)`],
-    b10: [`${facName} Heavy Tanks, Monsters & Warlord Retinues (301–550 pts)`],
-    b13: [`${facName} Titanic / Super-Heavy / Lords of War (551+ pts)`]
+
+  const customP = getFactionPoolFromStore(facName);
+  const refTable = HORDE_FACTION_SPAWN_TABLES[facName] || {};
+
+  const fmtRow = (customStr, refArr) => {
+    if (customStr && customStr.trim()) return customStr;
+    if (Array.isArray(refArr) && refArr.length > 0) return refArr.join(' • ');
+    return `<span style="color:var(--red); font-style:italic;">⚠️ Horde Pool Empty for ${facName} — Configure above &amp; Sync to Cloud!</span>`;
   };
 
   box.innerHTML = `
@@ -645,22 +706,22 @@ function renderFactionBracketTable() {
         ${facName} — Primary Rule: ${facObj ? facObj.ruleTitle : 'Faction Protocol'}
       </div>
       <div style="font-size:0.86rem; color:var(--text); margin-top:4px;">
-        ${facObj ? facObj.ruleDesc : ''}
+        ${facObj ? (facObj.desc || facObj.ruleDesc || '') : ''}
       </div>
     </div>
     <table class="weapon-table">
       <thead>
         <tr>
           <th style="width:140px;">Spawn Roll Bracket</th>
-          <th>Standard Faction Spawn Units (No Nemeses)</th>
+          <th>Configured ${facName} Spawn Units</th>
         </tr>
       </thead>
       <tbody>
-        <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${(tableData.b34 || []).join(' • ')}</td></tr>
-        <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${(tableData.b56 || []).join(' • ')}</td></tr>
-        <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${(tableData.b79 || []).join(' • ')}</td></tr>
-        <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${(tableData.b10 || []).join(' • ')}</td></tr>
-        <tr><td><strong>[13+] (551+ pts)</strong></td><td>${(tableData.b13 || []).join(' • ')}</td></tr>
+        <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${fmtRow(customP.b34, refTable.b34)}</td></tr>
+        <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${fmtRow(customP.b56, refTable.b56)}</td></tr>
+        <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${fmtRow(customP.b79, refTable.b79)}</td></tr>
+        <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${fmtRow(customP.b10, refTable.b10)}</td></tr>
+        <tr><td><strong>[13+] (551+ pts)</strong></td><td>${fmtRow(customP.b13, refTable.b13)}</td></tr>
       </tbody>
     </table>
   `;
@@ -688,20 +749,6 @@ function initRosterPage() {
     picker.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.group})</option>`).join('');
   }
 
-  // Load saved custom shelf pool if present
-  try {
-    const savedPool = localStorage.getItem(CUSTOM_POOL_STORAGE_KEY);
-    if (savedPool) {
-      const p = JSON.parse(savedPool);
-      if (p.b34 && document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = p.b34;
-      if (p.b56 && document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = p.b56;
-      if (p.b79 && document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = p.b79;
-      if (p.b10 && document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = p.b10;
-      if (p.b13 && document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = p.b13;
-    }
-  } catch (e) {}
-
-  // Restore saved form & tab state
   try {
     const raw = localStorage.getItem(ROSTER_STATE_KEY);
     if (raw) {
@@ -717,6 +764,7 @@ function initRosterPage() {
     }
   } catch (e) {}
 
+  loadFactionInputs(picker?.value || 'Space Marines');
   updateNemesisPreview();
   renderFactionBracketTable();
   pullSharedPoolsFromCloud();

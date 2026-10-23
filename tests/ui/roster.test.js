@@ -156,7 +156,11 @@ const evalFn = new Function(
     pullSharedPoolsFromCloud,
     renderFactionBracketTable,
     saveRosterPageState,
-    initRosterPage
+    initRosterPage,
+    getStoredPoolRoot,
+    getFactionPoolFromStore,
+    loadFactionInputs,
+    onFactionPickerChange
   };`
 );
 
@@ -328,5 +332,42 @@ test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supaba
   assert.equal(savedPool.b34, 'Cloud Gaunts 20');
 
   enableCloudMock = false;
+});
+
+test('roster: per-faction shelf pool storage preserves separate pools per faction', () => {
+  mockLocalStorage.clear();
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  mockElements.rosterPool34.value = '10 Hormagaunts';
+  mockElements.rosterPool56.value = '3 Warriors';
+  mockElements.rosterPool79.value = '1 Carnifex';
+  mockElements.rosterPool10.value = '1 Norn Emissary';
+  mockElements.rosterPool13.value = '1 Hierophant';
+  roster.saveShelfBarracks();
+
+  // Switch to Orks
+  mockElements.bracketFactionPicker.value = 'Orks';
+  mockElements.rosterPool34.value = '10 Boyz';
+  mockElements.rosterPool56.value = '5 Nobz';
+  mockElements.rosterPool79.value = '1 Battlewagon';
+  mockElements.rosterPool10.value = '1 Ghazghkull';
+  mockElements.rosterPool13.value = '1 Stompa';
+  roster.saveShelfBarracks();
+
+  // Verify stored JSON has byFaction
+  const root = roster.getStoredPoolRoot();
+  assert.ok(root.byFaction);
+  assert.equal(root.byFaction['Tyranids'].b34, '10 Hormagaunts');
+  assert.equal(root.byFaction['Orks'].b34, '10 Boyz');
+
+  // Switch faction picker back to Tyranids and trigger onFactionPickerChange
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  roster.onFactionPickerChange();
+  assert.equal(mockElements.rosterPool34.value, '10 Hormagaunts');
+  assert.equal(mockElements.rosterPool10.value, '1 Norn Emissary');
+
+  // Switch to an unconfigured faction and verify empty values
+  mockElements.bracketFactionPicker.value = 'Necrons';
+  roster.onFactionPickerChange();
+  assert.equal(mockElements.rosterPool34.value, '');
 });
 

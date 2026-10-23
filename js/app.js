@@ -962,36 +962,43 @@ if (typeof module !== 'undefined' && module.exports) {
     const box = document.getElementById('liveSpawnerBracketWindow');
     if (!box) return;
 
-    let pool = {
-      b34: '10 Hormagaunts, 10 Termagants, 10 Cultists, 3 Nurglings, 5 Barbgaunts',
-      b56: '10 Bloodletters, 10 Genestealers, 5 Chaos Terminators, 3 Tyranid Warriors, 10 Gargoyles',
-      b79: '1 Trygon, 1 Screamer-Killer, 1 Daemon Prince, 1 Chaos Predator, 6 Bloodcrushers',
-      b10: '1 Bloodthirster, 1 Norn Emissary, 1 Great Unclean One, 1 Tyrannofex + Hive Tyrant',
-      b13: '1 Baneblade, 1 Knight Castellan, 1 Hierophant Bio-Titan, 1 Lord of Skulls'
-    };
+    const facName = document.getElementById('hordeFactionSelect')?.value || '';
+    let pool = { b34: '', b56: '', b79: '', b10: '', b13: '' };
+
     try {
       const raw = localStorage.getItem('foa_custom_shelf_pool_v1');
-      if (raw) pool = { ...pool, ...JSON.parse(raw) };
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (facName && parsed.byFaction) {
+          pool = { ...pool, ...(parsed.byFaction[facName] || {}) };
+        } else if (!parsed.byFaction) {
+          pool = { ...pool, ...parsed };
+        }
+      }
     } catch (e) {}
+
+    const showVal = (val) => (val && val.trim())
+      ? val
+      : `<span style="color:var(--red); font-style:italic;">⚠️ Horde Pool Empty${facName ? ' for ' + facName : ''} — Configure in Mode 4 (Roster)!</span>`;
 
     box.innerHTML = `
       <div style="margin-bottom:6px; color:var(--muted); font-size:0.78rem;">
-        ☁️ <strong>Active Standard Horde Spawn Pool</strong> (Cloud-synced across both players via Supabase &amp; Room Code — excludes classified Nemesis/Adversary intrusions):
+        ☁️ <strong>Active Standard Horde Spawn Pool ${facName ? '(' + facName + ')' : ''}</strong>:
       </div>
       <table class="bracket-matrix-table">
         <thead>
           <tr>
             <th style="width:145px;">2D6 + Mod Bracket</th>
-            <th>Standard Horde Shelf Units (Rolled Deterministic by Room Seed)</th>
+            <th>Configured ${facName || 'Horde'} Shelf Units</th>
           </tr>
         </thead>
         <tbody>
           <tr><td><strong>[2] No Spawn</strong></td><td style="color:var(--muted);">Breach Holds (Unmodified 2 always spawns nothing)</td></tr>
-          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${pool.b34}</td></tr>
-          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${pool.b56}</td></tr>
-          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${pool.b79}</td></tr>
-          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${pool.b10} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
-          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${pool.b13} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${showVal(pool.b34)}</td></tr>
+          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${showVal(pool.b56)}</td></tr>
+          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${showVal(pool.b79)}</td></tr>
+          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
         </tbody>
       </table>
     `;
@@ -1055,14 +1062,15 @@ if (typeof module !== 'undefined' && module.exports) {
         card.style.borderColor = 'var(--red)';
         const alertDiv = document.createElement('div');
         alertDiv.className = 'warp-intrusion-alert';
+        alertDiv.style.textAlign = 'center';
         alertDiv.innerHTML = `
-          <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px;">
+          <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px; text-align:center;">
             ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${intrusionRoll} (5+) — ADVERSARY / NEMESIS HIJACK!]
           </div>
-          <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px;">
+          <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px; text-align:center;">
             Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
             <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'alpha')">📡 Ping Vox (The Exile)</button>
             <button type="button" class="btn-blue btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'beta')">📡 Ping Vox (Junebug)</button>
           </div>
@@ -1071,7 +1079,7 @@ if (typeof module !== 'undefined' && module.exports) {
       } else {
         const cleanNote = document.createElement('div');
         cleanNote.className = 'intrusion-badge-clean';
-        cleanNote.style.cssText = 'margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace;';
+        cleanNote.style.cssText = 'margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace; text-align:center;';
         cleanNote.textContent = `[Warp-Breach Intrusion Check: D6 = ${intrusionRoll} (Needed 5+) — Standard Horde Wave Holds]`;
         card.appendChild(cleanNote);
       }
@@ -1093,6 +1101,15 @@ if (typeof module !== 'undefined' && module.exports) {
       window.rollAllSpawnZones = function () {
         const res = origRollAll.apply(this, arguments);
         evaluateWarpBreachIntrusions();
+        return res;
+      };
+    }
+
+    if (typeof window.manualChangeFaction === 'function') {
+      const origManualFaction = window.manualChangeFaction;
+      window.manualChangeFaction = function () {
+        const res = origManualFaction.apply(this, arguments);
+        renderLiveSpawnerBracketTable();
         return res;
       };
     }
