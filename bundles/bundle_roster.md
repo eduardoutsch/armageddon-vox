@@ -254,7 +254,14 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
       <label class="hud-label" style="display:block; margin-bottom:4px;">5. Eye-Witness Combat Log (What Happened on the Table?)</label>
       <textarea id="nemReportNotes" oninput="updateNemesisPreview()" placeholder="Describe how this enemy unit earned its infamy (e.g., 'Spawned in Zone 2, survived two Vanquisher shots on 1 Wound, and ate Dreir's Death Riders in Round 5')..." style="width:100%; min-height:74px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
 
-      <div class="dossier-preview-box" id="nemDossierPreview"></div>
+      <div class="dossier-preview-box" id="nemDossierPreview">+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++
+• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH
+• THEATRE &amp; MODE: Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)
+• HOSTILE DATASHEET / FACTION: [Unspecified Hostile Entity]
+• TRIGGERING FEAT: Slain a Player Warlord / Character in combat
+• EYE-WITNESS COMBAT LOG: "Survived engagement and demonstrated anomalous lethality."
+------------------------------------------------
+REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (AGENT.md) and emit a CRT Vox-Dispatch christening its permanent Name, Title, Lore, and Boss Battle Trait!</div>
 
       <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitNemesisDossier()" style="margin-top:8px;">
         📡 Transmit Directly via Astropathic Vox →
@@ -438,51 +445,10 @@ const CUSTOM_POOL_STORAGE_KEY = 'foa_custom_shelf_pool_v1';
 const SUPABASE_URL = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
 
-// Complete 23-Faction Standard Horde Spawn Bracket Matrix
-const HORDE_FACTION_SPAWN_TABLES = {
-  "Space Marines": {
-    b34: ["5 Scout Squad", "5 Assault Intercessors", "5 Infernus Squad", "3 Outriders", "1 Invader ATV"],
-    b56: ["10 Intercessor Squad", "5 Hellblasters", "3 Bladeguard Veterans", "5 Jump Pack Intercessors", "1 Ballistus Dreadnought"],
-    b79: ["5 Terminator Squad + Captain", "6 Aggressor Squad", "1 Redemptor Dreadnought", "1 Gladiator Lancer", "1 Repulsor"],
-    b10: ["1 Land Raider Redeemer + 6 Bladeguard", "10 Terminators + Chaplain", "1 Roboute Guilliman / Chapter Master Retinue"],
-    b13: ["1 Astraeus Super-heavy Tank", "1 Thunderhawk Gunship", "1 Warlord Titan Battlegroup Support"]
-  },
-  "Tyranids": {
-    b34: ["10 Termagants", "10 Hormagaunts", "5 Barbgaunts", "10 Gargoyles", "3 Von Ryan's Leapers"],
-    b56: ["10 Genestealers + Broodlord", "3 Tyranid Warriors", "3 Zoanthropes", "1 Lictor", "1 Biovore + Pyrovores"],
-    b79: ["1 Screamer-Killer", "1 Trygon", "1 Exocrine", "1 Haruspex", "1 Maleceptor"],
-    b10: ["1 Norn Emissary", "1 Hive Tyrant + 3 Tyrant Guard", "1 Tyrannofex + 1 Psychophage"],
-    b13: ["1 Hierophant Bio-Titan", "1 Harridan Sky-Terror", "1 Scythed Hierodule"]
-  },
-  "Chaos Daemons": {
-    b34: ["3 Nurglings", "10 Blue Horrors", "5 Flesh Hounds", "3 Screamers", "5 Seekers"],
-    b56: ["10 Bloodletters", "10 Plaguebearers", "10 Daemonettes", "10 Pink Horrors", "3 Flamers"],
-    b79: ["6 Bloodcrushers", "1 Daemon Prince of Chaos", "1 Soul Grinder", "3 Fiends + Contorted Epitome"],
-    b10: ["1 Bloodthirster", "1 Great Unclean One", "1 Lord of Change", "1 Keeper of Secrets"],
-    b13: ["1 An'ggrath the Unbound", "1 Scabeiathrax the Bloated", "1 Aetaos'rau'keres", "1 Zarakynel"]
-  },
-  "Orks": {
-    b34: ["10 Gretchin + Runtherd", "10 Boyz", "5 Stormboyz", "3 Warbikers", "1 Deffkopta"],
-    b56: ["20 Boyz + Warboss", "10 Beast Snagga Boyz", "5 Nobz + Trukk", "3 Meganobz", "1 Deff Dread"],
-    b79: ["1 Battlewagon + 10 Nobz", "1 Kill Rig", "6 Squighog Boyz + Beastboss", "1 Gorkanaut"],
-    b10: ["1 Ghazghkull Thraka + 6 Meganobz", "1 Morkanaut + Mek", "1 Gargantuan Squiggoth"],
-    b13: ["1 Stompa", "2 Stompa Mob", "1 Great Gargant Support"]
-  },
-  "Necrons": {
-    b34: ["10 Necron Warriors", "5 Flayed Ones", "3 Canoptek Scarab Swarms", "5 Deathmarks", "3 Ophydian Destroyers"],
-    b56: ["10 Immortals + Chronomancer", "3 Skorpekh Destroyers", "3 Canoptek Wraiths", "1 Canoptek Doomstalker", "1 Triarch Stalker"],
-    b79: ["10 Lychguard + Overlord", "1 Doomsday Ark", "6 Lokhust Destroyers", "1 C'tan Shard of the Nightbringer"],
-    b10: ["1 Monolith", "1 C'tan Shard of the Void Dragon", "1 Silent King (Szarekh)"],
-    b13: ["1 Tesseract Vault", "1 Seraptek Heavy Construct", "1 Obelisk + Monolith Phalanx"]
-  },
-  "Chaos Space Marines": {
-    b34: ["10 Cultist Mob", "5 Legionaries", "5 Raptors", "8 Accursed Cultists", "3 Chaos Bikers"],
-    b56: ["10 Legionaries + Chaos Lord", "5 Chosen + Rhino", "5 Possessed", "5 Havocs", "1 Helbrute"],
-    b79: ["5 Chaos Terminators + Sorcerer", "1 Forgefiend", "1 Maulerfiend", "1 Venomcrawler + 2 Obliterators"],
-    b10: ["1 Chaos Land Raider + 10 Chosen", "1 Abaddon the Despoiler + 5 Terminators", "1 Vashtorr the Arkifane"],
-    b13: ["1 Khorne Lord of Skulls", "2 Khorne Lords of Skulls", "1 Chaos Warhound Titan"]
-  }
-};
+// Canonical 23-Faction Standard Horde Spawn Bracket Matrix is loaded from data.js
+const ROSTER_SPAWN_TABLES = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
+  ? HORDE_FACTION_SPAWN_TABLES
+  : ((typeof window !== 'undefined' && window.HORDE_FACTION_SPAWN_TABLES) ? window.HORDE_FACTION_SPAWN_TABLES : {});
 
 let activeRosterTab = 'nemesis';
 
@@ -692,7 +658,8 @@ function renderFactionBracketTable() {
     : null;
 
   const customP = getFactionPoolFromStore(facName);
-  const refTable = HORDE_FACTION_SPAWN_TABLES[facName] || {};
+  const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined') ? HORDE_FACTION_SPAWN_TABLES : ROSTER_SPAWN_TABLES;
+  const refTable = tables[facName] || {};
 
   const fmtRow = (customStr, refArr) => {
     if (customStr && customStr.trim()) return customStr;

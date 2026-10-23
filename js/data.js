@@ -337,6 +337,15 @@ const HORDE_FACTION_SPAWN_TABLES = {
   }
 };
 
+// Browser global exposure
+if (typeof window !== 'undefined') {
+  window.HORDE_FACTIONS = HORDE_FACTIONS;
+  window.OBJECTIVES = OBJECTIVES;
+  window.MISERIES = MISERIES;
+  window.HARD_MODE_ROUNDS = HARD_MODE_ROUNDS;
+  window.HORDE_FACTION_SPAWN_TABLES = HORDE_FACTION_SPAWN_TABLES;
+}
+
 // Dual export for Node.js test runner and browser global scope
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {

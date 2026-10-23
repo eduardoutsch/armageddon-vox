@@ -7,10 +7,10 @@ const ROOT_DIR = path.resolve(__dirname, '../../');
 const ROSTER_HTML_PATH = path.join(ROOT_DIR, 'pages/roster.html');
 const DATA_JS_PATH = path.join(ROOT_DIR, 'js/data.js');
 
-// Load HORDE_FACTIONS from js/data.js
+// Load HORDE_FACTIONS and HORDE_FACTION_SPAWN_TABLES from js/data.js
 const dataJsCode = fs.readFileSync(DATA_JS_PATH, 'utf8');
-const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS };`);
-const { HORDE_FACTIONS } = dataFn();
+const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES };`);
+const { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES } = dataFn();
 
 // Read roster.html and extract script block
 const rosterHtml = fs.readFileSync(ROSTER_HTML_PATH, 'utf8');
@@ -141,12 +141,13 @@ const evalFn = new Function(
   'window',
   'localStorage',
   'HORDE_FACTIONS',
+  'HORDE_FACTION_SPAWN_TABLES',
   'console',
   'fetch',
   `${rosterScriptCode}; return {
     ROSTER_STATE_KEY,
     CUSTOM_POOL_STORAGE_KEY,
-    HORDE_FACTION_SPAWN_TABLES,
+    HORDE_FACTION_SPAWN_TABLES: (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined' ? HORDE_FACTION_SPAWN_TABLES : (window && window.HORDE_FACTION_SPAWN_TABLES)),
     switchRosterTab,
     buildNemesisDossierString,
     updateNemesisPreview,
@@ -164,7 +165,34 @@ const evalFn = new Function(
   };`
 );
 
-const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console, mockFetch);
+const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES, console, mockFetch);
+
+test('roster: runs cleanly in browser global scope alongside data.js without syntax errors and populates preview', () => {
+  // Test sequential script execution in shared scope to verify no duplicate declarations
+  const runner = new Function(
+    'document',
+    'window',
+    'localStorage',
+    'console',
+    'fetch',
+    `
+    ${dataJsCode}
+    ${rosterScriptCode}
+    return {
+      initRosterPage,
+      updateNemesisPreview,
+      switchRosterTab,
+      buildNemesisDossierString
+    };
+    `
+  );
+  assert.doesNotThrow(() => {
+    const res = runner(mockDocument, mockWindow, mockLocalStorage, console, mockFetch);
+    assert.ok(res.switchRosterTab, 'switchRosterTab must be defined');
+    res.initRosterPage();
+    assert.ok(mockElements.nemDossierPreview.textContent.includes('ORDO MALLEUS'), 'Preview must have text');
+  }, 'Must not throw SyntaxError when data.js and roster.html run together');
+});
 
 test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for factions', () => {
   assert.ok(roster.HORDE_FACTION_SPAWN_TABLES, 'Must define HORDE_FACTION_SPAWN_TABLES');
