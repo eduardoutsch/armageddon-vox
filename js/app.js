@@ -356,19 +356,46 @@ function resolveRoomSyncedFaction(code) {
 }
 
 function manualChangeFaction() {
-  const val = document.getElementById('hordeFactionSelect').value;
+  const val = document.getElementById('hordeFactionSelect')?.value;
   activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
   renderFactionReminderBanner();
+
+  // Clear stale spawns from previous faction so user never sees mismatched cards
+  currentZoneSpawns = [];
+  const spawnContainer = document.getElementById('spawnResultsContainer');
+  if (spawnContainer) {
+    spawnContainer.innerHTML = `
+      <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+        <p class="card-desc">Horde faction updated to ${activeHordeFaction.name}. Tap the green button above to roll synchronized spawns.</p>
+      </div>
+    `;
+  }
+  saveSessionState();
+}
+
+function onChangeSpawnZoneCount() {
+  currentZoneSpawns = [];
+  const spawnContainer = document.getElementById('spawnResultsContainer');
+  if (spawnContainer) {
+    spawnContainer.innerHTML = `
+      <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+        <p class="card-desc">Spawn zone count updated. Tap the green button above to roll synchronized spawns.</p>
+      </div>
+    `;
+  }
   saveSessionState();
 }
 
 function renderFactionReminderBanner() {
-  document.getElementById('activeFactionBannerTitle').innerText = `HORDE FACTION: ${activeHordeFaction.name} — "${activeHordeFaction.ruleTitle}"`;
-  document.getElementById('activeFactionBannerDesc').innerText = activeHordeFaction.desc;
+  if (!activeHordeFaction) return;
+  const t = document.getElementById('activeFactionBannerTitle');
+  if (t) t.innerText = `HORDE FACTION: ${activeHordeFaction.name} — "${activeHordeFaction.ruleTitle}"`;
+  const d = document.getElementById('activeFactionBannerDesc');
+  if (d) d.innerText = activeHordeFaction.desc;
 }
 
 function startSession() {
-  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const code = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
   const mode = selectedModeVal;
   const role = selectedRoleVal;
 
@@ -391,10 +418,12 @@ function startSession() {
 
   if (isSoloMode) {
     personalSecretDeck = shuffledSecrets;
-    document.getElementById('secretPoolNotice').innerText = `Solo Deck (${personalSecretDeck.length} valid cards; Multiplayer blocked)`;
+    const n = document.getElementById('secretPoolNotice');
+    if (n) n.innerText = `Solo Deck (${personalSecretDeck.length} valid cards; Multiplayer blocked)`;
   } else {
     personalSecretDeck = (role === "1") ? shuffledSecrets.slice(0, 17) : shuffledSecrets.slice(17, 34);
-    document.getElementById('secretPoolNotice').innerText = `Co-op Split Pool (${personalSecretDeck.length} cards)`;
+    const n = document.getElementById('secretPoolNotice');
+    if (n) n.innerText = `Co-op Split Pool (${personalSecretDeck.length} cards)`;
   }
 
   sharedMiseryDeck = seededShuffle(MISERIES, rngMisery);
@@ -408,11 +437,23 @@ function startSession() {
   spGainedThisRound = 0;
   cp = 2;
   stratCount = 0;
+  currentZoneSpawns = [];
+
+  const spawnContainer = document.getElementById('spawnResultsContainer');
+  if (spawnContainer) {
+    spawnContainer.innerHTML = `
+      <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+        <p class="card-desc">Tap the green button above to generate synchronized brackets and units for each Spawn Zone.</p>
+      </div>
+    `;
+  }
 
   loadCustomPool();
 
-  document.getElementById('setupScreen').classList.add('hidden');
-  document.getElementById('gameScreen').classList.remove('hidden');
+  const setupScreen = document.getElementById('setupScreen');
+  if (setupScreen) setupScreen.classList.add('hidden');
+  const gameScreen = document.getElementById('gameScreen');
+  if (gameScreen) gameScreen.classList.remove('hidden');
 
   currentChoices = drawSecretCards(2);
   renderSecretChoices("Select 1 Initial Secret Objective");
@@ -679,15 +720,15 @@ function rollAllSpawnZones() {
   if (battleRound === 6) {
     return alert("Battle Round 6 (Hard Mode Final Stand): Do NOT roll Spawn Rolls in Round 6!");
   }
-  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+  const code = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
   const effRound = Math.max(1, battleRound);
-  const numZones = parseInt(document.getElementById('spawnZoneCountSelect').value, 10);
-  const fac = activeHordeFaction.name;
-  const extraMod = parseInt(document.getElementById('extraSpawnMod').value, 10) || 0;
-  const jammerActive = document.getElementById('jammerCheck').checked;
+  const numZones = parseInt(document.getElementById('spawnZoneCountSelect')?.value || '3', 10);
+  const fac = activeHordeFaction ? activeHordeFaction.name : (document.getElementById('hordeFactionSelect')?.value || 'Chaos Daemons');
+  const extraMod = parseInt(document.getElementById('extraSpawnMod')?.value, 10) || 0;
+  const jammerActive = !!document.getElementById('jammerCheck')?.checked;
   const unluckyNightActive = activeMiseries.some(m => m.id === 7);
-  const firstBonus6 = document.getElementById('firstRollBonusCheck').checked;
-  const firstBonus12 = document.getElementById('baitTrapBonusCheck').checked;
+  const firstBonus6 = !!document.getElementById('firstRollBonusCheck')?.checked;
+  const firstBonus12 = !!document.getElementById('baitTrapBonusCheck')?.checked;
 
   const rndIndex = Math.max(1, Math.min(effRound, 5));
   let baseRoundMod = HARD_MODE_ROUNDS[rndIndex].spawnModNum;
@@ -887,9 +928,59 @@ function renderResupplyTable() {
 
 function leaveSession() {
   if (typeof confirm === 'function' && !confirm("Exit current battle terminal?")) return;
-  document.getElementById('gameScreen').classList.add('hidden');
-  document.getElementById('setupScreen').classList.remove('hidden');
+  const gameScreen = document.getElementById('gameScreen');
+  if (gameScreen) gameScreen.classList.add('hidden');
+  const setupScreen = document.getElementById('setupScreen');
+  if (setupScreen) setupScreen.classList.remove('hidden');
   saveSessionState();
+}
+
+function clearSpawnerResults() {
+  currentZoneSpawns = [];
+  const spawnContainer = document.getElementById('spawnResultsContainer');
+  if (spawnContainer) {
+    spawnContainer.innerHTML = `
+      <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+        <p class="card-desc">Tap the green button above to generate synchronized brackets and units for each Spawn Zone.</p>
+      </div>
+    `;
+  }
+  saveSessionState();
+}
+
+function resetMatchToSetup() {
+  if (typeof confirm === 'function' && !confirm("Reset current battle and spawner to mission setup? All active round progress, objectives, and spawn cards will be cleared.")) {
+    return;
+  }
+  clearSessionState();
+  currentZoneSpawns = [];
+  battleRound = 0;
+  activeCard = null;
+  activeMiseries = [];
+  activeSecondaries = [];
+  personalSecretDeck = [];
+  sharedMiseryDeck = [];
+  sharedSecondaryDeck = [];
+  currentChoices = [];
+  sp = 0;
+  spGainedThisRound = 0;
+  cp = 2;
+  stratCount = 0;
+
+  const spawnContainer = document.getElementById('spawnResultsContainer');
+  if (spawnContainer) {
+    spawnContainer.innerHTML = `
+      <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+        <p class="card-desc">Tap the green button above to generate synchronized brackets and units for each Spawn Zone.</p>
+      </div>
+    `;
+  }
+
+  const setupScreen = document.getElementById('setupScreen');
+  if (setupScreen) setupScreen.classList.remove('hidden');
+  const gameScreen = document.getElementById('gameScreen');
+  if (gameScreen) gameScreen.classList.add('hidden');
+  switchTab(1, false);
 }
 
 // Dual export for Node.js test runner and browser environment
@@ -899,6 +990,7 @@ if (typeof module !== 'undefined' && module.exports) {
     selectRole,
     resolveRoomSyncedFaction,
     manualChangeFaction,
+    onChangeSpawnZoneCount,
     renderFactionReminderBanner,
     startSession,
     updateHUD,
@@ -908,6 +1000,8 @@ if (typeof module !== 'undefined' && module.exports) {
     spendCPForStrat,
     buyResupply,
     leaveSession,
+    clearSpawnerResults,
+    resetMatchToSetup,
     saveSessionState,
     restoreSessionState,
     clearSessionState,
@@ -1095,23 +1189,30 @@ if (typeof module !== 'undefined' && module.exports) {
     window.renderLiveSpawnerBracketTable = renderLiveSpawnerBracketTable;
     window.transmitHordeIntrusionPing = transmitHordeIntrusionPing;
     window.evaluateWarpBreachIntrusions = evaluateWarpBreachIntrusions;
+    window.resetMatchToSetup = resetMatchToSetup;
+    window.clearSpawnerResults = clearSpawnerResults;
+    window.onChangeSpawnZoneCount = onChangeSpawnZoneCount;
 
-    if (typeof window.rollAllSpawnZones === 'function') {
+    if (typeof window.rollAllSpawnZones === 'function' && !window.rollAllSpawnZones._hasIntrusionHook) {
       const origRollAll = window.rollAllSpawnZones;
-      window.rollAllSpawnZones = function () {
+      const wrappedRollAll = function () {
         const res = origRollAll.apply(this, arguments);
         evaluateWarpBreachIntrusions();
         return res;
       };
+      wrappedRollAll._hasIntrusionHook = true;
+      window.rollAllSpawnZones = wrappedRollAll;
     }
 
-    if (typeof window.manualChangeFaction === 'function') {
+    if (typeof window.manualChangeFaction === 'function' && !window.manualChangeFaction._hasBracketRenderHook) {
       const origManualFaction = window.manualChangeFaction;
-      window.manualChangeFaction = function () {
+      const wrappedManual = function () {
         const res = origManualFaction.apply(this, arguments);
         renderLiveSpawnerBracketTable();
         return res;
       };
+      wrappedManual._hasBracketRenderHook = true;
+      window.manualChangeFaction = wrappedManual;
     }
 
     window.addEventListener('DOMContentLoaded', () => {

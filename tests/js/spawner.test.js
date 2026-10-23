@@ -125,3 +125,24 @@ test('pickSyncedUnitFromBracket: resolves per-faction pool from byFaction in loc
   delete globalThis.localStorage;
   delete globalThis.document;
 });
+
+test('pickSyncedUnitFromBracket: falls back to canonical HORDE_FACTION_SPAWN_TABLES when custom storage is empty', () => {
+  const { HORDE_FACTION_SPAWN_TABLES } = require('../../js/data.js');
+  globalThis.HORDE_FACTION_SPAWN_TABLES = HORDE_FACTION_SPAWN_TABLES;
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'hordeFactionSelect') return { value: 'World Eaters' };
+      return null;
+    }
+  };
+
+  const rng = mulberry32(77);
+  const picked10 = pickSyncedUnitFromBracket('10-12', rng);
+  assert.ok(
+    HORDE_FACTION_SPAWN_TABLES['World Eaters'].b10.includes(picked10),
+    `Expected unit from World Eaters b10, got: ${picked10}`
+  );
+
+  delete globalThis.HORDE_FACTION_SPAWN_TABLES;
+  delete globalThis.document;
+});

@@ -383,4 +383,68 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusi
   assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
 });
 
+test('app: startSession clears currentZoneSpawns and resets spawnResultsContainer placeholder', () => {
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = '<div class="card spawn-zone">Stale Chaos Daemons Roll</div>';
+
+  app.startSession();
+
+  assert.ok(container.innerHTML.includes('Tap the green button above'));
+});
+
+test('app: manualChangeFaction updates activeHordeFaction and clears stale spawn results', () => {
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = '<div class="card spawn-zone">Old Faction Spawn Zone</div>';
+  document.getElementById('hordeFactionSelect').value = 'World Eaters';
+
+  app.manualChangeFaction();
+
+  assert.ok(container.innerHTML.includes('Horde faction updated to World Eaters'));
+  assert.equal(container.innerHTML.includes('Old Faction Spawn Zone'), false);
+});
+
+test('app: onChangeSpawnZoneCount clears spawns and prompts for fresh rolls', () => {
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = '<div class="card spawn-zone">3 Zone Roll</div>';
+
+  app.onChangeSpawnZoneCount();
+
+  assert.ok(container.innerHTML.includes('Spawn zone count updated'));
+});
+
+test('app: clearSpawnerResults and resetMatchToSetup clear session data and spawner state', () => {
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = '<div class="card spawn-zone">Zone 1</div>';
+
+  app.clearSpawnerResults();
+  assert.ok(container.innerHTML.includes('Tap the green button above'));
+
+  // Test resetMatchToSetup returns to setupScreen
+  globalThis.confirm = () => true;
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+
+  app.resetMatchToSetup();
+
+  assert.equal(document.getElementById('setupScreen').classList.contains('hidden'), false);
+  assert.equal(document.getElementById('gameScreen').classList.contains('hidden'), true);
+});
+
+test('app: rollAllSpawnZones rolls configured number of zones without throwing and renders cards', () => {
+  document.getElementById('seedInput').value = 'HADES-TEST';
+  document.getElementById('spawnZoneCountSelect').value = '5';
+  document.getElementById('hordeFactionSelect').value = 'World Eaters';
+  document.getElementById('extraSpawnMod').value = '0';
+  document.getElementById('jammerCheck').checked = false;
+  document.getElementById('firstRollBonusCheck').checked = false;
+  document.getElementById('baitTrapBonusCheck').checked = false;
+
+  const container = document.getElementById('spawnResultsContainer');
+
+  app.rollAllSpawnZones();
+
+  assert.ok(container.innerHTML.includes('Spawn Zone 1'));
+  assert.ok(container.innerHTML.includes('Spawn Zone 5'));
+});
+
 

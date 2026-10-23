@@ -80,8 +80,22 @@ function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
     } catch (e) {}
   }
   if (!raw && typeof document !== 'undefined') {
-    const el = document.getElementById(idMap[bracketKey]);
+    const el = document.getElementById(idMap[bracketKey]) || document.getElementById('rosterPool' + mapKey.slice(1));
     raw = el ? (el.value || '') : '';
+  }
+
+  // Canonical default faction spawn table fallback from js/data.js
+  const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
+    ? HORDE_FACTION_SPAWN_TABLES
+    : (typeof window !== 'undefined' && window.HORDE_FACTION_SPAWN_TABLES ? window.HORDE_FACTION_SPAWN_TABLES : null);
+
+  if (!raw && activeFaction && tables && tables[activeFaction]) {
+    const defaultUnits = tables[activeFaction][mapKey];
+    if (Array.isArray(defaultUnits) && defaultUnits.length > 0) {
+      raw = defaultUnits.join(', ');
+    } else if (typeof defaultUnits === 'string') {
+      raw = defaultUnits;
+    }
   }
 
   const list = raw.split(',').map(s => s.trim()).filter(Boolean);

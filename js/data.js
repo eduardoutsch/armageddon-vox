@@ -172,6 +172,171 @@ const HARD_MODE_ROUNDS = [
   { misery: 3, spawnModNum: -99, spawnMod: "NO SPAWNS • Final Horde Onslaught!" }
 ];
 
+// 7. CANONICAL DEFAULT HORDE SPAWN TABLES FOR ALL 23 OFFICIAL FACTIONS
+const HORDE_FACTION_SPAWN_TABLES = {
+  "Space Marines": {
+    b34: ["5 Scout Squad", "5 Assault Intercessors", "5 Infernus Squad", "3 Outriders", "1 Invader ATV"],
+    b56: ["10 Intercessor Squad", "5 Hellblasters", "3 Bladeguard Veterans", "5 Jump Pack Intercessors", "1 Ballistus Dreadnought"],
+    b79: ["5 Terminator Squad + Captain", "6 Aggressor Squad", "1 Redemptor Dreadnought", "1 Gladiator Lancer", "1 Repulsor"],
+    b10: ["1 Land Raider Redeemer + 6 Bladeguard", "10 Terminators + Chaplain", "1 Roboute Guilliman / Chapter Master Retinue"],
+    b13: ["1 Astraeus Super-heavy Tank", "1 Thunderhawk Gunship", "1 Warlord Titan Battlegroup Support"]
+  },
+  "Adepta Sororitas": {
+    b34: ["10 Battle Sisters Squad", "5 Seraphim Squad", "10 Sisters Novitiate", "1 Sororitas Rhino", "1 Mortifier"],
+    b56: ["10 Dominion Squad + Immolator", "5 Zephyrim Squad", "5 Celestian Sacresants", "1 Castigator Tank", "1 Exorcist"],
+    b79: ["3 Paragon Warsuits + Morvenn Vahl", "10 Repentia + Mistress", "1 Triumph of Saint Katherine", "2 Penitent Engines"],
+    b10: ["Morvenn Vahl + 3 Paragon Warsuits", "1 Saint Celestine + 10 Zephyrim", "1 Exorcist Battery Phalanx"],
+    b13: ["1 Sororitas Sanctum Super-Heavy", "1 Thunderhawk Transporter", "1 Warhound Titan Empyric Purifier"]
+  },
+  "Adeptus Custodes": {
+    b34: ["4 Custodian Guard Squad", "5 Prosecutors (Sisters of Silence)", "5 Witchseekers", "1 Allarus Terminator"],
+    b56: ["5 Custodian Wardens", "3 Allarus Custodians", "2 Vertus Praetors", "1 Venerable Contemptor Dreadnought"],
+    b79: ["6 Custodian Wardens + Blade Champion", "1 Caladius Grav-tank", "1 Achillus Contemptor", "1 Telemon Heavy Dreadnought"],
+    b10: ["Trajann Valoris + 5 Wardens", "1 Telemon Heavy Dreadnought + Caladius", "1 Land Raider Venerable"],
+    b13: ["1 Orion Assault Dropship", "1 Ares Gunship", "1 Legio Custodes Titan Battle-Asset"]
+  },
+  "Adeptus Mechanicus": {
+    b34: ["10 Skitarii Vanguard", "10 Skitarii Rangers", "5 Pteraxii Skystalkers", "3 Sydonian Dragoons", "3 Serberys Raiders"],
+    b56: ["6 Kataphron Breachers", "5 Sicarian Ruststalkers", "1 Onager Dunecrawler", "1 Skorpius Disintegrator"],
+    b79: ["6 Kataphron Destroyers + Tech-Priest Dominus", "2 Kastelan Robots + Datasmith", "1 Skorpius Dunerider + Electro-Priests"],
+    b10: ["Belisarius Cawl + 6 Breachers", "4 Kastelan Robots + Datasmith", "1 Dunecrawler Battery"],
+    b13: ["1 Knight Castellan Mechanicus", "1 Ordinatus Minoris Siege Engine", "1 Titan Battlegroup Support"]
+  },
+  "Astra Militarum": {
+    b34: ["10 Cadian Shock Troops", "10 Catachan Jungle Fighters", "10 Death Korps of Krieg", "1 Scout Sentinel", "1 Heavy Weapons Squad"],
+    b56: ["20 Cadian Shock Troops + Command Squad", "1 Rogal Dorn Battle Tank", "1 Leman Russ Demolisher", "2 Armoured Sentinels", "1 Chimera + 10 Kasrkin"],
+    b79: ["1 Lord Solar Leontus + Retinue", "1 Leman Russ Battle Tank + Leman Russ Executioner", "1 Rogal Dorn Battle Tank + Techpriest", "3 Basilisk Artillery Battery"],
+    b10: ["1 Baneblade Super-Heavy Tank", "1 Shadowsword Titan-Killer", "1 Stormsword Siege Tank"],
+    b13: ["1 Banesword Super-Heavy", "1 Mars-Pattern Warhound Titan", "1 Emperor's Fist Tank Company"]
+  },
+  "Grey Knights": {
+    b34: ["5 Strike Squad", "5 Interceptor Squad", "5 Purifier Squad", "1 Razorback"],
+    b56: ["5 Terminator Squad", "5 Paladin Squad", "1 Nemesis Dreadknight", "1 Brotherhood Librarian"],
+    b79: ["1 Nemesis Dreadknight (Grand Master)", "10 Paladins + Grand Master Voldus", "1 Grey Knights Land Raider Redeemer"],
+    b10: ["1 Kaldor Draigo + 5 Paladins", "2 Nemesis Dreadknights", "1 Grand Master in Nemesis Dreadknight + Retinue"],
+    b13: ["1 Grey Knights Thunderhawk Gunship", "3 Nemesis Dreadknight Strike Force", "1 Warlord Titan Banisher Protocol"]
+  },
+  "Imperial Agents": {
+    b34: ["10 Imperial Navy Breachers", "10 Exaction Squad (Arbites)", "10 Subductor Squad", "1 Eversor Assassin", "1 Callidus Assassin"],
+    b56: ["1 Inquisitor + 4 Henchmen", "1 Culexus Assassin", "1 Vindicare Assassin", "1 Imperial Chimera + 10 Breachers"],
+    b79: ["1 Inquisitor Greyfax + 10 Kasrkin Inquisitorial Retinue", "1 Corvus Blackstar + 5 Deathwatch Veterans", "1 Deathwatch Kill Team"],
+    b10: ["1 Inquisitor Lord Karamazov + Retinue", "1 Deathwatch Watch Master + 10 Veterans", "1 Blackstar Air Wing"],
+    b13: ["1 Ordo Malleus Requisitioned Titan", "1 Inquisitorial Black Ship Orbital Lance", "1 Void Station Gun Battery"]
+  },
+  "Imperial Knights": {
+    b34: ["1 Armiger Helverin", "1 Armiger Warglaive"],
+    b56: ["2 Armiger Helverins", "2 Armiger Warglaives", "1 Armiger Helverin + 1 Warglaive"],
+    b79: ["1 Knight Paladin", "1 Knight Errant", "1 Knight Crusader", "1 Knight Warden"],
+    b10: ["1 Knight Castellan", "1 Knight Valiant", "1 Canis Rex + Sir Hekhtur"],
+    b13: ["1 Acastus Knight Porphyrion", "1 Acastus Knight Asterius", "1 Warmaster Iconoclast Titan"]
+  },
+  "Chaos Space Marines": {
+    b34: ["10 Cultist Mob", "5 Legionaries", "5 Raptors", "8 Accursed Cultists", "3 Chaos Bikers"],
+    b56: ["10 Legionaries + Chaos Lord", "5 Chosen + Rhino", "5 Possessed", "5 Havocs", "1 Helbrute"],
+    b79: ["5 Chaos Terminators + Sorcerer", "1 Forgefiend", "1 Maulerfiend", "1 Venomcrawler + 2 Obliterators"],
+    b10: ["1 Chaos Land Raider + 10 Chosen", "1 Abaddon the Despoiler + 5 Terminators", "1 Vashtorr the Arkifane"],
+    b13: ["1 Khorne Lord of Skulls", "2 Khorne Lords of Skulls", "1 Chaos Warhound Titan"]
+  },
+  "Chaos Daemons": {
+    b34: ["3 Nurglings", "10 Blue Horrors", "5 Flesh Hounds", "3 Screamers", "5 Seekers"],
+    b56: ["10 Bloodletters", "10 Plaguebearers", "10 Daemonettes", "10 Pink Horrors", "3 Flamers"],
+    b79: ["6 Bloodcrushers", "1 Daemon Prince of Chaos", "1 Soul Grinder", "3 Fiends + Contorted Epitome"],
+    b10: ["1 Bloodthirster", "1 Great Unclean One", "1 Lord of Change", "1 Keeper of Secrets", "1 Be'lakor the Dark Master"],
+    b13: ["1 An'ggrath the Unbound", "1 Scabeiathrax the Bloated", "1 Aetaos'rau'keres", "1 Zarakynel"]
+  },
+  "Chaos Knights": {
+    b34: ["1 War Dog Brigand", "1 War Dog Karnivore", "1 War Dog Stalker"],
+    b56: ["2 War Dog Brigands", "2 War Dog Karnivores", "2 War Dog Executioners"],
+    b79: ["1 Knight Abominant", "1 Knight Desecrator", "1 Knight Rampager"],
+    b10: ["1 Knight Tyrant", "1 Knight Despoiler + War Dog Stalker", "1 Chaos Knight Lancer"],
+    b13: ["1 Chaos Warhound Titan", "1 Acastus Knight Porphyrion Despoiler", "1 Warmaster Titan Corrupted"]
+  },
+  "Death Guard": {
+    b34: ["10 Poxwalkers", "10 Death Guard Cultists", "5 Plague Marines", "1 Foetid Bloat-drone"],
+    b56: ["10 Plague Marines + Rhino", "3 Deathshroud Terminators", "1 Plagueburst Crawler", "1 Myphitic Blight-hauler"],
+    b79: ["5 Blightlord Terminators + Lord of Contagion", "2 Plagueburst Crawlers", "1 Daemon Prince of Nurgle with Wings"],
+    b10: ["1 Mortarion (Daemon Primarch of Nurgle)", "1 Death Guard Land Raider + 3 Deathshroud", "1 Great Unclean One Ally"],
+    b13: ["1 Nurgle Corrupted Lord of Skulls", "1 Plague Titan Bio-Colossus", "1 Great Plague Fleet Orbital Barrage"]
+  },
+  "Emperor's Children": {
+    b34: ["10 Tormentors / Cultists", "5 Noise Marines", "5 Warp Talons", "1 Chaos Rhino"],
+    b56: ["10 Noise Marines + Sonic Blasters", "5 Flawless Chosen", "1 Sonic Dreadnought / Helbrute", "5 Raptors"],
+    b79: ["6 Slaanesh Fiends + Herald", "1 Daemon Prince of Slaanesh", "1 Chaos Predator Destructor + Noise Marines"],
+    b10: ["1 Lucius the Eternal + 10 Noise Marines", "1 Keeper of Secrets Ally", "1 Chaos Land Raider + Chosen"],
+    b13: ["1 Slaanesh Subjugator Titan", "1 Hell-Strider Chaos Titan", "1 Sonic Decimator Super-Heavy"]
+  },
+  "Thousand Sons": {
+    b34: ["10 Tzaangors", "10 Cultists", "5 Rubric Marines", "1 Tzaangor Enlightened"],
+    b56: ["10 Rubric Marines + Sorcerer", "5 Scarab Occult Terminators", "1 Mutalith Vortex Beast", "1 Chaos Spawn Phalanx"],
+    b79: ["10 Scarab Occult Terminators + Sorcerer", "1 Daemon Prince of Tzeentch", "1 Forgefiend + Rubrics"],
+    b10: ["1 Magnus the Red (Daemon Primarch of Tzeentch)", "1 Lord of Change Ally", "1 Thousand Sons Land Raider + Sorcerers"],
+    b13: ["1 Tzeentch Corrupted Titan", "1 Silver Tower of Tzeentch", "1 Eldritch Warp Storm Cataclysm"]
+  },
+  "World Eaters": {
+    b34: ["10 Jakhals", "5 Khorne Berzerkers", "1 Chaos Spawn", "1 World Eaters Rhino"],
+    b56: ["10 Khorne Berzerkers + Master of Executions", "3 Eightbound", "1 Predator Destructor", "1 Helbrute"],
+    b79: ["6 Exalted Eightbound", "1 World Eaters Daemon Prince", "1 Maulerfiend", "1 Defiler"],
+    b10: ["1 Angron (Daemon Primarch of Khorne)", "1 World Eaters Land Raider + 5 Berzerkers", "1 Bloodthirster Ally"],
+    b13: ["1 Khorne Lord of Skulls", "2 Khorne Lords of Skulls", "1 Khornate Warhound Titan"]
+  },
+  "Aeldari": {
+    b34: ["10 Guardian Defenders", "5 Rangers", "5 Swooping Hawks", "5 Warp Spiders", "1 Windriders Unit"],
+    b56: ["10 Dire Avengers + Wave Serpent", "5 Howling Banshees", "5 Striking Scorpions", "5 Fire Dragons", "1 Wraithlord"],
+    b79: ["1 Wraithknight", "1 Fire Prism + 1 Falcon", "5 Wraithguard + Spiritseer", "1 Avatar of Khaine"],
+    b10: ["1 Avatar of Khaine + Farseer", "1 Wraithknight + 5 Wraithblades", "1 Eldrad Ulthran + 10 Guardians"],
+    b13: ["1 Revenant Titan", "1 Phantom Titan", "1 Scorpion Super-Heavy Grav Tank"]
+  },
+  "Drukhari": {
+    b34: ["10 Kabalite Warriors", "10 Wyches", "10 Wracks", "1 Venom", "3 Reavers"],
+    b56: ["1 Raider + 10 Kabalites", "5 Incubi + Archon", "1 Talos", "1 Cronos", "5 Scourges"],
+    b79: ["2 Talos Pain Engines", "1 Ravager Gunship", "10 Incubi + Drazhar", "1 Voidraven Bomber"],
+    b10: ["1 Drazhar + 10 Incubi + Raider", "1 Tantalus Super-Skimmer", "3 Talos Pain Engine Phalanx"],
+    b13: ["1 Drukhari Tormentor Titan Barge", "1 Dark City Dais of Destruction", "1 Commorragh Spire Leviathan"]
+  },
+  "Necrons": {
+    b34: ["10 Necron Warriors", "5 Flayed Ones", "3 Canoptek Scarab Swarms", "5 Deathmarks", "3 Ophydian Destroyers"],
+    b56: ["10 Immortals + Chronomancer", "3 Skorpekh Destroyers", "3 Canoptek Wraiths", "1 Canoptek Doomstalker", "1 Triarch Stalker"],
+    b79: ["10 Lychguard + Overlord", "1 Doomsday Ark", "6 Lokhust Destroyers", "1 C'tan Shard of the Nightbringer"],
+    b10: ["1 Monolith", "1 C'tan Shard of the Void Dragon", "1 The Silent King (Szarekh)"],
+    b13: ["1 Tesseract Vault", "1 Seraptek Heavy Construct", "1 Obelisk + Monolith Phalanx"]
+  },
+  "T'au Empire": {
+    b34: ["10 Breacher Team", "10 Strike Team", "10 Kroot Carnivores", "3 Stealth Battlesuits", "1 Piranha"],
+    b56: ["3 Crisis Battlesuits + Commander", "1 Devilfish + 10 Breachers", "1 Broadside Battlesuit", "1 Ghostkeel Battlesuit"],
+    b79: ["1 Hammerhead Gunship", "1 Commander Farsight + 3 Crisis Suits", "1 Riptide Battlesuit", "1 Sky Ray Gunship"],
+    b10: ["1 Stormsurge Ballistic Suit", "2 Broadside Battlesuits + Riptide", "1 Commander Shadowsun + Riptide"],
+    b13: ["1 Ta'unar Supremacy Armour", "1 Tiger Shark Fighter-Bomber", "1 Manta Super-Heavy Dropship"]
+  },
+  "Orks": {
+    b34: ["10 Gretchin + Runtherd", "10 Boyz", "5 Stormboyz", "3 Warbikers", "1 Deffkopta"],
+    b56: ["20 Boyz + Warboss", "10 Beast Snagga Boyz", "5 Nobz + Trukk", "3 Meganobz", "1 Deff Dread"],
+    b79: ["1 Battlewagon + 10 Nobz", "1 Kill Rig", "6 Squighog Boyz + Beastboss", "1 Gorkanaut"],
+    b10: ["1 Ghazghkull Thraka + 6 Meganobz", "1 Morkanaut + Mek", "1 Gargantuan Squiggoth"],
+    b13: ["1 Stompa", "2 Stompa Mob", "1 Great Gargant Support"]
+  },
+  "Leagues of Votann": {
+    b34: ["10 Hearthkyn Warriors", "3 Hernkyn Pioneers", "5 Brôkhyr Thunderkyn", "1 Sagitaur"],
+    b56: ["5 Einhyr Hearthguard", "5 Cthonian Beserks", "1 Sagitaur + 5 Warriors", "1 Brôkhyr Iron-master + Retinue"],
+    b79: ["1 Hekaton Land Fortress", "10 Einhyr Hearthguard + Kâhl", "1 Hekaton Land Fortress + Beserks"],
+    b10: ["1 Hekaton Land Fortress + 5 Hearthguard", "1 Ûthar the Destined + 10 Hearthguard", "2 Hekaton Land Fortresses"],
+    b13: ["1 Colossus Mobile Mining Rig", "1 Votann Void-Harvester Dreadnought", "1 Hearthguard Grand Battery"]
+  },
+  "Tyranids": {
+    b34: ["10 Termagants", "10 Hormagaunts", "5 Barbgaunts", "10 Gargoyles", "3 Von Ryan's Leapers"],
+    b56: ["10 Genestealers + Broodlord", "3 Tyranid Warriors", "3 Zoanthropes", "1 Lictor", "1 Biovore + Pyrovores"],
+    b79: ["1 Screamer-Killer", "1 Trygon", "1 Exocrine", "1 Haruspex", "1 Maleceptor"],
+    b10: ["1 Norn Emissary", "1 Hive Tyrant + 3 Tyrant Guard", "1 Tyrannofex + 1 Psychophage"],
+    b13: ["1 Hierophant Bio-Titan", "1 Harridan Sky-Terror", "1 Scythed Hierodule"]
+  },
+  "Genestealer Cults": {
+    b34: ["10 Neophyte Hybrids", "5 Acolyte Hybrids", "5 Purestrain Genestealers", "1 Achilles Ridgerunner", "5 Atalan Jackals"],
+    b56: ["10 Hybrid Metamorphs", "1 Goliath Truck + 10 Neophytes", "1 Aberrants Squad (5)", "1 Patriarch + Magus"],
+    b79: ["10 Aberrants + Abominant", "1 Goliath Rockgrinder + 5 Aberrants", "1 Cult Leman Russ Demolisher"],
+    b10: ["1 Patriarch + 10 Purestrains + 10 Aberrants", "1 Cult Baneblade Super-Heavy", "2 Goliath Rockgrinders"],
+    b13: ["1 Cult-Hijacked Warhound Titan", "1 Subterranean Burrowing Bio-Colossus", "1 Grand Insurrection Overwhelming Wave"]
+  }
+};
+
 // Dual export for Node.js test runner and browser global scope
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -180,6 +345,7 @@ if (typeof module !== 'undefined' && module.exports) {
     MISERIES,
     SECONDARIES,
     RESUPPLIES,
-    HARD_MODE_ROUNDS
+    HARD_MODE_ROUNDS,
+    HORDE_FACTION_SPAWN_TABLES
   };
 }

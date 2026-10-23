@@ -498,7 +498,10 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         </div>
       </div>
 
-      <button class="btn-ghost btn-sm" onclick="leaveSession()">Exit</button>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="btn-ghost btn-sm" onclick="resetMatchToSetup()" title="Reset battle and clear all spawner cards">🔄 Reset</button>
+        <button class="btn-ghost btn-sm" onclick="leaveSession()" title="Exit to mission setup">Exit</button>
+      </div>
     </div>
 
     <!-- PERSISTENT SYNCED HORDE FACTION REMINDER BANNER -->
@@ -665,7 +668,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         <p style="margin-bottom:12px;">Synchronized by Room Code &amp; Supabase Cloud Pool • [10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (5+)</p>
 
         <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin-bottom:14px; width:100%; max-width:620px;">
-          <select id="spawnZoneCountSelect" style="flex:1; min-width:200px;">
+          <select id="spawnZoneCountSelect" onchange="onChangeSpawnZoneCount()" style="flex:1; min-width:200px;">
             <option value="3">1,000 Pts (3 Spawn Zones)</option>
             <option value="5">2,000 Pts (5 Spawn Zones)</option>
           </select>
@@ -681,6 +684,15 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         <button class="btn-green" onclick="rollAllSpawnZones()" style="width:100%; max-width:360px; padding:13px; font-size:1rem;">
           🎲 Roll Synced Spawns for Round <span id="spawnerBtnRound">1</span>
         </button>
+
+        <div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:10px;">
+          <button type="button" class="btn-ghost btn-sm" onclick="clearSpawnerResults()" title="Clear spawn cards for this round">
+            🧹 Clear Spawn Cards
+          </button>
+          <button type="button" class="btn-ghost btn-sm" onclick="resetMatchToSetup()" title="Reset battle and clear spawner to mission setup">
+            🔄 End &amp; Reset Match
+          </button>
+        </div>
       </div>
 
       <div class="section-header">
