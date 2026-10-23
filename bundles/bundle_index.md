@@ -387,9 +387,12 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     </div>
 
     <!-- 1. ROOM CODE -->
-    <label class="setup-label">1. Shared Room Code (Syncs Decks, Horde Faction &amp; Spawns)</label>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:4px;">
+      <label class="setup-label" style="margin-bottom:0;">1. Shared Room Code (Syncs Decks, Horde Faction &amp; Spawns)</label>
+      <span id="setupSyncPill" class="cloud-sync-pill" style="font-size:0.75rem;">☁️ Supabase Live Room Sync Ready</span>
+    </div>
     <div class="seed-row">
-      <input type="text" id="seedInput" class="seed-input" placeholder="e.g. HADES-1" value="HADES-1">
+      <input type="text" id="seedInput" class="seed-input" placeholder="e.g. HADES-1" value="HADES-1" oninput="if(window.debouncedPushLiveSpawnerStateToCloud) debouncedPushLiveSpawnerStateToCloud()">
       <button type="button" class="dice-btn" onclick="generateRandomCode()">🎲 New Room</button>
     </div>
 
@@ -476,7 +479,10 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     <!-- STICKY TOP HUD -->
     <div class="hud-bar">
       <div class="hud-stat">
-        <span class="hud-label" id="hudSessionInfo">HADES-1 • P1</span>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="hud-label" id="hudSessionInfo">HADES-1 • P1</span>
+          <span id="spawnerSyncBadge" class="cloud-sync-pill" style="font-size:0.68rem; padding:2px 7px; cursor:pointer;" onclick="if(window.manualSyncSpawnerNow) manualSyncSpawnerNow()" title="Live synced across all players with this Room Code. Tap to refresh.">☁️ Room Live</span>
+        </div>
         <span class="hud-num" id="hudRound" style="color:var(--red);">Pre-Game</span>
       </div>
 
@@ -665,7 +671,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     <div id="tab4" class="hidden">
       <div class="round-banner" style="padding:16px;">
         <h2>Room-Synced Horde Spawner (n + 1 Zones)</h2>
-        <p style="margin-bottom:12px;">Synchronized by Room Code &amp; Supabase Cloud Pool • [10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (5+)</p>
+        <p style="margin-bottom:12px;">Live-Synchronized Across All Connected Players via Room Code &amp; Supabase Cloud • [10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (5+)</p>
 
         <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin-bottom:14px; width:100%; max-width:620px;">
           <select id="spawnZoneCountSelect" onchange="onChangeSpawnZoneCount()" style="flex:1; min-width:200px;">

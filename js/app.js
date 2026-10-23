@@ -103,6 +103,9 @@ function saveSessionState() {
       doubleCost
     };
     localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
+    if (typeof debouncedPushLiveSpawnerStateToCloud === 'function') {
+      debouncedPushLiveSpawnerStateToCloud();
+    }
   } catch (e) {
     console.error('Failed to save session state:', e);
   }
@@ -810,22 +813,41 @@ function rollDownZone(idx) {
 
 function renderSpawnZones() {
   const container = document.getElementById('spawnResultsContainer');
-  container.innerHTML = currentZoneSpawns.map((z, idx) => `
-    <div class="card spawn-zone">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
-        <span class="badge green">Spawn Zone ${z.zone} • ${z.bracketLabel} (${z.pts})</span>
-        <span class="hud-sub">${z.diceStr} | Mod: ${z.totalMod >= 0 ? '+'+z.totalMod : z.totalMod} → <strong>Total: ${z.finalRoll}</strong></span>
-      </div>
-      <h4 class="card-title" style="margin-top:6px;">${z.units.join('  +  ')}</h4>
-      ${(z.bracketKey !== 'NONE' && z.bracketKey !== '3-4') ? `
-        <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-          <button class="btn-ghost btn-sm" onclick="rollDownZone(${idx})">
-            ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
-          </button>
+  if (!container) return;
+  container.innerHTML = currentZoneSpawns.map((z, idx) => {
+    if (typeof z === 'string') {
+      return `
+        <div class="card spawn-zone">
+          <span class="badge green">Spawn Zone ${idx + 1}</span>
+          <h4 class="card-title" style="margin-top:6px;">${z}</h4>
         </div>
-      ` : ''}
-    </div>
-  `).join('');
+      `;
+    }
+    const zoneNum = z?.zone || idx + 1;
+    const bracketLabel = z?.bracketLabel || 'Spawn';
+    const ptsStr = z?.pts ? ` (${z.pts})` : '';
+    const diceStr = z?.diceStr || '';
+    const modStr = z?.totalMod !== undefined ? ` | Mod: ${z.totalMod >= 0 ? '+' + z.totalMod : z.totalMod}` : '';
+    const rollStr = z?.finalRoll !== undefined ? ` → <strong>Total: ${z.finalRoll}</strong>` : '';
+    const unitsStr = Array.isArray(z?.units) ? z.units.join('  +  ') : (z?.units || '');
+
+    return `
+      <div class="card spawn-zone">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+          <span class="badge green">Spawn Zone ${zoneNum} • ${bracketLabel}${ptsStr}</span>
+          <span class="hud-sub">${diceStr}${modStr}${rollStr}</span>
+        </div>
+        <h4 class="card-title" style="margin-top:6px;">${unitsStr}</h4>
+        ${(z?.bracketKey && z.bracketKey !== 'NONE' && z.bracketKey !== '3-4') ? `
+          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+            <button class="btn-ghost btn-sm" onclick="rollDownZone(${idx})">
+              ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
 }
 
 // --- SP, CP & RESUPPLY SHOP ---
@@ -983,9 +1005,314 @@ function resetMatchToSetup() {
   switchTab(1, false);
 }
 
+// =========================================================================
+// LIVE CLOUD ROOM SYNCHRONIZATION (SUPABASE)
+// =========================================================================
+let clientDeviceId = null;
+function getClientDeviceId() {
+  if (clientDeviceId) return clientDeviceId;
+  try {
+    let saved = (typeof sessionStorage !== 'undefined') ? sessionStorage.getItem('foa_spawner_device_id') : null;
+    if (!saved) {
+      saved = 'dev_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now();
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('foa_spawner_device_id', saved);
+    }
+    clientDeviceId = saved;
+  } catch (e) {
+    clientDeviceId = 'dev_' + Math.random().toString(36).slice(2, 10);
+  }
+  return clientDeviceId;
+}
+
+let lastSyncedUpdatedAt = 0;
+let isPushingToCloud = false;
+let isPollingFromCloud = false;
+let pushCloudTimer = null;
+
+function updateSyncBadge(isLive, labelText) {
+  if (typeof document === 'undefined') return;
+  const badge = document.getElementById('spawnerSyncBadge');
+  if (badge) {
+    badge.textContent = labelText || (isLive ? '☁️ Room Live' : '☁️ Room Offline');
+    badge.style.borderColor = isLive ? 'rgba(16, 185, 129, 0.55)' : 'var(--border)';
+  }
+  const setupBadge = document.getElementById('setupSyncPill');
+  if (setupBadge && isLive) {
+    setupBadge.textContent = '☁️ Live Room Sync Active';
+  }
+}
+
+async function pushLiveSpawnerStateToCloud() {
+  if (typeof fetch !== 'function') return false;
+  const setupScreen = (typeof document !== 'undefined') ? document.getElementById('setupScreen') : null;
+  const gameScreen = (typeof document !== 'undefined') ? document.getElementById('gameScreen') : null;
+  if (!setupScreen && !gameScreen) return false;
+
+  const roomCode = ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
+  const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
+
+  const fortChecks = [];
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.fort-grid input[type="checkbox"]').forEach(cb => {
+      fortChecks.push(cb.checked);
+    });
+  }
+
+  const spawnZoneCount = (typeof document !== 'undefined' && document.getElementById('spawnZoneCountSelect')?.value) || '3';
+  const extraSpawnMod = (typeof document !== 'undefined' && document.getElementById('extraSpawnMod')?.value) || '0';
+  const firstRollBonus = !!(typeof document !== 'undefined' && document.getElementById('firstRollBonusCheck')?.checked);
+  const baitTrapBonus = !!(typeof document !== 'undefined' && document.getElementById('baitTrapBonusCheck')?.checked);
+  const doubleCost = !!(typeof document !== 'undefined' && document.getElementById('doubleCostToggle')?.checked);
+  const teleCount = parseInt((typeof document !== 'undefined' && document.getElementById('teleCount')?.innerText) || '0', 10);
+  const wireCount = parseInt((typeof document !== 'undefined' && document.getElementById('wireCount')?.innerText) || '0', 10);
+  const mineCount = parseInt((typeof document !== 'undefined' && document.getElementById('mineCount')?.innerText) || '0', 10);
+
+  const now = Date.now();
+  lastSyncedUpdatedAt = now;
+
+  const sharedRoomState = {
+    roomCode,
+    hasActiveSession: isSessionActive,
+    battleRound,
+    activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+    spawnZoneCount,
+    extraSpawnMod,
+    firstRollBonus,
+    baitTrapBonus,
+    doubleCost,
+    currentZoneSpawns,
+    activeMiseries,
+    sharedMiseryDeck,
+    activeSecondaries,
+    sharedSecondaryDeck,
+    fortChecks,
+    teleCount,
+    wireCount,
+    mineCount,
+    updatedAt: now,
+    lastSenderId: getClientDeviceId()
+  };
+
+  isPushingToCloud = true;
+  try {
+    const supabaseUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+    const supabaseKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
+
+    let currentHordePool = {};
+    let currentNemesisStatus = {};
+    try {
+      const getRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_spawn_pools`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify({})
+      });
+      if (getRes && getRes.ok) {
+        const cur = await getRes.json();
+        if (cur) {
+          currentHordePool = cur.horde_pool || {};
+          currentNemesisStatus = cur.nemesis_status || {};
+        }
+      }
+    } catch (e) {}
+
+    const spawnerRooms = (currentNemesisStatus && currentNemesisStatus.spawner_rooms) ? currentNemesisStatus.spawner_rooms : {};
+    spawnerRooms[roomCode] = sharedRoomState;
+
+    const saveRes = await fetch(`${supabaseUrl}/rest/v1/rpc/save_shared_spawn_pools`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      },
+      body: JSON.stringify({
+        p_horde_pool: currentHordePool,
+        p_nemesis_status: {
+          ...currentNemesisStatus,
+          spawner_rooms: spawnerRooms
+        }
+      })
+    });
+
+    if (saveRes && saveRes.ok) {
+      updateSyncBadge(true, `☁️ Room Synced (${roomCode})`);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Live spawner cloud push error:', err);
+  } finally {
+    isPushingToCloud = false;
+  }
+  return false;
+}
+
+function debouncedPushLiveSpawnerStateToCloud() {
+  if (pushCloudTimer) clearTimeout(pushCloudTimer);
+  pushCloudTimer = setTimeout(() => {
+    pushLiveSpawnerStateToCloud();
+  }, 400);
+}
+
+function applyRemoteSharedState(remoteState) {
+  if (!remoteState) return;
+  const isSessionActive = !!remoteState.hasActiveSession;
+
+  if (typeof remoteState.battleRound === 'number') {
+    battleRound = remoteState.battleRound;
+  }
+
+  if (remoteState.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
+    const found = HORDE_FACTIONS.find(f => f.name === remoteState.activeHordeFactionName);
+    if (found) {
+      activeHordeFaction = found;
+      const sel = document.getElementById('hordeFactionSelect');
+      if (sel) sel.value = found.name;
+      renderFactionReminderBanner();
+    }
+  }
+
+  if (Array.isArray(remoteState.currentZoneSpawns)) {
+    currentZoneSpawns = remoteState.currentZoneSpawns;
+    if (currentZoneSpawns.length > 0) {
+      renderSpawnZones();
+      if (typeof evaluateWarpBreachIntrusions === 'function') evaluateWarpBreachIntrusions();
+    }
+  }
+
+  if (Array.isArray(remoteState.activeMiseries)) {
+    activeMiseries = remoteState.activeMiseries;
+  }
+  if (Array.isArray(remoteState.sharedMiseryDeck)) {
+    sharedMiseryDeck = remoteState.sharedMiseryDeck;
+  }
+  if (Array.isArray(remoteState.activeSecondaries)) {
+    activeSecondaries = remoteState.activeSecondaries;
+  }
+  if (Array.isArray(remoteState.sharedSecondaryDeck)) {
+    sharedSecondaryDeck = remoteState.sharedSecondaryDeck;
+  }
+
+  renderSharedDecks();
+
+  if (remoteState.spawnZoneCount && document.getElementById('spawnZoneCountSelect')) {
+    document.getElementById('spawnZoneCountSelect').value = remoteState.spawnZoneCount;
+  }
+  if (remoteState.extraSpawnMod && document.getElementById('extraSpawnMod')) {
+    document.getElementById('extraSpawnMod').value = remoteState.extraSpawnMod;
+  }
+  if (document.getElementById('firstRollBonusCheck')) {
+    document.getElementById('firstRollBonusCheck').checked = !!remoteState.firstRollBonus;
+  }
+  if (document.getElementById('baitTrapBonusCheck')) {
+    document.getElementById('baitTrapBonusCheck').checked = !!remoteState.baitTrapBonus;
+  }
+  if (document.getElementById('doubleCostToggle')) {
+    document.getElementById('doubleCostToggle').checked = !!remoteState.doubleCost;
+  }
+
+  if (typeof remoteState.wireCount === 'number' && document.getElementById('wireCount')) {
+    document.getElementById('wireCount').innerText = String(remoteState.wireCount);
+  }
+  if (typeof remoteState.teleCount === 'number' && document.getElementById('teleCount')) {
+    document.getElementById('teleCount').innerText = String(remoteState.teleCount);
+  }
+  if (typeof remoteState.mineCount === 'number' && document.getElementById('mineCount')) {
+    document.getElementById('mineCount').innerText = String(remoteState.mineCount);
+  }
+  if (Array.isArray(remoteState.fortChecks)) {
+    const cbs = document.querySelectorAll('.fort-grid input[type="checkbox"]');
+    cbs.forEach((cb, idx) => {
+      if (idx < remoteState.fortChecks.length) cb.checked = !!remoteState.fortChecks[idx];
+    });
+  }
+
+  // Update round titles and HUD
+  if (typeof HARD_MODE_ROUNDS !== 'undefined' && battleRound > 0) {
+    const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)] || HARD_MODE_ROUNDS[1];
+    const roundTitle = document.getElementById('roundTitle');
+    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
+    const spawnModDisplay = document.getElementById('spawnModDisplay');
+    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    const nextRoundBtn = document.getElementById('nextRoundBtn');
+    if (nextRoundBtn) {
+      nextRoundBtn.innerText = battleRound < 6
+        ? `Advance to Battle Round ${battleRound + 1}`
+        : `Battle Round 6 Active (Final Stand)`;
+    }
+    const btnRound = document.getElementById('spawnerBtnRound');
+    if (btnRound) btnRound.textContent = String(battleRound);
+  }
+
+  updateHUD();
+
+  if (isSessionActive) {
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    if (setupScreen) setupScreen.classList.add('hidden');
+    if (gameScreen) gameScreen.classList.remove('hidden');
+  }
+
+  // Persist to local cache so reload maintains sync
+  saveSessionState();
+}
+
+async function pollLiveSpawnerStateFromCloud() {
+  if (typeof fetch !== 'function' || isPushingToCloud || isPollingFromCloud) return false;
+  const roomCode = ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
+
+  isPollingFromCloud = true;
+  try {
+    const supabaseUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+    const supabaseKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
+
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_spawn_pools`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      },
+      body: JSON.stringify({})
+    });
+    if (!res || !res.ok) return false;
+    const data = await res.json();
+    if (!data || !data.nemesis_status || !data.nemesis_status.spawner_rooms) return false;
+
+    const remoteState = data.nemesis_status.spawner_rooms[roomCode];
+    if (!remoteState || !remoteState.updatedAt) return false;
+
+    if (remoteState.lastSenderId === getClientDeviceId()) return false;
+    if (remoteState.updatedAt <= lastSyncedUpdatedAt) return false;
+
+    applyRemoteSharedState(remoteState);
+    lastSyncedUpdatedAt = remoteState.updatedAt;
+    updateSyncBadge(true, `☁️ Synced with Ally (${roomCode} • R${remoteState.battleRound || 0})`);
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCloudSyncChime === 'function') {
+      window.VoxAudio.playCloudSyncChime();
+    }
+    return true;
+  } catch (err) {
+    return false;
+  } finally {
+    isPollingFromCloud = false;
+  }
+}
+
 // Dual export for Node.js test runner and browser environment
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    get battleRound() { return battleRound; },
+    get activeHordeFaction() { return activeHordeFaction; },
+    get selectedRoleVal() { return selectedRoleVal; },
+    get cp() { return cp; },
+    get sp() { return sp; },
+    get currentZoneSpawns() { return currentZoneSpawns; },
+    get activeMiseries() { return activeMiseries; },
+    get activeSecondaries() { return activeSecondaries; },
     selectMode,
     selectRole,
     resolveRoomSyncedFaction,
@@ -1019,7 +1346,12 @@ if (typeof module !== 'undefined' && module.exports) {
     rollAllSpawnZones,
     rollDownZone,
     saveCustomPool,
-    loadCustomPool
+    loadCustomPool,
+    pushLiveSpawnerStateToCloud,
+    pollLiveSpawnerStateFromCloud,
+    getClientDeviceId,
+    updateSyncBadge,
+    applyRemoteSharedState
   };
 }
 
@@ -1192,12 +1524,24 @@ if (typeof module !== 'undefined' && module.exports) {
     window.resetMatchToSetup = resetMatchToSetup;
     window.clearSpawnerResults = clearSpawnerResults;
     window.onChangeSpawnZoneCount = onChangeSpawnZoneCount;
+    window.pushLiveSpawnerStateToCloud = pushLiveSpawnerStateToCloud;
+    window.pollLiveSpawnerStateFromCloud = pollLiveSpawnerStateFromCloud;
+    window.debouncedPushLiveSpawnerStateToCloud = debouncedPushLiveSpawnerStateToCloud;
+    window.getClientDeviceId = getClientDeviceId;
+    window.updateSyncBadge = updateSyncBadge;
+    window.manualSyncSpawnerNow = function () {
+      updateSyncBadge(true, '☁️ Syncing...');
+      pollLiveSpawnerStateFromCloud().then(synced => {
+        if (!synced) pushLiveSpawnerStateToCloud();
+      });
+    };
 
     if (typeof window.rollAllSpawnZones === 'function' && !window.rollAllSpawnZones._hasIntrusionHook) {
       const origRollAll = window.rollAllSpawnZones;
       const wrappedRollAll = function () {
         const res = origRollAll.apply(this, arguments);
         evaluateWarpBreachIntrusions();
+        pushLiveSpawnerStateToCloud();
         return res;
       };
       wrappedRollAll._hasIntrusionHook = true;
@@ -1209,22 +1553,39 @@ if (typeof module !== 'undefined' && module.exports) {
       const wrappedManual = function () {
         const res = origManualFaction.apply(this, arguments);
         renderLiveSpawnerBracketTable();
+        debouncedPushLiveSpawnerStateToCloud();
         return res;
       };
       wrappedManual._hasBracketRenderHook = true;
       window.manualChangeFaction = wrappedManual;
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      syncSpawnerPoolFromSupabase();
-      renderLiveSpawnerBracketTable();
-    });
-    window.addEventListener('vox:page-swapped', () => {
-      if (document.getElementById('liveSpawnerBracketWindow')) {
+    let spawnerCloudPollTimer = null;
+    function initSpawnerCloudPolling() {
+      if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
         syncSpawnerPoolFromSupabase();
         renderLiveSpawnerBracketTable();
+        pollLiveSpawnerStateFromCloud();
+        if (!spawnerCloudPollTimer) {
+          spawnerCloudPollTimer = setInterval(() => {
+            if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
+              pollLiveSpawnerStateFromCloud();
+            } else {
+              clearInterval(spawnerCloudPollTimer);
+              spawnerCloudPollTimer = null;
+            }
+          }, 3500);
+        }
+      } else {
+        if (spawnerCloudPollTimer) {
+          clearInterval(spawnerCloudPollTimer);
+          spawnerCloudPollTimer = null;
+        }
       }
-    });
+    }
+
+    window.addEventListener('DOMContentLoaded', initSpawnerCloudPolling);
+    window.addEventListener('vox:page-swapped', initSpawnerCloudPolling);
   }
 
   if (typeof module !== 'undefined' && module.exports) {

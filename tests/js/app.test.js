@@ -447,4 +447,97 @@ test('app: rollAllSpawnZones rolls configured number of zones without throwing a
   assert.ok(container.innerHTML.includes('Spawn Zone 5'));
 });
 
+test('app: pushLiveSpawnerStateToCloud sends room state to Supabase save_shared_spawn_pools', async () => {
+  let calledUrl = null;
+  let sentBody = null;
+  globalThis.fetch = async (url, opts) => {
+    calledUrl = url;
+    sentBody = JSON.parse(opts.body);
+    return { ok: true, json: async () => ({ ok: true }) };
+  };
+
+  document.getElementById('seedInput').value = 'ROOM-XYZ';
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+
+  const ok = await app.pushLiveSpawnerStateToCloud();
+  assert.equal(ok, true);
+  assert.ok(calledUrl.includes('save_shared_spawn_pools'));
+  assert.ok(sentBody.p_nemesis_status);
+  assert.ok(sentBody.p_nemesis_status.spawner_rooms['ROOM-XYZ']);
+  assert.equal(sentBody.p_nemesis_status.spawner_rooms['ROOM-XYZ'].roomCode, 'ROOM-XYZ');
+});
+
+test('app: pollLiveSpawnerStateFromCloud synchronizes remote ally match actions while preserving private roles and CP', async () => {
+  const remoteRoomState = {
+    roomCode: 'ROOM-XYZ',
+    hasActiveSession: true,
+    battleRound: 3,
+    activeHordeFactionName: 'Tyranids',
+    spawnZoneCount: '3',
+    currentZoneSpawns: ['Zone 1: Gaunts', 'Zone 2: Carnifex', 'Zone 3: Tyrant'],
+    activeMiseries: [{ id: 6, title: 'Stray Bombardment' }],
+    activeSecondaries: [{ id: 1, title: 'Defend Objective' }],
+    wireCount: 2,
+    mineCount: 5,
+    updatedAt: Date.now() + 50000,
+    lastSenderId: 'ally-device-123'
+  };
+
+  globalThis.fetch = async (url) => {
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        nemesis_status: {
+          spawner_rooms: {
+            'ROOM-XYZ': remoteRoomState
+          }
+        }
+      })
+    };
+  };
+
+  document.getElementById('seedInput').value = 'ROOM-XYZ';
+  app.selectRole('2');
+  const localRoleBefore = app.selectedRoleVal;
+  const localCpBefore = app.cp;
+
+  const synced = await app.pollLiveSpawnerStateFromCloud();
+  assert.equal(synced, true);
+  assert.equal(app.battleRound, 3, 'Battle round must update to match remote ally');
+  assert.equal(app.activeHordeFaction.name, 'Tyranids', 'Horde faction must update to match remote ally');
+  assert.equal(document.getElementById('wireCount').innerText, '2', 'Fortifications must sync');
+  assert.equal(document.getElementById('mineCount').innerText, '5', 'Mine count must sync');
+
+  // Private state must remain completely untouched
+  assert.equal(app.selectedRoleVal, localRoleBefore, 'Personal role must not be overwritten');
+  assert.equal(app.cp, localCpBefore, 'Personal CP must not be overwritten');
+});
+
+test('app: pollLiveSpawnerStateFromCloud ignores older or self-sent updates', async () => {
+  const selfId = app.getClientDeviceId();
+  const selfSentState = {
+    roomCode: 'ROOM-XYZ',
+    hasActiveSession: true,
+    battleRound: 1,
+    updatedAt: Date.now() - 10000,
+    lastSenderId: selfId
+  };
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      nemesis_status: {
+        spawner_rooms: { 'ROOM-XYZ': selfSentState }
+      }
+    })
+  });
+
+  const synced = await app.pollLiveSpawnerStateFromCloud();
+  assert.equal(synced, false, 'Should ignore self-sent or older updates');
+});
+
+
 
