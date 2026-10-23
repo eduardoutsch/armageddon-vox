@@ -1085,10 +1085,43 @@ const {
   resolveServiceKey,
   resolveThreadUrls,
   scrubArtifacts,
+  extractCleanLastModelResponse,
   processSingleMessage,
   drainChannelQueue,
   runDualThreadCourier
 } = require('../vox_bridge.js');
+
+function createMockPage({ onInsertText, evaluateResult } = {}) {
+  return {
+    url: () => 'https://gemini.google.com/test',
+    evaluate: async (fn, arg) => {
+      if (typeof evaluateResult === 'function') {
+        return evaluateResult(fn, arg);
+      }
+      return evaluateResult || { count: 0, text: '' };
+    },
+    locator: (sel) => {
+      const btn = {
+        waitFor: async () => true,
+        count: async () => 1,
+        isEnabled: async () => true,
+        click: async () => {}
+      };
+      return {
+        first: () => btn,
+        count: async () => 1
+      };
+    },
+    bringToFront: async () => {},
+    waitForTimeout: async () => {},
+    keyboard: {
+      press: async () => {},
+      insertText: async (txt) => {
+        if (onInsertText) onInsertText(txt);
+      }
+    }
+  };
+}
 
 test('resolveServiceKey: resolves key correctly across standard and fallback env formats', () => {
   // Test primary standard keys
@@ -1164,10 +1197,230 @@ MD + 2
   assert.ok(cleanBullets.includes('• Unit Alfa ready'));
   assert.ok(cleanBullets.includes('• Unit Beta advancing'));
 
+  // Standalone code block and UI labels
+  const uiLabelInput = 'Plaintext\n+++ VOX TRANSMISSION +++\n• \n\n Unit Gamma deployed\nCopy code\nCopiar código\nTexto simples';
+  const cleanLabels = scrubArtifacts(uiLabelInput);
+  assert.equal(cleanLabels.includes('Plaintext'), false, 'Must scrub Plaintext label');
+  assert.equal(cleanLabels.includes('Copy code'), false, 'Must scrub Copy code label');
+  assert.equal(cleanLabels.includes('Copiar código'), false, 'Must scrub Copiar código label');
+  assert.equal(cleanLabels.includes('Texto simples'), false, 'Must scrub Texto simples label');
+  assert.ok(cleanLabels.includes('• Unit Gamma deployed'), 'Must collapse hanging bullets onto single line');
+
   // Null/empty input
   assert.equal(scrubArtifacts(''), '');
   assert.equal(scrubArtifacts(null), '');
   assert.equal(scrubArtifacts(undefined), '');
+});
+
+test('extractCleanLastModelResponse: removes code-block headers and prevents <p> inside <li> from breaking bullets', async () => {
+  class SimpleDomNode {
+    constructor(tagName, text = '', className = '', attrs = {}) {
+      this.tagName = tagName.toUpperCase();
+      this._text = text;
+      this.className = className;
+      this.attrs = attrs;
+      this.children = [];
+      this.childNodes = text ? [text] : [];
+      this.parentNode = null;
+    }
+    get textContent() {
+      if (this.childNodes.length > 0) {
+        return this.childNodes.map(c => (typeof c === 'string' ? c : c.textContent)).join('');
+      }
+      return this._text;
+    }
+    set textContent(v) {
+      this._text = v;
+      this.childNodes = [];
+      this.children = [];
+    }
+    cloneNode(deep = true) {
+      const cloned = new SimpleDomNode(this.tagName, this._text, this.className, { ...this.attrs });
+      if (deep) {
+        cloned.childNodes = this.childNodes.map(c => {
+          if (typeof c === 'string') return c;
+          const copy = c.cloneNode(true);
+          copy.parentNode = cloned;
+          return copy;
+        });
+        cloned.children = cloned.childNodes.filter(c => typeof c !== 'string');
+      }
+      return cloned;
+    }
+    remove() {
+      if (this.parentNode) {
+        this.parentNode.childNodes = this.parentNode.childNodes.filter(c => c !== this);
+        this.parentNode.children = this.parentNode.children.filter(c => c !== this);
+      }
+    }
+    replaceWith(...nodes) {
+      if (this.parentNode) {
+        const idx = this.parentNode.childNodes.indexOf(this);
+        if (idx !== -1) {
+          this.parentNode.childNodes.splice(idx, 1, ...nodes);
+          nodes.forEach(n => {
+            if (n && typeof n === 'object') n.parentNode = this.parentNode;
+          });
+          this.parentNode.children = this.parentNode.childNodes.filter(c => typeof c !== 'string');
+        }
+      }
+    }
+    prepend(...nodes) {
+      nodes.slice().reverse().forEach(n => {
+        this.childNodes.unshift(n);
+        if (n && typeof n === 'object') {
+          n.parentNode = this;
+          this.children.unshift(n);
+        }
+      });
+    }
+    append(...nodes) {
+      nodes.forEach(n => {
+        this.childNodes.push(n);
+        if (n && typeof n === 'object') {
+          n.parentNode = this;
+          this.children.push(n);
+        }
+      });
+    }
+    closest(tag) {
+      let curr = this.parentNode;
+      while (curr) {
+        if (curr.tagName === tag.toUpperCase()) return curr;
+        curr = curr.parentNode;
+      }
+      return null;
+    }
+    querySelectorAll(sel) {
+      const results = [];
+      const tokens = sel.split(',').map(s => s.trim().toLowerCase());
+      const visit = (node) => {
+        for (const child of node.children) {
+          if (!child || typeof child !== 'object') continue;
+          const tag = (child.tagName || '').toLowerCase();
+          const cls = (child.className || '').toLowerCase();
+          const match = tokens.some(t => {
+            if (t.startsWith('.')) return cls.includes(t.slice(1));
+            if (t.startsWith('button[')) return tag === 'button';
+            return tag === t;
+          });
+          if (match) results.push(child);
+          visit(child);
+        }
+      };
+      visit(this);
+      return results;
+    }
+  }
+
+  const root = new SimpleDomNode('div');
+  const codeHeader = new SimpleDomNode('div', 'Plaintext', 'code-block-decoration');
+  codeHeader.parentNode = root;
+  root.children.push(codeHeader);
+  root.childNodes.push(codeHeader);
+
+  const copyBtn = new SimpleDomNode('button', 'Copy code', '', { 'aria-label': 'Copy code' });
+  copyBtn.parentNode = root;
+  root.children.push(copyBtn);
+  root.childNodes.push(copyBtn);
+
+  const li = new SimpleDomNode('li');
+  li.parentNode = root;
+  const pInsideLi = new SimpleDomNode('p', 'Unit 1 deployed');
+  pInsideLi.parentNode = li;
+  li.children.push(pInsideLi);
+  li.childNodes.push(pInsideLi);
+  root.children.push(li);
+  root.childNodes.push(li);
+
+  const mockPage = {
+    evaluate: async (fn, sel) => {
+      const prevDoc = global.document;
+      global.document = {
+        querySelectorAll: (s) => (s === sel ? [root] : [])
+      };
+      try {
+        return fn(sel);
+      } finally {
+        global.document = prevDoc;
+      }
+    }
+  };
+
+  const res = await extractCleanLastModelResponse(mockPage);
+  assert.equal(res.count, 1);
+  assert.equal(res.text.includes('Plaintext'), false, 'Code header must be removed');
+  assert.equal(res.text.includes('Copy code'), false, 'Copy button must be removed');
+  assert.ok(res.text.includes('• Unit 1 deployed'), 'Bullet must stay on same line without orphan newline');
+  assert.equal(res.text.includes('• \n\n Unit 1 deployed'), false, 'Must not have orphan newline');
+});
+
+test('processSingleMessage: splits PASSIVE ASTROPATHIC CHOIR INTERCEPT variations and handles Plaintext headers', async () => {
+  const fetchCalls = [];
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const testMsg = {
+    id: '44556677-intercept-msg',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: 'Report astral choir bleed'
+  };
+
+  const mockPage = createMockPage();
+
+  // Response with Plaintext header and PASSIVE ASTROPATHIC CHOIR INTERCEPT
+  const responseWithAstropathicIntercept =
+    'REF-ID: 44556677\n+++ ORBITAL DISPATCH +++\nDirect comms verified.\nPlaintext\n+++ PASSIVE ASTROPATHIC CHOIR INTERCEPT +++\nPsychic static from [REDACTED] detected.';
+
+  const success = await processSingleMessage(testMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => responseWithAstropathicIntercept,
+    logFn: () => {}
+  });
+
+  assert.equal(success, true);
+  const patchCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_messages?id=eq.44556677-intercept-msg'));
+  assert.ok(patchCall, 'Must patch vox_messages');
+  assert.ok(patchCall.body.reply.includes('Direct comms verified.'));
+  assert.equal(patchCall.body.reply.includes('PASSIVE ASTROPATHIC CHOIR INTERCEPT'), false, 'Direct reply must have intercept stripped');
+
+  const interceptCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.ok(interceptCall, 'Must post to vox_interferences');
+  assert.ok(interceptCall.body.redacted_text.includes('PASSIVE ASTROPATHIC CHOIR INTERCEPT'));
+  assert.equal(interceptCall.body.redacted_text.includes('Plaintext'), false, 'Intercept must have leading Plaintext label stripped');
+});
+
+test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for EMERGENCY AUSPEX PING and UNBOUND ADVERSARY', async () => {
+  const dispatchedPrompts = [];
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const testMsg = {
+    id: '99887766-unbound-ping',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: '+++ EMERGENCY AUSPEX PING: UNBOUND ADVERSARY WARP-BREACH INTRUSION DETECTED +++'
+  };
+
+  await processSingleMessage(testMsg, mockPage, {
+    fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => 'REF-ID: 99887766\n+++ COGITATOR READOUT +++\nIntrusion noted.',
+    logFn: () => {}
+  });
+
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Unbound/Intrusion pings must trigger a Pattern 5 intercept bleed instruction in the prompt'
+  );
 });
 
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
@@ -1650,6 +1903,146 @@ test('UI Boundary: index.html serves as the centered Field Codex home launchpad'
   assert.ok(html.includes('pages/crusade.html'), 'index.html must link to Mode 5 Crusade Quartermaster');
   assert.ok(html.includes('pages/briefing.html'), 'index.html must link to Mode 6 Briefings');
   assert.ok(html.includes('pages/vox.html'), 'index.html must link to Mode 7 Vox');
+});
+
+test('UI Script Boundary: HTML script sequences parse cleanly in shared scope without duplicate identifier declarations', () => {
+  const vm = require('node:vm');
+  const pages = [
+    'index.html',
+    'pages/spawner.html',
+    'pages/pvp.html',
+    'pages/rogue.html',
+    'pages/roster.html',
+    'pages/crusade.html',
+    'pages/briefing.html',
+    'pages/vox.html',
+    'pages/welcome.html'
+  ];
+
+  for (const p of pages) {
+    const html = readPage(p);
+    const dir = path.dirname(path.join(ROOT_DIR, p));
+    const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+    let match;
+    const scriptContents = [];
+
+    while ((match = scriptRegex.exec(html)) !== null) {
+      const attrs = match[1] || '';
+      const inlineCode = match[2] || '';
+      const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+      if (srcMatch) {
+        const srcPath = path.resolve(dir, srcMatch[1]);
+        if (fs.existsSync(srcPath)) {
+          scriptContents.push(fs.readFileSync(srcPath, 'utf8'));
+        }
+      } else if (inlineCode.trim()) {
+        scriptContents.push(inlineCode);
+      }
+    }
+
+    // Concatenate all scripts that run sequentially in this HTML page into a single lexical script block
+    const concatenatedCode = scriptContents.join('\n;\n');
+    assert.doesNotThrow(() => {
+      new vm.Script(concatenatedCode, { filename: `${p}-concatenated-scripts.js` });
+    }, `Scripts in ${p} must not contain top-level duplicate identifier declarations (e.g. const/let collisions)`);
+  }
+});
+
+test('UI Browser Integration: all HTML pages load in headless browser with zero uncaught page errors', async () => {
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const pages = [
+    'index.html',
+    'pages/spawner.html',
+    'pages/pvp.html',
+    'pages/rogue.html',
+    'pages/roster.html',
+    'pages/crusade.html',
+    'pages/briefing.html',
+    'pages/vox.html',
+    'pages/welcome.html'
+  ];
+
+  try {
+    for (const p of pages) {
+      const pageErrors = [];
+      const errorListener = (err) => pageErrors.push(err.message);
+      page.on('pageerror', errorListener);
+
+      const filePath = 'file:///' + path.resolve(ROOT_DIR, p).replace(/\\/g, '/');
+      await page.goto(filePath, { waitUntil: 'load' });
+
+      assert.equal(
+        pageErrors.length,
+        0,
+        `Page ${p} threw uncaught browser errors on load: ${pageErrors.join(' | ')}`
+      );
+
+      page.off('pageerror', errorListener);
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test('UI Boundary: pages/roster.html loads with live dossier preview, active tab 1, and interactive submenu navigation', async () => {
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/roster.html').replace(/\\/g, '/');
+
+  try {
+    const pageErrors = [];
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    assert.equal(pageErrors.length, 0, `pages/roster.html must have zero browser page errors: ${pageErrors.join(' | ')}`);
+
+    // 1. Initial preview text verification
+    const initialPreview = await page.evaluate(() => document.getElementById('nemDossierPreview')?.textContent || '');
+    assert.ok(initialPreview.length > 50, 'Preview box must contain initial dossier example text on load');
+    assert.ok(initialPreview.includes('ORDO MALLEUS'), 'Preview must feature ORDO MALLEUS banner');
+    assert.ok(initialPreview.includes('FILING COMMANDER'), 'Preview must feature filing commander field');
+
+    // 2. Tab 1 is active by default
+    const isTab1Active = await page.evaluate(() => document.getElementById('rosTabBtn1')?.classList.contains('active'));
+    const isTabNemesisVisible = await page.evaluate(() => !document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTab1Active, true, 'Tab 1 button must be active by default');
+    assert.equal(isTabNemesisVisible, true, 'Tab Nemesis panel must be visible by default');
+
+    // 3. Switch to Tab 2 (Unbound Adversaries)
+    await page.click('#rosTabBtn2');
+    const isTab2Active = await page.evaluate(() => document.getElementById('rosTabBtn2')?.classList.contains('active'));
+    const isTabUnboundVisible = await page.evaluate(() => !document.getElementById('rosTabUnbound')?.classList.contains('hidden'));
+    const isTabNemesisHidden = await page.evaluate(() => document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTab2Active, true, 'Tab 2 button must become active after click');
+    assert.equal(isTabUnboundVisible, true, 'Tab Unbound panel must become visible after clicking Tab 2');
+    assert.equal(isTabNemesisHidden, true, 'Tab Nemesis panel must be hidden after switching to Tab 2');
+
+    // 4. Switch to Tab 3 (Brackets & Cloud Pool)
+    await page.click('#rosTabBtn3');
+    const isTab3Active = await page.evaluate(() => document.getElementById('rosTabBtn3')?.classList.contains('active'));
+    const isTabBracketsVisible = await page.evaluate(() => !document.getElementById('rosTabBrackets')?.classList.contains('hidden'));
+    assert.equal(isTab3Active, true, 'Tab 3 button must become active after click');
+    assert.equal(isTabBracketsVisible, true, 'Tab Brackets panel must become visible after clicking Tab 3');
+
+    // 5. Switch back to Tab 1
+    await page.click('#rosTabBtn1');
+    const isTab1Restored = await page.evaluate(() => !document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTab1Restored, true, 'Tab 1 panel must restore visibility when clicked');
+
+    // 6. Live update preview upon user input
+    await page.fill('#nemReportUnit', 'Tyranids — Screamer-Killer Test Unit');
+    await page.fill('#nemReportNotes', 'Weathered two melta shots and eliminated heavy infantry.');
+    const updatedPreview = await page.evaluate(() => document.getElementById('nemDossierPreview')?.textContent || '');
+    assert.ok(updatedPreview.includes('Tyranids — Screamer-Killer Test Unit'), 'Preview must update with entered unit');
+    assert.ok(updatedPreview.includes('Weathered two melta shots'), 'Preview must update with entered notes');
+  } finally {
+    await browser.close();
+  }
 });
 
 
@@ -2310,10 +2703,10 @@ const ROOT_DIR = path.resolve(__dirname, '../../');
 const ROSTER_HTML_PATH = path.join(ROOT_DIR, 'pages/roster.html');
 const DATA_JS_PATH = path.join(ROOT_DIR, 'js/data.js');
 
-// Load HORDE_FACTIONS from js/data.js
+// Load HORDE_FACTIONS and HORDE_FACTION_SPAWN_TABLES from js/data.js
 const dataJsCode = fs.readFileSync(DATA_JS_PATH, 'utf8');
-const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS };`);
-const { HORDE_FACTIONS } = dataFn();
+const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES };`);
+const { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES } = dataFn();
 
 // Read roster.html and extract script block
 const rosterHtml = fs.readFileSync(ROSTER_HTML_PATH, 'utf8');
@@ -2444,12 +2837,13 @@ const evalFn = new Function(
   'window',
   'localStorage',
   'HORDE_FACTIONS',
+  'HORDE_FACTION_SPAWN_TABLES',
   'console',
   'fetch',
   `${rosterScriptCode}; return {
     ROSTER_STATE_KEY,
     CUSTOM_POOL_STORAGE_KEY,
-    HORDE_FACTION_SPAWN_TABLES,
+    HORDE_FACTION_SPAWN_TABLES: (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined' ? HORDE_FACTION_SPAWN_TABLES : (window && window.HORDE_FACTION_SPAWN_TABLES)),
     switchRosterTab,
     buildNemesisDossierString,
     updateNemesisPreview,
@@ -2467,7 +2861,34 @@ const evalFn = new Function(
   };`
 );
 
-const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, console, mockFetch);
+const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES, console, mockFetch);
+
+test('roster: runs cleanly in browser global scope alongside data.js without syntax errors and populates preview', () => {
+  // Test sequential script execution in shared scope to verify no duplicate declarations
+  const runner = new Function(
+    'document',
+    'window',
+    'localStorage',
+    'console',
+    'fetch',
+    `
+    ${dataJsCode}
+    ${rosterScriptCode}
+    return {
+      initRosterPage,
+      updateNemesisPreview,
+      switchRosterTab,
+      buildNemesisDossierString
+    };
+    `
+  );
+  assert.doesNotThrow(() => {
+    const res = runner(mockDocument, mockWindow, mockLocalStorage, console, mockFetch);
+    assert.ok(res.switchRosterTab, 'switchRosterTab must be defined');
+    res.initRosterPage();
+    assert.ok(mockElements.nemDossierPreview.textContent.includes('ORDO MALLEUS'), 'Preview must have text');
+  }, 'Must not throw SyntaxError when data.js and roster.html run together');
+});
 
 test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for factions', () => {
   assert.ok(roster.HORDE_FACTION_SPAWN_TABLES, 'Must define HORDE_FACTION_SPAWN_TABLES');

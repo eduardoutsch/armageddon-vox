@@ -282,6 +282,146 @@ test('UI Boundary: index.html serves as the centered Field Codex home launchpad'
   assert.ok(html.includes('pages/vox.html'), 'index.html must link to Mode 7 Vox');
 });
 
+test('UI Script Boundary: HTML script sequences parse cleanly in shared scope without duplicate identifier declarations', () => {
+  const vm = require('node:vm');
+  const pages = [
+    'index.html',
+    'pages/spawner.html',
+    'pages/pvp.html',
+    'pages/rogue.html',
+    'pages/roster.html',
+    'pages/crusade.html',
+    'pages/briefing.html',
+    'pages/vox.html',
+    'pages/welcome.html'
+  ];
+
+  for (const p of pages) {
+    const html = readPage(p);
+    const dir = path.dirname(path.join(ROOT_DIR, p));
+    const scriptRegex = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+    let match;
+    const scriptContents = [];
+
+    while ((match = scriptRegex.exec(html)) !== null) {
+      const attrs = match[1] || '';
+      const inlineCode = match[2] || '';
+      const srcMatch = attrs.match(/src=["']([^"']+)["']/i);
+      if (srcMatch) {
+        const srcPath = path.resolve(dir, srcMatch[1]);
+        if (fs.existsSync(srcPath)) {
+          scriptContents.push(fs.readFileSync(srcPath, 'utf8'));
+        }
+      } else if (inlineCode.trim()) {
+        scriptContents.push(inlineCode);
+      }
+    }
+
+    // Concatenate all scripts that run sequentially in this HTML page into a single lexical script block
+    const concatenatedCode = scriptContents.join('\n;\n');
+    assert.doesNotThrow(() => {
+      new vm.Script(concatenatedCode, { filename: `${p}-concatenated-scripts.js` });
+    }, `Scripts in ${p} must not contain top-level duplicate identifier declarations (e.g. const/let collisions)`);
+  }
+});
+
+test('UI Browser Integration: all HTML pages load in headless browser with zero uncaught page errors', async () => {
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const pages = [
+    'index.html',
+    'pages/spawner.html',
+    'pages/pvp.html',
+    'pages/rogue.html',
+    'pages/roster.html',
+    'pages/crusade.html',
+    'pages/briefing.html',
+    'pages/vox.html',
+    'pages/welcome.html'
+  ];
+
+  try {
+    for (const p of pages) {
+      const pageErrors = [];
+      const errorListener = (err) => pageErrors.push(err.message);
+      page.on('pageerror', errorListener);
+
+      const filePath = 'file:///' + path.resolve(ROOT_DIR, p).replace(/\\/g, '/');
+      await page.goto(filePath, { waitUntil: 'load' });
+
+      assert.equal(
+        pageErrors.length,
+        0,
+        `Page ${p} threw uncaught browser errors on load: ${pageErrors.join(' | ')}`
+      );
+
+      page.off('pageerror', errorListener);
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test('UI Boundary: pages/roster.html loads with live dossier preview, active tab 1, and interactive submenu navigation', async () => {
+  const { chromium } = require('playwright');
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+
+  const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/roster.html').replace(/\\/g, '/');
+
+  try {
+    const pageErrors = [];
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    assert.equal(pageErrors.length, 0, `pages/roster.html must have zero browser page errors: ${pageErrors.join(' | ')}`);
+
+    // 1. Initial preview text verification
+    const initialPreview = await page.evaluate(() => document.getElementById('nemDossierPreview')?.textContent || '');
+    assert.ok(initialPreview.length > 50, 'Preview box must contain initial dossier example text on load');
+    assert.ok(initialPreview.includes('ORDO MALLEUS'), 'Preview must feature ORDO MALLEUS banner');
+    assert.ok(initialPreview.includes('FILING COMMANDER'), 'Preview must feature filing commander field');
+
+    // 2. Tab 1 is active by default
+    const isTab1Active = await page.evaluate(() => document.getElementById('rosTabBtn1')?.classList.contains('active'));
+    const isTabNemesisVisible = await page.evaluate(() => !document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTab1Active, true, 'Tab 1 button must be active by default');
+    assert.equal(isTabNemesisVisible, true, 'Tab Nemesis panel must be visible by default');
+
+    // 3. Switch to Tab 2 (Unbound Adversaries)
+    await page.click('#rosTabBtn2');
+    const isTab2Active = await page.evaluate(() => document.getElementById('rosTabBtn2')?.classList.contains('active'));
+    const isTabUnboundVisible = await page.evaluate(() => !document.getElementById('rosTabUnbound')?.classList.contains('hidden'));
+    const isTabNemesisHidden = await page.evaluate(() => document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTab2Active, true, 'Tab 2 button must become active after click');
+    assert.equal(isTabUnboundVisible, true, 'Tab Unbound panel must become visible after clicking Tab 2');
+    assert.equal(isTabNemesisHidden, true, 'Tab Nemesis panel must be hidden after switching to Tab 2');
+
+    // 4. Switch to Tab 3 (Brackets & Cloud Pool)
+    await page.click('#rosTabBtn3');
+    const isTab3Active = await page.evaluate(() => document.getElementById('rosTabBtn3')?.classList.contains('active'));
+    const isTabBracketsVisible = await page.evaluate(() => !document.getElementById('rosTabBrackets')?.classList.contains('hidden'));
+    assert.equal(isTab3Active, true, 'Tab 3 button must become active after click');
+    assert.equal(isTabBracketsVisible, true, 'Tab Brackets panel must become visible after clicking Tab 3');
+
+    // 5. Switch back to Tab 1
+    await page.click('#rosTabBtn1');
+    const isTab1Restored = await page.evaluate(() => !document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
+    assert.equal(isTab1Restored, true, 'Tab 1 panel must restore visibility when clicked');
+
+    // 6. Live update preview upon user input
+    await page.fill('#nemReportUnit', 'Tyranids — Screamer-Killer Test Unit');
+    await page.fill('#nemReportNotes', 'Weathered two melta shots and eliminated heavy infantry.');
+    const updatedPreview = await page.evaluate(() => document.getElementById('nemDossierPreview')?.textContent || '');
+    assert.ok(updatedPreview.includes('Tyranids — Screamer-Killer Test Unit'), 'Preview must update with entered unit');
+    assert.ok(updatedPreview.includes('Weathered two melta shots'), 'Preview must update with entered notes');
+  } finally {
+    await browser.close();
+  }
+});
+
 
 
 
