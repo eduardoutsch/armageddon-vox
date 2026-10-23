@@ -580,7 +580,19 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
         return null;
       }
       const parsed = JSON.parse(raw);
-      if (banner) banner.classList.remove('hidden');
+      if (banner) {
+        banner.classList.remove('hidden');
+        const targetName = parsed.channel === 'beta' ? 'Lord Commander Junebug (Terminal Beta)' : 'The Exile // Sanctuary of Ash (Terminal Alpha)';
+        banner.innerHTML = `
+          <div style="font-size:0.88rem; font-weight:800; margin-bottom:4px;">
+            📡 [1 ENCRYPTED TRANSMISSION QUEUED IN BUFFER]
+          </div>
+          <div style="font-size:0.8rem; line-height:1.45; opacity:0.95;">
+            Target Conduit: <strong>${targetName}</strong><br>
+            Terminal password required to verify identity and authorize transmission. Enter your Vermilion Pass-Seal below to decrypt and broadcast to the Campaign Master!
+          </div>
+        `;
+      }
       if (parsed.channel && parsed.channel !== selectedChannel) {
         selectConduit(parsed.channel, false);
       }
@@ -1117,22 +1129,37 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   async function initVoxTerminalPage() {
     const pending = checkPendingDossierBuffer();
 
-    // Auto-restore unlocked session within same browser tab if available
+    // If an encrypted dossier or ping is awaiting transmission, NEVER bypass the terminal password!
+    // Stale session keys must be purged, requiring the commander to authenticate before dispatch.
+    if (pending) {
+      try {
+        sessionStorage.removeItem(SESSION_AUTH_KEY);
+      } catch (e) {}
+      await selectConduit(pending.channel || 'alpha');
+      const passEl = document.getElementById('passInput');
+      if (passEl) {
+        passEl.value = '';
+        setTimeout(() => passEl.focus(), 100);
+      }
+      return;
+    }
+
+    // Auto-restore unlocked session within same browser tab ONLY when no pending transmission awaits authorization
     try {
       const savedSession = sessionStorage.getItem(SESSION_AUTH_KEY);
       if (savedSession) {
         const parsed = JSON.parse(savedSession);
-        const targetChan = (pending && pending.channel) ? pending.channel : parsed.channel;
-        if (parsed.pass && targetChan === parsed.channel) {
+        if (parsed.pass && parsed.channel) {
           selectedChannel = parsed.channel;
-          document.getElementById('passInput').value = parsed.pass;
+          const passEl = document.getElementById('passInput');
+          if (passEl) passEl.value = parsed.pass;
           await handleSealAction();
           return;
         }
       }
     } catch (e) {}
 
-    await selectConduit(pending && pending.channel ? pending.channel : 'alpha');
+    await selectConduit('alpha');
   }
 
   window.addEventListener('DOMContentLoaded', initVoxTerminalPage);

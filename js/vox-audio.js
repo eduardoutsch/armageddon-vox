@@ -939,6 +939,8 @@
           queuedAt: Date.now()
         })
       );
+      // Strictly prevent terminal password bypass: purge any pre-existing active session auth
+      sessionStorage.removeItem('foa_vox_active_session_v1');
     } catch (e) {}
 
     const inPagesDir = window.location.pathname.includes('/pages/');

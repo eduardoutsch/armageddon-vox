@@ -170,6 +170,7 @@ const evalFn = new Function(
     toggleOlderMessages,
     toggleOlderInterferences,
     lockTerminal,
+    initVoxTerminalPage,
     getSelectedChannel: () => selectedChannel,
     getActivePassphrase: () => activePassphrase,
     getShowAllOlderMessages: () => showAllOlderMessages,
@@ -546,6 +547,49 @@ test('vox: streamTextIntoElement uses elapsed-time teletype engine, sets dataset
   redactedEl.onclick();
   assert.equal(redactedEl.dataset.streaming, '0');
   assert.ok(redactedEl.innerHTML.includes('censor-bar'), 'Redacted stream finish must render censor-bar HTML');
+});
+
+test('vox: initVoxTerminalPage strictly enforces terminal password when pending payload is present, preventing password bypass', async () => {
+  sessionStore.clear();
+  vox.lockTerminal();
+
+  // Simulate an active session from a previous unlock
+  sessionStore.set(vox.SESSION_AUTH_KEY, JSON.stringify({ channel: 'beta', pass: 'PriorSecretPass' }));
+
+  // Simulate a pending transmission queued from pvp, roster, crusade, or spawner
+  const testPayload = {
+    channel: 'beta',
+    text: '+++ ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(testPayload));
+
+  // Run initVoxTerminalPage
+  await vox.initVoxTerminalPage();
+
+  // Terminal MUST NOT be unlocked automatically
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), true, 'Terminal screen must remain hidden');
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), false, 'Auth screen must remain visible');
+  assert.equal(vox.getActivePassphrase(), null, 'Active passphrase must remain null until explicitly authenticated');
+  assert.equal(sessionStore.has(vox.SESSION_AUTH_KEY), false, 'Active session must be cleared to enforce password entry');
+  assert.equal(vox.getSelectedChannel(), 'beta', 'Target channel must be matched from pending payload');
+  assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), false, 'Pending dossier banner must be shown');
+  assert.equal(mockElements.passInput.value, '', 'Pass input must not be auto-filled');
+});
+
+test('vox: initVoxTerminalPage restores saved session only when no pending payload awaits authorization', async () => {
+  sessionStore.clear();
+  vox.lockTerminal();
+
+  // Active session with NO pending payload
+  sessionStore.set(vox.SESSION_AUTH_KEY, JSON.stringify({ channel: 'alpha', pass: 'VermilionKey99' }));
+
+  await vox.initVoxTerminalPage();
+
+  // Should restore session and unlock
+  assert.equal(vox.getActivePassphrase(), 'VermilionKey99');
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), false);
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), true);
 });
 
 

@@ -241,6 +241,7 @@ test('vox-audio: newly added Crusade & CRT sound synthesizers execute without th
 
 test('vox-audio: transmitToVox stores pending payload in sessionStorage and routes seamlessly', () => {
   sessionStore.clear();
+  sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'alpha', pass: 'OldSecretPass' }));
   const testPayload = '+++ TEST MASTER DOSSIER TRANSMISSION +++';
 
   assert.doesNotThrow(() => {
@@ -253,6 +254,7 @@ test('vox-audio: transmitToVox stores pending payload in sessionStorage and rout
   assert.equal(parsed.channel, 'beta');
   assert.equal(parsed.text, testPayload);
   assert.ok(typeof parsed.queuedAt === 'number');
+  assert.equal(sessionStore.has('foa_vox_active_session_v1'), false, 'transmitToVox must clear active session auth to prevent password bypass');
 });
 
 test('vox-audio: window.VoxAudio exposes complete public API for all game modes', () => {
