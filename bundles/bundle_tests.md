@@ -1015,6 +1015,49 @@ test('app: evaluateWarpBreachIntrusions plays warp siren only once for a given w
   }
 });
 
+test('app: onRoomCodeChanged resets sync watermarks and pulls remote room state immediately', async () => {
+  let fetchedUrl = null;
+  const remoteState = {
+    roomCode: 'PASTED-CODE',
+    hasActiveSession: true,
+    battleRound: 2,
+    activeHordeFactionName: 'World Eaters',
+    currentZoneSpawns: [{ zone: 1, units: ['Eightbound'] }],
+    updatedAt: 12345, // even an older timestamp must be pulled when switching rooms
+    lastSenderId: 'creator-device'
+  };
+
+  globalThis.fetch = async (url) => {
+    fetchedUrl = url;
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        nemesis_status: {
+          spawner_rooms: { 'PASTED-CODE': remoteState }
+        }
+      })
+    };
+  };
+
+  document.getElementById('seedInput').value = 'PASTED-CODE';
+
+  assert.equal(typeof app.onRoomCodeChanged, 'function', 'onRoomCodeChanged must be exported');
+  const syncSuccess = await app.onRoomCodeChanged(true); // Immediate invocation
+  assert.equal(syncSuccess, true, 'Must pull existing room state from cloud upon pasting room code');
+  assert.equal(app.activeHordeFaction.name, 'World Eaters', 'Pasting code must adopt the room-synced horde faction');
+  assert.equal(app.battleRound, 2, 'Pasting code must adopt the room-synced round');
+  assert.equal(app.currentZoneSpawns.length, 1, 'Pasting code must adopt the room-synced spawn zones');
+});
+
+test('app: startSession preserves room-synced horde faction and spawns if already synced from cloud', () => {
+  document.getElementById('seedInput').value = 'PASTED-CODE';
+  app.startSession();
+  assert.equal(app.activeHordeFaction.name, 'World Eaters', 'startSession must not overwrite room-synced faction');
+  assert.equal(app.currentZoneSpawns.length, 1, 'startSession must not wipe existing room-synced spawns');
+});
+
+
 
 
 

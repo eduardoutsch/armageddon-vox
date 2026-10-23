@@ -392,7 +392,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       <span id="setupSyncPill" class="cloud-sync-pill" style="font-size:0.75rem;">☁️ Supabase Live Room Sync Ready</span>
     </div>
     <div class="seed-row">
-      <input type="text" id="seedInput" class="seed-input" placeholder="e.g. HADES-1" value="HADES-1" oninput="if(window.debouncedPushLiveSpawnerStateToCloud) debouncedPushLiveSpawnerStateToCloud()">
+      <input type="text" id="seedInput" class="seed-input" placeholder="e.g. HADES-1" value="HADES-1" oninput="if(window.onRoomCodeChanged) onRoomCodeChanged()" onchange="if(window.onRoomCodeChanged) onRoomCodeChanged()">
       <button type="button" class="dice-btn" onclick="generateRandomCode()">🎲 New Room</button>
     </div>
 

@@ -157,7 +157,8 @@ function restoreSessionState() {
     currentShopFilter = data.currentShopFilter || 'All';
 
     if (data.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
-      activeHordeFaction = HORDE_FACTIONS.find(f => f.name === data.activeHordeFactionName) || HORDE_FACTIONS[0];
+      const found = HORDE_FACTIONS.find(f => f.name === data.activeHordeFactionName) || HORDE_FACTIONS[0];
+      activeHordeFaction = { ...found, syncedRoomCode: data.seed || getActiveRoomCode() };
       const sel = document.getElementById('hordeFactionSelect');
       if (sel) sel.value = activeHordeFaction.name;
       renderFactionReminderBanner();
@@ -339,28 +340,35 @@ function selectRole(role) {
 }
 
 function resolveRoomSyncedFaction(code) {
-  const mode = document.getElementById('setupFactionMode').value;
+  const mode = (typeof document !== 'undefined' && document.getElementById('setupFactionMode')?.value) || 'SYNC_ALL';
   const rngFac = mulberry32(hashString(code + "_HORDE_FACTION"));
 
+  let picked = null;
   if (mode.startsWith("SYNC_")) {
     let pool = HORDE_FACTIONS;
     if (mode === "SYNC_CHAOS") pool = HORDE_FACTIONS.filter(f => f.group === "Chaos");
     if (mode === "SYNC_XENOS") pool = HORDE_FACTIONS.filter(f => f.group === "Xenos");
     if (mode === "SYNC_IMPERIUM") pool = HORDE_FACTIONS.filter(f => f.group === "Imperium");
     const idx = Math.floor(rngFac() * pool.length);
-    activeHordeFaction = pool[idx];
+    picked = pool[idx];
   } else {
-    activeHordeFaction = HORDE_FACTIONS.find(f => f.name === mode) || HORDE_FACTIONS[0];
+    picked = HORDE_FACTIONS.find(f => f.name === mode) || HORDE_FACTIONS[0];
   }
 
-  document.getElementById('hordeFactionSelect').value = activeHordeFaction.name;
-  renderFactionReminderBanner();
+  activeHordeFaction = { ...picked, syncedRoomCode: code };
+
+  if (typeof document !== 'undefined') {
+    const sel = document.getElementById('hordeFactionSelect');
+    if (sel) sel.value = activeHordeFaction.name;
+    renderFactionReminderBanner();
+  }
   saveSessionState();
 }
 
 function manualChangeFaction() {
   const val = document.getElementById('hordeFactionSelect')?.value;
-  activeHordeFaction = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
+  const found = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
+  activeHordeFaction = { ...found, syncedRoomCode: getActiveRoomCode() };
   renderFactionReminderBanner();
 
   // Clear stale spawns from previous faction so user never sees mismatched cards
@@ -398,15 +406,17 @@ function renderFactionReminderBanner() {
 }
 
 function startSession() {
-  const code = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
+  const code = getActiveRoomCode();
   const mode = selectedModeVal;
   const role = selectedRoleVal;
 
   isSoloMode = (mode === 'solo');
   spRoundCap = isSoloMode ? 16 : 8;
 
-  // 1. Resolve Room-Synced Horde Faction
-  resolveRoomSyncedFaction(code);
+  // 1. Resolve Room-Synced Horde Faction (only if not already set by cloud room sync)
+  if (!activeHordeFaction || activeHordeFaction.syncedRoomCode !== code) {
+    resolveRoomSyncedFaction(code);
+  }
 
   // 2. Resolve Room-Synced Decks
   const rngSecret = mulberry32(hashString(code + "_SEC"));
@@ -421,42 +431,44 @@ function startSession() {
 
   if (isSoloMode) {
     personalSecretDeck = shuffledSecrets;
-    const n = document.getElementById('secretPoolNotice');
+    const n = (typeof document !== 'undefined') ? document.getElementById('secretPoolNotice') : null;
     if (n) n.innerText = `Solo Deck (${personalSecretDeck.length} valid cards; Multiplayer blocked)`;
   } else {
     personalSecretDeck = (role === "1") ? shuffledSecrets.slice(0, 17) : shuffledSecrets.slice(17, 34);
-    const n = document.getElementById('secretPoolNotice');
+    const n = (typeof document !== 'undefined') ? document.getElementById('secretPoolNotice') : null;
     if (n) n.innerText = `Co-op Split Pool (${personalSecretDeck.length} cards)`;
   }
 
-  sharedMiseryDeck = seededShuffle(MISERIES, rngMisery);
-  sharedSecondaryDeck = seededShuffle(SECONDARIES, rngSecond);
+  if (!sharedMiseryDeck || sharedMiseryDeck.length === 0) {
+    sharedMiseryDeck = seededShuffle(MISERIES, rngMisery);
+  }
+  if (!sharedSecondaryDeck || sharedSecondaryDeck.length === 0) {
+    sharedSecondaryDeck = seededShuffle(SECONDARIES, rngSecond);
+  }
 
-  battleRound = 0;
-  activeCard = null;
-  activeMiseries = [];
-  activeSecondaries = [];
-  sp = 0;
-  spGainedThisRound = 0;
-  cp = 2;
-  stratCount = 0;
-  currentZoneSpawns = [];
-
-  const spawnContainer = document.getElementById('spawnResultsContainer');
-  if (spawnContainer) {
-    spawnContainer.innerHTML = `
-      <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
-        <p class="card-desc">Tap the green button above to generate synchronized brackets and units for each Spawn Zone.</p>
-      </div>
-    `;
+  // Preserve existing spawns if already synced from room!
+  if (!currentZoneSpawns || currentZoneSpawns.length === 0) {
+    currentZoneSpawns = [];
+    const spawnContainer = (typeof document !== 'undefined') ? document.getElementById('spawnResultsContainer') : null;
+    if (spawnContainer) {
+      spawnContainer.innerHTML = `
+        <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+          <p class="card-desc">Tap the green button above to generate synchronized brackets and units for each Spawn Zone.</p>
+        </div>
+      `;
+    }
+  } else {
+    renderSpawnZones();
   }
 
   loadCustomPool();
 
-  const setupScreen = document.getElementById('setupScreen');
-  if (setupScreen) setupScreen.classList.add('hidden');
-  const gameScreen = document.getElementById('gameScreen');
-  if (gameScreen) gameScreen.classList.remove('hidden');
+  if (typeof document !== 'undefined') {
+    const setupScreen = document.getElementById('setupScreen');
+    if (setupScreen) setupScreen.classList.add('hidden');
+    const gameScreen = document.getElementById('gameScreen');
+    if (gameScreen) gameScreen.classList.remove('hidden');
+  }
 
   currentChoices = drawSecretCards(2);
   renderSecretChoices("Select 1 Initial Secret Objective");
@@ -465,7 +477,9 @@ function startSession() {
   renderResupplyTable();
   switchTab(2);
   saveSessionState();
+  debouncedPushLiveSpawnerStateToCloud();
 }
+
 
 function switchTab(tabNum, persist = true) {
   [1, 2, 3, 4].forEach(n => {
@@ -1030,6 +1044,52 @@ function getClientDeviceId() {
   return clientDeviceId;
 }
 
+let currentRoomCode = '';
+let roomCodeChangeTimer = null;
+
+function getActiveRoomCode() {
+  return ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
+}
+
+async function onRoomCodeChanged(immediate = false) {
+  if (roomCodeChangeTimer) {
+    clearTimeout(roomCodeChangeTimer);
+    roomCodeChangeTimer = null;
+  }
+
+  const runSync = async () => {
+    const roomCode = getActiveRoomCode();
+    if (!roomCode) return false;
+
+    // Reset watermark when switching or pasting room codes
+    currentRoomCode = roomCode;
+    lastSyncedUpdatedAt = 0;
+    lastKnownStateSignature = '';
+
+    updateSyncBadge(true, `☁️ Connecting to Room (${roomCode})...`);
+
+    // 1. Try pulling existing live session from cloud FIRST
+    const pulled = await pollLiveSpawnerStateFromCloud(true);
+    if (pulled) {
+      return true;
+    }
+
+    // 2. If room does not exist in cloud, resolve deterministic faction for this seed
+    resolveRoomSyncedFaction(roomCode);
+    updateSyncBadge(true, `☁️ New Room Created (${roomCode})`);
+
+    // 3. Register the new room in Supabase so joining allies immediately sync
+    debouncedPushLiveSpawnerStateToCloud();
+    return false;
+  };
+
+  if (immediate) {
+    return await runSync();
+  } else {
+    roomCodeChangeTimer = setTimeout(runSync, 350);
+  }
+}
+
 let lastSyncedUpdatedAt = 0;
 let isPushingToCloud = false;
 let isPollingFromCloud = false;
@@ -1059,7 +1119,9 @@ function updateSyncBadge(isLive, labelText) {
   }
   const setupBadge = document.getElementById('setupSyncPill');
   if (setupBadge && isLive) {
-    setupBadge.textContent = '☁️ Live Room Sync Active';
+    setupBadge.textContent = labelText || (activeHordeFaction
+      ? `☁️ Room Synced (${getActiveRoomCode()} • ${activeHordeFaction.name})`
+      : '☁️ Live Room Sync Active');
   }
 }
 
@@ -1070,7 +1132,8 @@ async function pushLiveSpawnerStateToCloud() {
   const gameScreen = (typeof document !== 'undefined') ? document.getElementById('gameScreen') : null;
   if (!setupScreen && !gameScreen) return false;
 
-  const roomCode = ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
+  const roomCode = getActiveRoomCode();
+  currentRoomCode = roomCode;
   const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
 
   const fortChecks = [];
@@ -1082,6 +1145,7 @@ async function pushLiveSpawnerStateToCloud() {
 
   const spawnZoneCount = (typeof document !== 'undefined' && document.getElementById('spawnZoneCountSelect')?.value) || '3';
   const extraSpawnMod = (typeof document !== 'undefined' && document.getElementById('extraSpawnMod')?.value) || '0';
+  const setupFactionModeVal = (typeof document !== 'undefined' && document.getElementById('setupFactionMode')?.value) || 'SYNC_ALL';
   const firstRollBonus = !!(typeof document !== 'undefined' && document.getElementById('firstRollBonusCheck')?.checked);
   const baitTrapBonus = !!(typeof document !== 'undefined' && document.getElementById('baitTrapBonusCheck')?.checked);
   const doubleCost = !!(typeof document !== 'undefined' && document.getElementById('doubleCostToggle')?.checked);
@@ -1097,7 +1161,9 @@ async function pushLiveSpawnerStateToCloud() {
     hasActiveSession: isSessionActive,
     battleRound,
     activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+    setupFactionMode: setupFactionModeVal,
     spawnZoneCount,
+
     extraSpawnMod,
     firstRollBonus,
     baitTrapBonus,
@@ -1202,11 +1268,16 @@ function applyRemoteSharedState(remoteState) {
   if (remoteState.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
     const found = HORDE_FACTIONS.find(f => f.name === remoteState.activeHordeFactionName);
     if (found) {
-      activeHordeFaction = found;
+      activeHordeFaction = { ...found, syncedRoomCode: remoteState.roomCode || getActiveRoomCode() };
       const sel = (typeof document !== 'undefined') ? document.getElementById('hordeFactionSelect') : null;
       if (sel) sel.value = found.name;
       renderFactionReminderBanner();
     }
+  }
+
+  if (remoteState.setupFactionMode && typeof document !== 'undefined') {
+    const modeSel = document.getElementById('setupFactionMode');
+    if (modeSel) modeSel.value = remoteState.setupFactionMode;
   }
 
   if (Array.isArray(remoteState.currentZoneSpawns)) {
@@ -1336,9 +1407,14 @@ function applyRemoteSharedState(remoteState) {
   saveSessionState();
 }
 
-async function pollLiveSpawnerStateFromCloud() {
+async function pollLiveSpawnerStateFromCloud(force = false) {
   if (typeof fetch !== 'function' || isPushingToCloud || isPollingFromCloud) return false;
-  const roomCode = ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
+  const roomCode = getActiveRoomCode();
+  if (roomCode !== currentRoomCode) {
+    currentRoomCode = roomCode;
+    lastSyncedUpdatedAt = 0;
+    lastKnownStateSignature = '';
+  }
 
   isPollingFromCloud = true;
   try {
@@ -1361,15 +1437,17 @@ async function pollLiveSpawnerStateFromCloud() {
     const remoteState = data.nemesis_status.spawner_rooms[roomCode];
     if (!remoteState || !remoteState.updatedAt) return false;
 
-    if (remoteState.lastSenderId === getClientDeviceId()) return false;
-    if (remoteState.updatedAt <= lastSyncedUpdatedAt) return false;
+    if (!force) {
+      if (remoteState.lastSenderId === getClientDeviceId()) return false;
+      if (remoteState.updatedAt <= lastSyncedUpdatedAt) return false;
+    }
 
     const currentSig = `${remoteState.battleRound || 0}_${remoteState.activeHordeFactionName || ''}_` +
       `${JSON.stringify(remoteState.currentZoneSpawns || [])}_` +
       `${JSON.stringify(remoteState.activeMiseries || [])}_` +
       `${JSON.stringify(remoteState.activeSecondaries || [])}`;
 
-    if (currentSig === lastKnownStateSignature) {
+    if (!force && currentSig === lastKnownStateSignature) {
       lastSyncedUpdatedAt = remoteState.updatedAt;
       return false;
     }
@@ -1444,11 +1522,20 @@ if (typeof module !== 'undefined' && module.exports) {
     loadCustomPool,
     pushLiveSpawnerStateToCloud,
     pollLiveSpawnerStateFromCloud,
+    getActiveRoomCode,
+    onRoomCodeChanged,
     getClientDeviceId,
     updateSyncBadge,
     applyRemoteSharedState,
     triggerCardStaticShake
   };
+}
+
+if (typeof window !== 'undefined') {
+  window.getActiveRoomCode = getActiveRoomCode;
+  window.onRoomCodeChanged = onRoomCodeChanged;
+  window.pollLiveSpawnerStateFromCloud = pollLiveSpawnerStateFromCloud;
+  window.debouncedPushLiveSpawnerStateToCloud = debouncedPushLiveSpawnerStateToCloud;
 }
 
 // =========================================================================

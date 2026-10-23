@@ -46,7 +46,12 @@ function generateRandomCode() {
   const code = `${p}-${n}`;
   if (typeof document !== 'undefined') {
     const el = document.getElementById('seedInput');
-    if (el) el.value = code;
+    if (el) {
+      el.value = code;
+      if (typeof window !== 'undefined' && typeof window.onRoomCodeChanged === 'function') {
+        window.onRoomCodeChanged();
+      }
+    }
   }
   return code;
 }
