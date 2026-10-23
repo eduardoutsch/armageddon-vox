@@ -1152,6 +1152,7 @@ function advanceBattleRound() {
   }
   battleRound++;
   spGainedThisRound = 0;
+  lastWarpSirenSeedKey = '';
 
   const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)];
   document.getElementById('roundTitle').innerText = `Battle Round ${battleRound}`;
@@ -1175,6 +1176,7 @@ function advanceBattleRound() {
 
   updateHUD();
   renderSharedDecks();
+  debouncedPushLiveSpawnerStateToCloud();
 }
 
 function drawMisery(count) {
@@ -1537,6 +1539,7 @@ function leaveSession() {
 
 function clearSpawnerResults() {
   currentZoneSpawns = [];
+  lastWarpSirenSeedKey = '';
   const spawnContainer = document.getElementById('spawnResultsContainer');
   if (spawnContainer) {
     spawnContainer.innerHTML = `
@@ -1546,6 +1549,7 @@ function clearSpawnerResults() {
     `;
   }
   saveSessionState();
+  debouncedPushLiveSpawnerStateToCloud();
 }
 
 function resetMatchToSetup() {
@@ -1554,6 +1558,8 @@ function resetMatchToSetup() {
   }
   clearSessionState();
   currentZoneSpawns = [];
+  lastWarpSirenSeedKey = '';
+
   battleRound = 0;
   activeCard = null;
   activeMiseries = [];
@@ -1606,6 +1612,21 @@ let lastSyncedUpdatedAt = 0;
 let isPushingToCloud = false;
 let isPollingFromCloud = false;
 let pushCloudTimer = null;
+let hasCompletedInitialSync = false;
+let lastKnownStateSignature = '';
+let lastWarpSirenSeedKey = '';
+
+function triggerCardStaticShake(el) {
+  if (!el || !el.classList) return;
+  el.classList.remove('card-synced-shake');
+  if (typeof el.offsetWidth === 'number') {
+    void el.offsetWidth;
+  }
+  el.classList.add('card-synced-shake');
+  setTimeout(() => {
+    if (el && el.classList) el.classList.remove('card-synced-shake');
+  }, 600);
+}
 
 function updateSyncBadge(isLive, labelText) {
   if (typeof document === 'undefined') return;
@@ -1619,6 +1640,7 @@ function updateSyncBadge(isLive, labelText) {
     setupBadge.textContent = '☁️ Live Room Sync Active';
   }
 }
+
 
 async function pushLiveSpawnerStateToCloud() {
   if (typeof fetch !== 'function') return false;
@@ -1739,6 +1761,18 @@ function applyRemoteSharedState(remoteState) {
   if (!remoteState) return;
   const isSessionActive = !!remoteState.hasActiveSession;
 
+  const prevRound = battleRound;
+  const prevFaction = activeHordeFaction ? activeHordeFaction.name : null;
+  const prevSpawns = Array.isArray(currentZoneSpawns) ? [...currentZoneSpawns] : [];
+  const prevMiseries = Array.isArray(activeMiseries) ? [...activeMiseries] : [];
+  const prevSecondaries = Array.isArray(activeSecondaries) ? [...activeSecondaries] : [];
+
+  const roundChanged = typeof remoteState.battleRound === 'number' && remoteState.battleRound !== prevRound;
+  const factionChanged = !!(remoteState.activeHordeFactionName && remoteState.activeHordeFactionName !== prevFaction);
+  const spawnsChanged = Array.isArray(remoteState.currentZoneSpawns) && JSON.stringify(remoteState.currentZoneSpawns) !== JSON.stringify(prevSpawns);
+  const miseriesChanged = Array.isArray(remoteState.activeMiseries) && JSON.stringify(remoteState.activeMiseries) !== JSON.stringify(prevMiseries);
+  const secondariesChanged = Array.isArray(remoteState.activeSecondaries) && JSON.stringify(remoteState.activeSecondaries) !== JSON.stringify(prevSecondaries);
+
   if (typeof remoteState.battleRound === 'number') {
     battleRound = remoteState.battleRound;
   }
@@ -1747,7 +1781,7 @@ function applyRemoteSharedState(remoteState) {
     const found = HORDE_FACTIONS.find(f => f.name === remoteState.activeHordeFactionName);
     if (found) {
       activeHordeFaction = found;
-      const sel = document.getElementById('hordeFactionSelect');
+      const sel = (typeof document !== 'undefined') ? document.getElementById('hordeFactionSelect') : null;
       if (sel) sel.value = found.name;
       renderFactionReminderBanner();
     }
@@ -1776,40 +1810,82 @@ function applyRemoteSharedState(remoteState) {
 
   renderSharedDecks();
 
-  if (remoteState.spawnZoneCount && document.getElementById('spawnZoneCountSelect')) {
-    document.getElementById('spawnZoneCountSelect').value = remoteState.spawnZoneCount;
-  }
-  if (remoteState.extraSpawnMod && document.getElementById('extraSpawnMod')) {
-    document.getElementById('extraSpawnMod').value = remoteState.extraSpawnMod;
-  }
-  if (document.getElementById('firstRollBonusCheck')) {
-    document.getElementById('firstRollBonusCheck').checked = !!remoteState.firstRollBonus;
-  }
-  if (document.getElementById('baitTrapBonusCheck')) {
-    document.getElementById('baitTrapBonusCheck').checked = !!remoteState.baitTrapBonus;
-  }
-  if (document.getElementById('doubleCostToggle')) {
-    document.getElementById('doubleCostToggle').checked = !!remoteState.doubleCost;
-  }
+  if (typeof document !== 'undefined') {
+    if (remoteState.spawnZoneCount && document.getElementById('spawnZoneCountSelect')) {
+      document.getElementById('spawnZoneCountSelect').value = remoteState.spawnZoneCount;
+    }
+    if (remoteState.extraSpawnMod && document.getElementById('extraSpawnMod')) {
+      document.getElementById('extraSpawnMod').value = remoteState.extraSpawnMod;
+    }
+    if (document.getElementById('firstRollBonusCheck')) {
+      document.getElementById('firstRollBonusCheck').checked = !!remoteState.firstRollBonus;
+    }
+    if (document.getElementById('baitTrapBonusCheck')) {
+      document.getElementById('baitTrapBonusCheck').checked = !!remoteState.baitTrapBonus;
+    }
+    if (document.getElementById('doubleCostToggle')) {
+      document.getElementById('doubleCostToggle').checked = !!remoteState.doubleCost;
+    }
 
-  if (typeof remoteState.wireCount === 'number' && document.getElementById('wireCount')) {
-    document.getElementById('wireCount').innerText = String(remoteState.wireCount);
-  }
-  if (typeof remoteState.teleCount === 'number' && document.getElementById('teleCount')) {
-    document.getElementById('teleCount').innerText = String(remoteState.teleCount);
-  }
-  if (typeof remoteState.mineCount === 'number' && document.getElementById('mineCount')) {
-    document.getElementById('mineCount').innerText = String(remoteState.mineCount);
-  }
-  if (Array.isArray(remoteState.fortChecks)) {
-    const cbs = document.querySelectorAll('.fort-grid input[type="checkbox"]');
-    cbs.forEach((cb, idx) => {
-      if (idx < remoteState.fortChecks.length) cb.checked = !!remoteState.fortChecks[idx];
-    });
+    if (typeof remoteState.wireCount === 'number' && document.getElementById('wireCount')) {
+      document.getElementById('wireCount').innerText = String(remoteState.wireCount);
+    }
+    if (typeof remoteState.teleCount === 'number' && document.getElementById('teleCount')) {
+      document.getElementById('teleCount').innerText = String(remoteState.teleCount);
+    }
+    if (typeof remoteState.mineCount === 'number' && document.getElementById('mineCount')) {
+      document.getElementById('mineCount').innerText = String(remoteState.mineCount);
+    }
+    if (Array.isArray(remoteState.fortChecks)) {
+      const cbs = document.querySelectorAll('.fort-grid input[type="checkbox"]');
+      cbs.forEach((cb, idx) => {
+        if (idx < remoteState.fortChecks.length) cb.checked = !!remoteState.fortChecks[idx];
+      });
+    }
+
+    // Trigger subtle CRT static shake specifically on the card(s) that changed
+    if (roundChanged) {
+      const roundBanner = document.querySelector('#tab1 .round-banner') || document.querySelector('.round-banner');
+      if (roundBanner) triggerCardStaticShake(roundBanner);
+    }
+    if (factionChanged) {
+      const factionBanner = document.querySelector('.faction-reminder-bar');
+      if (factionBanner) triggerCardStaticShake(factionBanner);
+    }
+    if (spawnsChanged) {
+      const zoneCards = document.querySelectorAll('#spawnResultsContainer .spawn-zone');
+      zoneCards.forEach((card, idx) => {
+        const prevZ = prevSpawns[idx];
+        const curZ = currentZoneSpawns[idx];
+        if (!prevZ || JSON.stringify(prevZ) !== JSON.stringify(curZ)) {
+          triggerCardStaticShake(card);
+        }
+      });
+    }
+    if (miseriesChanged) {
+      const misCards = document.querySelectorAll('#activeMiseriesBox .card.misery');
+      misCards.forEach((card, idx) => {
+        const prevM = prevMiseries[idx];
+        const curM = activeMiseries[idx];
+        if (!prevM || JSON.stringify(prevM) !== JSON.stringify(curM)) {
+          triggerCardStaticShake(card);
+        }
+      });
+    }
+    if (secondariesChanged) {
+      const secCards = document.querySelectorAll('#activeSecondariesBox .card.secondary');
+      secCards.forEach((card, idx) => {
+        const prevS = prevSecondaries[idx];
+        const curS = activeSecondaries[idx];
+        if (!prevS || JSON.stringify(prevS) !== JSON.stringify(curS)) {
+          triggerCardStaticShake(card);
+        }
+      });
+    }
   }
 
   // Update round titles and HUD
-  if (typeof HARD_MODE_ROUNDS !== 'undefined' && battleRound > 0) {
+  if (typeof HARD_MODE_ROUNDS !== 'undefined' && battleRound > 0 && typeof document !== 'undefined') {
     const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)] || HARD_MODE_ROUNDS[1];
     const roundTitle = document.getElementById('roundTitle');
     if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
@@ -1827,7 +1903,7 @@ function applyRemoteSharedState(remoteState) {
 
   updateHUD();
 
-  if (isSessionActive) {
+  if (isSessionActive && typeof document !== 'undefined') {
     const setupScreen = document.getElementById('setupScreen');
     const gameScreen = document.getElementById('gameScreen');
     if (setupScreen) setupScreen.classList.add('hidden');
@@ -1866,11 +1942,29 @@ async function pollLiveSpawnerStateFromCloud() {
     if (remoteState.lastSenderId === getClientDeviceId()) return false;
     if (remoteState.updatedAt <= lastSyncedUpdatedAt) return false;
 
+    const currentSig = `${remoteState.battleRound || 0}_${remoteState.activeHordeFactionName || ''}_` +
+      `${JSON.stringify(remoteState.currentZoneSpawns || [])}_` +
+      `${JSON.stringify(remoteState.activeMiseries || [])}_` +
+      `${JSON.stringify(remoteState.activeSecondaries || [])}`;
+
+    if (currentSig === lastKnownStateSignature) {
+      lastSyncedUpdatedAt = remoteState.updatedAt;
+      return false;
+    }
+
     applyRemoteSharedState(remoteState);
     lastSyncedUpdatedAt = remoteState.updatedAt;
+    lastKnownStateSignature = currentSig;
+
     updateSyncBadge(true, `☁️ Synced with Ally (${roomCode} • R${remoteState.battleRound || 0})`);
-    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCloudSyncChime === 'function') {
-      window.VoxAudio.playCloudSyncChime();
+
+    // Audio cue plays strictly once per newly arrived remote change (never repeats or on initial hydration)
+    if (hasCompletedInitialSync) {
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCloudSyncChime === 'function') {
+        window.VoxAudio.playCloudSyncChime();
+      }
+    } else {
+      hasCompletedInitialSync = true;
     }
     return true;
   } catch (err) {
@@ -1879,6 +1973,7 @@ async function pollLiveSpawnerStateFromCloud() {
     isPollingFromCloud = false;
   }
 }
+
 
 // Dual export for Node.js test runner and browser environment
 if (typeof module !== 'undefined' && module.exports) {
@@ -1929,7 +2024,8 @@ if (typeof module !== 'undefined' && module.exports) {
     pollLiveSpawnerStateFromCloud,
     getClientDeviceId,
     updateSyncBadge,
-    applyRemoteSharedState
+    applyRemoteSharedState,
+    triggerCardStaticShake
   };
 }
 
@@ -2037,9 +2133,9 @@ if (typeof module !== 'undefined' && module.exports) {
     const roomStr = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
     const roundStr = (document.getElementById('spawnerBtnRound')?.textContent || '1').trim();
     let anyIntrusionTriggered = false;
+    const currentWaveIntrusions = [];
 
     cards.forEach((card, idx) => {
-      if (card.querySelector('.warp-intrusion-alert') || card.querySelector('.intrusion-badge-clean')) return;
       const text = card.textContent || '';
       const isBigBracket = /Bracket\s*\[(10[–\-]12|10\+|13\+)\]/i.test(text) && !/Rolled Down/i.test(text);
       if (!isBigBracket) return;
@@ -2063,34 +2159,43 @@ if (typeof module !== 'undefined' && module.exports) {
 
       if (intrusionRoll >= 5) {
         anyIntrusionTriggered = true;
-        card.style.borderColor = 'var(--red)';
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'warp-intrusion-alert';
-        alertDiv.style.textAlign = 'center';
-        alertDiv.innerHTML = `
-          <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px; text-align:center;">
-            ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${intrusionRoll} (5+) — ADVERSARY / NEMESIS HIJACK!]
-          </div>
-          <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px; text-align:center;">
-            Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
-            <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'alpha')">📡 Ping Vox (The Exile)</button>
-            <button type="button" class="btn-blue btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'beta')">📡 Ping Vox (Junebug)</button>
-          </div>
-        `;
-        card.appendChild(alertDiv);
+        currentWaveIntrusions.push(`${roomStr}_R${roundStr}_Z${zoneNum}_${intrusionRoll}`);
+        if (!card.querySelector('.warp-intrusion-alert')) {
+          card.style.borderColor = 'var(--red)';
+          const alertDiv = document.createElement('div');
+          alertDiv.className = 'warp-intrusion-alert';
+          alertDiv.style.textAlign = 'center';
+          alertDiv.innerHTML = `
+            <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px; text-align:center;">
+              ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${intrusionRoll} (5+) — ADVERSARY / NEMESIS HIJACK!]
+            </div>
+            <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px; text-align:center;">
+              Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
+              <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'alpha')">📡 Ping Vox (The Exile)</button>
+              <button type="button" class="btn-blue btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'beta')">📡 Ping Vox (Junebug)</button>
+            </div>
+          `;
+          card.appendChild(alertDiv);
+        }
       } else {
-        const cleanNote = document.createElement('div');
-        cleanNote.className = 'intrusion-badge-clean';
-        cleanNote.style.cssText = 'margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace; text-align:center;';
-        cleanNote.textContent = `[Warp-Breach Intrusion Check: D6 = ${intrusionRoll} (Needed 5+) — Standard Horde Wave Holds]`;
-        card.appendChild(cleanNote);
+        if (!card.querySelector('.intrusion-badge-clean') && !card.querySelector('.warp-intrusion-alert')) {
+          const cleanNote = document.createElement('div');
+          cleanNote.className = 'intrusion-badge-clean';
+          cleanNote.style.cssText = 'margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace; text-align:center;';
+          cleanNote.textContent = `[Warp-Breach Intrusion Check: D6 = ${intrusionRoll} (Needed 5+) — Standard Horde Wave Holds]`;
+          card.appendChild(cleanNote);
+        }
       }
     });
 
-    if (anyIntrusionTriggered && typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpSiren === 'function') {
-      window.VoxAudio.playWarpSiren();
+    const waveSignature = currentWaveIntrusions.sort().join('|');
+    if (anyIntrusionTriggered && waveSignature && waveSignature !== lastWarpSirenSeedKey) {
+      lastWarpSirenSeedKey = waveSignature;
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpSiren === 'function') {
+        window.VoxAudio.playWarpSiren();
+      }
     }
   }
 
@@ -2107,6 +2212,7 @@ if (typeof module !== 'undefined' && module.exports) {
     window.debouncedPushLiveSpawnerStateToCloud = debouncedPushLiveSpawnerStateToCloud;
     window.getClientDeviceId = getClientDeviceId;
     window.updateSyncBadge = updateSyncBadge;
+    window.triggerCardStaticShake = triggerCardStaticShake;
     window.manualSyncSpawnerNow = function () {
       updateSyncBadge(true, '☁️ Syncing...');
       pollLiveSpawnerStateFromCloud().then(synced => {
@@ -2171,7 +2277,8 @@ if (typeof module !== 'undefined' && module.exports) {
       syncSpawnerPoolFromSupabase,
       renderLiveSpawnerBracketTable,
       transmitHordeIntrusionPing,
-      evaluateWarpBreachIntrusions
+      evaluateWarpBreachIntrusions,
+      triggerCardStaticShake
     });
   }
 })();
@@ -2654,30 +2761,34 @@ if (typeof module !== 'undefined' && module.exports) {
   }
 
   /**
-   * 9. Lexmechanicus Cloud Pool Sync Chime (For Supabase Save & Pull)
+   * 9. Lexmechanicus Cloud Pool Sync Audio Cue (Single-Shot Soft Data Pulse)
+   * Plays a subtle, non-intrusive high-tech datalink chirp strictly once.
    */
-  function playCloudSyncChime() {
+  let lastCloudSyncChimeTime = 0;
+  function playCloudSyncChime(force = false) {
+    const nowMs = Date.now();
+    if (!force && nowMs - lastCloudSyncChimeTime < 1200) return false;
+    lastCloudSyncChimeTime = nowMs;
+
     const ctx = getAudioCtx();
-    if (!ctx) return;
+    if (!ctx) return false;
 
     const now = ctx.currentTime;
-    const notes = [1046.5, 1318.5, 1567.98, 2093.0];
-    notes.forEach((freq, idx) => {
-      const t = now + idx * 0.045;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1046.5, now);
 
-      gain.gain.setValueAtTime(0.09, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    gain.gain.setValueAtTime(0.045, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.15);
-    });
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+    return true;
   }
+
 
   // Global listener: contextually triggers sound profiles on clicks
   document.addEventListener('click', (e) => {

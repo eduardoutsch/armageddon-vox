@@ -2424,3 +2424,49 @@ details[open] > summary {
   }
 }
 
+/* =========================================================================
+   CARD SYNCED STATIC SHAKE & CRT PHOSPHOR TREMOR
+   ========================================================================= */
+@keyframes staticShake {
+  0% {
+    transform: translate(0, 0);
+    filter: brightness(1);
+  }
+  15% {
+    transform: translate(-2px, 1px) skewX(-0.6deg);
+    filter: contrast(1.15) brightness(1.22) drop-shadow(0 0 6px rgba(16, 185, 129, 0.65));
+  }
+  30% {
+    transform: translate(2px, -1px) skewX(0.6deg);
+    filter: contrast(1.2) brightness(1.25) drop-shadow(0 0 7px rgba(245, 158, 11, 0.5));
+  }
+  45% {
+    transform: translate(-1px, 2px);
+    filter: contrast(1.1) brightness(1.18) drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+  }
+  60% {
+    transform: translate(1px, -1px);
+    filter: contrast(1.2) brightness(1.24) drop-shadow(0 0 8px rgba(16, 185, 129, 0.7));
+  }
+  75% {
+    transform: translate(-1px, -1px);
+    filter: contrast(1.08) brightness(1.1);
+  }
+  90% {
+    transform: translate(1px, 1px);
+    filter: contrast(1.04) brightness(1.04);
+  }
+  100% {
+    transform: translate(0, 0);
+    filter: brightness(1);
+  }
+}
+
+.card-synced-shake {
+  animation: staticShake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  border-color: rgba(16, 185, 129, 0.85) !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35), inset 0 0 8px rgba(16, 185, 129, 0.15) !important;
+  will-change: transform, filter;
+}
+
+

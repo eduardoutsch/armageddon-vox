@@ -385,6 +385,7 @@ globalThis.localStorage = {
 
 globalThis.document = {
   getElementById: (id) => getOrCreateElement(id),
+  querySelector: (sel) => null,
   querySelectorAll: () => [],
   addEventListener: () => {},
   createElement: (tag) => ({
@@ -879,6 +880,142 @@ test('app: pollLiveSpawnerStateFromCloud ignores older or self-sent updates', as
   assert.equal(synced, false, 'Should ignore self-sent or older updates');
 });
 
+test('app: triggerCardStaticShake adds card-synced-shake class to element and cleans up', () => {
+  const classes = new Set();
+  const mockCard = {
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c)
+    },
+    offsetWidth: 100
+  };
+
+  assert.equal(typeof app.triggerCardStaticShake, 'function', 'triggerCardStaticShake must be exported');
+  app.triggerCardStaticShake(mockCard);
+  assert.equal(mockCard.classList.contains('card-synced-shake'), true, 'card-synced-shake class must be added');
+});
+
+test('app: applyRemoteSharedState triggers static shake on specifically changed card elements', () => {
+  const shakenElements = [];
+  const makeShakable = (id) => {
+    const el = getOrCreateElement(id);
+    el.classList = {
+      classes: new Set(),
+      add(cls) {
+        if (cls === 'card-synced-shake') shakenElements.push(id);
+        this.classes.add(cls);
+      },
+      remove(cls) { this.classes.delete(cls); },
+      contains(cls) { return this.classes.has(cls); }
+    };
+    return el;
+  };
+
+  const roundBanner = makeShakable('roundBannerTest');
+  const zoneCard1 = makeShakable('zoneCardTest1');
+  const zoneCard2 = makeShakable('zoneCardTest2');
+
+  const origQuerySelector = globalThis.document.querySelector;
+  const origQuerySelectorAll = globalThis.document.querySelectorAll;
+
+  globalThis.document.querySelector = (sel) => {
+    if (sel.includes('round-banner')) return roundBanner;
+    return null;
+  };
+  globalThis.document.querySelectorAll = (sel) => {
+    if (sel.includes('.spawn-zone')) return [zoneCard1, zoneCard2];
+    return [];
+  };
+
+  try {
+    app.applyRemoteSharedState({
+      battleRound: 4,
+      currentZoneSpawns: ['Zone 1: Orks Boyz', 'Zone 2: Meganobz']
+    });
+
+    assert.ok(shakenElements.includes('roundBannerTest'), 'Round banner must shake when battle round changes');
+    assert.ok(shakenElements.includes('zoneCardTest1') || shakenElements.includes('zoneCardTest2'), 'Changed spawn zone cards must shake');
+  } finally {
+    globalThis.document.querySelector = origQuerySelector;
+    globalThis.document.querySelectorAll = origQuerySelectorAll;
+  }
+});
+
+test('app: pollLiveSpawnerStateFromCloud plays chime strictly once and does not repeat on duplicate polls', async () => {
+  let chimeCount = 0;
+  globalThis.window.VoxAudio = {
+    playCloudSyncChime: () => { chimeCount++; }
+  };
+
+  const testState = {
+    roomCode: 'HADES-CHIME',
+    hasActiveSession: true,
+    battleRound: 2,
+    currentZoneSpawns: ['Zone 1: Gretchin'],
+    updatedAt: Date.now() + 100000,
+    lastSenderId: 'ally-sender-99'
+  };
+
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      ok: true,
+      nemesis_status: {
+        spawner_rooms: { 'HADES-CHIME': testState }
+      }
+    })
+  });
+
+  document.getElementById('seedInput').value = 'HADES-CHIME';
+
+  // First poll with new data triggers single chime
+  const sync1 = await app.pollLiveSpawnerStateFromCloud();
+  assert.equal(sync1, true);
+  assert.equal(chimeCount, 1, 'Chime should play exactly once on first reception of remote change');
+
+  // Second poll with identical state should NOT replay chime
+  const sync2 = await app.pollLiveSpawnerStateFromCloud();
+  assert.equal(sync2, false, 'Identical or already-synced poll must not re-sync');
+  assert.equal(chimeCount, 1, 'Chime must not repeat on subsequent poll of same state');
+});
+
+test('app: evaluateWarpBreachIntrusions plays warp siren only once for a given wave and does not repeat', () => {
+  let sirenCount = 0;
+  globalThis.window.VoxAudio = {
+    playWarpSiren: () => { sirenCount++; }
+  };
+
+  const container = document.getElementById('spawnResultsContainer');
+  const cardBig = {
+    textContent: 'Spawn Zone 1 • Bracket [13+] (551+ pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: () => {}
+  };
+
+  container.querySelectorAll = (selector) => {
+    if (selector === '.spawn-zone') return [cardBig];
+    return [];
+  };
+
+  // Force deterministic intrusion roll 6
+  const origMulberry = globalThis.mulberry32;
+  globalThis.mulberry32 = () => () => 0.99; // Math.floor(0.99 * 6) + 1 = 6
+
+  try {
+    app.evaluateWarpBreachIntrusions();
+    const countAfterFirst = sirenCount;
+
+    // Call evaluateWarpBreachIntrusions again (e.g. re-render or re-poll)
+    app.evaluateWarpBreachIntrusions();
+    assert.equal(sirenCount, countAfterFirst, 'Warp siren must not repeat on consecutive evaluations of the same wave');
+  } finally {
+    globalThis.mulberry32 = origMulberry;
+  }
+});
+
+
 
 
 ````
@@ -1162,6 +1299,17 @@ test('vox-audio: window.VoxAudio exposes complete public API for all game modes'
   assert.equal(typeof globalThis.window.VoxAudio.navigateSeamlessly, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.transmitToVox, 'function');
 });
+
+test('vox-audio: playCloudSyncChime throttles rapid calls to play strictly once', () => {
+  const playedFirst = voxModule.playCloudSyncChime(true);
+  assert.equal(playedFirst, true, 'First forced chime call must play');
+
+  // Immediate second invocation should be throttled (single-shot guard)
+  const playedSecond = voxModule.playCloudSyncChime();
+  assert.equal(playedSecond, false, 'Immediate consecutive chime must be suppressed by single-shot throttle');
+});
+
+
 
 
 ````

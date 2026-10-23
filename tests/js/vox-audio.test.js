@@ -273,4 +273,15 @@ test('vox-audio: window.VoxAudio exposes complete public API for all game modes'
   assert.equal(typeof globalThis.window.VoxAudio.transmitToVox, 'function');
 });
 
+test('vox-audio: playCloudSyncChime throttles rapid calls to play strictly once', () => {
+  const playedFirst = voxModule.playCloudSyncChime(true);
+  assert.equal(playedFirst, true, 'First forced chime call must play');
+
+  // Immediate second invocation should be throttled (single-shot guard)
+  const playedSecond = voxModule.playCloudSyncChime();
+  assert.equal(playedSecond, false, 'Immediate consecutive chime must be suppressed by single-shot throttle');
+});
+
+
+
 

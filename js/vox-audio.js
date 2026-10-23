@@ -470,30 +470,34 @@
   }
 
   /**
-   * 9. Lexmechanicus Cloud Pool Sync Chime (For Supabase Save & Pull)
+   * 9. Lexmechanicus Cloud Pool Sync Audio Cue (Single-Shot Soft Data Pulse)
+   * Plays a subtle, non-intrusive high-tech datalink chirp strictly once.
    */
-  function playCloudSyncChime() {
+  let lastCloudSyncChimeTime = 0;
+  function playCloudSyncChime(force = false) {
+    const nowMs = Date.now();
+    if (!force && nowMs - lastCloudSyncChimeTime < 1200) return false;
+    lastCloudSyncChimeTime = nowMs;
+
     const ctx = getAudioCtx();
-    if (!ctx) return;
+    if (!ctx) return false;
 
     const now = ctx.currentTime;
-    const notes = [1046.5, 1318.5, 1567.98, 2093.0];
-    notes.forEach((freq, idx) => {
-      const t = now + idx * 0.045;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1046.5, now);
 
-      gain.gain.setValueAtTime(0.09, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    gain.gain.setValueAtTime(0.045, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.075);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.15);
-    });
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+    return true;
   }
+
 
   // Global listener: contextually triggers sound profiles on clicks
   document.addEventListener('click', (e) => {
