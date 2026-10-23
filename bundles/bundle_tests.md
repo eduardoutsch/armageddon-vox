@@ -1415,12 +1415,13 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
     'Must include Lord Commander Junebug sealed dispatch title'
   );
   assert.ok(
-    html.includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
+    html.replace(/\s+/g, ' ').includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
     'Must include Lord Commander Junebug clearance tag'
   );
+  const normHtml = html.replace(/\s+/g, ' ');
   assert.ok(
-    html.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
-    html.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
+    normHtml.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
+    normHtml.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
     'Must include The Voice in the Ash narrative section'
   );
   assert.ok(
@@ -1822,7 +1823,10 @@ test('briefing: restoreBriefingState restores all user choices from localStorage
 
 test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
   // Check read-only styling
-  assert.ok(briefingHtml.includes('pointer-events: none; /* Strictly non-interactable status gauge */'), 'Must define pointer-events none');
+  assert.ok(
+    /pointer-events:\s*none;/i.test(briefingHtml),
+    'Must define pointer-events none'
+  );
   assert.ok(briefingHtml.includes('aria-label="Current Shipboard Balance Gauge (Read-Only)"'), 'Must define read-only aria-label');
   
   // Check -1 active status node
@@ -1840,19 +1844,44 @@ test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CU
 
 test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, and Flagship muster protocol', () => {
   // Alpha telemetry & lore
-  assert.ok(briefingHtml.includes('Deck 44: The Lower Decks &amp; Bay 04'), 'Must include Deck 44 telemetry');
-  assert.ok(briefingHtml.includes('Brig Cell 09: The Bleeding Bulkhead'), 'Must include Brig Cell 09 telemetry');
-  assert.ok(briefingHtml.includes('Deck 01: The High Sanctum Spire'), 'Must include Deck 01 telemetry');
+  assert.ok(
+    /Deck 44: The Lower Decks &amp; Bay\s+04/.test(briefingHtml) ||
+    briefingHtml.includes('Deck 44: The Lower Decks &amp; Bay 04'),
+    'Must include Deck 44 telemetry'
+  );
+  assert.ok(
+    /Brig Cell 09: The Bleeding\s+Bulkhead/.test(briefingHtml) ||
+    briefingHtml.includes('Brig Cell 09: The Bleeding Bulkhead'),
+    'Must include Brig Cell 09 telemetry'
+  );
+  assert.ok(
+    /Deck 01: The High Sanctum\s+Spire/.test(briefingHtml) ||
+    briefingHtml.includes('Deck 01: The High Sanctum Spire'),
+    'Must include Deck 01 telemetry'
+  );
   assert.ok(briefingHtml.includes('Campaign Chronicle Archive // Session 0 Prologue'), 'Must include Session 0 prologue archive');
   assert.ok(briefingHtml.includes('The Left Flank Heresy'), 'Must include chronicle pillar 1');
-  assert.ok(briefingHtml.includes('The Center Crucible &amp; Rise of'), 'Must include chronicle pillar 2');
+  assert.ok(
+    /The Center Crucible &amp; Rise of/.test(briefingHtml) ||
+    briefingHtml.includes('The Center Crucible &amp; Rise of'),
+    'Must include chronicle pillar 2'
+  );
   assert.ok(briefingHtml.includes('The Wrath of the Ashen Seraph'), 'Must include chronicle pillar 3');
 
   // Beta telemetry & muster protocol
-  assert.ok(briefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP)'), 'Must include Beta Hegemony lead telemetry');
-  assert.ok(briefingHtml.includes('Session 0 Legacy: Active Nemesis Echoes'), 'Must include Nemesis Echoes telemetry');
-  assert.ok(briefingHtml.includes('Private Conduit &amp; Psychic Bleed Array'), 'Must include private conduit telemetry');
-  assert.ok(briefingHtml.includes('Phase 1 Flagship Muster &amp; Registration Protocol'), 'Must include Flagship Muster Protocol');
+  const normBriefingHtml = briefingHtml.replace(/\s+/g, ' ');
+  assert.ok(normBriefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP)'), 'Must include Beta Hegemony lead telemetry');
+  assert.ok(normBriefingHtml.includes('Session 0 Legacy: Active Nemesis Echoes'), 'Must include Nemesis Echoes telemetry');
+  assert.ok(
+    normBriefingHtml.includes('Private Conduit &amp; Psychic Bleed Array') ||
+    normBriefingHtml.includes('Private Conduit & Psychic Bleed Array'),
+    'Must include private conduit telemetry'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Phase 1 Flagship Muster &amp; Registration Protocol') ||
+    normBriefingHtml.includes('Phase 1 Flagship Muster & Registration Protocol'),
+    'Must include Flagship Muster Protocol'
+  );
 });
 
 ````

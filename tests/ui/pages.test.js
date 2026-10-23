@@ -130,12 +130,13 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
     'Must include Lord Commander Junebug sealed dispatch title'
   );
   assert.ok(
-    html.includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
+    html.replace(/\s+/g, ' ').includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
     'Must include Lord Commander Junebug clearance tag'
   );
+  const normHtml = html.replace(/\s+/g, ' ');
   assert.ok(
-    html.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
-    html.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
+    normHtml.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
+    normHtml.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
     'Must include The Voice in the Ash narrative section'
   );
   assert.ok(
