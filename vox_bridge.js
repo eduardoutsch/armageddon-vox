@@ -185,6 +185,12 @@ async function extractCleanLastModelResponse(page) {
       '.source-chip',
       'mat-chip',
       'model-thoughts',
+      '.code-block-decoration',
+      '.code-block-header',
+      '.code-header',
+      '[class*="code-block-header"]',
+      'button[aria-label*="Copy"]',
+      'button[aria-label*="Copiar"]',
       '.sr-only',
       '.visually-hidden',
       '.cdk-visually-hidden'
@@ -196,7 +202,7 @@ async function extractCleanLastModelResponse(page) {
     clone.querySelectorAll('button, span, a, div, h1, h2, h3, h4, p').forEach(el => {
       if (el.children.length === 0) {
         const t = (el.textContent || '').trim();
-        if (/^(MD|\+\s*\d+|O Gemini disse:?|Gemini said:?)$/i.test(t)) {
+        if (/^(MD|\+\s*\d+|O Gemini disse:?|Gemini said:?|Plaintext|Texto simples|Text|Markdown|Copy code|Copiar código)$/i.test(t)) {
           el.remove();
         }
       }
@@ -207,11 +213,16 @@ async function extractCleanLastModelResponse(page) {
     });
 
     clone.querySelectorAll('li').forEach(li => {
+      // Unwrap inner <p> tags inside <li> so bullets never split onto an empty line!
+      li.querySelectorAll('p').forEach(p => {
+        p.replaceWith(...p.childNodes);
+      });
       li.prepend('\n• ');
       li.append('\n');
     });
 
     clone.querySelectorAll('p, h1, h2, h3, h4, h5, h6, pre, blockquote, hr, tr').forEach(block => {
+      if (block.tagName === 'P' && block.closest('li')) return;
       block.prepend('\n\n');
       block.append('\n\n');
     });
@@ -235,11 +246,13 @@ function scrubArtifacts(str) {
     .replace(/\[cite:\s*[\d,\s]+\]/gi, '')
     .replace(/[ \t]*\bMD\b(?:\s*\+\s*\d+)?/g, '')
     .replace(/^\s*\+\s*\d+\s*$/gm, '')
+    .replace(/^\s*(?:Plaintext|Texto simples|Text|Markdown|Copy code|Copiar código)\s*$/gim, '')
     .replace(/<\/?(?:DIRECT_REPLY|INTERCEPT)[^>]*>/gi, '')
     .replace(/(\+{3})([A-Za-z\[])/g, '$1\n\n$2')
     .replace(/([.!?])\s*(\+{3})/g, '$1\n\n$2')
     .replace(/([.!?])\s*(\[[A-Z0-9\s&//\-_]+\]:)/g, '$1\n\n$2')
     .replace(/([^\n])\s*(•\s+)/g, '$1\n$2')
+    .replace(/•\s*\n+\s*/g, '• ')
     .replace(/•\s*[•\-*]\s*/g, '• ')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -247,13 +260,13 @@ function scrubArtifacts(str) {
 }
 
 async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) {
-  const maxWaitMs = 90000;
+  const maxWaitMs = 150000;
   const start = Date.now();
 
   logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> with REF-ID ${msgShortId} (Previous count:${prevState.count})...`);
 
   let newResponseStarted = false;
-  while (Date.now() - start < 45000) {
+  while (Date.now() - start < 80000) {
     await page.waitForTimeout(1000);
     const curr = await extractCleanLastModelResponse(page);
 
@@ -373,7 +386,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       logFn(`[THREAD GUARD // ${channelTag}] Tab drifted to ${currentUrl} — snapping back to ${expectedUrl}...`);
       await targetPage.goto(expectedUrl, { waitUntil: 'domcontentloaded' });
       if (typeof targetPage.waitForSelector === 'function') {
-        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => {});
+        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => { });
       }
       if (typeof targetPage.waitForTimeout === 'function') {
         await targetPage.waitForTimeout(1500);
@@ -403,7 +416,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
     const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const needsInterceptBleed = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
@@ -474,9 +487,9 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     interceptAttrs = (interceptTagMatch[2] !== undefined ? interceptTagMatch[1] : '') || '';
     interceptPart = interceptTagMatch[2] !== undefined ? interceptTagMatch[2] : interceptTagMatch[1];
   } else {
-    const splitIdx = directPart.search(/\+{2,}\s*PASSIVE CHOIR INTERCEPT/i);
+    const splitIdx = directPart.search(/(?:Plaintext\s*\n+)?\+{2,}\s*(?:PASSIVE\s+)?(?:ASTROPATHIC\s+)?(?:CHOIR\s+)?INTERCEPT/i);
     if (splitIdx > 20) {
-      interceptPart = directPart.slice(splitIdx);
+      interceptPart = directPart.slice(splitIdx).replace(/^\s*Plaintext\s*/i, '');
       directPart = directPart.slice(0, splitIdx);
     }
   }
@@ -616,7 +629,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   logGreen('>> Opening Tab 1 (Commander Alpha // The Exile)...');
   await alphaPage.goto(alphaThreadUrl, { waitUntil: 'domcontentloaded' });
   if (typeof alphaPage.waitForSelector === 'function') {
-    await alphaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => {});
+    await alphaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => { });
   }
   if (typeof alphaPage.waitForTimeout === 'function') {
     await alphaPage.waitForTimeout(2000);
@@ -626,7 +639,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   logGreen('>> Opening Tab 2 (Commander Beta // JUNEBUG)...');
   await betaPage.goto(betaThreadUrl, { waitUntil: 'domcontentloaded' });
   if (typeof betaPage.waitForSelector === 'function') {
-    await betaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => {});
+    await betaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => { });
   }
   if (typeof betaPage.waitForTimeout === 'function') {
     await betaPage.waitForTimeout(2000);

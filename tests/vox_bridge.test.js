@@ -5,10 +5,43 @@ const {
   resolveServiceKey,
   resolveThreadUrls,
   scrubArtifacts,
+  extractCleanLastModelResponse,
   processSingleMessage,
   drainChannelQueue,
   runDualThreadCourier
 } = require('../vox_bridge.js');
+
+function createMockPage({ onInsertText, evaluateResult } = {}) {
+  return {
+    url: () => 'https://gemini.google.com/test',
+    evaluate: async (fn, arg) => {
+      if (typeof evaluateResult === 'function') {
+        return evaluateResult(fn, arg);
+      }
+      return evaluateResult || { count: 0, text: '' };
+    },
+    locator: (sel) => {
+      const btn = {
+        waitFor: async () => true,
+        count: async () => 1,
+        isEnabled: async () => true,
+        click: async () => {}
+      };
+      return {
+        first: () => btn,
+        count: async () => 1
+      };
+    },
+    bringToFront: async () => {},
+    waitForTimeout: async () => {},
+    keyboard: {
+      press: async () => {},
+      insertText: async (txt) => {
+        if (onInsertText) onInsertText(txt);
+      }
+    }
+  };
+}
 
 test('resolveServiceKey: resolves key correctly across standard and fallback env formats', () => {
   // Test primary standard keys
@@ -84,10 +117,230 @@ MD + 2
   assert.ok(cleanBullets.includes('• Unit Alfa ready'));
   assert.ok(cleanBullets.includes('• Unit Beta advancing'));
 
+  // Standalone code block and UI labels
+  const uiLabelInput = 'Plaintext\n+++ VOX TRANSMISSION +++\n• \n\n Unit Gamma deployed\nCopy code\nCopiar código\nTexto simples';
+  const cleanLabels = scrubArtifacts(uiLabelInput);
+  assert.equal(cleanLabels.includes('Plaintext'), false, 'Must scrub Plaintext label');
+  assert.equal(cleanLabels.includes('Copy code'), false, 'Must scrub Copy code label');
+  assert.equal(cleanLabels.includes('Copiar código'), false, 'Must scrub Copiar código label');
+  assert.equal(cleanLabels.includes('Texto simples'), false, 'Must scrub Texto simples label');
+  assert.ok(cleanLabels.includes('• Unit Gamma deployed'), 'Must collapse hanging bullets onto single line');
+
   // Null/empty input
   assert.equal(scrubArtifacts(''), '');
   assert.equal(scrubArtifacts(null), '');
   assert.equal(scrubArtifacts(undefined), '');
+});
+
+test('extractCleanLastModelResponse: removes code-block headers and prevents <p> inside <li> from breaking bullets', async () => {
+  class SimpleDomNode {
+    constructor(tagName, text = '', className = '', attrs = {}) {
+      this.tagName = tagName.toUpperCase();
+      this._text = text;
+      this.className = className;
+      this.attrs = attrs;
+      this.children = [];
+      this.childNodes = text ? [text] : [];
+      this.parentNode = null;
+    }
+    get textContent() {
+      if (this.childNodes.length > 0) {
+        return this.childNodes.map(c => (typeof c === 'string' ? c : c.textContent)).join('');
+      }
+      return this._text;
+    }
+    set textContent(v) {
+      this._text = v;
+      this.childNodes = [];
+      this.children = [];
+    }
+    cloneNode(deep = true) {
+      const cloned = new SimpleDomNode(this.tagName, this._text, this.className, { ...this.attrs });
+      if (deep) {
+        cloned.childNodes = this.childNodes.map(c => {
+          if (typeof c === 'string') return c;
+          const copy = c.cloneNode(true);
+          copy.parentNode = cloned;
+          return copy;
+        });
+        cloned.children = cloned.childNodes.filter(c => typeof c !== 'string');
+      }
+      return cloned;
+    }
+    remove() {
+      if (this.parentNode) {
+        this.parentNode.childNodes = this.parentNode.childNodes.filter(c => c !== this);
+        this.parentNode.children = this.parentNode.children.filter(c => c !== this);
+      }
+    }
+    replaceWith(...nodes) {
+      if (this.parentNode) {
+        const idx = this.parentNode.childNodes.indexOf(this);
+        if (idx !== -1) {
+          this.parentNode.childNodes.splice(idx, 1, ...nodes);
+          nodes.forEach(n => {
+            if (n && typeof n === 'object') n.parentNode = this.parentNode;
+          });
+          this.parentNode.children = this.parentNode.childNodes.filter(c => typeof c !== 'string');
+        }
+      }
+    }
+    prepend(...nodes) {
+      nodes.slice().reverse().forEach(n => {
+        this.childNodes.unshift(n);
+        if (n && typeof n === 'object') {
+          n.parentNode = this;
+          this.children.unshift(n);
+        }
+      });
+    }
+    append(...nodes) {
+      nodes.forEach(n => {
+        this.childNodes.push(n);
+        if (n && typeof n === 'object') {
+          n.parentNode = this;
+          this.children.push(n);
+        }
+      });
+    }
+    closest(tag) {
+      let curr = this.parentNode;
+      while (curr) {
+        if (curr.tagName === tag.toUpperCase()) return curr;
+        curr = curr.parentNode;
+      }
+      return null;
+    }
+    querySelectorAll(sel) {
+      const results = [];
+      const tokens = sel.split(',').map(s => s.trim().toLowerCase());
+      const visit = (node) => {
+        for (const child of node.children) {
+          if (!child || typeof child !== 'object') continue;
+          const tag = (child.tagName || '').toLowerCase();
+          const cls = (child.className || '').toLowerCase();
+          const match = tokens.some(t => {
+            if (t.startsWith('.')) return cls.includes(t.slice(1));
+            if (t.startsWith('button[')) return tag === 'button';
+            return tag === t;
+          });
+          if (match) results.push(child);
+          visit(child);
+        }
+      };
+      visit(this);
+      return results;
+    }
+  }
+
+  const root = new SimpleDomNode('div');
+  const codeHeader = new SimpleDomNode('div', 'Plaintext', 'code-block-decoration');
+  codeHeader.parentNode = root;
+  root.children.push(codeHeader);
+  root.childNodes.push(codeHeader);
+
+  const copyBtn = new SimpleDomNode('button', 'Copy code', '', { 'aria-label': 'Copy code' });
+  copyBtn.parentNode = root;
+  root.children.push(copyBtn);
+  root.childNodes.push(copyBtn);
+
+  const li = new SimpleDomNode('li');
+  li.parentNode = root;
+  const pInsideLi = new SimpleDomNode('p', 'Unit 1 deployed');
+  pInsideLi.parentNode = li;
+  li.children.push(pInsideLi);
+  li.childNodes.push(pInsideLi);
+  root.children.push(li);
+  root.childNodes.push(li);
+
+  const mockPage = {
+    evaluate: async (fn, sel) => {
+      const prevDoc = global.document;
+      global.document = {
+        querySelectorAll: (s) => (s === sel ? [root] : [])
+      };
+      try {
+        return fn(sel);
+      } finally {
+        global.document = prevDoc;
+      }
+    }
+  };
+
+  const res = await extractCleanLastModelResponse(mockPage);
+  assert.equal(res.count, 1);
+  assert.equal(res.text.includes('Plaintext'), false, 'Code header must be removed');
+  assert.equal(res.text.includes('Copy code'), false, 'Copy button must be removed');
+  assert.ok(res.text.includes('• Unit 1 deployed'), 'Bullet must stay on same line without orphan newline');
+  assert.equal(res.text.includes('• \n\n Unit 1 deployed'), false, 'Must not have orphan newline');
+});
+
+test('processSingleMessage: splits PASSIVE ASTROPATHIC CHOIR INTERCEPT variations and handles Plaintext headers', async () => {
+  const fetchCalls = [];
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const testMsg = {
+    id: '44556677-intercept-msg',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: 'Report astral choir bleed'
+  };
+
+  const mockPage = createMockPage();
+
+  // Response with Plaintext header and PASSIVE ASTROPATHIC CHOIR INTERCEPT
+  const responseWithAstropathicIntercept =
+    'REF-ID: 44556677\n+++ ORBITAL DISPATCH +++\nDirect comms verified.\nPlaintext\n+++ PASSIVE ASTROPATHIC CHOIR INTERCEPT +++\nPsychic static from [REDACTED] detected.';
+
+  const success = await processSingleMessage(testMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => responseWithAstropathicIntercept,
+    logFn: () => {}
+  });
+
+  assert.equal(success, true);
+  const patchCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_messages?id=eq.44556677-intercept-msg'));
+  assert.ok(patchCall, 'Must patch vox_messages');
+  assert.ok(patchCall.body.reply.includes('Direct comms verified.'));
+  assert.equal(patchCall.body.reply.includes('PASSIVE ASTROPATHIC CHOIR INTERCEPT'), false, 'Direct reply must have intercept stripped');
+
+  const interceptCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.ok(interceptCall, 'Must post to vox_interferences');
+  assert.ok(interceptCall.body.redacted_text.includes('PASSIVE ASTROPATHIC CHOIR INTERCEPT'));
+  assert.equal(interceptCall.body.redacted_text.includes('Plaintext'), false, 'Intercept must have leading Plaintext label stripped');
+});
+
+test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for EMERGENCY AUSPEX PING and UNBOUND ADVERSARY', async () => {
+  const dispatchedPrompts = [];
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const testMsg = {
+    id: '99887766-unbound-ping',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: '+++ EMERGENCY AUSPEX PING: UNBOUND ADVERSARY WARP-BREACH INTRUSION DETECTED +++'
+  };
+
+  await processSingleMessage(testMsg, mockPage, {
+    fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => 'REF-ID: 99887766\n+++ COGITATOR READOUT +++\nIntrusion noted.',
+    logFn: () => {}
+  });
+
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Unbound/Intrusion pings must trigger a Pattern 5 intercept bleed instruction in the prompt'
+  );
 });
 
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
