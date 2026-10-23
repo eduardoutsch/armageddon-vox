@@ -348,33 +348,28 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
     <div id="contentBeta" class="hidden">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
         <span style="font-family:monospace; font-size:0.76rem; color:var(--blue);">
-          +++ ORBITAL CONDUIT: GEOSTATIONARY ZENITH-09 // AUDITOR: LOGIS-PREFECT VANE // RECIPIENT: LORD COMMANDER JUNEBUG +++
+          +++ BRIDGE LOGIC CORE [UNREGISTERED HULL] // INTERLINK: GEOSTATIONARY ZENITH-09 // COMMANDER: LORD COMMANDER JUNEBUG +++
         </span>
         <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Beta')">🔒 Lock Lord Commander Junebug Dataslate</button>
       </div>
 
+      <!-- PART 1: FLAGSHIP BRIDGE COGITATOR WAKE SEQUENCE -->
       <div class="hero-card" style="margin-bottom:20px;">
-        <div class="status-pill">Incoming Vox-Transmission // Origin: Segmentum Solar Tactica Logis [Zenith-09]</div>
-        <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Fires of Armageddon</h1>
+        <div class="status-pill">Flagship Bridge Cogitator // Cold-Standby Wake Sequence • Orbital Anchor: Sector Node 0</div>
+        <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">Awaiting Flagship Christening &amp; Muster</h1>
 
         <div class="lore-quote" style="text-align:left; line-height:1.65;">
-          <p style="margin-bottom:10px;">
-            <em>"Hear me, my lord. The sky above Armageddon does not weep rain; it weeps ash, promethium soot, and the curdled blood of a dying reality.</em>
+          <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.82rem; color:var(--blue);">
+            <strong>+++ BRIDGE LOGIC CORE // VENTRAL AUSPEX &amp; LAUNCH BAY TELEMETRY +++</strong>
           </p>
           <p style="margin-bottom:10px;">
-            <em>Atop the jagged basalt cliffs of the Crimson Mesa, the Red Angel’s Gate stands torn wide—a yawning wound in the Immaterium that pulses like a butchered heart. From its depths, the laughter of dark gods and the screech of warp-born horrors echo across the continent, drowning the ruined spires of Hives Hades and Thoraddis in madness.</em>
+            <em>"Command imprint recognized. Welcome back to the bridge, Warlord. I have held this vessel in silent geostationary drift since the smoke cleared over the Golgotha Arbor-Basin.</em>
           </p>
           <p style="margin-bottom:10px;">
-            <em>Down in the suffocating heat of the Golgotha Arbor-Basin, the petrified jungle still smolders from your first contact. Blackened tree trunks lie shattered across craters of vitrified mud, and the air remains thick with the stench of ozone, melted ceramite, and promethium smoke. It was a brutal, grinding crucible of point-blank artillery and burning steel. Even as stained-glass war-engines detonated in blinding fireballs across the clearing, your lines held through the inferno—until wings of white fire tore through the low, sulfuric clouds to butcher the enemy's rear guard and claim that blood-soaked mire by a razor's edge.</em>
+            <em>Through my ventral augur-arrays, I still track the smoldering craters of your first contact down in that petrified jungle—where stained-glass war-engines detonated at point-blank range, eleven enemy trench-spade strikes glanced harmlessly off sacred ceramite, and wings of white fire dropped from the sulfuric clouds to butcher the rival command echelon and claim the clearing by a razor's edge (<strong>+3 VP</strong>).</em>
           </p>
-          <p style="margin-bottom:10px;">
-            <em>Yet that clash in the forest was only an omen. High above the toxic cloud-banks—where upper-thermosphere ash curtains register at 98.6% opacity and blind our orbital lenses over Sector Nodes 1 through 7—your flagship now hangs in the void, its launch bays primed and its warriors awaiting the order to unleash your true Crusade host upon the world below.</em>
-          </p>
-          <p style="margin-bottom:10px;">
-            <em>Who is it that answers your call in the dark, my lord? Do you return at the head of those same zealous Sisters, descending once more with bolter, flamer, and miracle to scour this world clean? Or was that first battle merely a prelude—and even now, does an entirely different warhost stir within your fleet's holds? Perhaps ancient vaults and forgotten relics call to you from beneath the ashes; perhaps your legions hunger for skulls, or wait in cold, inhuman silence to reclaim an empire of dust.</em>
-          </p>
-          <p style="margin-bottom:0;">
-            <em>Whatever army you unleash, know that you do not drop into an empty warzone. A rival commander already fortifies the northern clearings, nursing the wounds of your first encounter—and in the uncharted fog beyond the trees, a <strong>Third Force</strong> is waking. We have no flagship in orbit. We answer to no imperial tithe. Whether we claw our way up from subterranean brood-tunnels, erupt from screaming tears in the Warp, or march out of the choking ash-storms, my legions will contest every inch of this dying world against you both. When you lock blades with your rival in the ashes, I will feast upon the aftermath. And when my hordes surround you in the dark, you will have to decide whether the commander standing beside you is your salvation... or your next victim."</em>
+          <p style="margin:0;">
+            <em>Yet my launch bays remain sealed under temporary transponders, and my machine-spirit still lacks a true name. My troop holds, drop-shuttles, and teleportation matrices await your true Phase 1 Crusade host. Are we unleashing the Sisterhood once more to finish what they began—or do I unseal the deeper vaults for a different army entirely? Before you issue the planetfall order, be advised: our astropathic receiver has locked onto an impatient Vermilion-tier carrier wave from <strong>Geostationary Zenith-09</strong>. Patching <strong>Logis-Prefect Vane</strong> to your primary hololith now..."</em>
           </p>
         </div>
 
@@ -395,55 +390,22 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
         </div>
       </div>
 
-      <!-- NEW: FLAGSHIP MUSTER & ASTROPATHIC REGISTRATION PROTOCOL -->
-      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
-        <div class="section-header" style="margin-top:0;">
-          <h2 style="margin:0; font-size:1.22rem; color:var(--green);">📡 Phase 1 Flagship Muster &amp; Registration Protocol</h2>
-          <span class="hud-sub">Awaiting Official Fleet Declaration on Terminal Beta</span>
-        </div>
-        <p class="card-desc" style="margin-bottom:12px;">
-          To lock in your official Phase 1 Crusade force and unlock your custom faction tables across the website, step onto your bridge in <a href="vox.html" style="color:var(--green); font-weight:700;">📡 Mode 7: Astropath Vox (Lord Commander Junebug Conduit)</a> and transmit your opening dispatch to <strong>Logis-Prefect Vane</strong> with:
-        </p>
-        <div class="choice-grid" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:12px;">
-          <div class="card" style="background:#090b10; margin:0; padding:12px;">
-            <strong style="color:var(--gold); font-size:0.88rem;">1. Faction &amp; Detachment</strong>
-            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
-              Declare the army you are bringing to Armageddon—and as soon as your faction is logged, its bespoke <strong>Codex Battle Traits, Crusade Relics, and Agendas</strong> will be welded directly into your <a href="crusade.html" style="color:var(--gold);">Mode 5 Quartermaster Rollers</a>!
-            </p>
-          </div>
-          <div class="card" style="background:#090b10; margin:0; padding:12px;">
-            <strong style="color:var(--blue); font-size:0.88rem;">2. Flagship &amp; Warlord Lore</strong>
-            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
-              Name your orbital flagship, your Warlord, and any signature units on your Order of Battle (plus any <strong>Epic Hero</strong> you wish the Campaign Master to bestow a <strong>Mighty Champion</strong> ability upon!).
-            </p>
-          </div>
-          <div class="card" style="background:#090b10; margin:0; padding:12px;">
-            <strong style="color:var(--red); font-size:0.88rem;">3. Pledged Alliance Banner</strong>
-            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
-              Claim your banner among the three Alliances below (<strong>Gatebreakers</strong>, <strong>Desecrators</strong>, or <strong>Marauders</strong>). Whatever banner remains unclaimed by you and your rival will be seized by the unseen Third Force!
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION I: THE VOICE IN THE ASH -->
-      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--red);">
-        <h2 style="margin-top:0; font-size:1.25rem;">The Voice in the Ash (Your Chronicler &amp; The Third Force)</h2>
-        <p class="card-desc">
-          Welcome to our <strong>Warhammer 40,000: Armageddon Crusade</strong>! While you and The Exile // Sanctuary of Ash track your unit XP and Crusade cards on <strong>Administratum</strong>, the Campaign Master serves two roles simultaneously:
-        </p>
-        <ul style="font-size:0.92rem; line-height:1.6;">
-          <li><strong>1. Impartial Chronicler &amp; Orbital Auditor:</strong> After every battle you transmit from <a href="crusade.html" style="color:var(--gold);">Mode 5: Crusade Quartermaster</a>, High Command chronicles your Warlord's deeds, christens custom in-universe lore names and backstories for every single <strong>Battle Trait, Weapon Modification, Crusade Relic, and Battle Scar</strong> your units roll (<em>"Upgrades &amp; Scars Have Stories"</em>), and updates the 8-Node Planetary Sector Atlas.</li>
-          <li><strong>2. Overlord of the Unseen Third Force (The Horde AI):</strong> Armageddon features <strong>three warring Alliances</strong>. Once you and The Exile // Sanctuary of Ash each claim your banner, <strong>the Campaign Master takes direct command of the remaining 3rd Alliance</strong>—competing against you both for Sector Hegemony, Strategic Points, and Campaign Points across all 4 Campaign Phases!</li>
-        </ul>
-      </div>
-
-      <!-- SECTION II: THE THREE BANNERS -->
+      <!-- PART 2: INTERCEPTED DISPATCH FROM LOGIS-PREFECT VANE & THE THREE BANNERS -->
       <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
-        <h2 style="margin-top:0; font-size:1.25rem;">Choose Your Banner: The Three Alliances of Armageddon</h2>
-        <p class="card-desc" style="margin-bottom:12px;">
-          Pledge your Crusade force to whichever cause aligns with your ambition—and whatever banner remains unchosen shall be claimed by the Third Force gathering in the fog:
-        </p>
+        <div class="section-header" style="margin-top:0;">
+          <h2 style="margin:0; font-size:1.22rem; color:var(--gold);">📜 The Voice in the Ash (Your Chronicler &amp; The Third Force)</h2>
+          <span class="hud-sub">Auditor: Logis-Prefect Vane • Zenith-09</span>
+        </div>
+
+        <div class="lore-quote" style="text-align:left; line-height:1.62; margin-bottom:16px;">
+          <p style="margin-bottom:10px;">
+            <em>"Ah. Your bridge cogitator finally deigns to acknowledge my carrier wave. Allow me to dispense with the pleasantries, Lord Commander Junebug. Two kilometers below my observation deck, a rival siege-barge—a joyless Death Korps penitentiary hulk calling itself <strong>The Sanctuary of Ash</strong>—is already cycling its drop-locks over the northern edge of your clearing. Its commander survived your prologue purge, dragged half-dead from a smoking tank hull, and his gunners have spent the past forty-eight hours loading heavy siege ordnance with your name on it.</em>
+          </p>
+          <p style="margin:0;">
+            <em>Right now, your fleet is a ghost in my ledgers. You hold the dominant foothold in <strong>Sector Node 0 (2 / 8 HP)</strong>, yet you have registered no flagship designation, declared no Warlord, and claimed none of the theatre's three warring banners. Three great movements now vie for Armageddon's ashes, and your rival's banner remains sealed under encrypted cipher until your own fleet declares its allegiance. Choose your banner below—and know that whichever banner remains unclaimed by you two will be seized by the <strong>Unseen Third Force</strong> massing beneath the ash-curtains."</em>
+          </p>
+        </div>
+
         <div class="choice-grid" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));">
           <div class="card" style="border-top:3px solid var(--gold); margin:0;">
             <div class="choice-title">🛡️ The Gatebreakers</div>
@@ -466,15 +428,35 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
         </div>
       </div>
 
-      <!-- SECTION III: HOW THE WAR UNFOLDS -->
-      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--blue);">
-        <h2 style="margin-top:0; font-size:1.25rem;">How the War Unfolds Upon the Ashes</h2>
-        <ul style="font-size:0.92rem; line-height:1.6;">
-          <li><strong>⚔️ Mode 1 — Clash of Commanders (1v1 PvP):</strong> Wage head-to-head battles across Armageddon's <strong>Hellscapes</strong>, <strong>Warp Anomalies</strong>, and roaming <strong>Unbound Adversaries</strong>. Beware: every time you two fight each other, the Third Force creeps forward through the fog (+3 Vulture SPts and +1 Hegemony Point in an unmapped sector!).</li>
-          <li><strong>🧟 Mode 2 — Breach Containment (Co-op Hard Mode Horde):</strong> Stand shoulder-to-shoulder inside a single perimeter against endless waves from <strong>n + 1 Spawn Zones</strong> through <strong>Battle Round 6 (The Final Stand)</strong>.
-            <br><em>Whispers &amp; Betrayal in the Dark:</em> Before the horde hits your lines, our web terminal deals each commander a private <strong>Secret Objective</strong>. You are forbidden to show it and free to lie. Some directives demand heroism; others are covert <strong>Traitor Directives</strong> offering stolen Requisition Points, +200 pts Supply Limit expansions, and ancient relics if you arrange an "accidental" artillery barrage on your partner's lines or ensure their warlord does not walk out of the breach alive...</li>
-          <li><strong>🎲 Mode 3 — Rogue Sector Clashes &amp; Living Nemeses:</strong> Play off-roster games at any time to shift planetary Warp weather without risking your main Crusade units, while standout survivors and bosses across all modes are inducted into our <strong>Cross-Mode Nemesis Ledger</strong>!</li>
-        </ul>
+      <!-- PART 3: FLAGSHIP MUSTER & ASTROPATHIC REGISTRATION PROTOCOL -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
+        <div class="section-header" style="margin-top:0;">
+          <h2 style="margin:0; font-size:1.22rem; color:var(--green);">📡 Phase 1 Flagship Muster &amp; Registration Protocol</h2>
+          <span class="hud-sub">Awaiting Official Fleet Declaration on Terminal Beta</span>
+        </div>
+        <p class="card-desc" style="margin-bottom:12px;">
+          To lock in your official Phase 1 Crusade force and unlock your custom faction tables across the website, step onto your bridge in <a href="vox.html" style="color:var(--green); font-weight:700;">📡 Mode 7: Astropath Vox (Lord Commander Junebug Conduit)</a> and transmit your opening dispatch to <strong>Logis-Prefect Vane</strong> (or your ship's machine-spirit) with:
+        </p>
+        <div class="choice-grid" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:4px;">
+          <div class="card" style="background:#090b10; margin:0; padding:12px;">
+            <strong style="color:var(--gold); font-size:0.88rem;">1. Faction &amp; Detachment</strong>
+            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
+              Declare the army you are bringing to Armageddon—and as soon as your faction is logged, its bespoke <strong>Codex Battle Traits, Crusade Relics, and Agendas</strong> will be welded directly into your <a href="crusade.html" style="color:var(--gold);">Mode 5 Quartermaster Rollers</a>!
+            </p>
+          </div>
+          <div class="card" style="background:#090b10; margin:0; padding:12px;">
+            <strong style="color:var(--blue); font-size:0.88rem;">2. Flagship &amp; Warlord Lore</strong>
+            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
+              Christen your orbital flagship (and its machine-spirit), name your Warlord, and list any signature units on your Order of Battle (plus any <strong>Epic Hero</strong> you wish bestowed with a <strong>Mighty Champion</strong> ability!).
+            </p>
+          </div>
+          <div class="card" style="background:#090b10; margin:0; padding:12px;">
+            <strong style="color:var(--red); font-size:0.88rem;">3. Pledged Alliance Banner</strong>
+            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
+              Claim your banner among the three Alliances above (<strong>Gatebreakers</strong>, <strong>Desecrators</strong>, or <strong>Marauders</strong>). Whatever banner remains unclaimed by you and your rival will be seized by the Unseen Third Force!
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
