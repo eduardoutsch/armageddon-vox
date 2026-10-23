@@ -170,7 +170,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
       <!-- ALPHA -->
       <div class="alliance-score-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">🛡️ GATEBREAKERS</span>
+          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">⚔️ ALLIANCE PENDING</span>
           <span class="hud-sub">Supply Cache Tokens: <strong id="alphaCacheCount">0</strong></span>
         </div>
         <h3 style="margin:8px 0 2px 0; color:#fff;">🦅 The Exile // Sanctuary of Ash</h3>

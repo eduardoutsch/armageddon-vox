@@ -105,7 +105,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         <div class="hero-box red">
           <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">2. Per-Faction Cloud Pools &amp; Warp-Breach Intrusions (5+)</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
-            Spawns pull directly from the active Horde Faction's cloud-synced shelf pool (<code>[3–4]</code> to <code>[13+]</code>). Whenever a zone rolls a Big Bracket (<code>[10–12]</code> or <code>[13+]</code>), it automatically rolls a <strong>1D6 Warp-Breach Intrusion Check</strong>: on a <strong>5+</strong>, the klaxon sounds and an Unbound Adversary or Nemesis hijacks that zone via the Vox!
+            Spawns pull directly from the active Horde Faction's cloud-synced shelf pool (<code>[3–4]</code> to <code>[13+]</code>). Whenever a spawn rolls a Big Bracket (<code>[10–12]</code> or <code>[13+]</code>), there's a chance that the zone suffers a <strong>Warp-Breach Intrusion</strong>: The klaxon sounds and an emergency broadcast must be made via the Vox!
           </p>
         </div>
       </div>
@@ -113,7 +113,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       <div class="hero-box">
         <strong style="color:var(--gold-bright); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">3. Confidential Secret Objectives &amp; Covert Treachery</strong>
         <p style="font-size:0.86rem; color:var(--text); margin:0;">
-          Before Round 1, each commander locks in a private <strong>Secret Objective</strong> with a 3-character verification code. You are forbidden to show your screen and free to lie. Some directives demand heroism; others are covert <strong>Traitor Directives</strong> offering stolen Requisition Points, +200 pts Supply Limit expansions, and Antiquity Relics if you arrange an "accidental" collapse of your partner's flank...
+          Before Round 1, each commander locks in a private <strong>Secret Objective</strong> with a 3-character verification code. You are forbidden from showing your screen directly, but free to lie or not. Some directives demand heroism; others are covert <strong>Traitor Directives</strong> offering special rewards if you manage to complete it at the cost of your partner's flank...
         </p>
       </div>
 
@@ -191,7 +191,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         <div class="hero-box blue">
           <strong style="color:var(--blue); font-size:0.92rem; display:block; margin-bottom:4px; text-align:center;">1. Living Cross-Mode Nemeses</strong>
           <p style="font-size:0.86rem; color:var(--text); margin:0;">
-            Any Horde Warlord, Monster, or enemy Character that slays a player's hero or survives Round 6 can be transmitted to the Campaign Master via the <strong>"Vibe-Check" Dossier Compiler</strong>—returning in future matches with a custom title, Boss Battle Trait, and a <strong>+2/+3 XP &amp; +1 SPt bounty</strong> on its head!
+            Any Horde Warlord, Monster, or enemy Character that slays a player's hero or survives Round 6 can be transmitted to the Campaign Master via the <strong>"Vibe-Check" Dossier Compiler</strong>—returning in future matches with a custom title, Boss Battle Trait, and a <strong>special bounty</strong> on its head!
           </p>
         </div>
         <div class="hero-box blue">
