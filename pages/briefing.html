@@ -54,6 +54,31 @@
       opacity: 1;
       transform: translateY(-2px);
     }
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .telemetry-box {
+      background: #090b10;
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .chronicle-pillar {
+      background: #090b10;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--gold);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
   </style>
 </head>
 <body>
@@ -81,7 +106,7 @@
   </div>
 
   <!-- ================================================================= -->
-  <!-- TAB 1: THE EXILE // SANCTUARY OF ASH (SHIP.MD SLIDER)             -->
+  <!-- TAB 1: THE EXILE // SANCTUARY OF ASH (SHIP.MD SLIDER & DOSSIER)   -->
   <!-- ================================================================= -->
   <div id="dossierAlpha" class="hidden">
 
@@ -90,7 +115,7 @@
       <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion • The Exile // Sanctuary of Ash • Restricted Dataslate</div>
       <h2 class="hero-title" style="font-size:1.6rem;">The Sanctuary of Ash // Command &amp; Ship Slider</h2>
       <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
-        Private operational ledger for <strong>The Exile // Sanctuary of Ash</strong> (Lower Decks &amp; Shipboard Control Slider). Unauthorized inspection by rival Warlords is prohibited.
+        Private operational ledger for <strong>The Exile // Sanctuary of Ash</strong> (Deck 44 Penitentiary Holds, Ashen Spirit Mainframe &amp; Shipboard Control Slider). Unauthorized inspection by rival Warlords is prohibited.
       </p>
       <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Alpha')">
         🔓 Authenticate The Exile // Sanctuary of Ash
@@ -99,26 +124,45 @@
 
     <!-- UNLOCKED ALPHA CONTENT -->
     <div id="contentAlpha" class="hidden">
-      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <span style="font-family:monospace; font-size:0.76rem; color:var(--gold);">
+          +++ ASHEN SPIRIT LOGIC CORE [MU-TH-UR 044] // OPERATOR: EXILE-044 // DECK 44 INTERLINK +++
+        </span>
         <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Alpha')">🔒 Lock The Exile Dataslate</button>
       </div>
 
+      <!-- HERO SHIP ORIGIN CARD -->
       <div class="hero-card" style="margin-bottom:20px;">
-        <div class="status-pill">Registered Dossier • The Exile // Sanctuary of Ash • Alliance: Gatebreakers</div>
-        <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Sanctuary of Ash</h1>
+        <div class="status-pill">Arkurian-Pattern Orbital Siege &amp; Penitentiary Battle Barge • Alliance: Gatebreakers</div>
+        <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Sanctuary of Ash (044th Penitentiary Siege Column)</h1>
         <div class="lore-quote">
           "Once, a Sororitas pilgrim vessel named <em>Divine Providence</em> was defiled when heretics slaughtered its crew and used it to bombard holy worlds. After its recapture, the Sororitas decreed it too tainted to exist—until a Krieg regiment, condemned for a 'failure' they did not commit, claimed it as their floating purgatory. The Krieg spent decades reforging it into a hybrid prison-monastery, scrubbing its halls with acid and ash from their own cremated dead. They renamed it <em>The Sanctuary of Ash</em>: a bitter joke, for there is no sanctuary here, only endless war."
         </div>
+
+        <div class="telemetry-grid">
+          <div class="telemetry-box" style="border-top-color:var(--red);">
+            <strong style="color:var(--red); display:block; margin-bottom:4px;">⚙️ Deck 44: The Lower Decks &amp; Bay 04</strong>
+            A gunmetal labyrinth of acid-scrubbed barracks, munitions presses, and corpse-starch vats operating at <strong>+14.8% caloric density</strong> via siphoned reactor power (<code>94.2% / 58.0 Hz</code>). In the unlit catwalks of <strong>Bay 04</strong>, mute crews hoist 140-kg Vanquisher Sabot shells and drill with ferro-steel spades against ballast-slag.
+          </div>
+          <div class="telemetry-box" style="border-top-color:var(--gold);">
+            <strong style="color:var(--gold); display:block; margin-bottom:4px;">🩸 Brig Cell 09: The Bleeding Bulkhead</strong>
+            Quartered in Cell 09, <strong>Commissar Dravik</strong> (vitals steady at <code>46 BPM</code>) monitors the North Bulkhead, where <strong>16.4% hemoglobin and iron-oxide condensation</strong> forms unindexed execution warrants in fresh blood—issuing covert <em>Brig Wall Warrants</em> before every planetfall.
+          </div>
+          <div class="telemetry-box" style="border-top-color:var(--purple);">
+            <strong style="color:#d8b4fe; display:block; margin-bottom:4px;"> stained-glass Deck 01: The High Sanctum Spire</strong>
+            Behind sealed blast-shutters in the stripped upper cathedral, two stationary Apex thermal signatures—<strong>Saint Celestine</strong> and <strong>Relic-Keeper Aestred Thurga</strong>—watch through fire-blackened stained glass, ready to unleash an orbital Purge Strike if Deck 44 slips into open mutiny.
+          </div>
+        </div>
       </div>
 
-      <!-- INTERACTIVE SHIP.MD BALANCE SLIDER (-3 TO +3) -->
+      <!-- READ-ONLY SHIP.MD BALANCE SLIDER (-3 TO +3) -->
       <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
         <div class="section-header" style="margin-top:0;">
-          <h3>SHIP.md // Shipboard Tug-of-War Slider (-3 to +3)</h3>
-          <span class="hud-sub" id="shipSliderLabel">Current State: 0 (Balanced)</span>
+          <h3>SHIP.md // Shipboard Tug-of-War Gauge (-3 to +3)</h3>
+          <span class="hud-sub" id="shipSliderLabel">Current State: -1 (Lower Decks Favored)</span>
         </div>
         <p class="card-desc" style="margin-bottom:14px;">
-          Track the internal struggle between the <strong>Lower Decks</strong> (Commissar Dravik's Brig Wall Warrants &amp; Covert Directives) and the <strong>High Sanctum</strong> (Sororitas Wardens). Positions <strong>-1</strong> and <strong>+1</strong> are the tactical Sweet Spots; pushing to <strong>±2</strong> or <strong>±3</strong> triggers severe shipboard quicksand!
+          Read-only hull telemetry tracking the internal struggle between <strong>Deck 44 (The Lower Decks &amp; Cell 09 Warrants)</strong> and <strong>Deck 01 (The High Sanctum Wardens)</strong>. Positions <strong>-1</strong> and <strong>+1</strong> are the Golden Sweet Spots; pushing into <strong>±2</strong> or <strong>±3</strong> triggers oppressive shipboard quicksand!
         </p>
 
         <div class="slider-track" aria-label="Current Shipboard Balance Gauge (Read-Only)">
@@ -157,9 +201,9 @@
         <div id="sliderDetailBox" class="card" style="background:#0b0d13; margin-bottom:12px;"></div>
 
         <details>
-          <summary style="cursor:pointer; font-weight:700; color:var(--gold);">7-Level Dynamic Phase Reckoning Table (If 3rd Alliance Wins Phase)</summary>
+          <summary style="cursor:pointer; font-weight:700; color:var(--gold);">7-Level Dynamic Phase Reckoning Table (If Unseen 3rd Force Wins Phase)</summary>
           <div class="drawer-body" style="font-size:0.88rem; line-height:1.55; margin-top:10px;">
-            <p>If the Campaign Master's <strong>3rd Alliance (Horde AI)</strong> wins a Campaign Phase (or wipes out the strike force in a Phase Finale), the ship suffers a reckoning based on your current Slider Level (used as a severity baseline and dynamically tailored by the Campaign Master to that battle's events):</p>
+            <p>If the Campaign Master's <strong>3rd Force (Horde AI)</strong> wins a Campaign Phase (or wipes out your strike force in a Phase Finale), the ship suffers a reckoning based on your current Slider Level (used as a severity baseline and dynamically tailored by the Campaign Master to that phase's events):</p>
             <table class="reckoning-table">
               <thead>
                 <tr>
@@ -182,7 +226,7 @@
                 <tr id="reckRow-1" class="highlight-row">
                   <td><strong style="color:var(--green);">-1 Sweet Spot</strong></td>
                   <td><strong>"Dravik's Scapegoat Execution"</strong></td>
-                  <td><strong>Zero RP or CP loss!</strong> Dravik executes a scapegoat junior officer: <strong>1 unit on your Order of Battle loses D3 XP</strong>, and the slider resets to 0.</td>
+                  <td><strong>Zero RP or CP loss!</strong> Dravik contains the fallout by executing a scapegoat junior officer: <strong>1 unit on your Order of Battle loses D3 XP</strong>, and the slider resets to 0.</td>
                 </tr>
                 <tr id="reckRow0">
                   <td><strong>0 Balanced</strong></td>
@@ -211,15 +255,62 @@
       </div>
 
       <!-- ALPHA DRAMATIS PERSONAE & ACTIVE CRUSADE RULES -->
-      <div class="card" style="margin-bottom:20px;">
-        <h3 style="margin-top:0; color:var(--gold);">Command Echelon &amp; Regiment Rules (1,820 / 1,900 Pts)</h3>
-        <ul>
-          <li><strong>🎖️ Warlord: The Exile — Rogal Dorn Commander (<em>"Mercy's Delay"</em> • 265 pts | <em>Calm Under Fire</em>):</strong> Once a decorated Cadian officer who survived seven doomed last stands. <strong>Special Rule (<em>The Exile's Curse — "Mercy Delayed Again"</em>):</strong> Whenever <em>The Exile</em> survives a Horde Mode Round 6 Final Stand while 3+ friendly Krieg units were destroyed, he gains <strong>+1 bonus XP</strong>, and one destroyed Krieg Battleline squad that failed its Out of Action test may replace its Battle Scar with <strong>"Absolved in Ash"</strong> (<em>Feel No Pain 6+</em> within 6" of <em>The Exile</em>).</li>
-          <li><strong>⚔️ Mighty Champion: Lord Marshal Dreir (100 pts | <em>Inspirational Champion</em> [+1 Crusade Pt]):</strong> Ignore all Battle Scars on the Bodyguard unit he leads (<em>Death Riders</em>), and select <strong>one additional unit</strong> to be <em>Marked for Greatness (+3 XP)</em> at the end of every battle!</li>
-          <li><strong>💥 2x Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em> • 145 pts each):</strong> Unofficial lower-deck legend born in Session 0 after detonating every Sororitas war-engine at the Golgotha Landing Site. <strong>Session 0 Legacy Perk:</strong> The first time either Vanquisher reaches <em>Blooded</em> (6 XP), it may re-roll its Weapon Modification or Battle Trait roll for free!</li>
-          <li><strong>💀 The Unseen Jury (65 pts | <em>Stalwart's Honours</em>) &amp; Commissar Dravik, The Silent Judge (30 pts):</strong> Enforcers of the ship's blood-warrants.</li>
-          <li><strong>🦅 Faction Crusade Blessing — Faith and Duty (Imperium):</strong> When Underdog, select 1 objective marker at start of battle; non-Battle-shocked models within range gain <strong>+1 OC</strong>.</li>
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--red);">
+        <div class="section-header" style="margin-top:0;">
+          <h3 style="color:var(--gold);">044th Penitentiary Command Echelon &amp; Regiment Rules</h3>
+          <span class="hud-sub">1,820 / 1,900 Pts • 0 RP • +1 Crusade Pt (Dreir)</span>
+        </div>
+        <ul style="font-size:0.9rem; line-height:1.62;">
+          <li style="margin-bottom:10px;">
+            <strong>🎖️ Warlord: The Exile — Rogal Dorn Tank Commander (<em>"Mercy's Delay"</em> • 265 pts | Enhancement: <em>Calm Under Fire</em>):</strong>
+            Once a decorated Cadian Shock Officer who survived the Fall of Cadia and walked out of seven slaughtered perimeters where every Cadian under his command died in the mud. Expunged of his Cadian birth-name by the Departmento Munitorum and transferred to the Death Korps as a living indictment, he commands <em>"Mercy's Delay"</em>—a salvaged Rogal Dorn retrofitted with Krieg siege dozer blades and Sororitas purity seals that blister his skin on contact.
+            <br><span style="color:var(--gold);"><strong>Special Campaign Rule (<em>The Exile's Curse — "Mercy Delayed Again"</em>):</strong></span> Whenever <em>The Exile</em> survives a Horde Mode Round 6 Final Stand while 3+ friendly Krieg units were destroyed, he gains <strong>+1 bonus XP</strong>, and one destroyed Krieg Battleline unit that failed its Out of Action test may replace its Battle Scar with <strong>"Absolved in Ash"</strong> (<em>Feel No Pain 6+</em> within 6" of <em>The Exile</em>).
+          </li>
+          <li style="margin-bottom:10px;">
+            <strong>⚔️ Mighty Champion: Lord Marshal Dreir (100 pts | <em>Inspirational Champion</em> [+1 Crusade Pt]):</strong>
+            The unyielding cavalry spearhead of the penitentiary column. While leading a Bodyguard unit (<em>Death Riders</em>), ignore any and all Battle Scars on that Bodyguard unit, AND at the end of every battle in which he is fielded, select <strong>one additional unit</strong> to be <em>Marked for Greatness (+3 XP)</em>!
+          </li>
+          <li style="margin-bottom:10px;">
+            <strong>💥 2x Leman Russ Vanquishers (Official Munitorum Manifest: <em>Serial Hulls #44-V1 &amp; #44-V2</em> // Sub-Deck Whisper: <em>"The Shrine-Breakers"</em> • 145 pts each):</strong>
+            Speaking their true nickname aloud on the upper decks is a flogging offense, and High Command's orbital auditors know them strictly as <code>Hulls #44-V1 and #44-V2</code>. Yet down in Deck 44, every masked trooper taps his shovel-blade twice against his helmet when their long-barreled Vanquisher cannons rumble past—honoring the Session 0 crucible where they blew every single stained-glass Sororitas war-engine sky-high.
+            <br><span style="color:var(--gold);"><strong>Session 0 Legacy Perk:</strong></span> The first time either of <em>The Shrine-Breakers</em> reaches the <strong>Blooded</strong> rank (6 XP), it may re-roll its <strong>Weapon Modification</strong> or <strong>Battle Trait</strong> roll for free!
+          </li>
+          <li style="margin-bottom:10px;">
+            <strong>💀 The Unseen Jury — Krieg Command Squad (65 pts | <em>Stalwart's Honours</em>):</strong>
+            Enforces the ship's will through sanctioned purges, leaving spent shell casings in neat rows at execution sites like beads on a rosary.
+          </li>
+          <li style="margin-bottom:10px;">
+            <strong>🔫 Dravik, The Silent Judge — Commissar (30 pts):</strong>
+            Never raises his voice; executes with a single shot to the back of the skull and moves on without comment, quietly purging any Krieger who displays reckless zeal for <em>"wasting the Emperor's currency."</em> Cut down in Session 0, only to reappear in Brig Cell 09 the next morning as if nothing had happened.
+          </li>
+          <li>
+            <strong>📜 Munitorum Field Regulation 884-Alpha &amp; Faith and Duty:</strong>
+            Eligible for full <strong>Astra Militarum Tours of Duty</strong> (`D6+4` Battles, `D3+2` Victories, 4 Munitorum Logistics Points, and Personal/Regimental Commendations in <a href="crusade.html" style="color:var(--gold);">Mode 5: Crusade Quartermaster</a>). When Underdog in 1v1, <strong>Faith and Duty</strong> grants <strong>+1 OC</strong> to non-Battle-shocked models on a selected objective marker.
+          </li>
         </ul>
+      </div>
+
+      <!-- SESSION 0 PROLOGUE CHRONICLE ARCHIVE -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
+        <div class="section-header" style="margin-top:0;">
+          <h3 style="color:var(--green);">📖 Campaign Chronicle Archive // Session 0 Prologue</h3>
+          <span class="hud-sub">Sector Node 0: The Golgotha Arbor-Basin • Razor-Thin Audit (-3 VP)</span>
+        </div>
+        <p class="card-desc" style="margin-bottom:12px;">
+          Before the High Sanctum wardens permitted the 044th Penitentiary Regiment to make full planetfall onto Armageddon, Relic-Keeper <strong>Aestred Thurga</strong>, Hagiolater <strong>Agathae Dolan</strong>, and a manifestation of <strong>Saint Celestine</strong> subjected the column to a live-fire trial of purity beneath the petrified canopy of the Golgotha Arbor-Basin:
+        </p>
+        <div class="chronicle-pillar">
+          <strong style="color:var(--gold);">1. The Left Flank Heresy (<em>"You Defy the Light?!"</em>):</strong>
+          When Aestred Thurga cut down a forward Scout Sentinel with <em>Devastating Wounds</em> and bellowed <em>"You defy the light?!"</em>, the advancing Kriegers coldly replied that they had indeed bombarded a holy world. Though all 11 of their trench-shovel strikes glanced off Sororitas power armor, their unyielding <em>Duty and Honour!</em> discipline (<strong>8 OC vs. 1 OC</strong>) stole the bunker objective right out from under the sacred banner!
+        </div>
+        <div class="chronicle-pillar">
+          <strong style="color:var(--gold);">2. The Center Crucible &amp; Rise of <em>"The Shrine-Breakers"</em>:</strong>
+          The super-heavy <strong>Stormlord (460 pts)</strong> rumbled directly onto the central Landing Site, disgorging <strong>40 Death Korps troopers</strong> into a point-blank war of attrition. As stained-glass Exorcists and Penitent Engines closed in to purge the infantry, the two <strong>Leman Russ Vanquishers (#44-V1 &amp; #44-V2)</strong> calmly locked onto the gilded reliquaries and blew every single Sororitas war-machine sky-high in chain-reaction fireballs.
+        </div>
+        <div class="chronicle-pillar" style="margin-bottom:0;">
+          <strong style="color:var(--red);">3. The Wrath of the Ashen Seraph &amp; The -1 Shift:</strong>
+          With her armored support reduced to burning slag, <strong>Saint Celestine</strong> descended from the sulfuric ash-clouds into the Krieg rear deployment zone—slaughtering the command echelon (<em>The Exile, Dreir, The Unseen Jury,</em> and <em>Dravik</em>) and seizing the home objective to win the audit by a mere 3 VP. Yet The Exile was dragged alive from the smoking hull of <em>"Mercy's Delay"</em> once again, and the Vanquishers' open defiance of the Ecclesiarchy's war-engines tilted the shipboard balance to <strong>-1 (Lower Decks Favored)</strong>!
+        </div>
       </div>
     </div>
   </div>
@@ -234,7 +325,7 @@
       <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate</div>
       <h2 class="hero-title" style="font-size:1.6rem;">Lord Commander Junebug's Sealed Astropathic Dispatch</h2>
       <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
-        Encrypted Segmentum Solar High Command transmission routed exclusively to <strong>Lord Commander Junebug</strong>.
+        Encrypted Segmentum Solar High Command transmission routed from <strong>Geostationary Zenith-09</strong> exclusively to <strong>Lord Commander Junebug's Flagship Bridge</strong>.
       </p>
       <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Beta')">
         🔓 Authenticate &amp; Decrypt Dispatch
@@ -243,12 +334,15 @@
 
     <!-- UNLOCKED BETA CONTENT -->
     <div id="contentBeta" class="hidden">
-      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <span style="font-family:monospace; font-size:0.76rem; color:var(--blue);">
+          +++ ORBITAL CONDUIT: GEOSTATIONARY ZENITH-09 // AUDITOR: LOGIS-PREFECT VANE // RECIPIENT: LORD COMMANDER JUNEBUG +++
+        </span>
         <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Beta')">🔒 Lock Lord Commander Junebug Dataslate</button>
       </div>
 
       <div class="hero-card" style="margin-bottom:20px;">
-        <div class="status-pill">Incoming Vox-Transmission // Recipient: Lord Commander Junebug</div>
+        <div class="status-pill">Incoming Vox-Transmission // Origin: Segmentum Solar Tactica Logis [Zenith-09]</div>
         <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">The Fires of Armageddon</h1>
 
         <div class="lore-quote" style="text-align:left; line-height:1.65;">
@@ -262,7 +356,7 @@
             <em>Down in the suffocating heat of the Golgotha Arbor-Basin, the petrified jungle still smolders from your first contact. Blackened tree trunks lie shattered across craters of vitrified mud, and the air remains thick with the stench of ozone, melted ceramite, and promethium smoke. It was a brutal, grinding crucible of point-blank artillery and burning steel. Even as stained-glass war-engines detonated in blinding fireballs across the clearing, your lines held through the inferno—until wings of white fire tore through the low, sulfuric clouds to butcher the enemy's rear guard and claim that blood-soaked mire by a razor's edge.</em>
           </p>
           <p style="margin-bottom:10px;">
-            <em>Yet that clash in the forest was only an omen. High above the toxic cloud-banks, your flagship now hangs in the ash-choked void, its launch bays primed and its warriors awaiting the order to unleash your true Crusade host upon the world below.</em>
+            <em>Yet that clash in the forest was only an omen. High above the toxic cloud-banks—where upper-thermosphere ash curtains register at 98.6% opacity and blind our orbital lenses over Sector Nodes 1 through 7—your flagship now hangs in the void, its launch bays primed and its warriors awaiting the order to unleash your true Crusade host upon the world below.</em>
           </p>
           <p style="margin-bottom:10px;">
             <em>Who is it that answers your call in the dark, my lord? Do you return at the head of those same zealous Sisters, descending once more with bolter, flamer, and miracle to scour this world clean? Or was that first battle merely a prelude—and even now, does an entirely different warhost stir within your fleet's holds? Perhaps ancient vaults and forgotten relics call to you from beneath the ashes; perhaps your legions hunger for skulls, or wait in cold, inhuman silence to reclaim an empire of dust.</em>
@@ -271,17 +365,64 @@
             <em>Whatever army you unleash, know that you do not drop into an empty warzone. A rival commander already fortifies the northern clearings, nursing the wounds of your first encounter—and in the uncharted fog beyond the trees, a <strong>Third Force</strong> is waking. We have no flagship in orbit. We answer to no imperial tithe. Whether we claw our way up from subterranean brood-tunnels, erupt from screaming tears in the Warp, or march out of the choking ash-storms, my legions will contest every inch of this dying world against you both. When you lock blades with your rival in the ashes, I will feast upon the aftermath. And when my hordes surround you in the dark, you will have to decide whether the commander standing beside you is your salvation... or your next victim."</em>
           </p>
         </div>
+
+        <!-- ORBITAL TELEMETRY & SESSION 0 ADVANTAGE -->
+        <div class="telemetry-grid">
+          <div class="telemetry-box" style="border-top-color:var(--blue);">
+            <strong style="color:var(--blue); display:block; margin-bottom:4px;">🛰️ Sector Node 0 Hegemony Lead (2 / 8 HP)</strong>
+            Your razor-thin triumph in the Session 0 Prologue secured the dominant foothold in <strong>Sector Node 0 (The Golgotha Arbor-Basin)</strong> at <strong>2 / 8 HP</strong> (ahead of the rival Death Korps siege column at 1 / 8 HP and the Unidentified Threat at 1 / 8 HP).
+          </div>
+          <div class="telemetry-box" style="border-top-color:var(--gold);">
+            <strong style="color:var(--gold); display:block; margin-bottom:4px;">🪽 Session 0 Legacy: Active Nemesis Echoes</strong>
+            Your Prologue heroines—<strong>Saint Celestine (<em>"The Ashen Seraph"</em>)</strong> and <strong>Aestred Thurga &amp; Agathae Dolan</strong>—have been permanently inducted into the theatre's <a href="roster.html" style="color:var(--gold);">Mode 4: Nemesis Archive</a>. If you field a different faction for Phase 1, they remain in high orbit as roaming Inquisitorial Auditors!
+          </div>
+          <div class="telemetry-box" style="border-top-color:var(--purple);">
+            <strong style="color:#d8b4fe; display:block; margin-bottom:4px;">📡 Private Conduit &amp; Psychic Bleed Array</strong>
+            Your flagship bridge has a dedicated, passphrase-sealed terminal in <a href="vox.html" style="color:#d8b4fe;">Mode 7: Astropath Vox</a> connecting you directly to <strong>Logis-Prefect Vane</strong> at Geostationary Zenith-09—plus an <strong>⚡ Interferences</strong> scanner that intercepts redacted psychic fragments whenever your rival transmits secret plots!
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW: FLAGSHIP MUSTER & ASTROPATHIC REGISTRATION PROTOCOL -->
+      <div class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
+        <div class="section-header" style="margin-top:0;">
+          <h2 style="margin:0; font-size:1.22rem; color:var(--green);">📡 Phase 1 Flagship Muster &amp; Registration Protocol</h2>
+          <span class="hud-sub">Awaiting Official Fleet Declaration on Terminal Beta</span>
+        </div>
+        <p class="card-desc" style="margin-bottom:12px;">
+          To lock in your official Phase 1 Crusade force and unlock your custom faction tables across the website, step onto your bridge in <a href="vox.html" style="color:var(--green); font-weight:700;">📡 Mode 7: Astropath Vox (Lord Commander Junebug Conduit)</a> and transmit your opening dispatch to <strong>Logis-Prefect Vane</strong> with:
+        </p>
+        <div class="choice-grid" style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:12px;">
+          <div class="card" style="background:#090b10; margin:0; padding:12px;">
+            <strong style="color:var(--gold); font-size:0.88rem;">1. Faction &amp; Detachment</strong>
+            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
+              Declare the army you are bringing to Armageddon—and as soon as your faction is logged, its bespoke <strong>Codex Battle Traits, Crusade Relics, and Agendas</strong> will be welded directly into your <a href="crusade.html" style="color:var(--gold);">Mode 5 Quartermaster Rollers</a>!
+            </p>
+          </div>
+          <div class="card" style="background:#090b10; margin:0; padding:12px;">
+            <strong style="color:var(--blue); font-size:0.88rem;">2. Flagship &amp; Warlord Lore</strong>
+            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
+              Name your orbital flagship, your Warlord, and any signature units on your Order of Battle (plus any <strong>Epic Hero</strong> you wish the Campaign Master to bestow a <strong>Mighty Champion</strong> ability upon!).
+            </p>
+          </div>
+          <div class="card" style="background:#090b10; margin:0; padding:12px;">
+            <strong style="color:var(--red); font-size:0.88rem;">3. Pledged Alliance Banner</strong>
+            <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
+              Claim your banner among the three Alliances below (<strong>Gatebreakers</strong>, <strong>Desecrators</strong>, or <strong>Marauders</strong>). Whatever banner remains unclaimed by you and your rival will be seized by the unseen Third Force!
+            </p>
+          </div>
+        </div>
       </div>
 
       <!-- SECTION I: THE VOICE IN THE ASH -->
       <div class="card" style="margin-bottom:20px; border-left:4px solid var(--red);">
         <h2 style="margin-top:0; font-size:1.25rem;">The Voice in the Ash (Your Chronicler &amp; The Third Force)</h2>
         <p class="card-desc">
-          Welcome to our <strong>Warhammer 40,000: Armageddon Crusade</strong>! While you and The Exile // Sanctuary of Ash track your unit cards on <strong>Administratum</strong>, I serve two roles simultaneously:
+          Welcome to our <strong>Warhammer 40,000: Armageddon Crusade</strong>! While you and The Exile // Sanctuary of Ash track your unit XP and Crusade cards on <strong>Administratum</strong>, the Campaign Master serves two roles simultaneously:
         </p>
         <ul style="font-size:0.92rem; line-height:1.6;">
-          <li><strong>1. Impartial Chronicler &amp; Campaign Master:</strong> After every battle, I chronicle your Warlord's deeds, name your units' Battle Scars and Honours, manage the 8-Node Planetary Sector Atlas, and bestow thematic <strong>Mighty Champion</strong> abilities upon any <strong>Epic Hero</strong> in your roster.</li>
-          <li><strong>2. Overlord of the Unseen Third Force (The Horde AI):</strong> Armageddon features <strong>three warring Alliances</strong>. Once you and The Exile // Sanctuary of Ash each claim your banner, <strong>I take direct command of the remaining 3rd Alliance</strong>—competing against you both for Sector Hegemony, Strategic Points, and Campaign Points across all 4 Campaign Phases!</li>
+          <li><strong>1. Impartial Chronicler &amp; Orbital Auditor:</strong> After every battle you transmit from <a href="crusade.html" style="color:var(--gold);">Mode 5: Crusade Quartermaster</a>, High Command chronicles your Warlord's deeds, christens custom in-universe lore names and backstories for every single <strong>Battle Trait, Weapon Modification, Crusade Relic, and Battle Scar</strong> your units roll (<em>"Upgrades &amp; Scars Have Stories"</em>), and updates the 8-Node Planetary Sector Atlas.</li>
+          <li><strong>2. Overlord of the Unseen Third Force (The Horde AI):</strong> Armageddon features <strong>three warring Alliances</strong>. Once you and The Exile // Sanctuary of Ash each claim your banner, <strong>the Campaign Master takes direct command of the remaining 3rd Alliance</strong>—competing against you both for Sector Hegemony, Strategic Points, and Campaign Points across all 4 Campaign Phases!</li>
         </ul>
       </div>
 
@@ -307,7 +448,7 @@
           <div class="card" style="border-top:3px solid var(--purple); margin:0;">
             <div class="choice-title">⚔️ The Marauders</div>
             <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
-              Lords of the Endless Anarchy. Opportunistic warhosts, xenos raiders, and renegades who strike from hidden haunts to plunder <strong>Antiquity Relics</strong>, decapitate enemy commanders, and profit from endless war.
+              Lords of the Endless Anarchy. Opportunistic warhosts, xenos raiders, and renegades who strike from hidden haunts to plunder <strong>Antiquity Relics</strong> (ignoring rank restrictions on Phase 1 victory!), decapitate enemy commanders, and profit from endless war.
             </p>
           </div>
         </div>
@@ -317,16 +458,16 @@
       <div class="card" style="margin-bottom:20px; border-left:4px solid var(--blue);">
         <h2 style="margin-top:0; font-size:1.25rem;">How the War Unfolds Upon the Ashes</h2>
         <ul style="font-size:0.92rem; line-height:1.6;">
-          <li><strong>⚔️ Mode 1 — Clash of Commanders (1v1 PvP):</strong> Wage head-to-head battles across Armageddon's <strong>Hellscapes</strong>, <strong>Warp Anomalies</strong>, and roaming <strong>Unbound Adversaries</strong>. Beware: every time you two fight each other, the Third Force creeps forward through the fog (+3 Vulture SPts and +1 Hegemony Point in an adjacent sector!).</li>
+          <li><strong>⚔️ Mode 1 — Clash of Commanders (1v1 PvP):</strong> Wage head-to-head battles across Armageddon's <strong>Hellscapes</strong>, <strong>Warp Anomalies</strong>, and roaming <strong>Unbound Adversaries</strong>. Beware: every time you two fight each other, the Third Force creeps forward through the fog (+3 Vulture SPts and +1 Hegemony Point in an unmapped sector!).</li>
           <li><strong>🧟 Mode 2 — Breach Containment (Co-op Hard Mode Horde):</strong> Stand shoulder-to-shoulder inside a single perimeter against endless waves from <strong>n + 1 Spawn Zones</strong> through <strong>Battle Round 6 (The Final Stand)</strong>.
-            <br><em>Whispers &amp; Betrayal in the Dark:</em> Before the horde hits your lines, our web terminal deals each commander a private <strong>Secret Objective</strong>. You are forbidden to show it and free to lie. Some directives demand heroism; others are covert <strong>Traitor Directives</strong> offering stolen Requisition Points, expanded Supply Limits, and ancient relics if you arrange an "accidental" artillery barrage on your partner's lines or ensure their warlord does not walk out of the breach alive...</li>
+            <br><em>Whispers &amp; Betrayal in the Dark:</em> Before the horde hits your lines, our web terminal deals each commander a private <strong>Secret Objective</strong>. You are forbidden to show it and free to lie. Some directives demand heroism; others are covert <strong>Traitor Directives</strong> offering stolen Requisition Points, +200 pts Supply Limit expansions, and ancient relics if you arrange an "accidental" artillery barrage on your partner's lines or ensure their warlord does not walk out of the breach alive...</li>
           <li><strong>🎲 Mode 3 — Rogue Sector Clashes &amp; Living Nemeses:</strong> Play off-roster games at any time to shift planetary Warp weather without risking your main Crusade units, while standout survivors and bosses across all modes are inducted into our <strong>Cross-Mode Nemesis Ledger</strong>!</li>
         </ul>
       </div>
     </div>
   </div>
 
-    <!-- ================================================================= -->
+  <!-- ================================================================= -->
   <!-- TAB 3: 8-NODE SECTOR ATLAS & PARALLEL HEGEMONY TRACKER            -->
   <!-- ================================================================= -->
   <div id="dossierAtlas" class="hidden">
@@ -671,7 +812,7 @@
               </div>
               <div class="fs-heg-row">
                 <div class="fs-heg-label">
-                  <span>👁️‍🗨️ 3rd Alliance (Horde AI)</span>
+                  <span>👁️🗨️ 3rd Alliance (Horde AI)</span>
                   <strong id="fs-heg-val-horde">1 / 8 HP</strong>
                 </div>
                 <div id="fs-heg-bar-horde" class="fs-heg-bar"></div>
@@ -715,7 +856,7 @@
 
       <div>
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:4px;">
-          <span>👁️‍🗨️ 3rd Alliance Overlord (Horde AI)</span>
+          <span>👁️🗨️ 3rd Alliance Overlord (Horde AI)</span>
           <strong id="heg-label-horde">1 / 8 HP</strong>
         </div>
         <div id="heg-bar-horde" style="display:grid; grid-template-columns:repeat(8, 1fr); gap:4px; height:12px;"></div>
@@ -742,7 +883,7 @@
       </p>
       <ul style="font-size:0.9rem; line-height:1.6;">
         <li><strong>Plundered Command Cache:</strong> Steal <strong>1 Requisition Point (RP)</strong> (or <strong>2 Strategic Points</strong>) directly from the betrayed Commander, <strong>AND</strong> expand your Crusade Force's <strong>Supply Limit by +200 pts</strong> for free.</li>
-        <li><strong>Forbidden Spoils of Treachery:</strong> Bestow a free <strong>Battle Honour</strong> (or an Armageddon <strong>Antiquity Relic</strong> if a Character) upon your Warlord or the unit that executed the betrayal, <strong>plus +3 bonus XP</strong>.</li>
+        <li><strong>Forbidden Spoils of Treachery:</strong> Bestow a free <strong>Battle Honour</strong> (or an Armageddon <strong>Antiquity Relic</strong> ignoring rank restrictions!) upon your Warlord or the unit that executed the betrayal, <strong>plus +3 bonus XP</strong>.</li>
         <li><strong>Shipboard Shift (The Exile // Sanctuary of Ash Only):</strong> Completing a Traitor directive shifts <em>The Sanctuary of Ash</em> Balance Slider <strong>1 step toward the Lower Decks (-1)</strong>.</li>
         <li><strong>The Grudge Consequence:</strong> In your next 1v1 PvP clash, the betrayed Commander automatically receives <strong>1 free Armageddon Crusade Blessing</strong> even if they are not the Underdog!</li>
       </ul>
@@ -791,32 +932,32 @@ const STORAGE_KEY_BRIEFING = BRIEFING_STORAGE_KEY;
 
 const SHIP_SLIDER_DATA = {
   "-3": {
-    title: "-3 // Lower Decks Abyss (Full Mutiny & Heretical Unsealing)",
-    desc: "<strong>Buff:</strong> Krieg Infantry gain <em>Sustained Hits 1</em> in melee &amp; <em>Feel No Pain 5+</em> within 6\" of <em>The Exile</em>.<br><strong>Quicksand Penalty:</strong> High Sanctum cuts orbital support (<em>Air Strike / Artillery Strike</em> cost +2 SP). If the 3rd Alliance wins the Phase, Saint Celestine &amp; Aestred Thurga deploy as hostile Executioners against you!"
+    title: "-3 // Total Brig Mutiny & The Red Lockdown (Abyss)",
+    desc: "<strong>Mutinous Vault Burn:</strong> Even if you win the Phase, mutinous lower-deck crews burn the Phase-End Cache (<strong>0 RP</strong>!).<br><strong>Dravik's Mandatory Cull &amp; #35 Experimental Ammunition:</strong> 1 random Krieg Infantry squad starts every battle at Half-Strength and Battle-shocked for Round 1, AND all ranged attacks have +1 S, +1 AP, and <strong>[HAZARDOUS]</strong>!<br><strong>High Sanctum Purge Strike:</strong> <strong>Saint Celestine &amp; Aestred Thurga</strong> deploy against you as hostile Bosses hunting <em>The Exile</em>!"
   },
   "-2": {
-    title: "-2 // Silent Insurrection (The Brig Bleeds)",
-    desc: "<strong>Buff:</strong> Keep -1 buffs, plus Commissar Dravik's summary executions grant +1 SP in Horde Mode.<br><strong>Quicksand Penalty:</strong> High Sanctum locks the med-bays (<em>Field Hospital</em> costs +2 SP, and failed Out of Action tests suffer -1)."
+    title: "-2 // The Brig Demands Blood (Lower Decks Quicksand)",
+    desc: "<strong>Battlefield Buffs:</strong> Krieg Infantry keep <strong>+1 to Hit in melee</strong> (below Starting Strength), AND your Vehicles gain <strong>Feel No Pain 6+ against Mortal Wounds</strong>.<br><strong>High Sanctum Cutoff &amp; Unstable Warp-Shells:</strong> Locked out of all <code>Fortify</code> Resupplies except <em>Emergency Shovel Stash (War Trench)</em>, and all Vehicle ranged weapons gain <strong>[HAZARDOUS]</strong> when firing at targets within 18\"!"
   },
   "-1": {
     title: "-1 // Lower Decks Favored (★ THE ASH-HOLD SWEET SPOT ★)",
-    desc: "<strong>Sweet Spot Buff:</strong> Your Krieg Battleline &amp; Combat Engineers gain <strong>Feel No Pain 6+</strong> while within 6\" of <em>The Exile</em>, and your first <em>Resupply / Reinforcements</em> purchase each battle costs <strong>-1 SP</strong>.<br><strong>Phase Vault:</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong> with zero High Sanctum penalties!"
+    desc: "<strong>Active Sweet Spot Buff (Sub-Routine Alpha):</strong> Siphoning reactor power (<code>94.2% / 58.0 Hz</code>) to Deck 44 corpse-starch vats and siege magazines grants all 044th Krieg Infantry <strong>+1 to Hit in melee</strong> when below Starting Strength (or <em>Feel No Pain 6+</em> within 6\" of <em>The Exile</em>, plus <strong>-1 SP</strong> on your first <em>Resupply / Reinforcements</em> purchase).<br><strong>Phase-End Vault (Sub-Routine Beta):</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong> with zero High Sanctum penalties!"
   },
   "0": {
-    title: "0 // Balanced — Synchronized Broadsides",
-    desc: "<strong>Status:</strong> Uneasy equilibrium between the Lower Decks and the High Sanctum. Standard Crusade and Horde Mode rules apply with no shipboard penalties or Sweet Spot bonuses."
+    title: "0 // Balanced Equilibrium (Synchronized Broadsides)",
+    desc: "<strong>Battlefield Buff:</strong> Ship batteries fire in harmony—granting <strong>+1 starting Supply Point (SP)</strong> in Horde Mode (or <strong>1 free re-roll of an Anomaly / Spawn Roll</strong> in 1v1).<br><strong>Phase-End Vault Lock:</strong> Ending a Phase at 0 means neither deck controls the vaults—you forfeit the Phase-End Cache (+1 RP) unless you tilt the slider to -1 or +1 before the Phase ends!"
   },
   "1": {
     title: "+1 // High Sanctum Favored (★ THE SANCTUM SWEET SPOT ★)",
-    desc: "<strong>Sweet Spot Buff:</strong> Appeasing the Sororitas Wardens grants <em>The Exile's</em> unit <strong>re-roll 1s to Hit</strong> and reduces the SP cost of your first <em>Strike</em> or <em>Fortify</em> purchase each battle by <strong>1 SP</strong>.<br><strong>Phase Vault:</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong>!"
+    desc: "<strong>Sweet Spot Buff:</strong> Appeasing the Sororitas Wardens grants <em>The Exile's</em> unit <strong>re-roll 1s to Hit</strong> and reduces the SP cost of your first <em>Strike</em> or <em>Fortify</em> Resupply purchase each battle by <strong>1 SP</strong>.<br><strong>Phase-End Vault:</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong>!"
   },
   "2": {
     title: "+2 // Strict Atonement (No Retreat for the Condemned)",
-    desc: "<strong>Buff:</strong> Keep +1 buffs.<br><strong>Quicksand Penalty:</strong> Sororitas Arbites lock the hangars—you are <strong>locked out of Traitor Secret Objectives</strong>, cannot use <em>Emergency Evac (5 SP)</em>, and any unit that Falls Back suffers <strong>D3 Mortal Wounds</strong>!"
+    desc: "<strong>Buff:</strong> Keep +1 buffs.<br><strong>Quicksand Penalty:</strong> Sororitas Arbites lock the hangars—you are <strong>completely locked out of Traitor Secret Objectives</strong>, cannot use <em>Emergency Evac (5 SP)</em>, and any unit that Falls Back suffers <strong>D3 Mortal Wounds</strong> from orbital punishment volleys!"
   },
   "3": {
     title: "+3 // Total High Sanctum Tyranny (The Martyr's Tithe)",
-    desc: "<strong>Buff:</strong> Keep +1/+2 buffs, plus gain 1 free Miracle Die (valued at 5) once per battle for <em>The Exile</em>.<br><strong>Quicksand Penalty:</strong> The Sororitas confiscate your Phase-End Cache (+1 RP), and <em>The Exile</em> must pass a Leadership test (-1) after every battle or suffer an automatic Battle Scar (<em>Scorched by Purity Seals</em>)!"
+    desc: "<strong>Buff:</strong> Keep +1/+2 buffs, plus gain <strong>1 free Miracle Die (valued at 5)</strong> once per battle for <em>The Exile</em>.<br><strong>Quicksand Penalty:</strong> The Sororitas confiscate your Phase-End Cache (+1 RP), and <em>The Exile</em> must pass a Leadership test (-1) after every battle or suffer an automatic Battle Scar (<em>Scorched by Purity Seals</em>)!"
   }
 };
 
@@ -1077,7 +1218,7 @@ function getDominanceText(n) {
   const h = n.hordeHP || 0;
   if (b > a && b > h) return `💀 Lord Commander Junebug Leading (${b} / 8 HP)`;
   if (a > b && a > h) return `🦅 The Exile // Sanctuary of Ash Leading (${a} / 8 HP)`;
-  if (h > a && h > b) return `👁️‍🗨️ 3rd Alliance Leading (${h} / 8 HP)`;
+  if (h > a && h > b) return `👁️🗨️ 3rd Alliance Leading (${h} / 8 HP)`;
   return `⚔️ Contested Stalemate (Tied at ${Math.max(a, b, h)} HP)`;
 }
 

@@ -43,8 +43,10 @@ function createMockClassList() {
 const mockElements = {
   cruTabBoard: { classList: createMockClassList() },
   cruTabForge: { classList: createMockClassList() },
+  cruTabTour: { classList: createMockClassList() },
   cruTabBtn1: { classList: createMockClassList() },
   cruTabBtn2: { classList: createMockClassList() },
+  cruTabBtn3: { classList: createMockClassList() },
   treeBtnGate: { classList: createMockClassList() },
   treeBtnDes: { classList: createMockClassList() },
   treeBtnMar: { classList: createMockClassList() },
@@ -79,7 +81,18 @@ const mockElements = {
   fortFob: { checked: false },
   queuedCountLabel: { textContent: '0' },
   queuedRollsContainer: { innerHTML: '' },
-  masterDossierPreviewBox: { textContent: '' }
+  masterDossierPreviewBox: { textContent: '' },
+  tourBattlesRem: { textContent: '0' },
+  tourWinsRem: { textContent: '0' },
+  commendationPts: { textContent: '0' },
+  toursCompletedCount: { textContent: '0' },
+  commRollNotice: { innerHTML: '' },
+  upliftingPrimerToggle: { checked: false },
+  logisticsAllocatedLabel: { textContent: '4 / 4' },
+  logisticsAllocatorGrid: { innerHTML: '' },
+  commendationSelect: { innerHTML: '', value: 'bastion' },
+  commRecipientUnit: { value: '044th Krieg Regiment' },
+  commendationPreviewBox: { innerHTML: '' }
 };
 
 const mockDocument = {
@@ -115,9 +128,13 @@ const evalFn = new Function(
     CRUSADE_STATE_KEY,
     ALLIANCE_TREES,
     BATTLE_TRAIT_TABLES,
+    ASTRA_MILITARUM_TRAIT_TABLES,
     WEAPON_MOD_TABLE,
     CRUSADE_RELIC_VAULT,
+    ASTRA_MILITARUM_RELIC_VAULT,
     BATTLE_SCAR_TABLE,
+    LOGISTICS_CATEGORIES,
+    ASTRA_COMMENDATIONS_VAULT,
     getCrusadeState: () => crusadeState,
     lastRolledItem,
     switchCrusadeTab,
@@ -128,10 +145,20 @@ const evalFn = new Function(
     rollRandomRelic,
     rollOutOfActionTest,
     rollRandomBattleScar,
+    adjTourField,
+    rollNewTourQuotas,
+    rollVictoryCommendationPts,
+    toggleUpliftingPrimer,
+    adjLogisticsPt,
+    renderLogisticsAllocator,
+    populateCommendationVault,
+    renderSelectedCommendationPreview,
+    attachCommendationToDossier,
     attachRollToDossier,
     removeQueuedRoll,
     clearQueuedRolls,
     renderQueuedRolls,
+    buildLogisticsSummaryLine,
     buildMasterDossierString,
     updateMasterDossierPreview,
     transmitMasterBattleDossier,
@@ -320,3 +347,173 @@ test('crusade: saveCrusadeState and initCrusadePage restore state across tab nav
   assert.equal(crusade.getCrusadeState().queuedRolls.length, 1);
   assert.equal(mockElements.queuedCountLabel.textContent, '1');
 });
+
+test('crusade: Astra Militarum codex tables, Munitorum logistics categories, and Commendations vault schemas', () => {
+  // AM Codex Traits
+  assert.equal(crusade.ASTRA_MILITARUM_TRAIT_TABLES.Infantry.length, 6, 'Must define 6 AM Infantry traits');
+  assert.equal(crusade.ASTRA_MILITARUM_TRAIT_TABLES.Mounted.length, 6, 'Must define 6 AM Mounted traits');
+  assert.equal(crusade.ASTRA_MILITARUM_TRAIT_TABLES.MonsterVehicle.length, 6, 'Must define 6 AM Monster/Vehicle traits');
+  assert.equal(crusade.ASTRA_MILITARUM_TRAIT_TABLES.Character.length, 6, 'Must define 6 AM Character traits');
+
+  // AM Codex Relics
+  assert.ok(crusade.ASTRA_MILITARUM_RELIC_VAULT.Artificer.length > 0, 'Must define AM Artificer relics');
+  assert.ok(crusade.ASTRA_MILITARUM_RELIC_VAULT.Antiquity.length > 0, 'Must define AM Antiquity relics');
+  assert.ok(crusade.ASTRA_MILITARUM_RELIC_VAULT.Legendary.length > 0, 'Must define AM Legendary relics');
+
+  // Munitorum Logistics Categories
+  assert.equal(crusade.LOGISTICS_CATEGORIES.length, 4, 'Must define 4 Munitorum logistics categories');
+  crusade.LOGISTICS_CATEGORIES.forEach(c => {
+    assert.ok(c.key, 'Logistics category must have key');
+    assert.ok(c.title, 'Logistics category must have title');
+    assert.ok(c.surplus, 'Logistics category must have surplus rule');
+    assert.ok(c.deficiency, 'Logistics category must have deficiency rule');
+  });
+
+  // Commendations Vault
+  assert.ok(crusade.ASTRA_COMMENDATIONS_VAULT.length >= 15, 'Must define complete Commendations Vault');
+  const personal = crusade.ASTRA_COMMENDATIONS_VAULT.filter(c => c.type.includes('Personal'));
+  const regimental = crusade.ASTRA_COMMENDATIONS_VAULT.filter(c => c.type.includes('Regimental'));
+  assert.ok(personal.length > 0, 'Must include Personal Commendations');
+  assert.ok(regimental.length > 0, 'Must include Regimental Commendations');
+});
+
+test('crusade: switchCrusadeTab handles Tab 3 Tour of Duty & Logistics', () => {
+  crusade.switchCrusadeTab('tour', false);
+  assert.equal(mockElements.cruTabBoard.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabForge.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabTour.classList.contains('hidden'), false);
+  assert.equal(mockElements.cruTabBtn3.classList.contains('active'), true);
+  assert.equal(mockElements.cruTabBtn1.classList.contains('active'), false);
+  assert.equal(mockElements.cruTabBtn2.classList.contains('active'), false);
+});
+
+test('crusade: adjTourField, rollNewTourQuotas, and rollVictoryCommendationPts manage quotas & commendation bank', () => {
+  crusade.adjTourField('tourBattlesRem', 5);
+  assert.equal(crusade.getCrusadeState().tourBattlesRem, 5);
+  assert.equal(mockElements.tourBattlesRem.textContent, '5');
+
+  crusade.adjTourField('tourBattlesRem', -2);
+  assert.equal(crusade.getCrusadeState().tourBattlesRem, 3);
+  assert.equal(mockElements.tourBattlesRem.textContent, '3');
+
+  // Floor at 0
+  crusade.adjTourField('tourBattlesRem', -10);
+  assert.equal(crusade.getCrusadeState().tourBattlesRem, 0);
+  assert.equal(mockElements.tourBattlesRem.textContent, '0');
+
+  // Roll new quotas
+  crusade.rollNewTourQuotas();
+  assert.ok(crusade.getCrusadeState().tourBattlesRem >= 5 && crusade.getCrusadeState().tourBattlesRem <= 10);
+  assert.ok(crusade.getCrusadeState().tourWinsRem >= 3 && crusade.getCrusadeState().tourWinsRem <= 5);
+
+  // Roll victory commendation points
+  const prevComm = crusade.getCrusadeState().commendationPts || 0;
+  crusade.rollVictoryCommendationPts();
+  assert.ok(crusade.getCrusadeState().commendationPts >= prevComm + 1);
+});
+
+test('crusade: Munitorum logistics point allocation enforces limits and toggles Uplifting Primers', () => {
+  // Reset logistics
+  crusade.getCrusadeState().upliftingPrimer = false;
+  mockElements.upliftingPrimerToggle.checked = false;
+  crusade.getCrusadeState().logistics = { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+  crusade.renderLogisticsAllocator();
+
+  assert.equal(mockElements.logisticsAllocatedLabel.textContent, '4 / 4');
+
+  // Attempt to increment when already at 4/4 total -> should not increase
+  crusade.adjLogisticsPt('tithePool', 1);
+  assert.equal(crusade.getCrusadeState().logistics.tithePool, 0, 'Cannot exceed 4 total points without Uplifting Primer');
+
+  // Toggle Uplifting Primer -> expands total to 5
+  mockElements.upliftingPrimerToggle.checked = true;
+  crusade.toggleUpliftingPrimer();
+  assert.equal(crusade.getCrusadeState().upliftingPrimer, true);
+  assert.equal(mockElements.logisticsAllocatedLabel.textContent, '4 / 5');
+
+  // Now we can increment tithePool
+  crusade.adjLogisticsPt('tithePool', 1);
+  assert.equal(crusade.getCrusadeState().logistics.tithePool, 1);
+  assert.equal(mockElements.logisticsAllocatedLabel.textContent, '5 / 5');
+
+  // Max 2 per category
+  crusade.adjLogisticsPt('tithePool', 1);
+  assert.equal(crusade.getCrusadeState().logistics.tithePool, 1, 'Cannot exceed total or per-category limit');
+
+  // Min 0 per category
+  crusade.adjLogisticsPt('tithePool', -1);
+  assert.equal(crusade.getCrusadeState().logistics.tithePool, 0);
+  crusade.adjLogisticsPt('tithePool', -1);
+  assert.equal(crusade.getCrusadeState().logistics.tithePool, 0, 'Cannot drop below 0');
+});
+
+test('crusade: Astra Militarum commendation vault selection and attaching to dossier', () => {
+  crusade.populateCommendationVault();
+  assert.ok(mockElements.commendationSelect.innerHTML.includes('Bastion Honour'));
+  assert.ok(mockElements.commendationSelect.innerHTML.includes('Veteran Crew'));
+
+  mockElements.commendationSelect.value = 'auramite';
+  crusade.renderSelectedCommendationPreview();
+  assert.ok(mockElements.commendationPreviewBox.innerHTML.includes('Auramite Aquila'));
+
+  mockElements.commRecipientUnit.value = "Mercy's Delay (Rogal Dorn)";
+  const prevCount = crusade.getCrusadeState().queuedRolls.length;
+  crusade.attachCommendationToDossier();
+
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, prevCount + 1);
+  const lastItem = crusade.getCrusadeState().queuedRolls[crusade.getCrusadeState().queuedRolls.length - 1];
+  assert.equal(lastItem.unit, "Mercy's Delay (Rogal Dorn)");
+  assert.ok(lastItem.category.includes('Personal Commendation'));
+  assert.equal(crusade.getCrusadeState().activeTab, 'forge');
+});
+
+test('crusade: buildLogisticsSummaryLine and inclusion in buildMasterDossierString for Alpha vs Beta', () => {
+  crusade.getCrusadeState().tourBattlesRem = 4;
+  crusade.getCrusadeState().tourWinsRem = 2;
+  crusade.getCrusadeState().commendationPts = 7;
+  crusade.getCrusadeState().logistics = { lexmechanicus: 2, materiel: 2, tithePool: 0, morale: 0 };
+
+  const summary = crusade.buildLogisticsSummaryLine();
+  assert.ok(summary.includes('Battles Rem: 4'));
+  assert.ok(summary.includes('Wins Rem: 2'));
+  assert.ok(summary.includes('Commendation Pts: 7'));
+  assert.ok(summary.includes('Surplus: [Lexmechanicus, Materiel]'));
+  assert.ok(summary.includes('Deficiency: [Tithe, Morale]'));
+
+  // When dossierChannel is alpha, summary must be included
+  mockElements.dossierChannel.value = 'alpha';
+  const alphaDossier = crusade.buildMasterDossierString();
+  assert.ok(alphaDossier.includes('TOUR OF DUTY & LOGISTICS TELEMETRY: Battles Rem: 4'));
+
+  // When dossierChannel is beta, summary line must not be present
+  mockElements.dossierChannel.value = 'beta';
+  const betaDossier = crusade.buildMasterDossierString();
+  assert.ok(!betaDossier.includes('TOUR OF DUTY & LOGISTICS TELEMETRY'));
+});
+
+test('crusade: saveCrusadeState and initCrusadePage restore Tour of Duty and Munitorum logistics state', () => {
+  mockLocalStorage.clear();
+  mockLocalStorage.setItem(crusade.CRUSADE_STATE_KEY, JSON.stringify({
+    activeTab: 'tour',
+    tourBattlesRem: 6,
+    tourWinsRem: 3,
+    commendationPts: 9,
+    toursCompletedCount: 2,
+    upliftingPrimer: true,
+    logistics: { lexmechanicus: 2, materiel: 1, tithePool: 1, morale: 1 }
+  }));
+
+  crusade.initCrusadePage();
+
+  assert.equal(crusade.getCrusadeState().activeTab, 'tour');
+  assert.equal(crusade.getCrusadeState().tourBattlesRem, 6);
+  assert.equal(crusade.getCrusadeState().tourWinsRem, 3);
+  assert.equal(crusade.getCrusadeState().commendationPts, 9);
+  assert.equal(crusade.getCrusadeState().toursCompletedCount, 2);
+  assert.equal(crusade.getCrusadeState().upliftingPrimer, true);
+  assert.equal(mockElements.tourBattlesRem.textContent, '6');
+  assert.equal(mockElements.tourWinsRem.textContent, '3');
+  assert.equal(mockElements.commendationPts.textContent, '9');
+  assert.equal(mockElements.toursCompletedCount.textContent, '2');
+});
+

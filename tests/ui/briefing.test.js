@@ -260,3 +260,20 @@ test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CU
   assert.ok(briefingHtml.includes('selectSlider(CURRENT_SHIP_SLIDER);'), 'Must invoke selectSlider(CURRENT_SHIP_SLIDER)');
 });
 
+test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, and Flagship muster protocol', () => {
+  // Alpha telemetry & lore
+  assert.ok(briefingHtml.includes('Deck 44: The Lower Decks &amp; Bay 04'), 'Must include Deck 44 telemetry');
+  assert.ok(briefingHtml.includes('Brig Cell 09: The Bleeding Bulkhead'), 'Must include Brig Cell 09 telemetry');
+  assert.ok(briefingHtml.includes('Deck 01: The High Sanctum Spire'), 'Must include Deck 01 telemetry');
+  assert.ok(briefingHtml.includes('Campaign Chronicle Archive // Session 0 Prologue'), 'Must include Session 0 prologue archive');
+  assert.ok(briefingHtml.includes('The Left Flank Heresy'), 'Must include chronicle pillar 1');
+  assert.ok(briefingHtml.includes('The Center Crucible &amp; Rise of'), 'Must include chronicle pillar 2');
+  assert.ok(briefingHtml.includes('The Wrath of the Ashen Seraph'), 'Must include chronicle pillar 3');
+
+  // Beta telemetry & muster protocol
+  assert.ok(briefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP)'), 'Must include Beta Hegemony lead telemetry');
+  assert.ok(briefingHtml.includes('Session 0 Legacy: Active Nemesis Echoes'), 'Must include Nemesis Echoes telemetry');
+  assert.ok(briefingHtml.includes('Private Conduit &amp; Psychic Bleed Array'), 'Must include private conduit telemetry');
+  assert.ok(briefingHtml.includes('Phase 1 Flagship Muster &amp; Registration Protocol'), 'Must include Flagship Muster Protocol');
+});
+

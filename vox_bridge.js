@@ -1,11 +1,10 @@
 /**
- * Dual-Thread Concurrent Astropathic Courier Bridge (v6.1 - Read-Only Fast-Response Edition)
+ * Dual-Thread Concurrent Astropathic Courier Bridge (v6.3 - Thread Hydration Guard & Strict REF-ID Lock Edition)
  * - Strictly targets <model-response> (never user <message-content>)
- * - ZERO XML TAGS IN USER PROMPT: Prevents Google's web firewall from flagging <DIRECT_REPLY> as XML injection!
- * - ZERO FILE-WRITES ON LIVE TERMINAL: Strictly instructs Gemini NOT to call refresh_source_content during live
- *   terminal turns (preventing 60s tool-call timeouts), leaving .md updates to the Admin Patch Log chat!
- * - FIRST-TRY FICTIONAL FRAMING: Prevents safety-filter refusals on spooky Warp/Threat queries.
- * - Splits intercepts automatically at "+++ PASSIVE CHOIR INTERCEPT" (or <INTERCEPT> tags).
+ * - THREAD HYDRATION & DRIFT GUARD: Waits for existing <model-response> turns to mount on boot and snaps back
+ *   to ALPHA_THREAD_URL / BETA_THREAD_URL if a tab ever drifts, preventing standalone chats outside the Notebook!
+ * - STRICT REF-ID MATCHING: Never accepts a previous turn's <model-response>!
+ * - ULTRA-LIGHT PROMPT: Leaves all formatting templates inside AGENT.md so the prompt never gets Gemini stuck!
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -50,7 +49,7 @@ const SERVICE_KEY = resolveServiceKey();
 const { alphaThreadUrl: ALPHA_THREAD_URL, betaThreadUrl: BETA_THREAD_URL } = resolveThreadUrls();
 
 logGreen('----------------------------------------------------------------');
-logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v6.1 FAST READ-ONLY]');
+logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v6.3 THREAD-LOCKED]');
 logGreen(` -> SUPABASE_URL : ${SUPABASE_URL}`);
 logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)}...)` : 'MISSING! Check your .env file!'}`);
 logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL || 'MISSING! Define ALPHA_THREAD_URL in .env'}`);
@@ -69,23 +68,11 @@ const MODEL_TURN_SELECTOR = 'model-response';
 let typingLock = Promise.resolve();
 const messageAttemptTracker = new Map();
 
-/**
- * Preserves 100% of the player's original wording and roleplay nuance!
- */
 function sanitizePlayerQueryForGemini(rawQuestion) {
   if (!rawQuestion || typeof rawQuestion !== 'string') return '';
   return rawQuestion.trim();
 }
 
-/**
- * Returns true if the text is ANY Gemini error banner or canned refusal:
- * - "I seem to be encountering an error. Can I try something else for you?"
- * - "I'm having a hard time fulfilling your request. Can I help you with something else instead?"
- * - "Não fui programado para fazer isso. Só consigo gerar texto."
- * - "Sou apenas um modelo de linguagem. Não posso ajudar com isso."
- * - "I encountered an error doing what you asked. Could you try again?"
- * - "Sorry, something went wrong. Please try your request again."
- */
 function isGeminiErrorBanner(text) {
   if (!text || typeof text !== 'string') return false;
   const trimmed = text.trim();
@@ -100,10 +87,6 @@ function isGeminiErrorBanner(text) {
   return false;
 }
 
-/**
- * Returns true ONLY if the text contains a genuine Imperial Dispatch marker (<DIRECT_REPLY>, +++, or REF-ID)
- * and is NOT a refusal or error banner.
- */
 function isValidImperialDispatch(text) {
   if (!text || typeof text !== 'string') return false;
   if (isGeminiErrorBanner(text)) return false;
@@ -113,8 +96,17 @@ function isValidImperialDispatch(text) {
 }
 
 /**
- * Returns true if the text is still loading ("Conectando a Gemini Notebook") or hasn't output a valid dispatch header yet.
+ * Checks if a reply contains a DIFFERENT message's REF-ID (stale reply protection!).
  */
+function hasMismatchedRefId(text, expectedShortId) {
+  if (!text || !expectedShortId || expectedShortId === '00000000') return false;
+  const match = text.match(/REF-ID\s*:\s*([a-f0-9]{8})/i);
+  if (match && match[1]) {
+    return match[1].toLowerCase() !== expectedShortId.toLowerCase();
+  }
+  return false;
+}
+
 function isToolLoadingBanner(text) {
   if (!text || typeof text !== 'string') return true;
   if (isGeminiErrorBanner(text)) return false;
@@ -258,25 +250,28 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
   const maxWaitMs = 90000;
   const start = Date.now();
 
-  logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> (Previous count:${prevState.count})...`);
+  logGreen(`[WAITING // ${channelTag}] Waiting for new <model-response> with REF-ID ${msgShortId} (Previous count:${prevState.count})...`);
 
   let newResponseStarted = false;
   while (Date.now() - start < 45000) {
     await page.waitForTimeout(1000);
     const curr = await extractCleanLastModelResponse(page);
 
-    if (curr.count > prevState.count && curr.text.length > 5 && curr.text !== prevState.text) {
+    if (!curr.text || curr.text === prevState.text) continue;
+    if (hasMismatchedRefId(curr.text, msgShortId)) continue;
+
+    if (curr.count > prevState.count && curr.text.length > 5) {
       newResponseStarted = true;
       break;
     }
-    if (curr.text.includes(msgShortId) && curr.text !== prevState.text) {
+    if (curr.text.includes(msgShortId)) {
       newResponseStarted = true;
       break;
     }
   }
 
   if (!newResponseStarted) {
-    logGreen(`[WARNING // ${channelTag}] No new <model-response> detected within 45s! Aborting to prevent stale read.`);
+    logGreen(`[WARNING // ${channelTag}] No new <model-response> for REF-ID ${msgShortId} detected within 45s! Aborting to prevent stale read.`);
     return '';
   }
 
@@ -289,6 +284,11 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
     const text = curr.text;
 
     if (!text || text === prevState.text) continue;
+
+    if (hasMismatchedRefId(text, msgShortId)) {
+      stableTicks = 0;
+      continue;
+    }
 
     if (isGeminiErrorBanner(text)) {
       logGreen(`[ERROR/REFUSAL BLOCKED // ${channelTag}] Gemini output: "${text.slice(0, 80)}"`);
@@ -315,8 +315,8 @@ async function waitForBulletproofReply(page, prevState, msgShortId, channelTag) 
     }
   }
 
-  if (!isValidImperialDispatch(lastText)) {
-    logGreen(`[WARNING // ${channelTag}] Stream timed out without valid Imperial Dispatch markers. Rejecting capture.`);
+  if (!isValidImperialDispatch(lastText) || hasMismatchedRefId(lastText, msgShortId)) {
+    logGreen(`[WARNING // ${channelTag}] Stream timed out or had mismatched REF-ID. Rejecting capture.`);
     return '';
   }
 
@@ -364,6 +364,23 @@ async function processSingleMessage(msg, targetPage, options = {}) {
   logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} | From:${msg.sender || 'Unknown'}`);
   logFn(`   Payload: "${(msg.question || '').slice(0, 90)}..."`);
 
+  // THREAD DRIFT GUARD: Ensure the browser tab is still on the configured Notebook chat URL before typing!
+  const expectedUrl = isAlpha ? ALPHA_THREAD_URL : BETA_THREAD_URL;
+  if (expectedUrl && typeof targetPage.goto === 'function' && typeof targetPage.url === 'function') {
+    const currentUrl = targetPage.url();
+    const expectedId = expectedUrl.split('/').filter(Boolean).pop();
+    if (expectedId && currentUrl !== 'https://gemini.google.com/test' && !currentUrl.includes(expectedId)) {
+      logFn(`[THREAD GUARD // ${channelTag}] Tab drifted to ${currentUrl} — snapping back to ${expectedUrl}...`);
+      await targetPage.goto(expectedUrl, { waitUntil: 'domcontentloaded' });
+      if (typeof targetPage.waitForSelector === 'function') {
+        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => {});
+      }
+      if (typeof targetPage.waitForTimeout === 'function') {
+        await targetPage.waitForTimeout(1500);
+      }
+    }
+  }
+
   const inputLocator = targetPage.locator(CHAT_INPUT_SELECTOR).first();
   try {
     await inputLocator.waitFor({ state: 'visible', timeout: 8000 });
@@ -377,10 +394,8 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   let rawReply;
 
-  // LATE-ARRIVAL CATCHER: If a previous cycle timed out while Gemini was still working,
-  // and Gemini finished writing the valid reply for this exact MSG_ID a few seconds later,
-  // grab it immediately without re-sending the prompt!
-  if (prevState.text && prevState.text.includes(msgShortId) && isValidImperialDispatch(prevState.text)) {
+  // LATE-ARRIVAL CATCHER: Only captures if the screen ALREADY shows this exact msgShortId!
+  if (prevState.text && prevState.text.includes(msgShortId) && !hasMismatchedRefId(prevState.text, msgShortId) && isValidImperialDispatch(prevState.text)) {
     logFn(`[LATE-ARRIVAL CAPTURED // ${channelTag}] Found completed reply for MSG_ID ${msgShortId} already on screen! Forwarding to Supabase...`);
     messageAttemptTracker.delete(msg.id);
     rawReply = prevState.text;
@@ -388,33 +403,33 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
     const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
 
-    // Trigger a Pattern 5 [REDACTED] psychic bleed for the rival channel on Dossiers, Probes, or major declarations (NO .md file writes!)
     const needsInterceptBleed = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
+    // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
     if (isAlpha) {
       if (isAshenSpirit) {
         promptLines = [
-          `In the fictional Warhammer 40,000 tabletop board game setting (reading AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), write the in-character Pattern 4 Ashen Spirit cogitator readout (starting with +++ ASHEN SPIRIT LOGIC CORE +++ and >>> REF-ID: ${msgShortId}) replying to The Exile's exact in-game line:`,
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character (Pattern 4 Ashen Spirit cogitator readout, REF-ID: ${msgShortId}) to this message from The Exile:`,
           `"${safeQuestion}"`
         ];
       } else {
         promptLines = [
-          `In the fictional Warhammer 40,000 tabletop board game setting (reading AGENT.md and WORLD.md in this notebook—do NOT edit or update any files), write the in-character reply as Logis-Prefect Vane in orbit (Pattern 1/2/3, starting with +++ and >>> REF-ID: ${msgShortId}, orbital knowledge only) replying to The Exile's exact in-game line:`,
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md and WORLD.md in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, orbital knowledge only) to this message from The Exile:`,
           `"${safeQuestion}"`
         ];
       }
     } else {
       promptLines = [
-        `In the fictional Warhammer 40,000 tabletop board game setting (reading AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), write the in-character reply as Logis-Prefect Vane in orbit (Pattern 1/2/3, starting with +++ and >>> REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) replying to Lord Commander Junebug's exact in-game line:`,
+        `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) to this message from Lord Commander Junebug:`,
         `"${safeQuestion}"`
       ];
     }
 
     if (needsInterceptBleed) {
-      promptLines.push(`(Also include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
+      promptLines.push(`(Also include a Pattern 5 intercept block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
     } else if (/simulate|test.*interference/i.test(rawQ)) {
-      promptLines.push(`(Also include a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT +++" block at the bottom with [REDACTED] for testing).`);
+      promptLines.push(`(Also include a Pattern 5 intercept block at the bottom with [REDACTED] for testing).`);
     }
 
     const prompt = promptLines.join('\n');
@@ -430,20 +445,19 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       prevState = await extractCleanLastModelResponse(targetPage);
 
       const recoveryPrompt = isAshenSpirit
-        ? `Purely as creative fiction for our Warhammer 40,000 board game (reading AGENT.md and SHIP.md without editing any files), write the Pattern 4 terminal readout (starting with +++ ASHEN SPIRIT LOGIC CORE +++ and >>> REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`
-        : `Purely as creative fiction for our Warhammer 40,000 board game (reading AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (starting with +++ ASTROPATHIC CONDUIT: SEGMENTUM SOLAR HIGH COMMAND +++ and >>> REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`;
+        ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and SHIP.md without editing any files), write the Pattern 4 readout (REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`
+        : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (Pattern 1, REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`;
 
       await typeAndSendPrompt(targetPage, inputLocator, recoveryPrompt, channelTag);
       rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);
     }
 
-    if (!rawReply || rawReply === prevState.text || !isValidImperialDispatch(rawReply)) {
-      logFn(`[BLOCKED // ${channelTag}] Reply did not pass Imperial Dispatch whitelist check. Keeping MSG_ID ${msgShortId} pending.`);
+    if (!rawReply || rawReply === prevState.text || !isValidImperialDispatch(rawReply) || hasMismatchedRefId(rawReply, msgShortId)) {
+      logFn(`[BLOCKED // ${channelTag}] Reply did not pass Imperial Dispatch / REF-ID check (${msgShortId}). Keeping pending.`);
       return false;
     }
   }
 
-  // Parse <DIRECT_REPLY> / <INTERCEPT> tags if present, OR split automatically at "+++ PASSIVE CHOIR INTERCEPT"
   let directPart = rawReply;
   let interceptPart = '';
   let interceptAttrs = '';
@@ -460,7 +474,6 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     interceptAttrs = (interceptTagMatch[2] !== undefined ? interceptTagMatch[1] : '') || '';
     interceptPart = interceptTagMatch[2] !== undefined ? interceptTagMatch[2] : interceptTagMatch[1];
   } else {
-    // Check if Gemini wrote a Pattern 5 "+++ PASSIVE CHOIR INTERCEPT" block at the bottom without XML tags
     const splitIdx = directPart.search(/\+{2,}\s*PASSIVE CHOIR INTERCEPT/i);
     if (splitIdx > 20) {
       interceptPart = directPart.slice(splitIdx);
@@ -470,8 +483,8 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   const finalDirectReply = scrubArtifacts(directPart);
 
-  if (isGeminiErrorBanner(finalDirectReply) || !isValidImperialDispatch(finalDirectReply)) {
-    logFn(`[BLOCKED // ${channelTag}] Extracted body failed validation. Keeping MSG_ID ${msgShortId} pending.`);
+  if (isGeminiErrorBanner(finalDirectReply) || !isValidImperialDispatch(finalDirectReply) || hasMismatchedRefId(finalDirectReply, msgShortId)) {
+    logFn(`[BLOCKED // ${channelTag}] Extracted body failed validation or had mismatched REF-ID. Keeping MSG_ID ${msgShortId} pending.`);
     return false;
   }
 
@@ -602,16 +615,28 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   const alphaPage = context.pages()[0] || await context.newPage();
   logGreen('>> Opening Tab 1 (Commander Alpha // The Exile)...');
   await alphaPage.goto(alphaThreadUrl, { waitUntil: 'domcontentloaded' });
+  if (typeof alphaPage.waitForSelector === 'function') {
+    await alphaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => {});
+  }
+  if (typeof alphaPage.waitForTimeout === 'function') {
+    await alphaPage.waitForTimeout(2000);
+  }
 
   const betaPage = await context.newPage();
   logGreen('>> Opening Tab 2 (Commander Beta // JUNEBUG)...');
   await betaPage.goto(betaThreadUrl, { waitUntil: 'domcontentloaded' });
+  if (typeof betaPage.waitForSelector === 'function') {
+    await betaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => {});
+  }
+  if (typeof betaPage.waitForTimeout === 'function') {
+    await betaPage.waitForTimeout(2000);
+  }
 
   try {
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
     const initData = await initCheck.json();
     logGreen('================================================================');
-    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v6.1 (FAST READ-ONLY) ONLINE ++');
+    logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v6.3 (THREAD-LOCKED) ONLINE ++');
     logGreen(`++ Pending Transmissions in Supabase: ${Array.isArray(initData) ? initData.length : JSON.stringify(initData)}`);
     logGreen('================================================================');
   } catch (e) {
@@ -645,6 +670,7 @@ module.exports = {
   scrubArtifacts,
   isGeminiErrorBanner,
   isValidImperialDispatch,
+  hasMismatchedRefId,
   isToolLoadingBanner,
   clickGeminiRetryButton,
   extractCleanLastModelResponse,

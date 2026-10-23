@@ -88,6 +88,27 @@
       line-height: 1.52;
       margin: 14px 0;
     }
+    .logistics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .logistics-card {
+      background: #090b10;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .logistics-card.state-surplus {
+      border-color: var(--green);
+      box-shadow: 0 0 14px rgba(46, 160, 67, 0.2);
+    }
+    .logistics-card.state-deficiency {
+      border-color: var(--red);
+      box-shadow: 0 0 14px rgba(255, 71, 87, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -108,21 +129,22 @@
 
   <div class="hero-card" style="margin-bottom:18px;">
     <div class="hero-header">
-      <div class="status-pill">Global Theatre Command • Phase Standings &amp; Post-Battle Forge</div>
+      <div class="status-pill">Global Theatre Command • Phase Standings, Tour of Duty &amp; Post-Battle Forge</div>
       <h1 class="hero-title">Crusade Command &amp; Quartermaster</h1>
       <p class="hero-subtitle">
-        Track the 3-Way Alliance War across all 4 Campaign Phases, roll random Battle Traits, Weapon Modifications, Crusade Relics &amp; Battle Scars, and transmit your fused Master Battle Dossier directly to the Campaign Master.
+        Track the 3-Way Alliance War across all 4 Campaign Phases, manage Munitorum Regulation 884-Alpha Tours of Duty &amp; Logistics, roll random Battle Traits, Weapon Modifications, Crusade Relics &amp; Battle Scars, and transmit your fused Master Battle Dossier directly to the Campaign Master.
       </p>
     </div>
 
     <div class="nav-pills" style="margin-bottom:0;">
       <button id="cruTabBtn1" class="active" onclick="switchCrusadeTab('board')">🏆 1. Global Scoreboard &amp; Phase Tree</button>
       <button id="cruTabBtn2" onclick="switchCrusadeTab('forge')">🎲 2. Upgrade Rollers &amp; Master Battle Dossier</button>
+      <button id="cruTabBtn3" onclick="switchCrusadeTab('tour')">🦅 3. Tour of Duty &amp; Munitorum Logistics</button>
     </div>
   </div>
 
   <!-- ===================================================================== -->
-  <!-- TAB 1: GLOBAL 3-WAY ALLIANCE COMMAND BOARD & PHASE 1-4 TREE (CONCEPT 4)-->
+  <!-- TAB 1: GLOBAL 3-WAY ALLIANCE COMMAND BOARD & PHASE 1-4 TREE           -->
   <!-- ===================================================================== -->
   <div id="cruTabBoard">
 
@@ -194,7 +216,7 @@
       <!-- 3RD ALLIANCE (HORDE OVERLORD) -->
       <div class="alliance-score-card horde-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="rule-tag" style="border-color:var(--red); color:var(--red);">👁️‍🗨️ UNCHOSEN 3RD BANNER</span>
+          <span class="rule-tag" style="border-color:var(--red); color:var(--red);">👁️🗨️ UNCHOSEN 3RD BANNER</span>
           <span class="hud-sub">Origin: Unknown</span>
         </div>
         <h3 style="margin:8px 0 2px 0; color:#fff;">🔥 3rd Alliance Overlord</h3>
@@ -248,7 +270,7 @@
         <span class="hud-sub">"Upgrades &amp; Scars Have Stories"</span>
       </div>
       <p class="card-desc" style="margin-bottom:14px;">
-        Whenever a unit ranks up or fails an Out of Action test, enter the unit's name and what it did in battle below, roll the dice, and click <strong>➕ Attach Rolled Result to Master Dossier</strong> so the Campaign Master can christen its custom lore name over the CRT Vox!
+        Switch between the <strong>🌋 Armageddon Theatre</strong> and <strong>🦅 Astra Militarum Codex</strong> tables below, enter the unit's name and battlefield feat, roll the dice, and click <strong>➕ Attach</strong> so the Campaign Master can christen its custom lore name over the CRT Vox!
       </p>
 
       <!-- SOURCE POOL SELECTOR & UNIT CONTEXT BAR -->
@@ -257,13 +279,13 @@
           <label class="hud-label" style="display:block; margin-bottom:4px;">Rulebook Table Pool</label>
           <select id="forgeSourcePool" onchange="saveCrusadeState()" style="width:100%; padding:10px; font-weight:700;">
             <option value="Armageddon">🌋 Crusade: Armageddon Theatre (Universal — Active)</option>
-            <option value="AlphaCodex">🦅 Astra Militarum Codex (Ready for Codex Import)</option>
-            <option value="BetaCodex">💀 Lord Commander Junebug Faction Codex (Ready for Codex Import)</option>
+            <option value="AlphaCodex">🦅 Astra Militarum Codex (The Exile — Active!)</option>
+            <option value="BetaCodex">💀 Lord Commander Junebug Faction Codex (Awaiting Roster)</option>
           </select>
         </div>
         <div>
           <label class="hud-label" style="display:block; margin-bottom:4px;">Target Unit Name (For Dossier Story)</label>
-          <input type="text" id="rollerUnitName" placeholder="e.g. 'Mercy's Delay' / Krieg Squad II / Shrine-Breaker #1" style="width:100%; padding:10px;">
+          <input type="text" id="rollerUnitName" placeholder="e.g. 'Mercy's Delay' / Krieg Squad II / Hull #44-V1" style="width:100%; padding:10px;">
         </div>
       </div>
 
@@ -279,14 +301,14 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
               <strong style="color:var(--gold); font-size:1rem;">⚔️ Battle Traits (1D6)</strong>
               <select id="traitUnitType" style="padding:4px 8px; font-size:0.78rem;">
-                <option value="Infantry">Infantry Units</option>
-                <option value="Mounted">Mounted Units</option>
-                <option value="MonsterVehicle">Monster / Vehicle</option>
-                <option value="Character">Character Units</option>
+                <option value="Infantry">Infantry / Regiment</option>
+                <option value="Mounted">Mounted / Cavalry</option>
+                <option value="MonsterVehicle">Vehicle / Squadron / Monster</option>
+                <option value="Character">Officer / Character</option>
               </select>
             </div>
             <div id="traitResultBox" class="dice-result-box">
-              <span style="color:var(--muted);">Select unit category and roll 1D6 on the Battle Traits table...</span>
+              <span style="color:var(--muted);">Select Rulebook Pool &amp; unit category, then roll 1D6 on the Battle Traits table...</span>
             </div>
           </div>
           <div style="display:flex; gap:8px;">
@@ -324,7 +346,7 @@
               </select>
             </div>
             <div id="relicResultBox" class="dice-result-box">
-              <span style="color:var(--muted);">Select Relic tier and draw from the Armageddon Reliquary Vault...</span>
+              <span style="color:var(--muted);">Select Relic tier and draw from the active Armageddon or Astra Militarum Reliquary...</span>
             </div>
           </div>
           <div style="display:flex; gap:8px;">
@@ -374,8 +396,8 @@
           <select id="dossierModeNode" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
             <option value="Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Co-op Horde // Node 0 (Golgotha Jungle)</option>
             <option value="Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Solo Horde // Node 0 (Golgotha Jungle)</option>
-            <option value="Mode 1: Horde Breach // Node 1 (Hive Death Mire — Recon)">Mode 1: Horde // Node 1 (Hive Death Mire — Recon)</option>
-            <option value="Mode 1: Horde Breach // Node 2 (Hive Infernus — Recon)">Mode 1: Horde // Node 2 (Hive Infernus — Recon)</option>
+            <option value="Mode 1: Horde Breach // Node 1 (Anthrand Munitions Vaults — Recon)">Mode 1: Horde // Node 1 (Anthrand Vaults — Recon)</option>
+            <option value="Mode 1: Horde Breach // Node 2 (Stygies Outpost — Recon)">Mode 1: Horde // Node 2 (Stygies Outpost — Recon)</option>
             <option value="Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)">Mode 2: 1v1 PvP // Node 0 (Golgotha Jungle)</option>
             <option value="Mode 3: Rogue Sector Auxiliary Clash">Mode 3: Rogue Sector Auxiliary Clash</option>
           </select>
@@ -434,9 +456,9 @@
         </div>
       </div>
 
-      <!-- QUEUED UNIT UPGRADES, RELICS & SCARS LIST -->
+      <!-- QUEUED UNIT UPGRADES, RELICS, COMMENDATIONS & SCARS LIST -->
       <div class="section-header" style="margin-top:8px;">
-        <h4 style="margin:0; color:var(--gold);">Attached Unit Upgrades, Relics &amp; Battle Scars (<span id="queuedCountLabel">0</span>)</h4>
+        <h4 style="margin:0; color:var(--gold);">Attached Unit Upgrades, Relics, Commendations &amp; Scars (<span id="queuedCountLabel">0</span>)</h4>
         <button type="button" class="btn-ghost btn-sm" onclick="clearQueuedRolls()">Clear List</button>
       </div>
       <div id="queuedRollsContainer" style="margin-bottom:12px;"></div>
@@ -449,6 +471,114 @@
 
       <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitMasterBattleDossier()">
         📡 Transmit Directly via Astropathic Vox →
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 3: ASTRA MILITARUM TOUR OF DUTY, LOGISTICS & COMMENDATIONS        -->
+  <!-- ===================================================================== -->
+  <div id="cruTabTour" class="hidden">
+
+    <!-- 1. TOUR OF DUTY QUOTA GENERATOR & COMMENDATION POINTS BANK -->
+    <div class="card" style="border-left:4px solid var(--gold); margin-bottom:18px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>1. Munitorum Field Regulation 884-Alpha // Tour of Duty Quotas</h3>
+        <span class="hud-sub">D6+4 Battles Required • D3+2 Victories Required</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:14px;">
+        Roll your operational Tour of Duty quotas at the start of a Tour. After each battle, reduce <strong>Battles Remaining</strong> by 1 (and <strong>Victories Remaining</strong> by 1 if you won). You also earn <strong>1 Commendation Point</strong> per battle played—or <strong>D3 Commendation Points</strong> on a victory (plus bonus points from Astra Militarum Agendas). When both quotas reach <strong>0</strong>, cash in your Commendation Points below!
+      </p>
+
+      <div class="scoreboard-grid" style="margin-bottom:12px;">
+        <!-- BATTLES REMAINING -->
+        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--gold);">
+          <span class="hud-label">BATTLES REMAINING (D6+4)</span>
+          <div class="hud-val-row" style="margin-top:6px;">
+            <button type="button" class="mini-btn" onclick="adjTourField('tourBattlesRem', -1)">−</button>
+            <span class="hud-num" id="tourBattlesRem" style="color:var(--gold); font-size:1.45rem;">0</span>
+            <button type="button" class="mini-btn" onclick="adjTourField('tourBattlesRem', 1)">+</button>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;">Decrement by −1 after every battle</div>
+        </div>
+
+        <!-- VICTORIES REMAINING -->
+        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--green);">
+          <span class="hud-label">VICTORIES REMAINING (D3+2)</span>
+          <div class="hud-val-row" style="margin-top:6px;">
+            <button type="button" class="mini-btn" onclick="adjTourField('tourWinsRem', -1)">−</button>
+            <span class="hud-num" id="tourWinsRem" style="color:var(--green); font-size:1.45rem;">0</span>
+            <button type="button" class="mini-btn" onclick="adjTourField('tourWinsRem', 1)">+</button>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;">Decrement by −1 after every victory</div>
+        </div>
+
+        <!-- COMMENDATION POINTS BANK -->
+        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--blue);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="hud-label">COMMENDATION PTS</span>
+            <span class="hud-sub">Tours Done: <strong id="toursCompletedCount">0</strong></span>
+          </div>
+          <div class="hud-val-row" style="margin-top:6px;">
+            <button type="button" class="mini-btn" onclick="adjTourField('commendationPts', -1)">−</button>
+            <span class="hud-num" id="commendationPts" style="color:var(--blue); font-size:1.45rem;">0</span>
+            <button type="button" class="mini-btn" onclick="adjTourField('commendationPts', 1)">+</button>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;" id="commRollNotice">+1 per loss/draw • +D3 per victory</div>
+        </div>
+      </div>
+
+      <div style="flex-wrap:wrap; display:flex; gap:10px;">
+        <button type="button" class="btn-gold" data-sfx="custom" onclick="rollNewTourQuotas()">🎲 Roll New Tour Quotas (D6+4 / D3+2)</button>
+        <button type="button" class="btn-blue" data-sfx="custom" onclick="rollVictoryCommendationPts()">🎲 Roll Victory Commendation Pts (+D3)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="adjTourField('toursCompletedCount', 1)">🏆 Mark Tour Completed (+1)</button>
+      </div>
+    </div>
+
+    <!-- 2. 4 MUNITORUM LOGISTICS POINTS ALLOCATOR -->
+    <div class="card" style="border-left:4px solid var(--blue); margin-bottom:18px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>2. Munitorum Logistics Point Allocator (Surplus vs. Deficiency)</h3>
+        <span class="hud-sub">Allocated: <strong id="logisticsAllocatedLabel" style="color:var(--gold);">4 / 4</strong> Pts (Max 2 Per Category)</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+        <p class="card-desc" style="margin:0;">
+          Assign your <strong>4 Logistics Points</strong> across the four categories below (max 2 per category). Categories with <strong>2 pts</strong> grant a <strong>🟢 Surplus Bonus</strong>; categories with <strong>1 pt</strong> have <strong>⚪ No Effect</strong>; categories left at <strong>0 pts</strong> suffer a <strong>🔴 Deficiency Penalty</strong>!
+        </p>
+        <label style="font-size:0.82rem; color:var(--gold); font-weight:700; cursor:pointer; background:#090b10; padding:6px 10px; border-radius:8px; border:1px solid var(--border);">
+          <input type="checkbox" id="upliftingPrimerToggle" onchange="toggleUpliftingPrimer()"> 📖 Uplifting Primers Requisition (1 RP → 5 Logistics Pts)
+        </label>
+      </div>
+
+      <div class="logistics-grid" id="logisticsAllocatorGrid"></div>
+    </div>
+
+    <!-- 3. PERSONAL & REGIMENTAL COMMENDATIONS VAULT -->
+    <div class="card" style="border-left:4px solid var(--purple);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>3. Astra Militarum Commendations Vault (Personal &amp; Regimental)</h3>
+        <span class="hud-sub">Attach to Master Dossier for Lore Christening</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        Upon completing a Tour of Duty (both quotas at 0), spend your accumulated <strong>Commendation Points</strong> on <strong>Personal Commendations (1–5 pts)</strong> for individual units or <strong>Regimental Commendations (8 pts, max 2 on Order of Battle, +3 CrP each)</strong> for your entire army. Select any Commendation below and click <strong>➕ Attach to Master Battle Dossier</strong>!
+      </p>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Select Commendation Award</label>
+          <select id="commendationSelect" onchange="renderSelectedCommendationPreview()" style="width:100%; padding:10px; font-weight:700;"></select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Recipient Unit Name (Or 'Entire 044th Regiment')</label>
+          <input type="text" id="commRecipientUnit" placeholder="e.g. 'Mercy's Delay' / Hull #44-V1 / Entire 044th Regiment" style="width:100%; padding:10px;">
+        </div>
+      </div>
+
+      <div id="commendationPreviewBox" class="dice-result-box" style="min-height:80px; margin-bottom:12px;"></div>
+
+      <button type="button" class="btn-gold" onclick="attachCommendationToDossier()">
+        ➕ Attach Commendation to Master Dossier (Tab 2)
       </button>
     </div>
 
@@ -475,7 +605,7 @@ const ALLIANCE_TREES = {
       phase: "Phase 2A (Success Path): Reclaim the Lost Hives",
       goal: "End of battle: if 2+ non-Aircraft, non-Battle-shocked units are wholly within opponent's deployment zone, gain +5 SPts.",
       success: "SUCCESS (Commanding Grasp → Raze the Monoliths): In your 2nd Reinforcement step, set up 1 Strategic Reserve unit as if it were Battle Round 3.",
-      failure: "FAILURE (Staged Withdrawal → Light in the Dark): Select 1 INFANTRY or BATTLELINE unit at Declare Battle Formations to gain Scouts 6\"."
+      failure: "FAILURE (Staged Withdrawal → Light in the Dark): Select 1 INFANTRY or BATTLELINE unit at Declare Battle Formations to gain Scouts 6\".",
     },
     {
       phase: "Phase 2B (Failure Path): Strengthen the Imperator Line",
@@ -488,7 +618,7 @@ const ALLIANCE_TREES = {
     {
       phase: "Phase 1: Planetfall",
       goal: "At the end of each battle, if you are the victor, gain +5 Strategic Points.",
-      success: "SUCCESS (Momentum Unchecked → The Red Angel'sSummons): Add +1 to Advance and Charge rolls for units with 1+ Warp Counters.",
+      success: "SUCCESS (Momentum Unchecked → The Red Angel's Summons): Add +1 to Advance and Charge rolls for units with 1+ Warp Counters.",
       failure: "FAILURE (Spreading Corruption → Regroup in the Fire Wastes): If 3+ units end wholly within 9\" of different battlefield edges, gain +5 SPts."
     },
     {
@@ -521,12 +651,12 @@ const ALLIANCE_TREES = {
 };
 
 // =========================================================================
-// 11TH ED CRUSADE & ARMAGEDDON RANDOM ROLLER TABLES
+// 11TH ED CRUSADE & ARMAGEDDON RANDOM ROLLER TABLES (UNIVERSAL DEFAULT)
 // =========================================================================
 const BATTLE_TRAIT_TABLES = {
   Infantry: [
     { d6: 1, name: "Fortune's Favoured", desc: "Once per battle, you can re-roll one Hit roll, one Wound roll, or one Saving throw made for this unit." },
-    { d6: 2, name: "Hellsape Veterans", desc: "Models in this unit have Feel No Pain 5+ against Mortal Wounds and Anomaly effects." },
+    { d6: 2, name: "Hellscape Veterans", desc: "Models in this unit have Feel No Pain 5+ against Mortal Wounds and Anomaly effects." },
     { d6: 3, name: "Ash-Waste Stalkers", desc: "Models in this unit have the Stealth ability during Battle Round 1, and ignore negative Move modifiers from terrain." },
     { d6: 4, name: "Zealous Purge", desc: "Each time a model in this unit makes a melee attack against a unit within range of an objective marker, re-roll a Hit roll of 1." },
     { d6: 5, name: "Hardened to the Warp", desc: "While this unit has 1+ Warp Counters, add +1 to its Leadership and Objective Control characteristics." },
@@ -558,6 +688,44 @@ const BATTLE_TRAIT_TABLES = {
   ]
 };
 
+// =========================================================================
+// ASTRA MILITARUM CODEX BATTLE TRAITS & RELICS (COMMANDER ALPHA POOL)
+// =========================================================================
+const ASTRA_MILITARUM_TRAIT_TABLES = {
+  Infantry: [
+    { d6: 1, name: "Dead-Eyed Killers (AM Codex)", desc: "Each time you take a Battle-shock, Leadership, or Desperate Escape test for this unit, add +1 to that test." },
+    { d6: 2, name: "Stealthy (AM Codex)", desc: "Models in this unit have the Stealth ability while within terrain or more than 12\" from the attacking model." },
+    { d6: 3, name: "Brutal Strength (AM Codex)", desc: "Melee weapons equipped by models in this unit have the [LETHAL HITS] ability." },
+    { d6: 4, name: "Grim Demeanour (AM Codex)", desc: "While this unit is affected by an Order, add +1 to the Objective Control (OC) characteristic of models in this unit." },
+    { d6: 5, name: "Rapid Redeployment (AM Codex)", desc: "Ranged weapons equipped by models in this unit have the [ASSAULT] ability." },
+    { d6: 6, name: "Trench-Fighting Veterans (AM Codex)", desc: "Each time a ranged attack targets this unit while it has the Benefit of Cover, improve the Save characteristic of models in this unit by 1." }
+  ],
+  Mounted: [
+    { d6: 1, name: "Dead-Eyed Killers (AM Codex)", desc: "Each time you take a Battle-shock, Leadership, or Desperate Escape test for this unit, add +1 to that test." },
+    { d6: 2, name: "Stealthy Outriders (AM Codex)", desc: "Models in this unit have the Stealth ability and ignore vertical/rough terrain penalties." },
+    { d6: 3, name: "Brutal Strength (AM Codex)", desc: "Melee weapons equipped by models in this unit have the [LETHAL HITS] ability." },
+    { d6: 4, name: "Swift Envelopment (AM Codex)", desc: "Add +2\" to the Move characteristic of models in this unit and re-roll Advance rolls." },
+    { d6: 5, name: "Carbine Volley (AM Codex)", desc: "Ranged weapons equipped by models in this unit have the [ASSAULT] ability." },
+    { d6: 6, name: "Shock Lancers (AM Codex)", desc: "Each time this unit ends a Charge move, re-roll Hit rolls of 1 in the Fight phase this turn." }
+  ],
+  MonsterVehicle: [
+    { d6: 1, name: "Urban Fighters (AM Codex)", desc: "This VEHICLE unit ignores the -1 to Hit penalty from Big Guns Never Tire when firing at targets while within Engagement Range." },
+    { d6: 2, name: "Armoured Superiority (AM Codex)", desc: "Add +2 to the Objective Control (OC) characteristic of this VEHICLE model." },
+    { d6: 3, name: "Veteran Tankers (AM Codex)", desc: "Each time this model makes a ranged attack with its primary turret/hull weapon, re-roll a Hit roll of 1." },
+    { d6: 4, name: "Field-Rigged Plating (AM Codex)", desc: "This VEHICLE model has the Feel No Pain 6+ ability against Mortal Wounds." },
+    { d6: 5, name: "Overcharged Engines (AM Codex)", desc: "Add +1\" to this model's Move characteristic and +1 to Advance and Tank Shock rolls." },
+    { d6: 6, name: "Indomitable Machine Spirit (AM Codex)", desc: "While this VEHICLE model is Damaged (1–4 Wounds remaining), ignore the -1 penalty to its Hit rolls." }
+  ],
+  Character: [
+    { d6: 1, name: "Booming Voice (AM Officer)", desc: "Each time this OFFICER issues an Order, you can select an eligible unit within 12\" instead of 6\"." },
+    { d6: 2, name: "Eye for Talent (AM Officer)", desc: "If this OFFICER is on the battlefield and not destroyed at battle end, select 1 additional unit to be Marked for Greatness (+3 XP)!" },
+    { d6: 3, name: "Old Grudges (AM Officer)", desc: "At start of battle, select 1 enemy unit; attacks made by models in this OFFICER's unit targeting that enemy unit can re-roll the Hit roll." },
+    { d6: 4, name: "Front-Line Leader (AM Officer)", desc: "While this OFFICER is leading a unit, models in that unit can re-roll Battle-shock tests and add +1 to Charge rolls." },
+    { d6: 5, name: "Master of Ordnance & Supply (AM Officer)", desc: "Once per battle, target this OFFICER's unit with a Battle Tactic Stratagem for 0 CP." },
+    { d6: 6, name: "Summary Executioner (AM Officer)", desc: "Once per battle round, when this unit fails a Battle-shock test, destroy 1 bodyguard model to immediately pass that test instead." }
+  ]
+};
+
 const WEAPON_MOD_TABLE = [
   { d6: 1, name: "Finely Balanced", desc: "Improve this weapon's Ballistic Skill or Weapon Skill characteristic by 1 (to a maximum of 2+)." },
   { d6: 2, name: "Brutal", desc: "Add +1 to this weapon's Strength characteristic." },
@@ -586,6 +754,23 @@ const CRUSADE_RELIC_VAULT = {
   ]
 };
 
+const ASTRA_MILITARUM_RELIC_VAULT = {
+  Artificer: [
+    { name: "Iconic Accoutrements (AM Artificer • +1 CrP)", desc: "Select one melee weapon or pistol equipped by the bearer; improve its WS/BS by 1, add +1 to its Attacks and +1 to its Damage, and friendly units within 6\" re-roll Battle-shock tests." },
+    { name: "Voice of Von Rhyne (AM Artificer • +1 CrP)", desc: "OFFICER model only. The bearer can issue 1 additional Order in your Command phase, and Orders issued by the bearer are not lost if the target unit becomes Battle-shocked!" },
+    { name: "Death Mask of Ollanius (AM Artificer • +1 CrP)", desc: "Bearer has a 4+ Invulnerable save, and while bearer's unit is Battle-shocked, subtract 1 from its OC instead of reducing OC to 0." }
+  ],
+  Antiquity: [
+    { name: "Tactical Auto-Reliquary of Tyberius (AM Antiquity • +2 CrP)", desc: "INFANTRY OFFICER only. Improve bearer's Save, Wounds, Leadership, and OC by 1, improve bearer's WS and BS by 1, and improve bearer's Invulnerable save by 1 (max 4+)!" },
+    { name: "Kurov's Aquila (AM Antiquity • +2 CrP)", desc: "OFFICER model only. Once per battle, when your opponent uses a Stratagem, increase the CP cost of that Stratagem by +1 CP, and roll a D6 each Command phase: on a 5+, gain +1 CP." },
+    { name: "Blade of Conquest (AM Antiquity • +2 CrP)", desc: "Upgrades bearer's melee weapon with +2 Strength, AP -3, Damage 2, and [DEVASTATING WOUNDS] on the charge." }
+  ],
+  Legendary: [
+    { name: "Star of Terra (AM Legendary • +3 CrP)", desc: "INFANTRY OFFICER model only. Models in the bearer's unit have a 5+ Invulnerable save, AND each time an attack targets the bearer's unit, subtract 1 from the Wound roll!" },
+    { name: "Laurels of Command (AM Legendary • +3 CrP)", desc: "OFFICER model only. Each time the bearer issues an Order to a unit, roll a D6: on a 4+, issue a second different Order to that same unit immediately for free (both Orders remain active simultaneously)!" }
+  ]
+};
+
 const BATTLE_SCAR_TABLE = [
   { d6: 1, name: "Crippling Damage", desc: "Subtract 1\" from the Move characteristic of models in this unit, and you cannot use Advance or Charge re-rolls for this unit." },
   { d6: 2, name: "Battle-Weary", desc: "Each time this unit takes a Battle-shock, Leadership, or Out of Action test, subtract 1 from the roll." },
@@ -593,6 +778,59 @@ const BATTLE_SCAR_TABLE = [
   { d6: 4, name: "Disgraced", desc: "You cannot use any Stratagems to affect this unit, and this unit cannot be Marked for Greatness." },
   { d6: 5, name: "Mark of Shame", desc: "This unit cannot form an Attached unit, is unaffected by friendly Aura abilities, and cannot be selected for Marked for Greatness." },
   { d6: 6, name: "Deep Scars", desc: "Each time a Critical Wound is scored against this unit, that attack's AP is improved by 1." }
+];
+
+// =========================================================================
+// MUNITORUM LOGISTICS CATEGORIES & COMMENDATIONS VAULT (REGULATION 884-A)
+// =========================================================================
+const LOGISTICS_CATEGORIES = [
+  {
+    key: "lexmechanicus",
+    title: "📡 Lexmechanicus (Comms & Planning)",
+    surplus: "SURPLUS (2 Pts): When selecting Agendas for a battle, you can select 1 additional Astra Militarum Agenda to be active for that battle!",
+    deficiency: "DEFICIENCY (0 Pts): Each time an OFFICER from your army issues an Order, roll 1D6: on a 1, that Order is not issued!"
+  },
+  {
+    key: "materiel",
+    title: "⚙️ Materiel (Fuel & Ordnance)",
+    surplus: "SURPLUS (2 Pts): Each time an ASTRA MILITARUM unit from your army is selected to shoot, you can re-roll one Hit roll!",
+    deficiency: "DEFICIENCY (0 Pts): Subtract 2\" from the Move characteristic of all ASTRA MILITARUM VEHICLE models in your Crusade force!"
+  },
+  {
+    key: "tithePool",
+    title: "🪖 Tithe Pool (Fresh Recruits)",
+    surplus: "SURPLUS (2 Pts): In your Command phase, return 1 destroyed model (excluding Characters) to each REGIMENT INFANTRY unit below Starting Strength!",
+    deficiency: "DEFICIENCY (0 Pts): In your Command phase, if your WARLORD is not on the battlefield, you do not gain a Command Point!"
+  },
+  {
+    key: "morale",
+    title: "🦅 Morale (Rations & Spirit)",
+    surplus: "SURPLUS (2 Pts): Improve the Leadership characteristic of all ASTRA MILITARUM models in your Crusade force by 1!",
+    deficiency: "DEFICIENCY (0 Pts): You cannot use the Insane Bravery Stratagem during your battles!"
+  }
+];
+
+const ASTRA_COMMENDATIONS_VAULT = [
+  // PERSONAL COMMENDATIONS (1–5 PTS)
+  { id: "bastion", type: "Personal Commendation (1 Pt • Regiment Unit)", name: "Bastion Honour (1 Pt)", desc: "REGIMENT unit only. Once per battle, at the start of the opponent's Fight phase, this unit gains Fights First until the end of the phase." },
+  { id: "steel_armorial", type: "Personal Commendation (1 Pt • Vehicle / Enginseer)", name: "Steel Armorial (1 Pt)", desc: "VEHICLE or TECH-PRIEST ENGINSEER only. If this unit survives the battle, re-roll one failed Out of Action test taken for a friendly Astra Militarum Vehicle unit." },
+  { id: "diamantine", type: "Personal Commendation (1 Pt • Infantry / Mounted)", name: "Diamantine Star (1 Pt)", desc: "Once per battle, this unit can use the Rapid Ingress or Heroic Intervention Stratagem for 0 CP." },
+  { id: "strategium", type: "Personal Commendation (2 Pts • Any Unit)", name: "Merit of the Strategium (2 Pts)", desc: "Each time you select this unit as the target of a Stratagem, roll 1D6: on a 5+, you gain 1 CP." },
+  { id: "dispensation", type: "Personal Commendation (3 Pts • Officer Warlord)", name: "Decree of Dispensation (3 Pts)", desc: "OFFICER Warlord only. Once per Tour of Duty, select 1 Logistics Deficiency effect currently applying to your force; ignore that Deficiency for the entire battle!" },
+  { id: "purity", type: "Personal Commendation (3 Pts • Officer / Priest)", name: "Laurels of Purity (3 Pts)", desc: "OFFICER or MINISTORUM PRIEST only. While leading a unit, models in that unit have Feel No Pain 4+ against Psychic Attacks." },
+  { id: "sigilum", type: "Personal Commendation (3 Pts • Any Unit)", name: "Lord Commander's Sigilum (3 Pts)", desc: "At the end of the battle, if this unit destroyed 1 or more enemy units during that battle, gain +1 bonus Commendation Point!" },
+  { id: "resolute", type: "Personal Commendation (3 Pts • Any Unit)", name: "Medallion Resolute (3 Pts)", desc: "While this unit is within range of an Objective Marker you control, models in this unit have a 5+ Invulnerable save!" },
+  { id: "laudable", type: "Personal Commendation (3 Pts • Any Unit)", name: "Medal of Laudable Service (3 Pts)", desc: "At the start of every Tour of Duty, you can replace one Battle Honour on this unit with a new Battle Honour of your choosing." },
+  { id: "oculus", type: "Personal Commendation (4 Pts • Officer Warlord)", name: "Oculus Laureate (4 Pts)", desc: "OFFICER Warlord only. You can use one Crusade Blessing even if you are not the Underdog!" },
+  { id: "auramite", type: "Personal Commendation (5 Pts • Battle-Hardened+)", name: "Auramite Aquila (5 Pts)", desc: "Battle-hardened+ unit only. Gains 1 extra Battle Trait that does NOT count toward its Battle Honour cap, and reduces Legendary Veterans Requisition to 1 RP!" },
+  // REGIMENTAL COMMENDATIONS (8 PTS • +3 CRUSADE PTS • ARMY-WIDE)
+  { id: "reg_veteran_crew", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Veteran Crew (8 Pts — Squadron Doctrine)", desc: "While a SQUADRON unit is under Duty and Honour!, ignore all Damaged profile penalties! [Materiel Surplus]: +3 OC to all Squadron models! [Tithe Pool Deficiency]: -1 to Out of Action tests." },
+  { id: "reg_vanguard", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Vanguard Honours (8 Pts — Squadron Doctrine)", desc: "While a SQUADRON unit is under Move! Move! Move!, its ranged weapons gain [ASSAULT] when Advancing! [Lexmechanicus Surplus]: +1 CP in Command phase if 1+ Squadron unit is in opponent's deployment zone. [Morale Deficiency]: Roll D6 when gaining a Commendation Pt; on a 1, lose 1." },
+  { id: "reg_drill", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Paragons of Drill Discipline (8 Pts — Las-Fusillade & Artillery)", desc: "Units under First Rank, Fire! Second Rank, Fire! that Remain Stationary gain [SUSTAINED HITS 1] on Rapid Fire weapons! [Materiel Surplus]: Artillery units re-roll Hit rolls of 1. [Tithe Pool Deficiency]: +1 RP cost to Supply/Repair/Recruits." },
+  { id: "reg_preservation", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Preservation Commendation (8 Pts — Armoured Shield)", desc: "INFANTRY under Take Cover! within 3\" of a friendly TRANSPORT gain Benefit of Cover. [Tithe Pool Surplus]: +1 Wound to all TRANSPORT models! [Lexmechanicus Deficiency]: -1 Crusade Blessing." },
+  { id: "reg_mech_assault", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Mechanised Assault Merit (8 Pts — Transport Disembark)", desc: "Units disembarking from a TRANSPORT under First Rank, Fire! Second Rank, Fire! automatically receive that same Order! [Morale Surplus]: Regiment units can disembark after Transport Advances. [Materiel Deficiency]: -4\" Move on Below Half-Strength Transports." },
+  { id: "reg_cavalry", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Cavalry Aquila (8 Pts — Vanguard Infiltration)", desc: "REGIMENT units under Move! Move! Move! add +2 to Advance rolls. [Lexmechanicus Surplus]: Up to 3 Regiment units gain Infiltrators! [Morale Deficiency]: Cannot use Marked for Greatness or Relics." },
+  { id: "reg_guerrillas", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Veteran Guerrillas (8 Pts — Bayonet Precision)", desc: "REGIMENT units under Fix Bayonets! gain [PRECISION] on melee weapons. [Tithe Pool Surplus]: Regiment units gain 2 XP from Battle Experience instead of 1 XP! [Morale Deficiency]: 0 RP gained on defeat." }
 ];
 
 let crusadeState = {
@@ -606,7 +844,19 @@ let crusadeState = {
   betaCacheCount: 0,
   hordeSP: 0,
   hordeCP: 0,
-  queuedRolls: []
+  queuedRolls: [],
+  // Astra Militarum Tour of Duty & Logistics State
+  tourBattlesRem: 0,
+  tourWinsRem: 0,
+  commendationPts: 0,
+  toursCompletedCount: 0,
+  upliftingPrimer: false,
+  logistics: {
+    lexmechanicus: 1,
+    materiel: 2,
+    tithePool: 0,
+    morale: 1
+  }
 };
 
 let lastRolledItem = {
@@ -618,10 +868,20 @@ let lastRolledItem = {
 
 function switchCrusadeTab(which, persist = true) {
   crusadeState.activeTab = which;
-  document.getElementById('cruTabBoard').classList.toggle('hidden', which !== 'board');
-  document.getElementById('cruTabForge').classList.toggle('hidden', which !== 'forge');
-  document.getElementById('cruTabBtn1').classList.toggle('active', which === 'board');
-  document.getElementById('cruTabBtn2').classList.toggle('active', which === 'forge');
+  const tabBoard = document.getElementById('cruTabBoard');
+  const tabForge = document.getElementById('cruTabForge');
+  const tabTour = document.getElementById('cruTabTour');
+  if (tabBoard) tabBoard.classList.toggle('hidden', which !== 'board');
+  if (tabForge) tabForge.classList.toggle('hidden', which !== 'forge');
+  if (tabTour) tabTour.classList.toggle('hidden', which !== 'tour');
+
+  const btn1 = document.getElementById('cruTabBtn1');
+  const btn2 = document.getElementById('cruTabBtn2');
+  const btn3 = document.getElementById('cruTabBtn3');
+  if (btn1) btn1.classList.toggle('active', which === 'board');
+  if (btn2) btn2.classList.toggle('active', which === 'forge');
+  if (btn3) btn3.classList.toggle('active', which === 'tour');
+
   if (persist) saveCrusadeState();
 }
 
@@ -655,8 +915,10 @@ function selectAllianceTree(alliance, persist = true) {
 // --- PURE RANDOM ROLLERS WITH CUSTOM WEB AUDIO SFX ---
 function rollRandomBattleTrait() {
   if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
   const uType = document.getElementById('traitUnitType').value || 'Infantry';
-  const table = BATTLE_TRAIT_TABLES[uType] || BATTLE_TRAIT_TABLES.Infantry;
+  const activePool = poolKey === 'AlphaCodex' ? ASTRA_MILITARUM_TRAIT_TABLES : BATTLE_TRAIT_TABLES;
+  const table = activePool[uType] || BATTLE_TRAIT_TABLES.Infantry;
   const pick = table[Math.floor(Math.random() * table.length)];
   lastRolledItem.trait = {
     category: `Battle Trait (${uType})`,
@@ -702,8 +964,10 @@ function rollRandomWeaponMod() {
 
 function rollRandomRelic() {
   if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
   const tier = document.getElementById('relicTierSelect').value || 'Artificer';
-  const pool = CRUSADE_RELIC_VAULT[tier] || CRUSADE_RELIC_VAULT.Artificer;
+  const activeVault = poolKey === 'AlphaCodex' ? ASTRA_MILITARUM_RELIC_VAULT : CRUSADE_RELIC_VAULT;
+  const pool = activeVault[tier] || CRUSADE_RELIC_VAULT.Artificer;
   const pick = pool[Math.floor(Math.random() * pool.length)];
 
   lastRolledItem.relic = {
@@ -763,6 +1027,167 @@ function rollRandomBattleScar() {
   }, 260);
 }
 
+// =========================================================================
+// ASTRA MILITARUM TOUR OF DUTY, LOGISTICS & COMMENDATIONS FUNCTIONS
+// =========================================================================
+function adjTourField(field, delta) {
+  crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
+  const el = document.getElementById(field);
+  if (el) el.textContent = String(crusadeState[field]);
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
+function rollNewTourQuotas() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const d6 = Math.floor(Math.random() * 6) + 1;
+  const d3 = Math.floor(Math.random() * 3) + 1;
+  crusadeState.tourBattlesRem = d6 + 4;
+  crusadeState.tourWinsRem = d3 + 2;
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playForgeAnvil();
+    const bEl = document.getElementById('tourBattlesRem');
+    const wEl = document.getElementById('tourWinsRem');
+    if (bEl) bEl.textContent = String(crusadeState.tourBattlesRem);
+    if (wEl) wEl.textContent = String(crusadeState.tourWinsRem);
+    updateMasterDossierPreview();
+    saveCrusadeState();
+  }, 240);
+}
+
+function rollVictoryCommendationPts() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const d3 = Math.floor(Math.random() * 3) + 1;
+  crusadeState.commendationPts = (crusadeState.commendationPts || 0) + d3;
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playRelicChoir();
+    const cEl = document.getElementById('commendationPts');
+    const noticeEl = document.getElementById('commRollNotice');
+    if (cEl) cEl.textContent = String(crusadeState.commendationPts);
+    if (noticeEl) noticeEl.innerHTML = `<strong style="color:var(--green);">Rolled D3 = +${d3} Commendation Pts!</strong>`;
+    updateMasterDossierPreview();
+    saveCrusadeState();
+  }, 240);
+}
+
+function toggleUpliftingPrimer() {
+  const cb = document.getElementById('upliftingPrimerToggle');
+  crusadeState.upliftingPrimer = !!(cb && cb.checked);
+  renderLogisticsAllocator();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
+function adjLogisticsPt(catKey, delta) {
+  if (!crusadeState.logistics) {
+    crusadeState.logistics = { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+  }
+  const maxTotal = crusadeState.upliftingPrimer ? 5 : 4;
+  const currentTotal = Object.values(crusadeState.logistics).reduce((a, b) => a + b, 0);
+  const currVal = crusadeState.logistics[catKey] || 0;
+  const nextVal = currVal + delta;
+
+  if (nextVal < 0 || nextVal > 2) return;
+  if (delta > 0 && currentTotal >= maxTotal) return;
+
+  crusadeState.logistics[catKey] = nextVal;
+  if (window.VoxAudio) window.VoxAudio.playClank('card');
+  renderLogisticsAllocator();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
+function renderLogisticsAllocator() {
+  const grid = document.getElementById('logisticsAllocatorGrid');
+  const label = document.getElementById('logisticsAllocatedLabel');
+  const cb = document.getElementById('upliftingPrimerToggle');
+  if (!grid) return;
+
+  if (!crusadeState.logistics) {
+    crusadeState.logistics = { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+  }
+  if (cb) cb.checked = !!crusadeState.upliftingPrimer;
+
+  const maxTotal = crusadeState.upliftingPrimer ? 5 : 4;
+  const currentTotal = Object.values(crusadeState.logistics).reduce((a, b) => a + b, 0);
+  if (label) label.textContent = `${currentTotal} / ${maxTotal}`;
+
+  grid.innerHTML = LOGISTICS_CATEGORIES.map(cat => {
+    const pts = crusadeState.logistics[cat.key] || 0;
+    const stateClass = pts === 2 ? 'state-surplus' : (pts === 0 ? 'state-deficiency' : '');
+    const badgeHtml = pts === 2
+      ? `<span class="rule-tag" style="border-color:var(--green); color:var(--green);">🟢 SURPLUS (2 PTS)</span>`
+      : (pts === 1
+        ? `<span class="rule-tag" style="border-color:var(--muted); color:var(--muted);">⚪ STANDARD (1 PT)</span>`
+        : `<span class="rule-tag" style="border-color:var(--red); color:var(--red);">🔴 DEFICIENCY (0 PTS)</span>`);
+
+    const ruleText = pts === 2
+      ? `<span style="color:var(--green);">${cat.surplus}</span>`
+      : (pts === 1
+        ? `<span style="color:var(--muted);">Standard Munitorum allocation — no Surplus bonus or Deficiency penalty applies.</span>`
+        : `<span style="color:var(--red);">${cat.deficiency}</span>`);
+
+    return `
+      <div class="logistics-card ${stateClass}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:#fff; font-size:0.9rem;">${cat.title}</strong>
+          ${badgeHtml}
+        </div>
+        <div class="hud-val-row" style="margin-bottom:8px;">
+          <button type="button" class="mini-btn" onclick="adjLogisticsPt('${cat.key}', -1)">−</button>
+          <span class="hud-num" style="color:var(--gold); font-size:1.2rem;">${pts} PT${pts === 1 ? '' : 'S'}</span>
+          <button type="button" class="mini-btn" onclick="adjLogisticsPt('${cat.key}', 1)">+</button>
+        </div>
+        <div style="font-size:0.8rem; line-height:1.45;">${ruleText}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateCommendationVault() {
+  const sel = document.getElementById('commendationSelect');
+  if (!sel) return;
+  sel.innerHTML = ASTRA_COMMENDATIONS_VAULT.map(c =>
+    `<option value="${c.id}">${c.name} — [${c.type}]</option>`
+  ).join('');
+  renderSelectedCommendationPreview();
+}
+
+function renderSelectedCommendationPreview() {
+  const sel = document.getElementById('commendationSelect');
+  const box = document.getElementById('commendationPreviewBox');
+  if (!sel || !box) return;
+  const pick = ASTRA_COMMENDATIONS_VAULT.find(c => c.id === sel.value) || ASTRA_COMMENDATIONS_VAULT[0];
+  box.innerHTML = `
+    <div><span class="dice-pip-badge" style="background:var(--gold); color:#000;">${pick.type}</span> <strong style="color:#fff;">${pick.name}</strong></div>
+    <div style="margin-top:6px; font-size:0.84rem; color:var(--text);">${pick.desc}</div>
+  `;
+}
+
+function attachCommendationToDossier() {
+  const sel = document.getElementById('commendationSelect');
+  if (!sel) return;
+  const pick = ASTRA_COMMENDATIONS_VAULT.find(c => c.id === sel.value) || ASTRA_COMMENDATIONS_VAULT[0];
+  const unitName = (document.getElementById('commRecipientUnit')?.value || '044th Krieg Regiment').trim();
+
+  crusadeState.queuedRolls.push({
+    unit: unitName,
+    context: `Awarded upon Tour of Duty completion (${pick.type})`,
+    category: pick.type,
+    roll: `Munitorum Commendation`,
+    name: pick.name,
+    desc: pick.desc
+  });
+
+  if (window.VoxAudio) window.VoxAudio.playRelicChoir();
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+  switchCrusadeTab('forge');
+}
+
 function attachRollToDossier(kind) {
   const item = lastRolledItem[kind];
   if (!item) {
@@ -808,7 +1233,7 @@ function renderQueuedRolls() {
   if (!box) return;
 
   if (crusadeState.queuedRolls.length === 0) {
-    box.innerHTML = `<div style="font-size:0.82rem; color:var(--muted); font-style:italic;">No unit upgrades, relics, or scars attached yet. Roll on any table above and click "➕ Attach" to include them in your Master Battle Dossier!</div>`;
+    box.innerHTML = `<div style="font-size:0.82rem; color:var(--muted); font-style:italic;">No unit upgrades, relics, commendations, or scars attached yet. Roll on any table above (or Tab 3 Commendations) and click "➕ Attach" to include them in your Master Battle Dossier!</div>`;
     return;
   }
 
@@ -821,6 +1246,21 @@ function renderQueuedRolls() {
       <button type="button" class="mini-btn" onclick="removeQueuedRoll(${idx})" title="Remove">✕</button>
     </div>
   `).join('');
+}
+
+function buildLogisticsSummaryLine() {
+  const log = crusadeState.logistics || { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+  const surplus = [];
+  const def = [];
+  LOGISTICS_CATEGORIES.forEach(c => {
+    const v = log[c.key] || 0;
+    const shortName = c.title.split(' ')[1];
+    if (v === 2) surplus.push(shortName);
+    if (v === 0) def.push(shortName);
+  });
+  const surStr = surplus.length ? surplus.join(', ') : 'None';
+  const defStr = def.length ? def.join(', ') : 'None';
+  return `Battles Rem: ${crusadeState.tourBattlesRem || 0} | Wins Rem: ${crusadeState.tourWinsRem || 0} | Commendation Pts: ${crusadeState.commendationPts || 0} | Surplus: [${surStr}] | Deficiency: [${defStr}]`;
 }
 
 function buildMasterDossierString() {
@@ -846,22 +1286,31 @@ function buildMasterDossierString() {
       ).join('\n')
     : '  • None attached this battle.';
 
-  return [
+  const lines = [
     `+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++`,
     `• REPORTING COMMANDER: ${cmdr}`,
     `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
     `• OUTCOME & SURVIVAL: ${outcome}`,
     `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
     `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
-    `• LEFTOVER SP SALVAGE: ${leftover}`,
+    `• LEFTOVER SP SALVAGE: ${leftover}`
+  ];
+
+  if (chan === 'alpha') {
+    lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${buildLogisticsSummaryLine()}`);
+  }
+
+  lines.push(
     `------------------------------------------------`,
     `• ROLLED UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES FOR EVERY SCAR & HONOUR"):`,
     unitLines,
     `------------------------------------------------`,
     `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
     `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please update AGENT.md / Commander Dossiers, adjust Sector Hegemony & Alliance SPts, and emit a personalized CRT Vox-Dispatch christening custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, and Battle Scar!`
-  ].join('\n');
+    `REQUEST FOR CAMPAIGN MASTER: Please emit a personalized Pattern 2 Munitorum After-Action Audit & Honour Scroll christening custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, Commendation, and Battle Scar!`
+  );
+
+  return lines.join('\n');
 }
 
 function updateMasterDossierPreview() {
@@ -893,13 +1342,15 @@ function initCrusadePage() {
     }
   } catch (e) {}
 
-  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP'].forEach(k => {
+  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts', 'toursCompletedCount'].forEach(k => {
     const el = document.getElementById(k);
     if (el && typeof crusadeState[k] === 'number') el.textContent = String(crusadeState[k]);
   });
 
   switchCrusadeTab(crusadeState.activeTab || 'board', false);
   selectAllianceTree(crusadeState.selectedTree || 'Gatebreakers', false);
+  renderLogisticsAllocator();
+  populateCommendationVault();
   renderQueuedRolls();
   updateMasterDossierPreview();
 }
