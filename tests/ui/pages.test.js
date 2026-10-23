@@ -257,23 +257,28 @@ test('UI Boundary: pages/welcome.html provides concise tutorials for all game mo
   );
   assert.ok(html.includes('Mode 2: 1v1 Ash Wastes PvP'), 'welcome.html must explain Mode 2');
   assert.ok(html.includes('Mode 3: Rogue Sector'), 'welcome.html must explain Mode 3');
-  assert.ok(html.includes('Mode 4: Rosters'), 'welcome.html must explain Mode 4');
-  assert.ok(html.includes('Mode 5: Briefings'), 'welcome.html must explain Mode 5');
-  assert.ok(html.includes('Cogitator Audio'), 'welcome.html must explain audio features');
+  assert.ok(html.includes('Mode 4: Hostile Matrix'), 'welcome.html must explain Mode 4');
+  assert.ok(html.includes('Mode 5: Crusade Quartermaster'), 'welcome.html must explain Mode 5');
+  assert.ok(html.includes('Mode 6: Commander Briefings') || html.includes('Mode 6: Briefings'), 'welcome.html must explain Mode 6');
+  assert.ok(html.includes('Mode 7: Astropathic CRT Vox-Sanctum') || html.includes('Mode 7: Astropath Vox'), 'welcome.html must explain Mode 7');
+  assert.ok(html.includes('Vox-Caster Ambience'), 'welcome.html must explain audio features');
   assert.ok(html.includes('<link rel="stylesheet" href="../css/style.css">'), 'welcome.html must link to style.css');
   assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), 'welcome.html must link to vox-audio.js');
+  assert.ok(html.includes('http-equiv="refresh"') && html.includes('url=../index.html'), 'welcome.html must redirect to index.html');
 });
 
 test('UI Boundary: index.html serves as the centered Field Codex home launchpad', () => {
   const html = readPage('index.html');
-  assert.ok(html.includes('Sanctuary Field Codex &amp; Quickstart Manual') || html.includes('Sanctuary Field Codex & Quickstart Manual'));
-  assert.ok(html.includes('welcome-quick-grid'), 'index.html must feature centered quick-launch command matrix');
+  assert.ok(html.includes('The Fires of Armageddon'), 'index.html must display campaign title');
+  assert.ok(html.includes('New Commander Induction Protocol'), 'index.html must feature onboarding protocol');
   assert.ok(html.includes('welcome-btn-row'), 'index.html must feature centered action button rows');
   assert.ok(html.includes('pages/spawner.html'), 'index.html must link to Mode 1 spawner');
   assert.ok(html.includes('pages/pvp.html'), 'index.html must link to Mode 2 1v1 PvP');
   assert.ok(html.includes('pages/rogue.html'), 'index.html must link to Mode 3 Rogue AI');
-  assert.ok(html.includes('pages/roster.html'), 'index.html must link to Mode 4 Rosters');
-  assert.ok(html.includes('pages/briefing.html'), 'index.html must link to Mode 5 Briefings');
+  assert.ok(html.includes('pages/roster.html'), 'index.html must link to Mode 4 Hostile Matrix');
+  assert.ok(html.includes('pages/crusade.html'), 'index.html must link to Mode 5 Crusade Quartermaster');
+  assert.ok(html.includes('pages/briefing.html'), 'index.html must link to Mode 6 Briefings');
+  assert.ok(html.includes('pages/vox.html'), 'index.html must link to Mode 7 Vox');
 });
 
 

@@ -267,6 +267,49 @@ test('pickSyncedUnitFromBracket: picks from shelf pool and falls back gracefully
   const picked13 = pickSyncedUnitFromBracket('13+', rng, mockPool);
   assert.equal(picked13, 'Hierophant Bio-Titan');
 });
+
+test('pickSyncedUnitFromBracket: resolves per-faction pool from byFaction in localStorage with warning when empty', () => {
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v))
+  };
+
+  const poolPayload = {
+    byFaction: {
+      'Orks': {
+        b34: '10 Boyz',
+        b56: '5 Nobz',
+        b79: '1 Battlewagon',
+        b10: '1 Ghazghkull',
+        b13: '1 Stompa'
+      }
+    }
+  };
+  globalThis.localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(poolPayload));
+
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'hordeFactionSelect') return { value: 'Orks' };
+      return null;
+    }
+  };
+
+  const rng = mulberry32(42);
+  const picked = pickSyncedUnitFromBracket('3-4', rng);
+  assert.equal(picked, '10 Boyz');
+
+  // When active faction has no units for a bracket
+  globalThis.document.getElementById = (id) => {
+    if (id === 'hordeFactionSelect') return { value: 'Necrons' };
+    return null;
+  };
+  const emptyRes = pickSyncedUnitFromBracket('5-6', rng);
+  assert.equal(emptyRes, '⚠️ Necrons Pool Empty for Bracket [5-6] — Configure in Mode 4!');
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+});
 ````
 
 ---
@@ -910,6 +953,7 @@ test('vox-audio: newly added Crusade & CRT sound synthesizers execute without th
 
 test('vox-audio: transmitToVox stores pending payload in sessionStorage and routes seamlessly', () => {
   sessionStore.clear();
+  sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'alpha', pass: 'OldSecretPass' }));
   const testPayload = '+++ TEST MASTER DOSSIER TRANSMISSION +++';
 
   assert.doesNotThrow(() => {
@@ -922,6 +966,7 @@ test('vox-audio: transmitToVox stores pending payload in sessionStorage and rout
   assert.equal(parsed.channel, 'beta');
   assert.equal(parsed.text, testPayload);
   assert.ok(typeof parsed.queuedAt === 'number');
+  assert.equal(sessionStore.has('foa_vox_active_session_v1'), false, 'transmitToVox must clear active session auth to prevent password bypass');
 });
 
 test('vox-audio: window.VoxAudio exposes complete public API for all game modes', () => {
@@ -1497,23 +1542,28 @@ test('UI Boundary: pages/welcome.html provides concise tutorials for all game mo
   );
   assert.ok(html.includes('Mode 2: 1v1 Ash Wastes PvP'), 'welcome.html must explain Mode 2');
   assert.ok(html.includes('Mode 3: Rogue Sector'), 'welcome.html must explain Mode 3');
-  assert.ok(html.includes('Mode 4: Rosters'), 'welcome.html must explain Mode 4');
-  assert.ok(html.includes('Mode 5: Briefings'), 'welcome.html must explain Mode 5');
-  assert.ok(html.includes('Cogitator Audio'), 'welcome.html must explain audio features');
+  assert.ok(html.includes('Mode 4: Hostile Matrix'), 'welcome.html must explain Mode 4');
+  assert.ok(html.includes('Mode 5: Crusade Quartermaster'), 'welcome.html must explain Mode 5');
+  assert.ok(html.includes('Mode 6: Commander Briefings') || html.includes('Mode 6: Briefings'), 'welcome.html must explain Mode 6');
+  assert.ok(html.includes('Mode 7: Astropathic CRT Vox-Sanctum') || html.includes('Mode 7: Astropath Vox'), 'welcome.html must explain Mode 7');
+  assert.ok(html.includes('Vox-Caster Ambience'), 'welcome.html must explain audio features');
   assert.ok(html.includes('<link rel="stylesheet" href="../css/style.css">'), 'welcome.html must link to style.css');
   assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), 'welcome.html must link to vox-audio.js');
+  assert.ok(html.includes('http-equiv="refresh"') && html.includes('url=../index.html'), 'welcome.html must redirect to index.html');
 });
 
 test('UI Boundary: index.html serves as the centered Field Codex home launchpad', () => {
   const html = readPage('index.html');
-  assert.ok(html.includes('Sanctuary Field Codex &amp; Quickstart Manual') || html.includes('Sanctuary Field Codex & Quickstart Manual'));
-  assert.ok(html.includes('welcome-quick-grid'), 'index.html must feature centered quick-launch command matrix');
+  assert.ok(html.includes('The Fires of Armageddon'), 'index.html must display campaign title');
+  assert.ok(html.includes('New Commander Induction Protocol'), 'index.html must feature onboarding protocol');
   assert.ok(html.includes('welcome-btn-row'), 'index.html must feature centered action button rows');
   assert.ok(html.includes('pages/spawner.html'), 'index.html must link to Mode 1 spawner');
   assert.ok(html.includes('pages/pvp.html'), 'index.html must link to Mode 2 1v1 PvP');
   assert.ok(html.includes('pages/rogue.html'), 'index.html must link to Mode 3 Rogue AI');
-  assert.ok(html.includes('pages/roster.html'), 'index.html must link to Mode 4 Rosters');
-  assert.ok(html.includes('pages/briefing.html'), 'index.html must link to Mode 5 Briefings');
+  assert.ok(html.includes('pages/roster.html'), 'index.html must link to Mode 4 Hostile Matrix');
+  assert.ok(html.includes('pages/crusade.html'), 'index.html must link to Mode 5 Crusade Quartermaster');
+  assert.ok(html.includes('pages/briefing.html'), 'index.html must link to Mode 6 Briefings');
+  assert.ok(html.includes('pages/vox.html'), 'index.html must link to Mode 7 Vox');
 });
 
 
@@ -1941,6 +1991,8 @@ test('pvp: rollUnboundAdversary picks an unbound unit, triggers SFX, renders pin
 
   assert.ok(mockElements.unboundResult.innerHTML.includes('Power Level'));
   assert.ok(mockElements.unboundResult.innerHTML.includes('transmitUnboundPing'), 'Must include Vox ping button callbacks');
+  assert.ok(mockElements.unboundResult.innerHTML.includes('text-align:center'), 'Ping banner must feature centered text alignment');
+  assert.ok(mockElements.unboundResult.innerHTML.includes('justify-content:center'), 'Ping action buttons must be centered');
   assert.equal(warpSirenPlayed + auspexLockPlayed > 0, true, 'Must trigger either warp siren or auspex lock SFX');
 
   const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
@@ -2293,7 +2345,11 @@ const evalFn = new Function(
     pullSharedPoolsFromCloud,
     renderFactionBracketTable,
     saveRosterPageState,
-    initRosterPage
+    initRosterPage,
+    getStoredPoolRoot,
+    getFactionPoolFromStore,
+    loadFactionInputs,
+    onFactionPickerChange
   };`
 );
 
@@ -2465,6 +2521,43 @@ test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supaba
   assert.equal(savedPool.b34, 'Cloud Gaunts 20');
 
   enableCloudMock = false;
+});
+
+test('roster: per-faction shelf pool storage preserves separate pools per faction', () => {
+  mockLocalStorage.clear();
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  mockElements.rosterPool34.value = '10 Hormagaunts';
+  mockElements.rosterPool56.value = '3 Warriors';
+  mockElements.rosterPool79.value = '1 Carnifex';
+  mockElements.rosterPool10.value = '1 Norn Emissary';
+  mockElements.rosterPool13.value = '1 Hierophant';
+  roster.saveShelfBarracks();
+
+  // Switch to Orks
+  mockElements.bracketFactionPicker.value = 'Orks';
+  mockElements.rosterPool34.value = '10 Boyz';
+  mockElements.rosterPool56.value = '5 Nobz';
+  mockElements.rosterPool79.value = '1 Battlewagon';
+  mockElements.rosterPool10.value = '1 Ghazghkull';
+  mockElements.rosterPool13.value = '1 Stompa';
+  roster.saveShelfBarracks();
+
+  // Verify stored JSON has byFaction
+  const root = roster.getStoredPoolRoot();
+  assert.ok(root.byFaction);
+  assert.equal(root.byFaction['Tyranids'].b34, '10 Hormagaunts');
+  assert.equal(root.byFaction['Orks'].b34, '10 Boyz');
+
+  // Switch faction picker back to Tyranids and trigger onFactionPickerChange
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  roster.onFactionPickerChange();
+  assert.equal(mockElements.rosterPool34.value, '10 Hormagaunts');
+  assert.equal(mockElements.rosterPool10.value, '1 Norn Emissary');
+
+  // Switch to an unconfigured faction and verify empty values
+  mockElements.bracketFactionPicker.value = 'Necrons';
+  roster.onFactionPickerChange();
+  assert.equal(mockElements.rosterPool34.value, '');
 });
 
 ````
@@ -3172,6 +3265,7 @@ const evalFn = new Function(
     toggleOlderMessages,
     toggleOlderInterferences,
     lockTerminal,
+    initVoxTerminalPage,
     getSelectedChannel: () => selectedChannel,
     getActivePassphrase: () => activePassphrase,
     getShowAllOlderMessages: () => showAllOlderMessages,
@@ -3548,6 +3642,49 @@ test('vox: streamTextIntoElement uses elapsed-time teletype engine, sets dataset
   redactedEl.onclick();
   assert.equal(redactedEl.dataset.streaming, '0');
   assert.ok(redactedEl.innerHTML.includes('censor-bar'), 'Redacted stream finish must render censor-bar HTML');
+});
+
+test('vox: initVoxTerminalPage strictly enforces terminal password when pending payload is present, preventing password bypass', async () => {
+  sessionStore.clear();
+  vox.lockTerminal();
+
+  // Simulate an active session from a previous unlock
+  sessionStore.set(vox.SESSION_AUTH_KEY, JSON.stringify({ channel: 'beta', pass: 'PriorSecretPass' }));
+
+  // Simulate a pending transmission queued from pvp, roster, crusade, or spawner
+  const testPayload = {
+    channel: 'beta',
+    text: '+++ ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(testPayload));
+
+  // Run initVoxTerminalPage
+  await vox.initVoxTerminalPage();
+
+  // Terminal MUST NOT be unlocked automatically
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), true, 'Terminal screen must remain hidden');
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), false, 'Auth screen must remain visible');
+  assert.equal(vox.getActivePassphrase(), null, 'Active passphrase must remain null until explicitly authenticated');
+  assert.equal(sessionStore.has(vox.SESSION_AUTH_KEY), false, 'Active session must be cleared to enforce password entry');
+  assert.equal(vox.getSelectedChannel(), 'beta', 'Target channel must be matched from pending payload');
+  assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), false, 'Pending dossier banner must be shown');
+  assert.equal(mockElements.passInput.value, '', 'Pass input must not be auto-filled');
+});
+
+test('vox: initVoxTerminalPage restores saved session only when no pending payload awaits authorization', async () => {
+  sessionStore.clear();
+  vox.lockTerminal();
+
+  // Active session with NO pending payload
+  sessionStore.set(vox.SESSION_AUTH_KEY, JSON.stringify({ channel: 'alpha', pass: 'VermilionKey99' }));
+
+  await vox.initVoxTerminalPage();
+
+  // Should restore session and unlock
+  assert.equal(vox.getActivePassphrase(), 'VermilionKey99');
+  assert.equal(mockElements.terminalScreen.classList.contains('hidden'), false);
+  assert.equal(mockElements.authScreen.classList.contains('hidden'), true);
 });
 
 
