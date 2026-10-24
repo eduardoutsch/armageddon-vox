@@ -1057,7 +1057,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
             } else {
               const pend = document.createElement('div');
               pend.className = 'crt-pending-line';
-              pend.innerHTML = `⏳ Signal traversing the Immaterium... Awaiting Campaign Master decree <span class="crt-cursor"></span>`;
+              pend.innerHTML = `⏳ VERMILION CIPHER TRANSMITTED // AWAITING COGITATOR DECRYPTION & RETURN FEED... <span class="crt-cursor"></span>`;
               wrap.appendChild(pend);
             }
 
