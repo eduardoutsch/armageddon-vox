@@ -60,7 +60,7 @@ NPM package manifests, Cloudflare Pages deployment configs, repository documenta
 ## File: `README.md` <a id="file-readmemd"></a>
 
 ````markdown
-# ⚔️ Fires of Armageddon // Warhammer 40,000 Horde & Asymmetric Crusade Suite
+# Fires of Armageddon // Warhammer 40,000 Horde & Asymmetric Crusade Suite
 
 A zero-dependency, offline-tolerant web companion suite, deterministic wave spawner, and real-time AI-bridged Astropathic Vox relay designed for cooperative, solo, and asymmetric Warhammer 40,000 Crusade campaigns.
 
@@ -1007,8 +1007,7 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
 
     const nextHeartbeat = {
       status: status === 'offline' ? 'offline' : 'online',
-      updatedAt: Date.now(),
-      manualActive: status !== 'offline'
+      updatedAt: Date.now()
     };
 
     const saveRes = await fetchFn(`${supabaseUrl}/rest/v1/rpc/save_shared_spawn_pools`, {
@@ -1091,13 +1090,19 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   };
   process.once('SIGINT', handleShutdown);
   process.once('SIGTERM', handleShutdown);
+  process.once('SIGHUP', handleShutdown);
+  process.once('SIGBREAK', handleShutdown);
+  if (typeof context.on === 'function') context.on('close', handleShutdown);
+  if (typeof alphaPage.on === 'function') alphaPage.on('close', handleShutdown);
+  if (typeof betaPage.on === 'function') betaPage.on('close', handleShutdown);
 
   let busyAlpha = false;
   let busyBeta = false;
   let heartbeatTick = 0;
 
   setInterval(() => {
-    heartbeatTick = (heartbeatTick + 1) % 3;
+    if (shuttingDown) return;
+    heartbeatTick = (heartbeatTick + 1) % 2;
     if (heartbeatTick === 0) {
       publishServerHeartbeat('online').catch(() => {});
     }
@@ -1183,5 +1188,6 @@ if not exist "%~dp0node_modules\playwright" (
 
 echo Launching Dual-Thread Courier...
 node "%~dp0vox_bridge.js"
+node -e "require('./vox_bridge.js').publishServerHeartbeat('offline').catch(function(){})" >nul 2>nul
 pause
 ````

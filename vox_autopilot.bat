@@ -31,4 +31,5 @@ if not exist "%~dp0node_modules\playwright" (
 
 echo Launching Dual-Thread Courier...
 node "%~dp0vox_bridge.js"
+node -e "require('./vox_bridge.js').publishServerHeartbeat('offline').catch(function(){})" >nul 2>nul
 pause

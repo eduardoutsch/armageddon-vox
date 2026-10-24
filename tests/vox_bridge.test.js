@@ -711,6 +711,7 @@ test('publishServerHeartbeat: publishes online/offline vox_server_heartbeat to S
   assert.deepEqual(saveCall.body.p_nemesis_status.spawner_rooms, { 'HADES-01': { battleRound: 2 } });
   assert.equal(saveCall.body.p_nemesis_status.vox_server_heartbeat.status, 'online');
   assert.equal(typeof saveCall.body.p_nemesis_status.vox_server_heartbeat.updatedAt, 'number');
+  assert.equal(saveCall.body.p_nemesis_status.vox_server_heartbeat.manualActive, undefined, 'Must not set manualActive bypass');
 
   fetchCalls.length = 0;
   const okOffline = await publishServerHeartbeat('offline', {

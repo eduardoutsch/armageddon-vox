@@ -990,19 +990,20 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   /**
    * Evaluates whether a Supabase `vox_server_heartbeat` payload indicates that the
    * Astropathic Courier server (`vox_bridge.js`) is currently online and active.
+   * Strictly enforces a 25-second freshness window on `updatedAt` so that if the
+   * Windows `.bat` console or browser is forcibly closed, the status automatically
+   * flips to OFFLINE within seconds.
    *
-   * @param {object} hb - Heartbeat object `{ status, updatedAt, manualActive }`
+   * @param {object} hb - Heartbeat object `{ status, updatedAt }`
    * @param {number} [now=Date.now()] - Current epoch timestamp in ms
-   * @returns {boolean} True if the server is online
+   * @returns {boolean} True if the server is online and heartbeat is fresh (<= 25s)
    */
   function isVoxServerOnline(hb, now = Date.now()) {
     if (!hb || typeof hb !== 'object') return false;
     if (hb.status !== 'online') return false;
-    if (hb.manualActive === true) return true;
-    if (typeof hb.updatedAt === 'number') {
-      return (now - hb.updatedAt) <= 90000;
-    }
-    return false;
+    if (typeof hb.updatedAt !== 'number') return false;
+    const ageMs = now - hb.updatedAt;
+    return ageMs >= -5000 && ageMs <= 25000;
   }
   window.isVoxServerOnline = isVoxServerOnline;
 
@@ -1293,7 +1294,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
     if (serverStatusTimer) clearInterval(serverStatusTimer);
     serverStatusTimer = setInterval(() => {
       checkVoxServerStatus().catch(() => {});
-    }, 15000);
+    }, 8000);
 
     const pending = checkPendingDossierBuffer();
 

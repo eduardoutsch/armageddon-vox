@@ -654,11 +654,11 @@ test('vox: displays live Astropathic Server Online/Offline status on both Auth a
   assert.equal(typeof vox.checkVoxServerStatus, 'function', 'Must define checkVoxServerStatus function');
 
   const now = 1700000000000;
-  // Fresh online heartbeat (10 seconds ago)
+  // Fresh online heartbeat (10 seconds ago, within 25s window)
   assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 10000 }, now), true);
-  // Manual active online flag
-  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 500000, manualActive: true }, now), true);
-  // Stale heartbeat (5 minutes ago without manualActive)
+  // Stale heartbeat (30 seconds ago) must be offline even if legacy manualActive flag is true
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 30000, manualActive: true }, now), false);
+  // Stale heartbeat (5 minutes ago)
   assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 300000 }, now), false);
   // Explicit offline heartbeat
   assert.equal(vox.isVoxServerOnline({ status: 'offline', updatedAt: now - 1000 }, now), false);

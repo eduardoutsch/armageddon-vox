@@ -2128,6 +2128,7 @@ test('publishServerHeartbeat: publishes online/offline vox_server_heartbeat to S
   assert.deepEqual(saveCall.body.p_nemesis_status.spawner_rooms, { 'HADES-01': { battleRound: 2 } });
   assert.equal(saveCall.body.p_nemesis_status.vox_server_heartbeat.status, 'online');
   assert.equal(typeof saveCall.body.p_nemesis_status.vox_server_heartbeat.updatedAt, 'number');
+  assert.equal(saveCall.body.p_nemesis_status.vox_server_heartbeat.manualActive, undefined, 'Must not set manualActive bypass');
 
   fetchCalls.length = 0;
   const okOffline = await publishServerHeartbeat('offline', {
@@ -5400,11 +5401,11 @@ test('vox: displays live Astropathic Server Online/Offline status on both Auth a
   assert.equal(typeof vox.checkVoxServerStatus, 'function', 'Must define checkVoxServerStatus function');
 
   const now = 1700000000000;
-  // Fresh online heartbeat (10 seconds ago)
+  // Fresh online heartbeat (10 seconds ago, within 25s window)
   assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 10000 }, now), true);
-  // Manual active online flag
-  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 500000, manualActive: true }, now), true);
-  // Stale heartbeat (5 minutes ago without manualActive)
+  // Stale heartbeat (30 seconds ago) must be offline even if legacy manualActive flag is true
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 30000, manualActive: true }, now), false);
+  // Stale heartbeat (5 minutes ago)
   assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 300000 }, now), false);
   // Explicit offline heartbeat
   assert.equal(vox.isVoxServerOnline({ status: 'offline', updatedAt: now - 1000 }, now), false);
