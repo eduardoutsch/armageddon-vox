@@ -420,13 +420,33 @@ function seededShuffle(arr, rng) {
 }
 
 /**
- * Generates a thematic room code like HADES-42.
+ * Expanded pool of 60 Warhammer 40,000 & Armageddon Crusade room code prefixes.
+ */
+const ROOM_CODE_PREFIXES = [
+  "HADES", "ASH", "GATE", "THOR", "VULK", "SKULL", "WARP", "IRON", "PYRE", "HIVE",
+  "GOLGOTHA", "ACHERON", "INFERNUS", "TARTARUS", "TEMPESTORA", "HELSREACH", "VOLCANUS",
+  "PALATINE", "KRIEG", "VARKAN", "EXILE", "JUNEBUG", "YARRICK", "GRIMALDUS", "ANGRON",
+  "KHORNE", "MALEFACTOR", "SANCTUARY", "BASTION", "VANGUARD", "BASILISK", "BANEBLADE",
+  "VALKYRIE", "DREAD", "RELIC", "CHIMERA", "VANQUISHER", "ROGAL", "MORTAR", "TRENCH",
+  "BUNKER", "SIEGE", "AUSPEX", "VOX", "ORBITAL", "VOID", "NECRON", "TYRANID",
+  "DAEMON", "MARAUDER", "DESECRATOR", "GATEBREAKER", "SECTOR", "CITADEL", "PROMETHIUM",
+  "OBSIDIAN", "SULFUR", "CINDER", "REDANGEL", "WRATH"
+];
+
+/**
+ * Generates a thematic room code like HADES-42 or HELSREACH-84.
  */
 function generateRandomCode() {
-  const prefixes = ["HADES", "ASH", "GATE", "THOR", "VULK", "SKULL", "WARP", "IRON", "PYRE", "HIVE"];
-  const p = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const n = Math.floor(10 + Math.random() * 90);
-  const code = `${p}-${n}`;
+  const prevCode = (typeof document !== 'undefined' && document.getElementById('seedInput')?.value)
+    ? document.getElementById('seedInput').value.trim().toUpperCase()
+    : '';
+  let code = '';
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const p = ROOM_CODE_PREFIXES[Math.floor(Math.random() * ROOM_CODE_PREFIXES.length)];
+    const n = Math.floor(10 + Math.random() * 90);
+    code = `${p}-${n}`;
+    if (code !== prevCode) break;
+  }
   if (typeof document !== 'undefined') {
     const el = document.getElementById('seedInput');
     if (el) {
@@ -445,9 +465,11 @@ if (typeof module !== 'undefined' && module.exports) {
     hashString,
     mulberry32,
     seededShuffle,
-    generateRandomCode
+    generateRandomCode,
+    ROOM_CODE_PREFIXES
   };
 }
+
 ````
 
 ---
@@ -2126,7 +2148,7 @@ if (typeof window !== 'undefined') {
 // =========================================================================
 (function () {
   const SUPABASE_URL_SPAWNER = 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
-  const SUPABASE_ANON_SPAWNER = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
+  const SUPABASE_ANON_SPAWNER = 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
 
   async function syncSpawnerPoolFromSupabase() {
     if (typeof fetch !== 'function' || typeof localStorage === 'undefined') return;
@@ -2169,9 +2191,16 @@ if (typeof window !== 'undefined') {
       }
     } catch (e) {}
 
-    const showVal = (val) => (val && val.trim())
-      ? val
-      : `<span style="color:var(--red); font-style:italic;">⚠️ Horde Pool Empty${facName ? ' for ' + facName : ''} — Configure in Mode 4 (Roster)!</span>`;
+    const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
+      ? HORDE_FACTION_SPAWN_TABLES
+      : ((typeof window !== 'undefined' && window.HORDE_FACTION_SPAWN_TABLES) ? window.HORDE_FACTION_SPAWN_TABLES : {});
+    const refTable = (facName && tables[facName]) ? tables[facName] : {};
+
+    const showVal = (val, refArr) => {
+      if (val && val.trim()) return val;
+      if (Array.isArray(refArr) && refArr.length > 0) return refArr.join(' • ');
+      return `<span style="color:var(--red); font-style:italic;">⚠️ Horde Pool Empty${facName ? ' for ' + facName : ''} — Configure in Mode 4 (Roster)!</span>`;
+    };
 
     box.innerHTML = `
       <div style="margin-bottom:6px; color:var(--muted); font-size:0.78rem;">
@@ -2186,11 +2215,11 @@ if (typeof window !== 'undefined') {
         </thead>
         <tbody>
           <tr><td><strong>[2] No Spawn</strong></td><td style="color:var(--muted);">Breach Holds (Unmodified 2 always spawns nothing)</td></tr>
-          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${showVal(pool.b34)}</td></tr>
-          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${showVal(pool.b56)}</td></tr>
-          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${showVal(pool.b79)}</td></tr>
-          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
-          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${showVal(pool.b34, refTable.b34)}</td></tr>
+          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${showVal(pool.b56, refTable.b56)}</td></tr>
+          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${showVal(pool.b79, refTable.b79)}</td></tr>
+          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10, refTable.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13, refTable.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
         </tbody>
       </table>
     `;

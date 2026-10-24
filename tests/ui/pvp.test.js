@@ -27,8 +27,12 @@ const mockElements = {
   warpIntensity: { value: 'major' },
   anomalyResultBox: { innerHTML: '' },
   vultureKillCheck: { checked: false },
-  vulturePts: { innerText: '3 SPts' },
-  unboundResult: { innerHTML: '' }
+  vulturePts: { innerText: '3 SPts', textContent: '3 SPts' },
+  pvpReportSpBadge: { textContent: '3 SPts' },
+  unboundResult: { innerHTML: '' },
+  pvpReportChannel: { value: 'alpha' },
+  pvpReportNotes: { value: '' },
+  pvpVulturePreviewBox: { textContent: '' }
 };
 
 globalThis.document = {
@@ -52,9 +56,9 @@ globalThis.window = {
 };
 
 // Evaluate script in mock environment
-const pvpEnv = {};
 const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpScriptCode}; return {
   HELLSCAPES,
+  HELLSCAPE_NAMES,
   ANOMALIES,
   UNBOUND_UNITS,
   STORAGE_KEY_PVP,
@@ -65,13 +69,17 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpS
   rollWarpAnomaly,
   updateVulture,
   rollUnboundAdversary,
-  transmitUnboundPing
+  transmitUnboundPing,
+  buildPvpVultureReportString,
+  updatePvpVulturePreview,
+  transmitPvpVultureReport
 };`);
 
 const pvp = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
 
 test('pvp: HELLSCAPES, ANOMALIES, and UNBOUND_UNITS contain valid crusade content', () => {
   assert.equal(pvp.HELLSCAPES.length, 6, 'Must define 6 Hellscape environments');
+  assert.equal(pvp.HELLSCAPE_NAMES.length, 6, 'Must define 6 Hellscape names');
   assert.equal(pvp.ANOMALIES.length, 6, 'Must define 6 Warp Anomalies');
   assert.equal(pvp.UNBOUND_UNITS.length, 4, 'Must define 4 Unbound Adversary power levels');
   assert.ok(pvp.UNBOUND_UNITS[3].includes('CLASSIFIED APEX ANOMALY'), 'PL 4 must reference Classified Apex Anomaly');
@@ -94,14 +102,18 @@ test('pvp: renderHellscape updates description and saves state to localStorage',
   assert.equal(parsed.hellscapeIdx, 2);
 });
 
-test('pvp: updateVulture calculates 3 SPts base or 4 SPts with player kill bonus', () => {
+test('pvp: updateVulture calculates 3 SPts base or 4 SPts with player kill bonus and updates Vulture report preview', () => {
   mockElements.vultureKillCheck.checked = false;
   pvp.updateVulture(true);
   assert.equal(mockElements.vulturePts.innerText, '3 SPts');
+  assert.equal(mockElements.pvpReportSpBadge.textContent, '3 SPts');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('3 SPts'));
 
   mockElements.vultureKillCheck.checked = true;
   pvp.updateVulture(true);
   assert.equal(mockElements.vulturePts.innerText, '4 SPts');
+  assert.equal(mockElements.pvpReportSpBadge.textContent, '4 SPts');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('4 SPts'));
 
   const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
   const parsed = JSON.parse(raw);
@@ -157,6 +169,57 @@ test('pvp: transmitUnboundPing formats emergency apex payload for PL 4 and stand
   assert.ok(transmittedPayload.includes('roll/select our Power Level 2 Unbound Adversary'));
 });
 
+test('pvp: buildPvpVultureReportString and transmitPvpVultureReport compile and send Campaign Master 3rd Alliance SPts report separately from Unbound Adversary roller', () => {
+  assert.ok(
+    pvpHtml.includes('transmitPvpVultureReport()'),
+    'pages/pvp.html must include a dedicated button calling transmitPvpVultureReport()'
+  );
+  assert.ok(
+    pvpHtml.includes('rollUnboundAdversary()') && pvpHtml.includes('transmitUnboundPing('),
+    'pages/pvp.html must keep rollUnboundAdversary() and transmitUnboundPing() separate'
+  );
+
+  // Case 1: Base 3 SPts (no unit destroyed), Alpha channel
+  mockElements.hellscapeSelect.value = '4';
+  mockElements.warpIntensity.value = 'catastrophic';
+  mockElements.vultureKillCheck.checked = false;
+  mockElements.pvpReportChannel.value = 'alpha';
+  mockElements.pvpReportNotes.value = 'Unbound Daemons contested the central siphon.';
+
+  pvp.updatePvpVulturePreview();
+  const report3 = pvp.buildPvpVultureReportString();
+
+  assert.equal(mockElements.pvpVulturePreviewBox.textContent, report3);
+  assert.ok(report3.includes('+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++'));
+  assert.ok(report3.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(report3.includes('CAMPAIGN MASTER (3RD ALLIANCE) VULTURED SPTS: 3 SPts'));
+  assert.ok(report3.includes('Base Vulture Presence (+3 SPts) [No Player Unit Destroyed] = 3 SPts'));
+  assert.ok(report3.includes('Gravitic Nexus // Intensity: CATASTROPHIC'));
+  assert.ok(report3.includes('Unbound Daemons contested the central siphon.'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitPvpVultureReport();
+  assert.equal(transmittedChannel, 'alpha');
+  assert.equal(transmittedPayload, report3);
+
+  // Case 2: 4 SPts (Destroyed a Player Unit checked), Beta channel
+  mockElements.vultureKillCheck.checked = true;
+  mockElements.pvpReportChannel.value = 'beta';
+  pvp.updatePvpVulturePreview();
+  const report4 = pvp.buildPvpVultureReportString();
+
+  assert.ok(report4.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(report4.includes('CAMPAIGN MASTER (3RD ALLIANCE) VULTURED SPTS: 4 SPts'));
+  assert.ok(report4.includes('Destroyed a Player Unit (+1 SPt) = 4 SPts'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitPvpVultureReport();
+  assert.equal(transmittedChannel, 'beta');
+  assert.equal(transmittedPayload, report4);
+});
+
 test('pvp: savePvpState ignores save when hellscapeSelect element is absent', () => {
   storageStore.clear();
   storageStore.set(pvp.STORAGE_KEY_PVP, JSON.stringify({ hellscapeIdx: 4, custom: true }));
@@ -173,13 +236,15 @@ test('pvp: savePvpState ignores save when hellscapeSelect element is absent', ()
   mockElements.hellscapeSelect = origSelect;
 });
 
-test('pvp: restorePvpState faithfully reconstructs UI state from localStorage', () => {
+test('pvp: restorePvpState faithfully reconstructs UI state and Vulture report fields from localStorage', () => {
   localStorage.setItem(pvp.STORAGE_KEY_PVP, JSON.stringify({
     hellscapeIdx: 5,
     warpIntensity: 'minor',
     anomalyHtml: '<span class="test-surge">Warp Fluke</span>',
     vultureKilled: true,
-    unboundHtml: '<p>Daemonic Beast</p>'
+    unboundHtml: '<p>Daemonic Beast</p>',
+    reportChannel: 'beta',
+    reportNotes: 'Marauders claimed 4 SPts in Sector 5.'
   }));
 
   pvp.restorePvpState();
@@ -190,4 +255,7 @@ test('pvp: restorePvpState faithfully reconstructs UI state from localStorage', 
   assert.equal(mockElements.vultureKillCheck.checked, true);
   assert.equal(mockElements.vulturePts.innerText, '4 SPts');
   assert.equal(mockElements.unboundResult.innerHTML, '<p>Daemonic Beast</p>');
+  assert.equal(mockElements.pvpReportChannel.value, 'beta');
+  assert.equal(mockElements.pvpReportNotes.value, 'Marauders claimed 4 SPts in Sector 5.');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('4 SPts'));
 });

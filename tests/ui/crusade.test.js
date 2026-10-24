@@ -92,7 +92,9 @@ const mockElements = {
   logisticsAllocatorGrid: { innerHTML: '' },
   commendationSelect: { innerHTML: '', value: 'bastion' },
   commRecipientUnit: { value: '044th Krieg Regiment' },
-  commendationPreviewBox: { innerHTML: '' }
+  commendationPreviewBox: { innerHTML: '' },
+  startTourNotes: { value: '' },
+  startOfTourPreviewBox: { textContent: '' }
 };
 
 const mockDocument = {
@@ -157,11 +159,15 @@ const evalFn = new Function(
     attachRollToDossier,
     removeQueuedRoll,
     clearQueuedRolls,
+    resetMasterDossierForm,
     renderQueuedRolls,
     buildLogisticsSummaryLine,
     buildMasterDossierString,
     updateMasterDossierPreview,
     transmitMasterBattleDossier,
+    buildStartOfTourDossierString,
+    updateStartOfTourPreview,
+    transmitStartOfTourDossier,
     saveCrusadeState,
     initCrusadePage
   };`
@@ -561,4 +567,78 @@ test('crusade: saveCrusadeState and initCrusadePage restore Tour of Duty and Mun
   assert.equal(mockElements.commendationPts.textContent, '9');
   assert.equal(mockElements.toursCompletedCount.textContent, '2');
 });
+
+test('crusade: resetMasterDossierForm resets all Crusade report form fields and queued rolls to clean defaults', () => {
+  assert.ok(
+    crusadeHtml.includes('resetMasterDossierForm()'),
+    'pages/crusade.html must include a button calling resetMasterDossierForm()'
+  );
+
+  // Dirty up all fields and queue a roll
+  mockElements.dossierChannel.value = 'beta';
+  mockElements.dossierModeNode.value = 'Mode 2: 1v1 Ash Wastes PvP // Node 1 (Pyre-Silt Refinery)';
+  mockElements.dossierOutcome.value = '1v1 PvP Defeat (+3 SPts)';
+  mockElements.dossierSecretCode.value = 'Z99';
+  mockElements.dossierSecretTag.value = 'Wargear / Cache Tag (+1 Supply Cache Token)';
+  mockElements.fortHosp.checked = true;
+  mockElements.fortAmmo.checked = true;
+  mockElements.fortTrench.checked = true;
+  mockElements.fortFob.checked = true;
+  mockElements.dossierLeftoverSp.value = '3 Leftover SP → Bank 1v1 Supply Cache Token';
+  mockElements.dossierBattleNotes.value = 'Custom battle report notes to be cleared.';
+  mockElements.rollerUnitName.value = 'Test Unit';
+  crusade.rollRandomBattleTrait();
+  crusade.attachRollToDossier('trait');
+  assert.ok(crusade.getCrusadeState().queuedRolls.length > 0);
+
+  crusade.resetMasterDossierForm();
+
+  assert.equal(mockElements.dossierChannel.value, 'alpha');
+  assert.equal(mockElements.dossierSecretCode.value, '');
+  assert.equal(mockElements.fortHosp.checked, false);
+  assert.equal(mockElements.fortAmmo.checked, false);
+  assert.equal(mockElements.fortTrench.checked, false);
+  assert.equal(mockElements.fortFob.checked, false);
+  assert.equal(mockElements.dossierLeftoverSp.value, '0 Leftover SP');
+  assert.equal(mockElements.dossierBattleNotes.value, '');
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 0);
+  assert.equal(mockElements.queuedCountLabel.textContent, '0');
+  assert.ok(mockElements.masterDossierPreviewBox.textContent.includes('None attached this battle.'));
+});
+
+test('crusade: buildStartOfTourDossierString and transmitStartOfTourDossier compile and transmit unique Start of Tour of Duty report', () => {
+  assert.ok(
+    crusadeHtml.includes('transmitStartOfTourDossier()'),
+    'pages/crusade.html must include a button calling transmitStartOfTourDossier()'
+  );
+
+  crusade.getCrusadeState().tourBattlesRem = 8;
+  crusade.getCrusadeState().tourWinsRem = 4;
+  crusade.getCrusadeState().commendationPts = 2;
+  crusade.getCrusadeState().toursCompletedCount = 1;
+  crusade.getCrusadeState().upliftingPrimer = true;
+  crusade.getCrusadeState().logistics = { lexmechanicus: 2, materiel: 2, tithePool: 1, morale: 0 };
+  mockElements.startTourNotes.value = 'Deploying 044th Krieg armored column to Golgotha sector.';
+
+  crusade.updateStartOfTourPreview();
+  const report = crusade.buildStartOfTourDossierString();
+
+  assert.equal(mockElements.startOfTourPreviewBox.textContent, report);
+  assert.ok(report.includes('+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++'));
+  assert.ok(report.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(report.includes('BATTLES REQUIRED QUOTA (D6+4): 8 Battles'));
+  assert.ok(report.includes('VICTORIES REQUIRED QUOTA (D3+2): 4 Wins'));
+  assert.ok(report.includes('PRIOR TOURS COMPLETED: 1'));
+  assert.ok(report.includes('UPLIFTING PRIMERS REQUISITION (1 RP): ACTIVE (5 Total Logistics Pts)'));
+  assert.ok(report.includes('Surplus: [Lexmechanicus, Materiel]'));
+  assert.ok(report.includes('Deficiency: [Morale]'));
+  assert.ok(report.includes('Deploying 044th Krieg armored column to Golgotha sector.'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  crusade.transmitStartOfTourDossier();
+  assert.equal(transmittedChannel, 'alpha');
+  assert.equal(transmittedPayload, report);
+});
+
 

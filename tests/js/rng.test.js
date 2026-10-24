@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { hashString, mulberry32, seededShuffle, generateRandomCode } = require('../../js/rng.js');
+const { hashString, mulberry32, seededShuffle, generateRandomCode, ROOM_CODE_PREFIXES } = require('../../js/rng.js');
 
 test('hashString should produce deterministic 32-bit uint', () => {
   const hash1 = hashString('HADES-1');
@@ -56,7 +56,18 @@ test('seededShuffle is strictly reproducible across runs', () => {
   assert.deepEqual(s1, s2);
 });
 
-test('generateRandomCode returns a string with valid prefix and 2-digit number', () => {
-  const code = generateRandomCode();
-  assert.match(code, /^[A-Z]+-\d{2}$/);
+test('generateRandomCode returns a string with valid prefix and 2-digit number from expanded ROOM_CODE_PREFIXES pool', () => {
+  assert.ok(Array.isArray(ROOM_CODE_PREFIXES), 'Must export ROOM_CODE_PREFIXES array');
+  assert.ok(ROOM_CODE_PREFIXES.length >= 40, `Expected at least 40 room prefixes, got ${ROOM_CODE_PREFIXES.length}`);
+
+  const uniquePrefixes = new Set(ROOM_CODE_PREFIXES);
+  assert.equal(uniquePrefixes.size, ROOM_CODE_PREFIXES.length, 'All room code prefixes must be unique');
+
+  for (let i = 0; i < 50; i++) {
+    const code = generateRandomCode();
+    assert.match(code, /^[A-Z]+-\d{2}$/);
+    const prefix = code.split('-')[0];
+    assert.ok(uniquePrefixes.has(prefix), `Generated prefix ${prefix} must belong to ROOM_CODE_PREFIXES`);
+  }
 });
+

@@ -458,7 +458,10 @@
       <!-- QUEUED UNIT UPGRADES, RELICS, COMMENDATIONS & SCARS LIST -->
       <div class="section-header" style="margin-top:8px;">
         <h4 style="margin:0; color:var(--gold);">Attached Unit Upgrades, Relics, Commendations &amp; Scars (<span id="queuedCountLabel">0</span>)</h4>
-        <button type="button" class="btn-ghost btn-sm" onclick="clearQueuedRolls()">Clear List</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn-ghost btn-sm" onclick="clearQueuedRolls()">Clear Attached Rolls</button>
+          <button type="button" class="btn-ghost btn-sm" onclick="resetMasterDossierForm()">🔄 Reset Crusade Report</button>
+        </div>
       </div>
       <div id="queuedRollsContainer" style="margin-bottom:12px;"></div>
 
@@ -468,9 +471,14 @@
       <!-- LIVE MASTER DOSSIER PREVIEW -->
       <div class="master-dossier-preview" id="masterDossierPreviewBox"></div>
 
-      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitMasterBattleDossier()">
-        📡 Transmit Directly via Astropathic Vox →
-      </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="launch-btn" style="flex:1;" data-sfx="custom" onclick="transmitMasterBattleDossier()">
+          📡 Transmit Directly via Astropathic Vox →
+        </button>
+        <button type="button" class="btn-ghost" onclick="resetMasterDossierForm()">
+          🔄 Reset Crusade Report
+        </button>
+      </div>
     </div>
 
   </div>
@@ -555,7 +563,7 @@
     </div>
 
     <!-- 3. PERSONAL & REGIMENTAL COMMENDATIONS VAULT -->
-    <div class="card" style="border-left:4px solid var(--purple);">
+    <div class="card" style="border-left:4px solid var(--purple); margin-bottom:18px;">
       <div class="section-header" style="margin-top:0;">
         <h3>3. Astra Militarum Commendations Vault (Personal &amp; Regimental)</h3>
         <span class="hud-sub">Attach to Master Dossier for Lore Christening</span>
@@ -579,6 +587,26 @@
 
       <button type="button" class="btn-gold" onclick="attachCommendationToDossier()">
         ➕ Attach Commendation to Master Dossier (Tab 2)
+      </button>
+    </div>
+
+    <!-- 4. UNIQUE START OF TOUR OF DUTY DISPATCH -->
+    <div class="card" style="border-left:4px solid var(--green);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>4. Start of Tour of Duty Dispatch (Munitorum Field Regulation 884-Alpha)</h3>
+        <span class="hud-sub">Official Tour Activation &amp; Logistics Filing</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        Once you have rolled your <strong>New Tour Quotas (D6+4 Battles / D3+2 Victories)</strong> and locked in your <strong>Munitorum Logistics Points</strong> (Surplus vs. Deficiency) above, transmit this dedicated <strong>Start of Tour of Duty Dispatch</strong> so the Campaign Master officially registers your regiment's active operational mandate!
+      </p>
+
+      <label class="hud-label" style="display:block; margin-bottom:4px;">Regimental Deployment Directive / Operational Notes (Optional)</label>
+      <textarea id="startTourNotes" oninput="updateStartOfTourPreview()" placeholder="e.g. Commencing 2nd Tour of Duty in the Golgotha sector; prioritizing Materiel and Lexmechanicus Surplus..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
+
+      <div class="master-dossier-preview" id="startOfTourPreviewBox"></div>
+
+      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitStartOfTourDossier()">
+        📡 Transmit Start of Tour of Duty Dispatch →
       </button>
     </div>
 
@@ -1035,6 +1063,7 @@ function adjTourField(field, delta) {
   const el = document.getElementById(field);
   if (el) el.textContent = String(crusadeState[field]);
   updateMasterDossierPreview();
+  updateStartOfTourPreview();
   saveCrusadeState();
 }
 
@@ -1052,6 +1081,7 @@ function rollNewTourQuotas() {
     if (bEl) bEl.textContent = String(crusadeState.tourBattlesRem);
     if (wEl) wEl.textContent = String(crusadeState.tourWinsRem);
     updateMasterDossierPreview();
+    updateStartOfTourPreview();
     saveCrusadeState();
   }, 240);
 }
@@ -1068,6 +1098,7 @@ function rollVictoryCommendationPts() {
     if (cEl) cEl.textContent = String(crusadeState.commendationPts);
     if (noticeEl) noticeEl.innerHTML = `<strong style="color:var(--green);">Rolled D3 = +${d3} Commendation Pts!</strong>`;
     updateMasterDossierPreview();
+    updateStartOfTourPreview();
     saveCrusadeState();
   }, 240);
 }
@@ -1077,6 +1108,7 @@ function toggleUpliftingPrimer() {
   crusadeState.upliftingPrimer = !!(cb && cb.checked);
   renderLogisticsAllocator();
   updateMasterDossierPreview();
+  updateStartOfTourPreview();
   saveCrusadeState();
 }
 
@@ -1096,6 +1128,7 @@ function adjLogisticsPt(catKey, delta) {
   if (window.VoxAudio) window.VoxAudio.playClank('card');
   renderLogisticsAllocator();
   updateMasterDossierPreview();
+  updateStartOfTourPreview();
   saveCrusadeState();
 }
 
@@ -1226,6 +1259,44 @@ function clearQueuedRolls() {
   saveCrusadeState();
 }
 
+/**
+ * Resets all Crusade Master Battle Dossier form fields, checkboxes, and attached
+ * unit progression rolls back to their clean default state.
+ */
+function resetMasterDossierForm() {
+  const chanEl = document.getElementById('dossierChannel');
+  const modeEl = document.getElementById('dossierModeNode');
+  const outEl = document.getElementById('dossierOutcome');
+  const secCodeEl = document.getElementById('dossierSecretCode');
+  const secTagEl = document.getElementById('dossierSecretTag');
+  const hospEl = document.getElementById('fortHosp');
+  const ammoEl = document.getElementById('fortAmmo');
+  const trenchEl = document.getElementById('fortTrench');
+  const fobEl = document.getElementById('fortFob');
+  const leftEl = document.getElementById('dossierLeftoverSp');
+  const notesEl = document.getElementById('dossierBattleNotes');
+
+  if (chanEl) chanEl.value = 'alpha';
+  if (modeEl) modeEl.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  if (outEl) outEl.value = 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)';
+  if (secCodeEl) secCodeEl.value = '';
+  if (secTagEl) secTagEl.value = 'Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)';
+  if (hospEl) hospEl.checked = false;
+  if (ammoEl) ammoEl.checked = false;
+  if (trenchEl) trenchEl.checked = false;
+  if (fobEl) fobEl.checked = false;
+  if (leftEl) leftEl.value = '0 Leftover SP';
+  if (notesEl) notesEl.value = '';
+
+  crusadeState.queuedRolls = [];
+  if (window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+}
+
 function renderQueuedRolls() {
   const countEl = document.getElementById('queuedCountLabel');
   const box = document.getElementById('queuedRollsContainer');
@@ -1334,6 +1405,50 @@ function transmitMasterBattleDossier() {
   }
 }
 
+/**
+ * Compiles the unique Start of Tour of Duty Dispatch string (Munitorum Field Regulation 884-Alpha),
+ * reporting newly rolled Tour Quotas (D6+4 Battles / D3+2 Victories), Uplifting Primers status,
+ * and Munitorum Logistics Point allocation (Surplus vs. Deficiency) to the Campaign Master.
+ *
+ * @returns {string} Formatted Start of Tour of Duty dispatch payload.
+ */
+function buildStartOfTourDossierString() {
+  const battles = crusadeState.tourBattlesRem || 0;
+  const wins = crusadeState.tourWinsRem || 0;
+  const commPts = crusadeState.commendationPts || 0;
+  const toursDone = crusadeState.toursCompletedCount || 0;
+  const primerStr = crusadeState.upliftingPrimer
+    ? 'ACTIVE (5 Total Logistics Pts)'
+    : 'INACTIVE (4 Standard Logistics Pts)';
+  const notes = (document.getElementById('startTourNotes')?.value || 'Commencing new Astra Militarum Tour of Duty in the Armageddon sector.').trim();
+
+  return [
+    `+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++`,
+    `• REPORTING COMMANDER: THE EXILE // SANCTUARY OF ASH (044TH KRIEG SIEGE REGIMENT)`,
+    `• BATTLES REQUIRED QUOTA (D6+4): ${battles} Battles`,
+    `• VICTORIES REQUIRED QUOTA (D3+2): ${wins} Wins`,
+    `• PRIOR TOURS COMPLETED: ${toursDone} // CURRENT COMMENDATION BANK: ${commPts} Pts`,
+    `• UPLIFTING PRIMERS REQUISITION (1 RP): ${primerStr}`,
+    `• MUNITORUM LOGISTICS ALLOCATION: ${buildLogisticsSummaryLine()}`,
+    `------------------------------------------------`,
+    `• REGIMENTAL DEPLOYMENT DIRECTIVE: "${notes}"`,
+    `------------------------------------------------`,
+    `REQUEST FOR CAMPAIGN MASTER: Please officially register this Start of Tour of Duty mandate in the Departmento Munitorum ledger and issue an opening operational decree!`
+  ].join('\n');
+}
+
+function updateStartOfTourPreview() {
+  const box = document.getElementById('startOfTourPreviewBox');
+  if (box) box.textContent = buildStartOfTourDossierString();
+}
+
+function transmitStartOfTourDossier() {
+  const payload = buildStartOfTourDossierString();
+  if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox('alpha', payload);
+  }
+}
+
 function saveCrusadeState() {
   try {
     localStorage.setItem(CRUSADE_STATE_KEY, JSON.stringify(crusadeState));
@@ -1360,6 +1475,7 @@ function initCrusadePage() {
   populateCommendationVault();
   renderQueuedRolls();
   updateMasterDossierPreview();
+  updateStartOfTourPreview();
 }
 
 window.addEventListener('DOMContentLoaded', initCrusadePage);

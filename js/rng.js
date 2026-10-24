@@ -37,13 +37,33 @@ function seededShuffle(arr, rng) {
 }
 
 /**
- * Generates a thematic room code like HADES-42.
+ * Expanded pool of 60 Warhammer 40,000 & Armageddon Crusade room code prefixes.
+ */
+const ROOM_CODE_PREFIXES = [
+  "HADES", "ASH", "GATE", "THOR", "VULK", "SKULL", "WARP", "IRON", "PYRE", "HIVE",
+  "GOLGOTHA", "ACHERON", "INFERNUS", "TARTARUS", "TEMPESTORA", "HELSREACH", "VOLCANUS",
+  "PALATINE", "KRIEG", "VARKAN", "EXILE", "JUNEBUG", "YARRICK", "GRIMALDUS", "ANGRON",
+  "KHORNE", "MALEFACTOR", "SANCTUARY", "BASTION", "VANGUARD", "BASILISK", "BANEBLADE",
+  "VALKYRIE", "DREAD", "RELIC", "CHIMERA", "VANQUISHER", "ROGAL", "MORTAR", "TRENCH",
+  "BUNKER", "SIEGE", "AUSPEX", "VOX", "ORBITAL", "VOID", "NECRON", "TYRANID",
+  "DAEMON", "MARAUDER", "DESECRATOR", "GATEBREAKER", "SECTOR", "CITADEL", "PROMETHIUM",
+  "OBSIDIAN", "SULFUR", "CINDER", "REDANGEL", "WRATH"
+];
+
+/**
+ * Generates a thematic room code like HADES-42 or HELSREACH-84.
  */
 function generateRandomCode() {
-  const prefixes = ["HADES", "ASH", "GATE", "THOR", "VULK", "SKULL", "WARP", "IRON", "PYRE", "HIVE"];
-  const p = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const n = Math.floor(10 + Math.random() * 90);
-  const code = `${p}-${n}`;
+  const prevCode = (typeof document !== 'undefined' && document.getElementById('seedInput')?.value)
+    ? document.getElementById('seedInput').value.trim().toUpperCase()
+    : '';
+  let code = '';
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const p = ROOM_CODE_PREFIXES[Math.floor(Math.random() * ROOM_CODE_PREFIXES.length)];
+    const n = Math.floor(10 + Math.random() * 90);
+    code = `${p}-${n}`;
+    if (code !== prevCode) break;
+  }
   if (typeof document !== 'undefined') {
     const el = document.getElementById('seedInput');
     if (el) {
@@ -62,6 +82,8 @@ if (typeof module !== 'undefined' && module.exports) {
     hashString,
     mulberry32,
     seededShuffle,
-    generateRandomCode
+    generateRandomCode,
+    ROOM_CODE_PREFIXES
   };
 }
+

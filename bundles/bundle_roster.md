@@ -94,13 +94,16 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-family: monospace;
-      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
       padding: 4px 10px;
       border-radius: 999px;
       background: rgba(16, 185, 129, 0.14);
       border: 1px solid rgba(16, 185, 129, 0.45);
       color: #6ee7b7;
+      margin: 0;
     }
     .locked-status-select {
       padding: 6px 10px;
@@ -232,9 +235,9 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
 
   <div class="hero-card" style="margin-bottom:18px;">
     <div class="hero-header">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div class="status-pill">Ordo Malleus Threat Archive • Cloud-Synced Spawn Pools</div>
-        <span id="cloudSyncBadge" class="cloud-sync-pill">☁️ Supabase Pool Sync Ready</span>
+      <div style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+        <div class="status-pill" style="margin:0;">Ordo Malleus Threat Archive • Cloud-Synced Spawn Pools</div>
+        <span id="cloudSyncBadge" class="cloud-sync-pill" style="margin:0;">☁️ Supabase Pool Sync Ready</span>
       </div>
       <h1 class="hero-title">Hostile Threat Matrix &amp; Nemesis Vault</h1>
       <p class="hero-subtitle">
@@ -349,7 +352,9 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
             <strong>Origin Feat (Rogue Sector // Southern Iron-Oxide Flats):</strong> Shrugged off point-blank salvos from Commissar Yarrick's entire armoured column—regenerating its living-metal necrodermis through concentrated fire—before shearing a super-heavy <strong>Baneblade</strong> and both attending Tech-Priest Enginseers clean in half.
           </p>
           <div class="card" style="background:#0b0d13; margin:10px 0 8px 0; font-size:0.85rem; border-left-color:var(--purple);">
-            <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>Bane-Cleaver &amp; Matter Absorption</em>:</strong> Start of Fight phase, select 1 enemy <strong>VEHICLE</strong> within 12": on a 2+, it suffers <strong>D3 Mortal Wounds</strong> and the Void Dragon regains that many lost Wounds. Whenever it destroys a <strong>VEHICLE</strong> or <strong>MONSTER</strong> in melee, it heals <strong>D3+1 Wounds</strong> and forces enemy units within 6" to take a Battle-shock test.
+            <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>Tesseract Arc-Discharge</em>:</strong><br>
+            • <strong>Pin-Breaker Volley:</strong> Does not suffer the -1 to Hit penalty from <strong>Big Guns Never Tire / Close-Quarters Shooting</strong> when firing its ranged weapons while Engaged with enemy Infantry.<br>
+            • <strong>Split-Hull Arc:</strong> Whenever this C'tan Shard destroys an enemy VEHICLE in melee, lightning arcs from the split hull—forcing all other enemy units within 6" of that destroyed Vehicle to take an immediate Battle-shock test (at -1 if they are VEHICLE units).
           </div>
           <div style="font-size:0.8rem; color:var(--gold); font-weight:700;">
             🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point
@@ -362,7 +367,7 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
     <div class="card" style="border-left:4px solid var(--red); margin-top:24px;">
       <div class="section-header" style="margin-top:0;">
         <h3 style="color:var(--red);">📁 Compile &amp; Transmit New Nemesis Dossier to Campaign Master</h3>
-        <span class="hud-sub">"Vibe-Check" Induction Protocol</span>
+        <span class="hud-sub">Induction Protocol</span>
       </div>
       <p class="card-desc" style="margin-bottom:14px;">
         Whenever a Horde Warlord survives Round 6, slays a Player's Character, or any enemy Monster/Sergeant performs an unforgettable cinematic feat in Horde, 1v1, or Rogue Sector battles, compile their field folder below and transmit it directly to the Campaign Master via the Astropathic Vox!
@@ -568,7 +573,7 @@ REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mo
 
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button type="button" class="btn-blue" onclick="saveShelfBarracks()">☁️ Save &amp; Sync Shelf Barracks to Cloud</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="pullSharedPoolsFromCloud()">🔄 Pull Latest from Cloud</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="pullSharedPoolsFromCloud(true)">🔄 Pull Latest from Cloud</button>
         <span id="shelfSaveNotice" style="font-size:0.82rem; color:var(--green);" class="hidden">✓ Synced with Supabase Cloud &amp; Mode 1 Spawner!</span>
       </div>
     </div>
@@ -600,7 +605,7 @@ var SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL)
   : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
 var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY)
   ? window.SUPABASE_ANON_KEY
-  : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzZnZoamphbGV4cXBienFvYXFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MzcxNjEsImV4cCI6MjA5MjQxMzE2MX0.fc9652398N1BP1126h1-t0h22H2y519a119918b500';
+  : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
 
 // Canonical 23-Faction Standard Horde Spawn Bracket Matrix is loaded from data.js
 var ROSTER_SPAWN_TABLES = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
@@ -728,6 +733,7 @@ function saveShelfBarracks() {
 
   const notice = document.getElementById('shelfSaveNotice');
   if (notice) {
+    notice.textContent = '✓ Synced with Supabase Cloud & Mode 1 Spawner!';
     notice.classList.remove('hidden');
     setTimeout(() => notice.classList.add('hidden'), 3000);
   }
@@ -760,7 +766,7 @@ async function syncPoolsToSupabaseCloud(poolObj) {
   return false;
 }
 
-async function pullSharedPoolsFromCloud() {
+async function pullSharedPoolsFromCloud(isManual = false) {
   if (typeof fetch !== 'function') return false;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_shared_spawn_pools`, {
@@ -780,12 +786,47 @@ async function pullSharedPoolsFromCloud() {
       window.VoxAudio.playCloudSyncChime();
     }
 
+    const facName = document.getElementById('bracketFactionPicker')?.value || 'Space Marines';
+
     if (data.horde_pool && Object.keys(data.horde_pool).length > 0) {
       localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(data.horde_pool));
-      const facName = document.getElementById('bracketFactionPicker')?.value || 'Space Marines';
       loadFactionInputs(facName);
-      renderFactionBracketTable();
     }
+
+    if (isManual) {
+      const currentP = getFactionPoolFromStore(facName);
+      const hasAnyValue = Boolean(
+        (currentP.b34 && currentP.b34.trim()) ||
+        (currentP.b56 && currentP.b56.trim()) ||
+        (currentP.b79 && currentP.b79.trim()) ||
+        (currentP.b10 && currentP.b10.trim()) ||
+        (currentP.b13 && currentP.b13.trim())
+      );
+      if (!hasAnyValue) {
+        const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined') ? HORDE_FACTION_SPAWN_TABLES : ROSTER_SPAWN_TABLES;
+        const ref = tables[facName] || {};
+        const fallbackInputs = {
+          b34: Array.isArray(ref.b34) ? ref.b34.join(', ') : '',
+          b56: Array.isArray(ref.b56) ? ref.b56.join(', ') : '',
+          b79: Array.isArray(ref.b79) ? ref.b79.join(', ') : '',
+          b10: Array.isArray(ref.b10) ? ref.b10.join(', ') : '',
+          b13: Array.isArray(ref.b13) ? ref.b13.join(', ') : ''
+        };
+        if (document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = fallbackInputs.b34;
+        if (document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = fallbackInputs.b56;
+        if (document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = fallbackInputs.b79;
+        if (document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = fallbackInputs.b10;
+        if (document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = fallbackInputs.b13;
+      }
+      const notice = document.getElementById('shelfSaveNotice');
+      if (notice) {
+        notice.textContent = '✓ Pulled Latest Pool & Nemesis Status from Supabase Cloud!';
+        notice.classList.remove('hidden');
+        setTimeout(() => notice.classList.add('hidden'), 3500);
+      }
+    }
+
+    renderFactionBracketTable();
 
     if (data.nemesis_status) {
       if (data.nemesis_status.nem1 && document.getElementById('nemStatus1')) {

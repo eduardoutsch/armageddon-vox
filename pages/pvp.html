@@ -85,6 +85,39 @@
         <p style="margin:0;">Roll above to determine the Unbound Adversary Power Level (PL 1–4), or ping the Campaign Master on the Vox to reveal who emerges from the ash-storm.</p>
       </div>
     </div>
+
+    <!-- 4. CAMPAIGN MASTER 3RD ALLIANCE VULTURE SPTS MATCH REPORT (SEPARATE FROM ADVERSARY ROLLER) -->
+    <div class="card gold" style="border-left:4px solid var(--gold);">
+      <span class="badge gold">Post-Match Telemetry • Separate from Adversary Roller</span>
+      <h3>3rd Alliance Vulture SPts Match Report</h3>
+      <p>At the conclusion of your 1v1 Ash Wastes clash, transmit this dedicated report to inform the <strong>Campaign Master</strong> how many Strategic Points his <strong>3rd Alliance (Marauders)</strong> vultured during the match (<strong>3 SPts</strong> base for Unbound Adversary interference, or <strong>4 SPts</strong> if an Unbound Adversary destroyed at least 1 player unit above).</p>
+
+      <div class="grid-2" style="margin-bottom:12px;">
+        <div>
+          <label style="display:block; font-size:0.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Reporting Commander Conduit</label>
+          <select id="pvpReportChannel" onchange="updatePvpVulturePreview()" style="width:100%;">
+            <option value="alpha">The Exile // Sanctuary of Ash (Alpha Conduit)</option>
+            <option value="beta">Lord Commander Junebug (Beta Conduit)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:0.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Vulture Massacre Bonus (+1 SPt)</label>
+          <div class="stat-box" style="padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.82rem; color:var(--text);">Campaign Master Gain:</span>
+            <strong id="pvpReportSpBadge" style="color:var(--gold); font-size:1.05rem;">3 SPts</strong>
+          </div>
+        </div>
+      </div>
+
+      <label style="display:block; font-size:0.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Vulture Interference &amp; Match Notes (Optional)</label>
+      <textarea id="pvpReportNotes" oninput="updatePvpVulturePreview()" placeholder="Note which units the Unbound Adversaries harassed or destroyed, or how the 3rd Alliance capitalized on the clash..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
+
+      <div id="pvpVulturePreviewBox" class="stat-box" style="text-align:left; font-family:monospace; font-size:0.78rem; white-space:pre-wrap; line-height:1.45; color:var(--gold); margin-bottom:12px;"></div>
+
+      <button type="button" class="btn-gold" data-sfx="custom" style="width:100%; padding:12px; font-weight:800;" onclick="transmitPvpVultureReport()">
+        📡 Transmit 3rd Alliance Vulture SPts Report →
+      </button>
+    </div>
   </div>
 
 <script>
@@ -95,6 +128,15 @@ const HELLSCAPES = [
   "<strong>Staggered Time:</strong> Temporal echoes distort objectives. In Odd Battle Rounds, Northern/Eastern NML objectives grant bonus VP; in Even Battle Rounds, Southern/Western NML objectives grant bonus VP.",
   "<strong>Gravitic Nexus:</strong> Units starting their Movement phase within range of an objective marker may trigger Gravity Inversion—gaining FLY and +3\" Move for that phase.",
   "<strong>Banishing Rifts:</strong> Units with Warp Counters or the DAEMON keyword re-roll Wound rolls of 1 while within No Man's Land, but suffer 1 mortal wound on unmodified save rolls of 1."
+];
+
+const HELLSCAPE_NAMES = [
+  "Folded Space",
+  "Fractured Realm",
+  "Fading Reality",
+  "Staggered Time",
+  "Gravitic Nexus",
+  "Banishing Rifts"
 ];
 
 const ANOMALIES = [
@@ -125,7 +167,9 @@ function savePvpState() {
       warpIntensity: document.getElementById('warpIntensity')?.value || 'major',
       anomalyHtml: document.getElementById('anomalyResultBox')?.innerHTML || '',
       vultureKilled: !!document.getElementById('vultureKillCheck')?.checked,
-      unboundHtml: document.getElementById('unboundResult')?.innerHTML || ''
+      unboundHtml: document.getElementById('unboundResult')?.innerHTML || '',
+      reportChannel: document.getElementById('pvpReportChannel')?.value || 'alpha',
+      reportNotes: document.getElementById('pvpReportNotes')?.value || ''
     };
     localStorage.setItem(STORAGE_KEY_PVP, JSON.stringify(data));
   } catch (e) {
@@ -137,13 +181,16 @@ function restorePvpState() {
   if (typeof localStorage === 'undefined') return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY_PVP);
-    if (!raw) return;
+    if (!raw) {
+      updatePvpVulturePreview(false);
+      return;
+    }
     const data = JSON.parse(raw);
     if (!data) return;
 
     if (typeof data.hellscapeIdx === 'number') {
       const el = document.getElementById('hellscapeSelect');
-      if (el) el.value = data.hellscapeIdx;
+      if (el) el.value = String(data.hellscapeIdx);
       renderHellscape(false);
     }
     if (data.warpIntensity) {
@@ -163,20 +210,30 @@ function restorePvpState() {
       const el = document.getElementById('unboundResult');
       if (el) el.innerHTML = data.unboundHtml;
     }
+    if (data.reportChannel) {
+      const el = document.getElementById('pvpReportChannel');
+      if (el) el.value = data.reportChannel;
+    }
+    if (typeof data.reportNotes === 'string') {
+      const el = document.getElementById('pvpReportNotes');
+      if (el) el.value = data.reportNotes;
+    }
+    updatePvpVulturePreview(false);
   } catch (e) {
     console.warn('Could not restore pvp state:', e);
   }
 }
 
 function renderHellscape(shouldSave = true) {
-  const idx = parseInt(document.getElementById('hellscapeSelect').value, 10);
-  document.getElementById('hellscapeDesc').innerHTML = HELLSCAPES[idx];
+  const idx = parseInt(document.getElementById('hellscapeSelect').value, 10) || 0;
+  document.getElementById('hellscapeDesc').innerHTML = HELLSCAPES[idx] || HELLSCAPES[0];
+  updatePvpVulturePreview(false);
   if (shouldSave) savePvpState();
 }
 
 function rollRandomHellscape() {
   const idx = Math.floor(Math.random() * HELLSCAPES.length);
-  document.getElementById('hellscapeSelect').value = idx;
+  document.getElementById('hellscapeSelect').value = String(idx);
   renderHellscape(true);
 }
 
@@ -192,13 +249,71 @@ function rollWarpAnomaly() {
   } else {
     box.innerHTML = `<span class="badge">Rolled ${roll} (Needed ${target}+) • Reality Holds</span><p style="margin:0;">The empyric currents subside this round. No new Anomaly manifests.</p>`;
   }
+  updatePvpVulturePreview(false);
   savePvpState();
 }
 
 function updateVulture(shouldSave = true) {
   const extra = document.getElementById('vultureKillCheck').checked ? 1 : 0;
-  document.getElementById('vulturePts').innerText = `${3 + extra} SPts`;
+  const totalStr = `${3 + extra} SPts`;
+  const ptsEl = document.getElementById('vulturePts');
+  if (ptsEl) {
+    ptsEl.innerText = totalStr;
+    ptsEl.textContent = totalStr;
+  }
+  const badgeEl = document.getElementById('pvpReportSpBadge');
+  if (badgeEl) badgeEl.textContent = totalStr;
+  updatePvpVulturePreview(false);
   if (shouldSave) savePvpState();
+}
+
+/**
+ * Compiles the dedicated 1v1 Ash Wastes 3rd Alliance Vulture SPts Match Report,
+ * informing the Campaign Master how many Strategic Points (3 SPts base or 4 SPts
+ * with unit kill bonus) his 3rd Alliance gained during the match.
+ *
+ * @returns {string} Formatted teletype report payload for Astropathic Vox transmission.
+ */
+function buildPvpVultureReportString() {
+  const chan = document.getElementById('pvpReportChannel')?.value || 'alpha';
+  const cmdr = chan === 'alpha'
+    ? 'THE EXILE // SANCTUARY OF ASH'
+    : 'LORD COMMANDER JUNEBUG';
+  const killedUnit = !!document.getElementById('vultureKillCheck')?.checked;
+  const totalSp = killedUnit ? 4 : 3;
+  const breakdown = killedUnit
+    ? 'Base Vulture Presence (+3 SPts) + Destroyed a Player Unit (+1 SPt) = 4 SPts'
+    : 'Base Vulture Presence (+3 SPts) [No Player Unit Destroyed] = 3 SPts';
+  const hellscapeIdx = parseInt(document.getElementById('hellscapeSelect')?.value, 10) || 0;
+  const hellscapeName = HELLSCAPE_NAMES[hellscapeIdx] || HELLSCAPE_NAMES[0];
+  const intensity = (document.getElementById('warpIntensity')?.value || 'major').toUpperCase();
+  const notes = (document.getElementById('pvpReportNotes')?.value || '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.').trim();
+
+  return [
+    `+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++`,
+    `• REPORTING COMMANDER: ${cmdr}`,
+    `• CAMPAIGN MASTER (3RD ALLIANCE) VULTURED SPTS: ${totalSp} SPts`,
+    `• VULTURE SPTS BREAKDOWN: ${breakdown}`,
+    `• ACTIVE HELLSCAPE & WARP INTENSITY: ${hellscapeName} // Intensity: ${intensity}`,
+    `------------------------------------------------`,
+    `• VULTURE INTERFERENCE LOG: "${notes}"`,
+    `------------------------------------------------`,
+    `REQUEST FOR CAMPAIGN MASTER: Please credit +${totalSp} Strategic Points to the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes engagement and chronicle how your scavenging forces exploited our clash!`
+  ].join('\n');
+}
+
+function updatePvpVulturePreview(shouldSave = true) {
+  const box = document.getElementById('pvpVulturePreviewBox');
+  if (box) box.textContent = buildPvpVultureReportString();
+  if (shouldSave) savePvpState();
+}
+
+function transmitPvpVultureReport() {
+  const chan = document.getElementById('pvpReportChannel')?.value || 'alpha';
+  const payload = buildPvpVultureReportString();
+  if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox(chan, payload);
+  }
 }
 
 function transmitUnboundPing(pl, channel) {
@@ -246,6 +361,7 @@ function rollUnboundAdversary() {
 
 renderHellscape(false);
 restorePvpState();
+updatePvpVulturePreview(false);
 </script>
 <script src="../js/vox-audio.js"></script>
 </body>

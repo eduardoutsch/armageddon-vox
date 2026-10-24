@@ -343,6 +343,39 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for EMERGE
   );
 });
 
+test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for START OF TOUR OF DUTY DISPATCH and 3RD ALLIANCE VULTURE SPTS REPORT', async () => {
+  for (const header of [
+    '+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++',
+    '+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++'
+  ]) {
+    const dispatchedPrompts = [];
+    const mockPage = createMockPage({
+      onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+    });
+
+    const testMsg = {
+      id: '11223344-dispatch-msg',
+      channel: 'alpha',
+      sender: 'The Exile',
+      question: header
+    };
+
+    await processSingleMessage(testMsg, mockPage, {
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      supabaseUrl: 'https://test.supabase.co',
+      serviceKey: 'valid_test_secret_key_123',
+      waitForReplyFn: async () => 'REF-ID: 11223344\n+++ COGITATOR READOUT +++\nDispatch logged.',
+      logFn: () => {}
+    });
+
+    const fullPrompt = dispatchedPrompts.join('\n');
+    assert.ok(
+      fullPrompt.includes('Pattern 5 intercept block'),
+      `Report "${header}" must trigger a Pattern 5 intercept bleed instruction in the prompt`
+    );
+  }
+});
+
 test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR AUXILIARY BATTLE REPORT and broadcasts to BOTH alpha and beta channels', async () => {
   const dispatchedPrompts = [];
   const fetchCalls = [];

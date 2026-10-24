@@ -116,7 +116,7 @@ test('HARD_MODE_ROUNDS: correctly specifies 6 rounds with Round 6 Final Stand', 
 ````javascript
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { hashString, mulberry32, seededShuffle, generateRandomCode } = require('../../js/rng.js');
+const { hashString, mulberry32, seededShuffle, generateRandomCode, ROOM_CODE_PREFIXES } = require('../../js/rng.js');
 
 test('hashString should produce deterministic 32-bit uint', () => {
   const hash1 = hashString('HADES-1');
@@ -172,10 +172,21 @@ test('seededShuffle is strictly reproducible across runs', () => {
   assert.deepEqual(s1, s2);
 });
 
-test('generateRandomCode returns a string with valid prefix and 2-digit number', () => {
-  const code = generateRandomCode();
-  assert.match(code, /^[A-Z]+-\d{2}$/);
+test('generateRandomCode returns a string with valid prefix and 2-digit number from expanded ROOM_CODE_PREFIXES pool', () => {
+  assert.ok(Array.isArray(ROOM_CODE_PREFIXES), 'Must export ROOM_CODE_PREFIXES array');
+  assert.ok(ROOM_CODE_PREFIXES.length >= 40, `Expected at least 40 room prefixes, got ${ROOM_CODE_PREFIXES.length}`);
+
+  const uniquePrefixes = new Set(ROOM_CODE_PREFIXES);
+  assert.equal(uniquePrefixes.size, ROOM_CODE_PREFIXES.length, 'All room code prefixes must be unique');
+
+  for (let i = 0; i < 50; i++) {
+    const code = generateRandomCode();
+    assert.match(code, /^[A-Z]+-\d{2}$/);
+    const prefix = code.split('-')[0];
+    assert.ok(uniquePrefixes.has(prefix), `Generated prefix ${prefix} must belong to ROOM_CODE_PREFIXES`);
+  }
 });
+
 ````
 
 ---
@@ -1749,6 +1760,39 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for EMERGE
   );
 });
 
+test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for START OF TOUR OF DUTY DISPATCH and 3RD ALLIANCE VULTURE SPTS REPORT', async () => {
+  for (const header of [
+    '+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++',
+    '+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++'
+  ]) {
+    const dispatchedPrompts = [];
+    const mockPage = createMockPage({
+      onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+    });
+
+    const testMsg = {
+      id: '11223344-dispatch-msg',
+      channel: 'alpha',
+      sender: 'The Exile',
+      question: header
+    };
+
+    await processSingleMessage(testMsg, mockPage, {
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      supabaseUrl: 'https://test.supabase.co',
+      serviceKey: 'valid_test_secret_key_123',
+      waitForReplyFn: async () => 'REF-ID: 11223344\n+++ COGITATOR READOUT +++\nDispatch logged.',
+      logFn: () => {}
+    });
+
+    const fullPrompt = dispatchedPrompts.join('\n');
+    assert.ok(
+      fullPrompt.includes('Pattern 5 intercept block'),
+      `Report "${header}" must trigger a Pattern 5 intercept bleed instruction in the prompt`
+    );
+  }
+});
+
 test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR AUXILIARY BATTLE REPORT and broadcasts to BOTH alpha and beta channels', async () => {
   const dispatchedPrompts = [];
   const fetchCalls = [];
@@ -2875,8 +2919,12 @@ const mockElements = {
   warpIntensity: { value: 'major' },
   anomalyResultBox: { innerHTML: '' },
   vultureKillCheck: { checked: false },
-  vulturePts: { innerText: '3 SPts' },
-  unboundResult: { innerHTML: '' }
+  vulturePts: { innerText: '3 SPts', textContent: '3 SPts' },
+  pvpReportSpBadge: { textContent: '3 SPts' },
+  unboundResult: { innerHTML: '' },
+  pvpReportChannel: { value: 'alpha' },
+  pvpReportNotes: { value: '' },
+  pvpVulturePreviewBox: { textContent: '' }
 };
 
 globalThis.document = {
@@ -2900,9 +2948,9 @@ globalThis.window = {
 };
 
 // Evaluate script in mock environment
-const pvpEnv = {};
 const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpScriptCode}; return {
   HELLSCAPES,
+  HELLSCAPE_NAMES,
   ANOMALIES,
   UNBOUND_UNITS,
   STORAGE_KEY_PVP,
@@ -2913,13 +2961,17 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpS
   rollWarpAnomaly,
   updateVulture,
   rollUnboundAdversary,
-  transmitUnboundPing
+  transmitUnboundPing,
+  buildPvpVultureReportString,
+  updatePvpVulturePreview,
+  transmitPvpVultureReport
 };`);
 
 const pvp = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
 
 test('pvp: HELLSCAPES, ANOMALIES, and UNBOUND_UNITS contain valid crusade content', () => {
   assert.equal(pvp.HELLSCAPES.length, 6, 'Must define 6 Hellscape environments');
+  assert.equal(pvp.HELLSCAPE_NAMES.length, 6, 'Must define 6 Hellscape names');
   assert.equal(pvp.ANOMALIES.length, 6, 'Must define 6 Warp Anomalies');
   assert.equal(pvp.UNBOUND_UNITS.length, 4, 'Must define 4 Unbound Adversary power levels');
   assert.ok(pvp.UNBOUND_UNITS[3].includes('CLASSIFIED APEX ANOMALY'), 'PL 4 must reference Classified Apex Anomaly');
@@ -2942,14 +2994,18 @@ test('pvp: renderHellscape updates description and saves state to localStorage',
   assert.equal(parsed.hellscapeIdx, 2);
 });
 
-test('pvp: updateVulture calculates 3 SPts base or 4 SPts with player kill bonus', () => {
+test('pvp: updateVulture calculates 3 SPts base or 4 SPts with player kill bonus and updates Vulture report preview', () => {
   mockElements.vultureKillCheck.checked = false;
   pvp.updateVulture(true);
   assert.equal(mockElements.vulturePts.innerText, '3 SPts');
+  assert.equal(mockElements.pvpReportSpBadge.textContent, '3 SPts');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('3 SPts'));
 
   mockElements.vultureKillCheck.checked = true;
   pvp.updateVulture(true);
   assert.equal(mockElements.vulturePts.innerText, '4 SPts');
+  assert.equal(mockElements.pvpReportSpBadge.textContent, '4 SPts');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('4 SPts'));
 
   const raw = localStorage.getItem(pvp.STORAGE_KEY_PVP);
   const parsed = JSON.parse(raw);
@@ -3005,6 +3061,57 @@ test('pvp: transmitUnboundPing formats emergency apex payload for PL 4 and stand
   assert.ok(transmittedPayload.includes('roll/select our Power Level 2 Unbound Adversary'));
 });
 
+test('pvp: buildPvpVultureReportString and transmitPvpVultureReport compile and send Campaign Master 3rd Alliance SPts report separately from Unbound Adversary roller', () => {
+  assert.ok(
+    pvpHtml.includes('transmitPvpVultureReport()'),
+    'pages/pvp.html must include a dedicated button calling transmitPvpVultureReport()'
+  );
+  assert.ok(
+    pvpHtml.includes('rollUnboundAdversary()') && pvpHtml.includes('transmitUnboundPing('),
+    'pages/pvp.html must keep rollUnboundAdversary() and transmitUnboundPing() separate'
+  );
+
+  // Case 1: Base 3 SPts (no unit destroyed), Alpha channel
+  mockElements.hellscapeSelect.value = '4';
+  mockElements.warpIntensity.value = 'catastrophic';
+  mockElements.vultureKillCheck.checked = false;
+  mockElements.pvpReportChannel.value = 'alpha';
+  mockElements.pvpReportNotes.value = 'Unbound Daemons contested the central siphon.';
+
+  pvp.updatePvpVulturePreview();
+  const report3 = pvp.buildPvpVultureReportString();
+
+  assert.equal(mockElements.pvpVulturePreviewBox.textContent, report3);
+  assert.ok(report3.includes('+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++'));
+  assert.ok(report3.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(report3.includes('CAMPAIGN MASTER (3RD ALLIANCE) VULTURED SPTS: 3 SPts'));
+  assert.ok(report3.includes('Base Vulture Presence (+3 SPts) [No Player Unit Destroyed] = 3 SPts'));
+  assert.ok(report3.includes('Gravitic Nexus // Intensity: CATASTROPHIC'));
+  assert.ok(report3.includes('Unbound Daemons contested the central siphon.'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitPvpVultureReport();
+  assert.equal(transmittedChannel, 'alpha');
+  assert.equal(transmittedPayload, report3);
+
+  // Case 2: 4 SPts (Destroyed a Player Unit checked), Beta channel
+  mockElements.vultureKillCheck.checked = true;
+  mockElements.pvpReportChannel.value = 'beta';
+  pvp.updatePvpVulturePreview();
+  const report4 = pvp.buildPvpVultureReportString();
+
+  assert.ok(report4.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(report4.includes('CAMPAIGN MASTER (3RD ALLIANCE) VULTURED SPTS: 4 SPts'));
+  assert.ok(report4.includes('Destroyed a Player Unit (+1 SPt) = 4 SPts'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitPvpVultureReport();
+  assert.equal(transmittedChannel, 'beta');
+  assert.equal(transmittedPayload, report4);
+});
+
 test('pvp: savePvpState ignores save when hellscapeSelect element is absent', () => {
   storageStore.clear();
   storageStore.set(pvp.STORAGE_KEY_PVP, JSON.stringify({ hellscapeIdx: 4, custom: true }));
@@ -3021,13 +3128,15 @@ test('pvp: savePvpState ignores save when hellscapeSelect element is absent', ()
   mockElements.hellscapeSelect = origSelect;
 });
 
-test('pvp: restorePvpState faithfully reconstructs UI state from localStorage', () => {
+test('pvp: restorePvpState faithfully reconstructs UI state and Vulture report fields from localStorage', () => {
   localStorage.setItem(pvp.STORAGE_KEY_PVP, JSON.stringify({
     hellscapeIdx: 5,
     warpIntensity: 'minor',
     anomalyHtml: '<span class="test-surge">Warp Fluke</span>',
     vultureKilled: true,
-    unboundHtml: '<p>Daemonic Beast</p>'
+    unboundHtml: '<p>Daemonic Beast</p>',
+    reportChannel: 'beta',
+    reportNotes: 'Marauders claimed 4 SPts in Sector 5.'
   }));
 
   pvp.restorePvpState();
@@ -3038,6 +3147,9 @@ test('pvp: restorePvpState faithfully reconstructs UI state from localStorage', 
   assert.equal(mockElements.vultureKillCheck.checked, true);
   assert.equal(mockElements.vulturePts.innerText, '4 SPts');
   assert.equal(mockElements.unboundResult.innerHTML, '<p>Daemonic Beast</p>');
+  assert.equal(mockElements.pvpReportChannel.value, 'beta');
+  assert.equal(mockElements.pvpReportNotes.value, 'Marauders claimed 4 SPts in Sector 5.');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('4 SPts'));
 });
 ````
 
@@ -3678,9 +3790,43 @@ test('roster: Active Nemesis cards are collapsible windows sharing the same desi
 
   assert.ok(rosterHtml.includes('"The World-Eater of the Iron-Oxide Wastes"'), 'Must include Void Dragon title');
   assert.ok(rosterHtml.includes('Faction: Xenos / Necrons (Hypercrypt Phalanx)'), 'Must include unified Faction subtitle for Void Dragon');
-  assert.ok(rosterHtml.includes('Bane-Cleaver &amp; Matter Absorption'), 'Must include Void Dragon Boss Battle Trait');
+  assert.ok(rosterHtml.includes('Tesseract Arc-Discharge'), 'Must include Void Dragon Boss Battle Trait');
   assert.ok(rosterHtml.includes('🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point'), 'Must include Bounty Payout');
 });
+
+test('roster: uses valid Supabase publishable anon key, aligns #cloudSyncBadge with .status-pill, and manual pull populates inputs & shows notice', async () => {
+  assert.ok(
+    rosterHtml.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO'),
+    'pages/roster.html must configure the valid Supabase publishable key'
+  );
+  assert.ok(
+    !rosterHtml.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500'),
+    'pages/roster.html must not contain the invalid placeholder JWT key'
+  );
+
+  // Verify hero header aligns status-pill and cloudSyncBadge on the same centered row without vertical offset
+  assert.match(
+    rosterHtml,
+    /justify-content:\s*center;\s*align-items:\s*center;[^>]*>[\s\S]*?class="status-pill"\s+style="margin:0;"[\s\S]*?id="cloudSyncBadge"/,
+    'Hero header must center and align .status-pill (margin:0) and #cloudSyncBadge on the same row'
+  );
+
+  // Test manual click on "Pull Latest from Cloud": pullSharedPoolsFromCloud(true)
+  enableCloudMock = true;
+  mockElements.shelfSaveNotice.classList.add('hidden');
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+
+  const ok = await roster.pullSharedPoolsFromCloud(true);
+  assert.equal(ok, true);
+  assert.equal(
+    mockElements.shelfSaveNotice.classList.contains('hidden'),
+    false,
+    'Manual pullSharedPoolsFromCloud(true) must un-hide #shelfSaveNotice for visual confirmation'
+  );
+  assert.ok(mockElements.cloudSyncBadge.textContent.includes('Cloud Pool Synced'));
+  enableCloudMock = false;
+});
+
 
 
 ````
@@ -3784,7 +3930,9 @@ const mockElements = {
   logisticsAllocatorGrid: { innerHTML: '' },
   commendationSelect: { innerHTML: '', value: 'bastion' },
   commRecipientUnit: { value: '044th Krieg Regiment' },
-  commendationPreviewBox: { innerHTML: '' }
+  commendationPreviewBox: { innerHTML: '' },
+  startTourNotes: { value: '' },
+  startOfTourPreviewBox: { textContent: '' }
 };
 
 const mockDocument = {
@@ -3849,11 +3997,15 @@ const evalFn = new Function(
     attachRollToDossier,
     removeQueuedRoll,
     clearQueuedRolls,
+    resetMasterDossierForm,
     renderQueuedRolls,
     buildLogisticsSummaryLine,
     buildMasterDossierString,
     updateMasterDossierPreview,
     transmitMasterBattleDossier,
+    buildStartOfTourDossierString,
+    updateStartOfTourPreview,
+    transmitStartOfTourDossier,
     saveCrusadeState,
     initCrusadePage
   };`
@@ -4253,6 +4405,80 @@ test('crusade: saveCrusadeState and initCrusadePage restore Tour of Duty and Mun
   assert.equal(mockElements.commendationPts.textContent, '9');
   assert.equal(mockElements.toursCompletedCount.textContent, '2');
 });
+
+test('crusade: resetMasterDossierForm resets all Crusade report form fields and queued rolls to clean defaults', () => {
+  assert.ok(
+    crusadeHtml.includes('resetMasterDossierForm()'),
+    'pages/crusade.html must include a button calling resetMasterDossierForm()'
+  );
+
+  // Dirty up all fields and queue a roll
+  mockElements.dossierChannel.value = 'beta';
+  mockElements.dossierModeNode.value = 'Mode 2: 1v1 Ash Wastes PvP // Node 1 (Pyre-Silt Refinery)';
+  mockElements.dossierOutcome.value = '1v1 PvP Defeat (+3 SPts)';
+  mockElements.dossierSecretCode.value = 'Z99';
+  mockElements.dossierSecretTag.value = 'Wargear / Cache Tag (+1 Supply Cache Token)';
+  mockElements.fortHosp.checked = true;
+  mockElements.fortAmmo.checked = true;
+  mockElements.fortTrench.checked = true;
+  mockElements.fortFob.checked = true;
+  mockElements.dossierLeftoverSp.value = '3 Leftover SP → Bank 1v1 Supply Cache Token';
+  mockElements.dossierBattleNotes.value = 'Custom battle report notes to be cleared.';
+  mockElements.rollerUnitName.value = 'Test Unit';
+  crusade.rollRandomBattleTrait();
+  crusade.attachRollToDossier('trait');
+  assert.ok(crusade.getCrusadeState().queuedRolls.length > 0);
+
+  crusade.resetMasterDossierForm();
+
+  assert.equal(mockElements.dossierChannel.value, 'alpha');
+  assert.equal(mockElements.dossierSecretCode.value, '');
+  assert.equal(mockElements.fortHosp.checked, false);
+  assert.equal(mockElements.fortAmmo.checked, false);
+  assert.equal(mockElements.fortTrench.checked, false);
+  assert.equal(mockElements.fortFob.checked, false);
+  assert.equal(mockElements.dossierLeftoverSp.value, '0 Leftover SP');
+  assert.equal(mockElements.dossierBattleNotes.value, '');
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, 0);
+  assert.equal(mockElements.queuedCountLabel.textContent, '0');
+  assert.ok(mockElements.masterDossierPreviewBox.textContent.includes('None attached this battle.'));
+});
+
+test('crusade: buildStartOfTourDossierString and transmitStartOfTourDossier compile and transmit unique Start of Tour of Duty report', () => {
+  assert.ok(
+    crusadeHtml.includes('transmitStartOfTourDossier()'),
+    'pages/crusade.html must include a button calling transmitStartOfTourDossier()'
+  );
+
+  crusade.getCrusadeState().tourBattlesRem = 8;
+  crusade.getCrusadeState().tourWinsRem = 4;
+  crusade.getCrusadeState().commendationPts = 2;
+  crusade.getCrusadeState().toursCompletedCount = 1;
+  crusade.getCrusadeState().upliftingPrimer = true;
+  crusade.getCrusadeState().logistics = { lexmechanicus: 2, materiel: 2, tithePool: 1, morale: 0 };
+  mockElements.startTourNotes.value = 'Deploying 044th Krieg armored column to Golgotha sector.';
+
+  crusade.updateStartOfTourPreview();
+  const report = crusade.buildStartOfTourDossierString();
+
+  assert.equal(mockElements.startOfTourPreviewBox.textContent, report);
+  assert.ok(report.includes('+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++'));
+  assert.ok(report.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(report.includes('BATTLES REQUIRED QUOTA (D6+4): 8 Battles'));
+  assert.ok(report.includes('VICTORIES REQUIRED QUOTA (D3+2): 4 Wins'));
+  assert.ok(report.includes('PRIOR TOURS COMPLETED: 1'));
+  assert.ok(report.includes('UPLIFTING PRIMERS REQUISITION (1 RP): ACTIVE (5 Total Logistics Pts)'));
+  assert.ok(report.includes('Surplus: [Lexmechanicus, Materiel]'));
+  assert.ok(report.includes('Deficiency: [Morale]'));
+  assert.ok(report.includes('Deploying 044th Krieg armored column to Golgotha sector.'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  crusade.transmitStartOfTourDossier();
+  assert.equal(transmittedChannel, 'alpha');
+  assert.equal(transmittedPayload, report);
+});
+
 
 ````
 

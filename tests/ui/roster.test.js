@@ -431,8 +431,42 @@ test('roster: Active Nemesis cards are collapsible windows sharing the same desi
 
   assert.ok(rosterHtml.includes('"The World-Eater of the Iron-Oxide Wastes"'), 'Must include Void Dragon title');
   assert.ok(rosterHtml.includes('Faction: Xenos / Necrons (Hypercrypt Phalanx)'), 'Must include unified Faction subtitle for Void Dragon');
-  assert.ok(rosterHtml.includes('Bane-Cleaver &amp; Matter Absorption'), 'Must include Void Dragon Boss Battle Trait');
+  assert.ok(rosterHtml.includes('Tesseract Arc-Discharge'), 'Must include Void Dragon Boss Battle Trait');
   assert.ok(rosterHtml.includes('🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point'), 'Must include Bounty Payout');
 });
+
+test('roster: uses valid Supabase publishable anon key, aligns #cloudSyncBadge with .status-pill, and manual pull populates inputs & shows notice', async () => {
+  assert.ok(
+    rosterHtml.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO'),
+    'pages/roster.html must configure the valid Supabase publishable key'
+  );
+  assert.ok(
+    !rosterHtml.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500'),
+    'pages/roster.html must not contain the invalid placeholder JWT key'
+  );
+
+  // Verify hero header aligns status-pill and cloudSyncBadge on the same centered row without vertical offset
+  assert.match(
+    rosterHtml,
+    /justify-content:\s*center;\s*align-items:\s*center;[^>]*>[\s\S]*?class="status-pill"\s+style="margin:0;"[\s\S]*?id="cloudSyncBadge"/,
+    'Hero header must center and align .status-pill (margin:0) and #cloudSyncBadge on the same row'
+  );
+
+  // Test manual click on "Pull Latest from Cloud": pullSharedPoolsFromCloud(true)
+  enableCloudMock = true;
+  mockElements.shelfSaveNotice.classList.add('hidden');
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+
+  const ok = await roster.pullSharedPoolsFromCloud(true);
+  assert.equal(ok, true);
+  assert.equal(
+    mockElements.shelfSaveNotice.classList.contains('hidden'),
+    false,
+    'Manual pullSharedPoolsFromCloud(true) must un-hide #shelfSaveNotice for visual confirmation'
+  );
+  assert.ok(mockElements.cloudSyncBadge.textContent.includes('Cloud Pool Synced'));
+  enableCloudMock = false;
+});
+
 
 

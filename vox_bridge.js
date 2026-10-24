@@ -416,7 +416,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
     const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
