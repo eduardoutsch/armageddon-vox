@@ -544,6 +544,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         <button type="button" class="btn-gold" data-sfx="custom" onclick="rollNewTourQuotas()">🎲 Roll New Tour Quotas (D6+4 / D3+2)</button>
         <button type="button" class="btn-blue" data-sfx="custom" onclick="rollVictoryCommendationPts()">🎲 Roll Victory Commendation Pts (+D3)</button>
         <button type="button" class="btn-ghost btn-sm" onclick="adjTourField('toursCompletedCount', 1)">🏆 Mark Tour Completed (+1)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="adjTourField('toursCompletedCount', -1)">↩️ Demark Tour Completed (−1)</button>
       </div>
     </div>
 

@@ -4131,6 +4131,22 @@ test('crusade: adjTourField, rollNewTourQuotas, and rollVictoryCommendationPts m
   const prevComm = crusade.getCrusadeState().commendationPts || 0;
   crusade.rollVictoryCommendationPts();
   assert.ok(crusade.getCrusadeState().commendationPts >= prevComm + 1);
+
+  // Mark and Demark Tour Completed (+1 and -1)
+  assert.ok(
+    crusadeHtml.includes(`adjTourField('toursCompletedCount', 1)`),
+    'pages/crusade.html must include Mark Tour Completed (+1) button'
+  );
+  assert.ok(
+    crusadeHtml.includes(`adjTourField('toursCompletedCount', -1)`),
+    'pages/crusade.html must include Demark Tour Completed (-1) button'
+  );
+  crusade.adjTourField('toursCompletedCount', 1);
+  assert.equal(crusade.getCrusadeState().toursCompletedCount, 1);
+  assert.equal(mockElements.toursCompletedCount.textContent, '1');
+  crusade.adjTourField('toursCompletedCount', -1);
+  assert.equal(crusade.getCrusadeState().toursCompletedCount, 0);
+  assert.equal(mockElements.toursCompletedCount.textContent, '0');
 });
 
 test('crusade: Munitorum logistics point allocation enforces limits and toggles Uplifting Primers', () => {
