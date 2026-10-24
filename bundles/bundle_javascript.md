@@ -2911,6 +2911,21 @@ if (typeof window !== 'undefined') {
   }
 
 
+  let hasUserInteracted = false;
+
+  function handleUserGestureForMusic(e) {
+    hasUserInteracted = true;
+    if (!wantMusic) return;
+    if (e && e.target && typeof e.target.closest === 'function' && e.target.closest('#voxMusicToggle, #voxMusicSkip')) {
+      return;
+    }
+    if (!ytReady) {
+      loadYouTubeAPI();
+    } else if (!isPlayerActuallyPlaying()) {
+      resumeOrStartMusic(true);
+    }
+  }
+
   // Global listener: contextually triggers sound profiles on clicks
   document.addEventListener('click', (e) => {
     const target = e.target.closest(
@@ -2934,20 +2949,16 @@ if (typeof window !== 'undefined') {
       }
     }
 
-    if (wantMusic && (!e.target || !e.target.closest || !e.target.closest('#voxMusicToggle, #voxMusicSkip'))) {
-      if (!ytReady) {
-        loadYouTubeAPI();
-      } else if (!isPlayerActuallyPlaying()) {
-        resumeOrStartMusic(true);
-      }
-    }
+    handleUserGestureForMusic(e);
   });
+
+  // Unlock audio immediately on pointerdown or touchstart anywhere on root page (e.g. https://armageddon-vox.pages.dev/)
+  document.addEventListener('pointerdown', handleUserGestureForMusic);
+  document.addEventListener('touchstart', handleUserGestureForMusic);
 
   // Global listener: plays CRT teletype click whenever player types in an input or textarea
   document.addEventListener('keydown', (e) => {
-    if (wantMusic && ytReady && !isPlayerActuallyPlaying()) {
-      resumeOrStartMusic(true);
-    }
+    handleUserGestureForMusic(e);
     const el = e.target;
     if (!el || !el.matches('input[type="text"], input[type="password"], textarea')) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.key === 'Shift' || e.key === 'Tab' || e.key === 'CapsLock') return;
@@ -2962,6 +2973,9 @@ if (typeof window !== 'undefined') {
   function isPlayerActuallyPlaying() {
     if (!ytPlayer || !ytReady) return false;
     try {
+      if (typeof ytPlayer.isMuted === 'function' && ytPlayer.isMuted()) {
+        return false;
+      }
       if (typeof ytPlayer.getPlayerState === 'function') {
         const state = ytPlayer.getPlayerState();
         // YT.PlayerState.PLAYING === 1, YT.PlayerState.BUFFERING === 3
@@ -2996,6 +3010,7 @@ if (typeof window !== 'undefined') {
 
     document.getElementById('voxMusicToggle').addEventListener('click', toggleMusic);
     document.getElementById('voxMusicSkip').addEventListener('click', () => {
+      hasUserInteracted = true;
       playNextRandomTrack();
     });
 
@@ -3064,21 +3079,25 @@ if (typeof window !== 'undefined') {
     if (ytPlayer) return;
 
     const { videoId, startSeconds } = getActiveTrackConfig();
+    const playerVars = {
+      autoplay: wantMusic ? 1 : 0,
+      start: startSeconds,
+      loop: 1,
+      controls: 0,
+      disablekb: 1,
+      modestbranding: 1,
+      playsinline: 1,
+      enablejsapi: 1
+    };
+    if (window.location && typeof window.location.origin === 'string' && /^https?:\/\//i.test(window.location.origin)) {
+      playerVars.origin = window.location.origin;
+    }
 
     ytPlayer = new YT.Player('soaHiddenYtPlayer', {
       height: '1',
       width: '1',
       videoId: videoId,
-      playerVars: {
-        autoplay: wantMusic ? 1 : 0,
-        start: startSeconds,
-        loop: 1,
-        controls: 0,
-        disablekb: 1,
-        modestbranding: 1,
-        playsinline: 1,
-        enablejsapi: 1
-      },
+      playerVars: playerVars,
       events: {
         onReady: (event) => {
           ytReady = true;
@@ -3087,7 +3106,7 @@ if (typeof window !== 'undefined') {
             if (typeof event.target.setVolume === 'function') event.target.setVolume(35);
           }
           if (wantMusic) {
-            resumeOrStartMusic(false);
+            resumeOrStartMusic(hasUserInteracted);
           }
         },
         onStateChange: (event) => {
@@ -3181,6 +3200,24 @@ if (typeof window !== 'undefined') {
         return;
       }
 
+      let state = -1;
+      if (typeof ytPlayer.getPlayerState === 'function') {
+        try {
+          state = ytPlayer.getPlayerState();
+        } catch (e) {}
+      }
+
+      // When triggered from a user gesture and the player is still UNSTARTED (-1) or CUED (5)
+      // (e.g. after initial root-page autoplay block on https://armageddon-vox.pages.dev/),
+      // synchronously call loadVideoById inside the gesture call stack so playback starts immediately.
+      if ((state === -1 || state === 5) && (fromUserGesture || hasUserInteracted) && typeof ytPlayer.loadVideoById === 'function') {
+        const { videoId, startSeconds } = getActiveTrackConfig();
+        ytPlayer.loadVideoById({
+          videoId: videoId,
+          startSeconds: startSeconds
+        });
+      }
+
       if (typeof ytPlayer.playVideo === 'function') {
         ytPlayer.playVideo();
       } else if (typeof ytPlayer.loadVideoById === 'function') {
@@ -3193,17 +3230,21 @@ if (typeof window !== 'undefined') {
 
       updateMusicUI(true);
 
-      // If triggered by a user gesture and the current video remains stuck/unstarted after 1.2s,
-      // automatically advance to a fresh random track (eliminating the need to press Skip manually).
-      if (fromUserGesture) {
-        if (musicRecoveryTimer) clearTimeout(musicRecoveryTimer);
-        musicRecoveryTimer = setTimeout(() => {
-          musicRecoveryTimer = null;
-          if (wantMusic && ytReady && !isPlayerActuallyPlaying()) {
-            playNextRandomTrack();
-          }
-        }, 1200);
-      }
+      if (musicRecoveryTimer) clearTimeout(musicRecoveryTimer);
+      musicRecoveryTimer = setTimeout(() => {
+        musicRecoveryTimer = null;
+        if (!wantMusic || !ytReady || isPlayerActuallyPlaying()) return;
+        if (fromUserGesture || hasUserInteracted) {
+          playNextRandomTrack();
+        } else if (ytPlayer && typeof ytPlayer.mute === 'function' && typeof ytPlayer.playVideo === 'function') {
+          // If browser blocked unmuted autoplay on initial load before any user gesture,
+          // pre-buffer muted so the very first pointerdown/click/keydown unmutes with zero delay.
+          try {
+            ytPlayer.mute();
+            ytPlayer.playVideo();
+          } catch (e) {}
+        }
+      }, 900);
     } catch (err) {
       console.warn('Vox-Caster resume exception, falling back to random:', err);
       playNextRandomTrack();
@@ -3247,6 +3288,14 @@ if (typeof window !== 'undefined') {
   }
 
   function toggleMusic() {
+    hasUserInteracted = true;
+    // If user wanted music ON, but browser blocked initial autoplay on root load so nothing is playing yet,
+    // clicking VOX-AMBIENCE starts the music immediately instead of toggling it OFF!
+    if (wantMusic && ytReady && !isPlayerActuallyPlaying()) {
+      resumeOrStartMusic(true);
+      return;
+    }
+
     wantMusic = !wantMusic;
     try {
       localStorage.setItem(STORAGE_KEY_MUSIC, String(wantMusic));
@@ -3259,7 +3308,7 @@ if (typeof window !== 'undefined') {
         updateMusicUI(true);
         loadYouTubeAPI();
       } else {
-        resumeOrStartMusic();
+        resumeOrStartMusic(true);
       }
     } else {
       isPlaying = false;
@@ -3465,6 +3514,18 @@ if (typeof window !== 'undefined') {
     transmitToVox: transmitToVox
   };
 
+  /**
+   * Normalizes URL pathnames so root '/' and '/index.html' (on Cloudflare Pages / static hosts)
+   * resolve to the same canonical path ('/').
+   *
+   * @param {string} pathname - URL pathname string
+   * @returns {string} Canonical pathname
+   */
+  function normalizePathname(pathname) {
+    const raw = String(pathname || '/');
+    return raw.replace(/\/index\.html$/i, '/') || '/';
+  }
+
   document.addEventListener('click', (e) => {
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 
@@ -3479,7 +3540,7 @@ if (typeof window !== 'undefined') {
       const url = new URL(link.href, window.location.href);
       if (url.origin !== window.location.origin) return;
 
-      if (url.pathname === window.location.pathname && url.search === window.location.search) {
+      if (normalizePathname(url.pathname) === normalizePathname(window.location.pathname) && url.search === window.location.search) {
         if (url.hash) return;
         e.preventDefault();
         return;
@@ -3524,7 +3585,8 @@ if (typeof window !== 'undefined') {
       createPlayer,
       isPlayerActuallyPlaying,
       resumeOrStartMusic,
-      playNextRandomTrack
+      playNextRandomTrack,
+      normalizePathname
     };
   }
 })();

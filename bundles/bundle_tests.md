@@ -1402,7 +1402,22 @@ test('vox-audio: recovers from browser autoplay block on user interaction and au
   const prevLoadCalls = loadCalls;
   capturedEvents.onError({ data: 150 });
   assert.equal(loadCalls, prevLoadCalls + 1, 'onError must automatically skip to the next random track');
+
+  // Simulate root domain (https://armageddon-vox.pages.dev/) where initial autoplay left state at -1 (UNSTARTED):
+  // calling resumeOrStartMusic(true) on a user gesture must synchronously call loadVideoById + playVideo
+  const loadsBeforeGesture = loadCalls;
+  const playsBeforeGesture = playCalls;
+  voxModule.resumeOrStartMusic(true);
+  assert.equal(loadCalls, loadsBeforeGesture + 1, 'resumeOrStartMusic(true) must synchronously call loadVideoById when state is -1');
+  assert.equal(playCalls, playsBeforeGesture + 1, 'resumeOrStartMusic(true) must synchronously call playVideo');
+
+  // Verify normalizePathname treats root '/' and '/index.html' identically
+  assert.equal(typeof voxModule.normalizePathname, 'function', 'Must export normalizePathname helper');
+  assert.equal(voxModule.normalizePathname('/'), '/');
+  assert.equal(voxModule.normalizePathname('/index.html'), '/');
+  assert.equal(voxModule.normalizePathname('/pages/vox.html'), '/pages/vox.html');
 });
+
 
 
 
