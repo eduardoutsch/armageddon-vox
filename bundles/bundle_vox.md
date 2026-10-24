@@ -1115,7 +1115,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
             card.className = isRogue ? 'crt-intercept-card rogue-intercept' : 'crt-intercept-card';
             const headerColor = isRogue ? '#c084fc' : '#ff4757';
             const headerBorder = isRogue ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
-            const headerIcon = isRogue ? '🎲 SECTOR BROADCAST' : '⚡ INTERCEPT';
+            const headerIcon = isRogue ? 'SECTOR BROADCAST' : 'INTERCEPT';
             card.innerHTML = `
               <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:${headerColor}; border-bottom:1px dashed ${headerBorder}; padding-bottom:5px; margin-bottom:8px;">
                 <span>${headerIcon} // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>
