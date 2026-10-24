@@ -174,7 +174,8 @@ const evalFn = new Function(
     getSelectedChannel: () => selectedChannel,
     getActivePassphrase: () => activePassphrase,
     getShowAllOlderMessages: () => showAllOlderMessages,
-    getShowAllOlderInterferences: () => showAllOlderInterferences
+    getShowAllOlderInterferences: () => showAllOlderInterferences,
+    isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null)
   };`
 );
 
@@ -590,6 +591,46 @@ test('vox: initVoxTerminalPage restores saved session only when no pending paylo
   assert.equal(vox.getActivePassphrase(), 'VermilionKey99');
   assert.equal(mockElements.terminalScreen.classList.contains('hidden'), false);
   assert.equal(mockElements.authScreen.classList.contains('hidden'), true);
+});
+
+test('vox: renders Rogue Sector dual-channel interferences in a distinct color/class (.rogue-intercept) compared to rival player interferences', async () => {
+  assert.equal(typeof vox.isRogueSectorInterference, 'function', 'Must define isRogueSectorInterference helper');
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT' }), true);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)' }), false);
+
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  mockInterferences = [
+    {
+      id: 'int_rival_1',
+      target_channel: 'alpha',
+      origin_hint: 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)',
+      redacted_text: 'Rival movement near [REDACTED]',
+      created_at: '2026-10-24T14:00:00Z'
+    },
+    {
+      id: 'int_rogue_1',
+      target_channel: 'alpha',
+      origin_hint: 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT',
+      redacted_text: 'Rogue sector clash near [REDACTED] shifted Warp weather',
+      created_at: '2026-10-24T14:05:00Z'
+    }
+  ];
+
+  mockElements.interferencesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  assert.equal(mockElements.interferencesBox.children.length, 2);
+  const rivalCard = mockElements.interferencesBox.children[0];
+  const rogueCard = mockElements.interferencesBox.children[1];
+
+  assert.equal(rivalCard.className, 'crt-intercept-card', 'Rival player intercept must use standard crimson .crt-intercept-card');
+  assert.ok(rivalCard.innerHTML.includes('#ff4757'), 'Rival player intercept header must use crimson color');
+
+  assert.ok(rogueCard.className.includes('rogue-intercept'), 'Rogue Sector intercept must include .rogue-intercept class');
+  assert.ok(!rogueCard.innerHTML.includes('#ff4757'), 'Rogue Sector intercept header must use a distinct non-crimson color');
+  assert.ok(voxHtml.includes('.crt-intercept-card.rogue-intercept'), 'vox.html CSS must define .crt-intercept-card.rogue-intercept');
 });
 
 

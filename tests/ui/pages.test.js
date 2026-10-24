@@ -325,9 +325,22 @@ test('UI Script Boundary: HTML script sequences parse cleanly in shared scope wi
   }
 });
 
-test('UI Browser Integration: all HTML pages load in headless browser with zero uncaught page errors', async () => {
+/**
+ * Launches a headless Playwright browser, falling back to system Chrome or Edge
+ * when the standalone Playwright Chromium binary is not installed locally.
+ */
+async function launchTestBrowser() {
   const { chromium } = require('playwright');
-  const browser = await chromium.launch({ headless: true });
+  for (const opts of [{ headless: true }, { channel: 'chrome', headless: true }, { channel: 'msedge', headless: true }]) {
+    try {
+      return await chromium.launch(opts);
+    } catch (_) {}
+  }
+  throw new Error('Could not launch headless Chromium, Chrome, or Edge for UI integration test');
+}
+
+test('UI Browser Integration: all HTML pages load in headless browser with zero uncaught page errors', async () => {
+  const browser = await launchTestBrowser();
   const page = await browser.newPage();
 
   const pages = [
@@ -365,8 +378,7 @@ test('UI Browser Integration: all HTML pages load in headless browser with zero 
 });
 
 test('UI Boundary: pages/roster.html loads with live dossier preview, active tab 1, and interactive submenu navigation', async () => {
-  const { chromium } = require('playwright');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchTestBrowser();
   const page = await browser.newPage();
 
   const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/roster.html').replace(/\\/g, '/');
@@ -444,18 +456,11 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     server.listen(0, () => resolve(server.address().port));
   });
 
-  let playwright;
-  try {
-    playwright = require('playwright');
-  } catch (e) {
-    server.close();
-    return;
-  }
-
-  const browser = await playwright.chromium.launch();
+  let browser;
   const pageErrors = [];
 
   try {
+    browser = await launchTestBrowser();
     const page = await browser.newPage();
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
@@ -517,7 +522,7 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     const syntaxErrors = pageErrors.filter((e) => !e.includes('401'));
     assert.deepEqual(syntaxErrors, [], 'Must encounter 0 page errors or syntax errors during seamless navigation');
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
     server.close();
   }
 });

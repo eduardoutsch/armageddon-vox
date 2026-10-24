@@ -1707,6 +1707,51 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for EMERGE
   );
 });
 
+test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR AUXILIARY BATTLE REPORT and broadcasts to BOTH alpha and beta channels', async () => {
+  const dispatchedPrompts = [];
+  const fetchCalls = [];
+  const logged = [];
+
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const rogueMsg = {
+    id: '55667788-rogue-report',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: '+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++\n• BATTLE OUTCOME: Chaos Victory'
+  };
+
+  const success = await processSingleMessage(rogueMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 55667788\n+++ ORBITAL DECREE +++\nRogue clash logged.</DIRECT_REPLY><INTERCEPT>Warp surge near [REDACTED] detected across the sector.</INTERCEPT>',
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Rogue Sector report must trigger Pattern 5 intercept bleed instruction in the prompt'
+  );
+
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCalls.length, 2, 'Rogue Sector intercept must be broadcast to BOTH alpha and beta');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
+  assert.ok(logged.some(m => m.includes('ALPHA & BETA')));
+});
+
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];
@@ -2232,9 +2277,22 @@ test('UI Script Boundary: HTML script sequences parse cleanly in shared scope wi
   }
 });
 
-test('UI Browser Integration: all HTML pages load in headless browser with zero uncaught page errors', async () => {
+/**
+ * Launches a headless Playwright browser, falling back to system Chrome or Edge
+ * when the standalone Playwright Chromium binary is not installed locally.
+ */
+async function launchTestBrowser() {
   const { chromium } = require('playwright');
-  const browser = await chromium.launch({ headless: true });
+  for (const opts of [{ headless: true }, { channel: 'chrome', headless: true }, { channel: 'msedge', headless: true }]) {
+    try {
+      return await chromium.launch(opts);
+    } catch (_) {}
+  }
+  throw new Error('Could not launch headless Chromium, Chrome, or Edge for UI integration test');
+}
+
+test('UI Browser Integration: all HTML pages load in headless browser with zero uncaught page errors', async () => {
+  const browser = await launchTestBrowser();
   const page = await browser.newPage();
 
   const pages = [
@@ -2272,8 +2330,7 @@ test('UI Browser Integration: all HTML pages load in headless browser with zero 
 });
 
 test('UI Boundary: pages/roster.html loads with live dossier preview, active tab 1, and interactive submenu navigation', async () => {
-  const { chromium } = require('playwright');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchTestBrowser();
   const page = await browser.newPage();
 
   const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/roster.html').replace(/\\/g, '/');
@@ -2351,18 +2408,11 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     server.listen(0, () => resolve(server.address().port));
   });
 
-  let playwright;
-  try {
-    playwright = require('playwright');
-  } catch (e) {
-    server.close();
-    return;
-  }
-
-  const browser = await playwright.chromium.launch();
+  let browser;
   const pageErrors = [];
 
   try {
+    browser = await launchTestBrowser();
     const page = await browser.newPage();
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
@@ -2424,7 +2474,7 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     const syntaxErrors = pageErrors.filter((e) => !e.includes('401'));
     assert.deepEqual(syntaxErrors, [], 'Must encounter 0 page errors or syntax errors during seamless navigation');
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
     server.close();
   }
 });
@@ -3872,19 +3922,19 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
   assert.ok(dossierStr.includes('Held the frontline'));
 });
 
-test('crusade: buildMasterDossierString formats Mode 3 Rogue Sector Battle with planetary consequences and alliance SPt telemetry', () => {
+test('crusade: does not duplicate Mode 3 Rogue Sector reporting (kept exclusively in pages/rogue.html)', () => {
+  assert.ok(!crusadeHtml.includes('Mode 3: Rogue Sector Auxiliary Clash'), 'crusade.html must not include Mode 3 Rogue Sector option in dossierModeNode');
+  assert.ok(!crusadeHtml.includes('Mode 3 Rogue Sector:'), 'crusade.html must not include Mode 3 Rogue Sector outcomes in dossierOutcome');
+
   mockElements.dossierChannel.value = 'alpha';
-  mockElements.dossierModeNode.value = 'Mode 3: Rogue Sector Auxiliary Clash';
-  mockElements.dossierOutcome.value = 'Mode 3 Rogue Sector: Imperium Victory (+1 SPt Gatebreakers // Warp Drops to Minor)';
-  mockElements.dossierBattleNotes.value = 'Auxiliary militia secured fuel depot 7 from Chaos raiders.';
+  mockElements.dossierModeNode.value = 'Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)';
+  mockElements.dossierOutcome.value = '1v1 PvP Victory & Achieved Phase Narrative Goal (+5 SPts)';
+  mockElements.dossierBattleNotes.value = 'Secured the central ridge against rival vanguard.';
 
   const dossierStr = crusade.buildMasterDossierString();
   assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
-  assert.ok(dossierStr.includes('Mode 3: Rogue Sector Auxiliary Clash'));
-  assert.ok(dossierStr.includes('Imperium Victory'));
-  assert.ok(dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'));
-  assert.ok(dossierStr.includes('Gatebreakers'));
-  assert.ok(dossierStr.includes('Auxiliary militia secured fuel depot 7'));
+  assert.ok(!dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'), 'Master Dossier in crusade.html must not include Rogue Sector planetary impact');
+  assert.ok(dossierStr.includes('Pattern 2 Munitorum After-Action Audit'));
 });
 
 test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox', () => {
@@ -4278,7 +4328,8 @@ const evalFn = new Function(
     getSelectedChannel: () => selectedChannel,
     getActivePassphrase: () => activePassphrase,
     getShowAllOlderMessages: () => showAllOlderMessages,
-    getShowAllOlderInterferences: () => showAllOlderInterferences
+    getShowAllOlderInterferences: () => showAllOlderInterferences,
+    isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null)
   };`
 );
 
@@ -4694,6 +4745,46 @@ test('vox: initVoxTerminalPage restores saved session only when no pending paylo
   assert.equal(vox.getActivePassphrase(), 'VermilionKey99');
   assert.equal(mockElements.terminalScreen.classList.contains('hidden'), false);
   assert.equal(mockElements.authScreen.classList.contains('hidden'), true);
+});
+
+test('vox: renders Rogue Sector dual-channel interferences in a distinct color/class (.rogue-intercept) compared to rival player interferences', async () => {
+  assert.equal(typeof vox.isRogueSectorInterference, 'function', 'Must define isRogueSectorInterference helper');
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT' }), true);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)' }), false);
+
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  mockInterferences = [
+    {
+      id: 'int_rival_1',
+      target_channel: 'alpha',
+      origin_hint: 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)',
+      redacted_text: 'Rival movement near [REDACTED]',
+      created_at: '2026-10-24T14:00:00Z'
+    },
+    {
+      id: 'int_rogue_1',
+      target_channel: 'alpha',
+      origin_hint: 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT',
+      redacted_text: 'Rogue sector clash near [REDACTED] shifted Warp weather',
+      created_at: '2026-10-24T14:05:00Z'
+    }
+  ];
+
+  mockElements.interferencesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  assert.equal(mockElements.interferencesBox.children.length, 2);
+  const rivalCard = mockElements.interferencesBox.children[0];
+  const rogueCard = mockElements.interferencesBox.children[1];
+
+  assert.equal(rivalCard.className, 'crt-intercept-card', 'Rival player intercept must use standard crimson .crt-intercept-card');
+  assert.ok(rivalCard.innerHTML.includes('#ff4757'), 'Rival player intercept header must use crimson color');
+
+  assert.ok(rogueCard.className.includes('rogue-intercept'), 'Rogue Sector intercept must include .rogue-intercept class');
+  assert.ok(!rogueCard.innerHTML.includes('#ff4757'), 'Rogue Sector intercept header must use a distinct non-crimson color');
+  assert.ok(voxHtml.includes('.crt-intercept-card.rogue-intercept'), 'vox.html CSS must define .crt-intercept-card.rogue-intercept');
 });
 
 

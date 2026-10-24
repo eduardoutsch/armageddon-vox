@@ -250,6 +250,34 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       box-shadow: 0 0 8px rgba(255, 71, 87, 0.65);
     }
 
+    /* Rogue Sector Dual-Broadcast Interferences (Warp Amethyst / Purple CRT Phosphor) */
+    .crt-intercept-card.rogue-intercept {
+      background: rgba(18, 7, 30, 0.88);
+      border: 1px dashed rgba(168, 85, 247, 0.6);
+      border-left: 4px solid #a855f7;
+      color: #e9d5ff;
+      text-shadow: 0 0 7px rgba(168, 85, 247, 0.5);
+    }
+
+    .crt-intercept-card.rogue-intercept .censor-bar {
+      background: #a855f7;
+      color: #0f041d;
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.7);
+    }
+
+    .crt-intercept-card.rogue-intercept .crt-purge-btn {
+      background: rgba(168, 85, 247, 0.12);
+      border-color: rgba(168, 85, 247, 0.45);
+      color: #d8b4fe;
+    }
+
+    .crt-intercept-card.rogue-intercept .crt-purge-btn:hover {
+      background: rgba(168, 85, 247, 0.3);
+      border-color: #a855f7;
+      color: #fff;
+      box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+    }
+
     /* CRT Input Box */
     .crt-input-textarea {
       width: 100%;
@@ -904,6 +932,20 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   }
   window.purgeVoxEntry = purgeVoxEntry;
 
+  /**
+   * Determines whether an interference entry originated from a dual-broadcast
+   * Mode 3 Rogue Sector Auxiliary Battle Report rather than a single rival player's conduit.
+   *
+   * @param {object} ix - Interference record from public.vox_interferences
+   * @returns {boolean} True when the interference is a Rogue Sector dual-channel broadcast
+   */
+  function isRogueSectorInterference(ix) {
+    if (!ix) return false;
+    const combined = `${ix.origin_hint || ''} ${ix.redacted_text || ''}`;
+    return /PARALLEL SECTOR|ORBITAL AUGUR ARRAY|ROGUE SECTOR/i.test(combined);
+  }
+  window.isRogueSectorInterference = isRogueSectorInterference;
+
   async function refreshTerminal(forceScroll = false) {
     if (!activePassphrase) return;
     try {
@@ -1068,11 +1110,15 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
           }
 
           visibleInts.forEach(ix => {
+            const isRogue = isRogueSectorInterference(ix);
             const card = document.createElement('div');
-            card.className = 'crt-intercept-card';
+            card.className = isRogue ? 'crt-intercept-card rogue-intercept' : 'crt-intercept-card';
+            const headerColor = isRogue ? '#c084fc' : '#ff4757';
+            const headerBorder = isRogue ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
+            const headerIcon = isRogue ? '🎲 SECTOR BROADCAST' : '⚡ INTERCEPT';
             card.innerHTML = `
-              <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:#ff4757; border-bottom:1px dashed rgba(255,71,87,0.3); padding-bottom:5px; margin-bottom:8px;">
-                <span>⚡ INTERCEPT // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>
+              <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:${headerColor}; border-bottom:1px dashed ${headerBorder}; padding-bottom:5px; margin-bottom:8px;">
+                <span>${headerIcon} // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>
                 <span>
                   ${formatTime(ix.created_at)}
                   <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(ix.id)}', 'interference')" title="Purge Intercept from Log">✕ PURGE</button>

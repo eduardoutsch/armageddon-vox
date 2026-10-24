@@ -411,7 +411,6 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
             <option value="Mode 1: Horde Breach // Node 1 (Anthrand Munitions Vaults — Recon)">Mode 1: Horde // Node 1 (Anthrand Vaults — Recon)</option>
             <option value="Mode 1: Horde Breach // Node 2 (Stygies Outpost — Recon)">Mode 1: Horde // Node 2 (Stygies Outpost — Recon)</option>
             <option value="Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)">Mode 2: 1v1 PvP // Node 0 (Golgotha Jungle)</option>
-            <option value="Mode 3: Rogue Sector Auxiliary Clash">Mode 3: Rogue Sector Auxiliary Clash</option>
           </select>
         </div>
       </div>
@@ -426,10 +425,6 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
             <option value="Wiped Out in Horde Mode &amp; Failed Secret Objective">Horde: Wiped Out &amp; Failed Secret Objective</option>
             <option value="1v1 PvP Victory &amp; Achieved Phase Narrative Goal (+5 SPts)">1v1 PvP: Victory &amp; Achieved Phase Goal (+5 SPts)</option>
             <option value="1v1 PvP Defeat">1v1 PvP: Defeat</option>
-            <option value="Mode 3 Rogue Sector: Imperium Victory (+1 SPt Gatebreakers // Warp Drops to Minor)">Mode 3 Rogue: Imperium Victory (+1 SPt Gatebreakers)</option>
-            <option value="Mode 3 Rogue Sector: Chaos Victory (+1 SPt Desecrators // Warp Escalates to Catastrophic)">Mode 3 Rogue: Chaos Victory (+1 SPt Desecrators)</option>
-            <option value="Mode 3 Rogue Sector: Xenos Victory (+1 SPt Marauders // Triggers Hellscape)">Mode 3 Rogue: Xenos Victory (+1 SPt Marauders)</option>
-            <option value="Mode 3 Rogue Sector: Contested Stalemate (Zero Planetary Shift)">Mode 3 Rogue: Contested Stalemate</option>
           </select>
         </div>
         <div>
@@ -1279,6 +1274,13 @@ function buildLogisticsSummaryLine() {
   return `Battles Rem: ${crusadeState.tourBattlesRem || 0} | Wins Rem: ${crusadeState.tourWinsRem || 0} | Commendation Pts: ${crusadeState.commendationPts || 0} | Surplus: [${surStr}] | Deficiency: [${defStr}]`;
 }
 
+/**
+ * Compiles the Master Post-Battle & Unit Progression Dossier string for Mode 1 (Horde)
+ * and Mode 2 (1v1 PvP) Crusade engagements. Off-roster Mode 3 Rogue Sector reports
+ * are handled exclusively by pages/rogue.html to avoid cross-page duplication.
+ *
+ * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
+ */
 function buildMasterDossierString() {
   const chan = document.getElementById('dossierChannel')?.value || 'alpha';
   const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
@@ -1288,19 +1290,6 @@ function buildMasterDossierString() {
   const secTag = document.getElementById('dossierSecretTag')?.value || 'None';
   const leftover = document.getElementById('dossierLeftoverSp')?.value || '0 Leftover SP';
   const notes = (document.getElementById('dossierBattleNotes')?.value || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
-
-  const isRogueMode = modeNode.includes('Mode 3') || modeNode.includes('Rogue') || outcome.includes('Rogue');
-
-  let rogueImpact = '';
-  if (outcome.includes('Imperium Victory')) {
-    rogueImpact = 'Stabilizes sector: Next main game Warp Intensity drops to Minor (or -1 to 1st R1 Horde Spawn Roll) • +1 SPt to Gatebreakers';
-  } else if (outcome.includes('Chaos Victory')) {
-    rogueImpact = 'Widens breach: Next main game Warp Intensity escalates to Catastrophic (or triggers Banishing Rifts) • +1 SPt to Desecrators';
-  } else if (outcome.includes('Xenos Victory')) {
-    rogueImpact = 'Plunders vaults: Triggers Gravitic Nexus or Staggered Time Hellscape next main match • +1 SPt to Marauders';
-  } else {
-    rogueImpact = 'Contested / Stalemate: Zero planetary shift or Hegemony award';
-  }
 
   const forts = [];
   if (document.getElementById('fortHosp')?.checked) forts.push('Field Hospital (Auto-Pass OOA)');
@@ -1319,26 +1308,15 @@ function buildMasterDossierString() {
     `+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++`,
     `• REPORTING COMMANDER: ${cmdr}`,
     `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
-    `• OUTCOME & SURVIVAL: ${outcome}`
+    `• OUTCOME & SURVIVAL: ${outcome}`,
+    `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
+    `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
+    `• LEFTOVER SP SALVAGE: ${leftover}`
   ];
-
-  if (isRogueMode) {
-    lines.push(`• ROGUE SECTOR PLANETARY IMPACT: ${rogueImpact}`);
-  } else {
-    lines.push(
-      `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
-      `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
-      `• LEFTOVER SP SALVAGE: ${leftover}`
-    );
-  }
 
   if (chan === 'alpha') {
     lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${buildLogisticsSummaryLine()}`);
   }
-
-  const cmRequest = isRogueMode
-    ? `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this Rogue Sector battle's planetary consequence on the next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and christening any custom in-universe Lore for attached unit upgrades or Nemesis nominations!`
-    : `REQUEST FOR CAMPAIGN MASTER: Please emit a personalized Pattern 2 Munitorum After-Action Audit & Honour Scroll christening custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, Commendation, and Battle Scar!`;
 
   lines.push(
     `------------------------------------------------`,
@@ -1347,7 +1325,7 @@ function buildMasterDossierString() {
     `------------------------------------------------`,
     `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
     `------------------------------------------------`,
-    cmRequest
+    `REQUEST FOR CAMPAIGN MASTER: Please emit a personalized Pattern 2 Munitorum After-Action Audit & Honour Scroll christening custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, Commendation, and Battle Scar!`
   );
 
   return lines.join('\n');

@@ -84,7 +84,7 @@ A web-based mission runner, dynamic spawner, and companion suite designed for co
   Enemy roster configurations across threat brackets, nemesis tracking, custom shelf barracks, and one-click Nemesis Dossier induction compiler.
 
 - **🏆 Mode 5: Crusade Command & Quartermaster (`pages/crusade.html`)**  
-  3-Way Alliance Scoreboard (Imperium, Chaos, Xenos), 4-Phase Branching Narrative Trees, Random Upgrade Rollers (Traits, Mods, Relics, Scars), and Master Post-Battle Dossier Compiler supporting all modes (Horde, 1v1 PvP, and Mode 3 Rogue Sector Auxiliary Clashes).
+  3-Way Alliance Scoreboard (Imperium, Chaos, Xenos), 4-Phase Branching Narrative Trees, Random Upgrade Rollers (Traits, Mods, Relics, Scars), Munitorum Tour of Duty & Logistics tracking, and Master Post-Battle Dossier Compiler for Crusade modes (Mode 1 Horde and Mode 2 1v1 PvP).
 
 - **📜 Mode 6: Briefings, Ship & Atlas (`pages/briefing.html`)**  
   Interactive planetary atlas with 8-node sector SVG map, 3-way Parallel Hegemony Race tracker, narrative lore briefings, and orbital command support assets.
@@ -676,7 +676,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
     const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const needsInterceptBleed = /MASTER POST-BATTLE|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
@@ -783,6 +783,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   if (interceptPart && interceptPart.trim()) {
     const cleanIntercept = scrubArtifacts(interceptPart);
+    const isRogueBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT/i.test(rawQ);
 
     const isSelfTest =
       /simulate|test.*interference/i.test(rawQ) ||
@@ -792,20 +793,26 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     if (/target=["']?alpha/i.test(interceptAttrs)) destChannel = 'alpha';
     if (/target=["']?beta/i.test(interceptAttrs)) destChannel = 'beta';
 
-    const destOriginLabel = isSelfTest
-      ? 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK'
-      : originLabel;
+    const targetChannels = isRogueBroadcast ? ['alpha', 'beta'] : [destChannel];
 
-    await fetchFn(`${supabaseUrl}/rest/v1/vox_interferences`, {
-      method: 'POST',
-      headers: reqHeaders,
-      body: JSON.stringify({
-        target_channel: destChannel,
-        origin_hint: destOriginLabel,
-        redacted_text: cleanIntercept
-      })
-    });
-    logFn(`[INTERCEPT // ${channelTag}] Redacted psychic bleed transmitted to ${destChannel.toUpperCase()}!`);
+    const destOriginLabel = isRogueBroadcast
+      ? 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT'
+      : (isSelfTest
+        ? 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK'
+        : originLabel);
+
+    for (const targetCh of targetChannels) {
+      await fetchFn(`${supabaseUrl}/rest/v1/vox_interferences`, {
+        method: 'POST',
+        headers: reqHeaders,
+        body: JSON.stringify({
+          target_channel: targetCh,
+          origin_hint: destOriginLabel,
+          redacted_text: cleanIntercept
+        })
+      });
+    }
+    logFn(`[INTERCEPT BLEED ROUTED // ${channelTag}] -> ${targetChannels.join(' & ').toUpperCase()}!`);
   }
 
   logFn(`[DELIVERED // ${channelTag}] Verified reply for MSG_ID ${msgShortId} streamed to CRT terminal!`);

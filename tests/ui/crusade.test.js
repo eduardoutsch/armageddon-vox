@@ -309,19 +309,19 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
   assert.ok(dossierStr.includes('Held the frontline'));
 });
 
-test('crusade: buildMasterDossierString formats Mode 3 Rogue Sector Battle with planetary consequences and alliance SPt telemetry', () => {
+test('crusade: does not duplicate Mode 3 Rogue Sector reporting (kept exclusively in pages/rogue.html)', () => {
+  assert.ok(!crusadeHtml.includes('Mode 3: Rogue Sector Auxiliary Clash'), 'crusade.html must not include Mode 3 Rogue Sector option in dossierModeNode');
+  assert.ok(!crusadeHtml.includes('Mode 3 Rogue Sector:'), 'crusade.html must not include Mode 3 Rogue Sector outcomes in dossierOutcome');
+
   mockElements.dossierChannel.value = 'alpha';
-  mockElements.dossierModeNode.value = 'Mode 3: Rogue Sector Auxiliary Clash';
-  mockElements.dossierOutcome.value = 'Mode 3 Rogue Sector: Imperium Victory (+1 SPt Gatebreakers // Warp Drops to Minor)';
-  mockElements.dossierBattleNotes.value = 'Auxiliary militia secured fuel depot 7 from Chaos raiders.';
+  mockElements.dossierModeNode.value = 'Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)';
+  mockElements.dossierOutcome.value = '1v1 PvP Victory & Achieved Phase Narrative Goal (+5 SPts)';
+  mockElements.dossierBattleNotes.value = 'Secured the central ridge against rival vanguard.';
 
   const dossierStr = crusade.buildMasterDossierString();
   assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
-  assert.ok(dossierStr.includes('Mode 3: Rogue Sector Auxiliary Clash'));
-  assert.ok(dossierStr.includes('Imperium Victory'));
-  assert.ok(dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'));
-  assert.ok(dossierStr.includes('Gatebreakers'));
-  assert.ok(dossierStr.includes('Auxiliary militia secured fuel depot 7'));
+  assert.ok(!dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'), 'Master Dossier in crusade.html must not include Rogue Sector planetary impact');
+  assert.ok(dossierStr.includes('Pattern 2 Munitorum After-Action Audit'));
 });
 
 test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox', () => {

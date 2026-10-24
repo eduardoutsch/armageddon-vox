@@ -343,6 +343,51 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for EMERGE
   );
 });
 
+test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR AUXILIARY BATTLE REPORT and broadcasts to BOTH alpha and beta channels', async () => {
+  const dispatchedPrompts = [];
+  const fetchCalls = [];
+  const logged = [];
+
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const rogueMsg = {
+    id: '55667788-rogue-report',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: '+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++\n• BATTLE OUTCOME: Chaos Victory'
+  };
+
+  const success = await processSingleMessage(rogueMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 55667788\n+++ ORBITAL DECREE +++\nRogue clash logged.</DIRECT_REPLY><INTERCEPT>Warp surge near [REDACTED] detected across the sector.</INTERCEPT>',
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Rogue Sector report must trigger Pattern 5 intercept bleed instruction in the prompt'
+  );
+
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCalls.length, 2, 'Rogue Sector intercept must be broadcast to BOTH alpha and beta');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
+  assert.ok(logged.some(m => m.includes('ALPHA & BETA')));
+});
+
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];
