@@ -55,6 +55,8 @@ const mockElements = {
   rosTabBtn3: { classList: createMockClassList() },
   nemStatus1: { value: 'roaming' },
   nemStatus2: { value: 'roaming' },
+  nemStatus3: { value: 'roaming' },
+  toggleAllNemBtn: { textContent: '▴ Collapse All' },
   nemReportChannel: { value: 'alpha' },
   nemReportSector: { value: 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)' },
   nemReportUnit: { value: 'Tyranids — Screamer-Killer' },
@@ -72,8 +74,11 @@ const mockElements = {
   factionBracketDisplay: { innerHTML: '' }
 };
 
+const mockNemesisCards = [{ open: true }, { open: true }, { open: true }];
+
 const mockDocument = {
-  getElementById: (id) => mockElements[id] || null
+  getElementById: (id) => mockElements[id] || null,
+  querySelectorAll: (sel) => (sel.includes('details.nemesis-card') ? mockNemesisCards : [])
 };
 
 let transmittedChannel = null;
@@ -149,6 +154,7 @@ const evalFn = new Function(
     CUSTOM_POOL_STORAGE_KEY,
     HORDE_FACTION_SPAWN_TABLES: (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined' ? HORDE_FACTION_SPAWN_TABLES : (window && window.HORDE_FACTION_SPAWN_TABLES)),
     switchRosterTab,
+    toggleAllNemesisCards,
     buildNemesisDossierString,
     updateNemesisPreview,
     transmitNemesisDossier,
@@ -398,4 +404,34 @@ test('roster: per-faction shelf pool storage preserves separate pools per factio
   roster.onFactionPickerChange();
   assert.equal(mockElements.rosterPool34.value, '');
 });
+
+test('roster: Active Nemesis cards are collapsible windows and include Nemesis 3 (C\'tan Shard of the Void Dragon)', () => {
+  // Verify all 3 active nemeses are rendered as collapsible <details> windows
+  const detailsMatches = rosterHtml.match(/<details\s+class="[^"]*nemesis-card[^"]*"/g) || [];
+  assert.ok(detailsMatches.length >= 3, 'Must render at least 3 collapsible <details class="...nemesis-card..."> windows');
+
+  // Verify Nemesis 3: C'tan Shard of the Void Dragon content and placement after Aestred Thurga
+  const thurgaIdx = rosterHtml.indexOf('Aestred Thurga');
+  const voidDragonIdx = rosterHtml.indexOf("C'tan Shard of the Void Dragon");
+  assert.ok(thurgaIdx > -1, 'Must include Aestred Thurga card');
+  assert.ok(voidDragonIdx > thurgaIdx, "C'tan Shard of the Void Dragon card must appear after Aestred Thurga's card");
+
+  assert.ok(rosterHtml.includes('Power Level 4 • Rogue Sector Apex Nemesis'), 'Must include PL 4 Rogue Sector Apex Nemesis badge');
+  assert.ok(rosterHtml.includes('"The World-Eater of the Iron-Oxide Wastes" (Necrons // Hypercrypt Phalanx)'), 'Must include Void Dragon title and faction');
+  assert.ok(rosterHtml.includes('id="nemBadge3"'), 'Must include #nemBadge3 status badge');
+  assert.ok(rosterHtml.includes('id="nemStatus3"'), 'Must include #nemStatus3 select element');
+  assert.ok(rosterHtml.includes('Boss Battle Trait — "Bane-Cleaver &amp; Matter Absorption":'), 'Must include Boss Battle Trait');
+  assert.ok(rosterHtml.includes('🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point'), 'Must include Bounty Payout');
+
+  // Verify toggleAllNemesisCards collapses all open Nemesis cards and expands them back
+  mockNemesisCards.forEach((c) => { c.open = true; });
+  roster.toggleAllNemesisCards();
+  assert.ok(mockNemesisCards.every((c) => c.open === false), 'toggleAllNemesisCards must collapse all open Nemesis cards');
+  assert.equal(mockElements.toggleAllNemBtn.textContent, '▾ Expand All');
+
+  roster.toggleAllNemesisCards();
+  assert.ok(mockNemesisCards.every((c) => c.open === true), 'toggleAllNemesisCards must expand all collapsed Nemesis cards');
+  assert.equal(mockElements.toggleAllNemBtn.textContent, '▴ Collapse All');
+});
+
 

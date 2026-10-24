@@ -113,6 +113,105 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
       background: #090b10;
       color: var(--gold);
     }
+    details.nemesis-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--purple);
+      border-radius: 14px;
+      clip-path: none;
+      padding: 0;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    details.nemesis-card > summary.nemesis-card-summary {
+      list-style: none;
+      padding: 16px 18px;
+      font-family: var(--font-ui);
+      font-size: 1rem;
+      text-transform: none;
+      letter-spacing: normal;
+      color: var(--text);
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: none;
+      display: block;
+    }
+    details.nemesis-card > summary.nemesis-card-summary::-webkit-details-marker {
+      display: none;
+    }
+    details.nemesis-card[open] > summary.nemesis-card-summary {
+      border-bottom: 1px dashed var(--border);
+      background: rgba(212, 163, 73, 0.05);
+    }
+    .nemesis-card-body {
+      padding: 12px 18px 18px 18px;
+    }
+    .nem-collapse-pill {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 800;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-bright);
+      background: #090b10;
+      color: var(--muted);
+      letter-spacing: 0.6px;
+    }
+    .nem-collapse-pill::before {
+      content: "▸ EXPAND";
+    }
+    details.nemesis-card[open] .nem-collapse-pill {
+      color: var(--gold-bright);
+      border-color: rgba(212, 163, 73, 0.45);
+    }
+    details.nemesis-card[open] .nem-collapse-pill::before {
+      content: "▾ COLLAPSE";
+    }
+    .nem-status-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .nem-locked-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 800;
+      border-radius: 6px;
+      border: 1px solid var(--gold);
+      background: #090b10;
+      color: var(--gold-bright);
+      letter-spacing: 0.5px;
+    }
+    .nem-locked-badge.roaming {
+      border-color: var(--gold);
+      color: var(--gold-bright);
+    }
+    .nem-locked-badge.deployed {
+      border-color: var(--red);
+      color: #fca5a5;
+      background: rgba(204, 41, 54, 0.15);
+    }
+    .nem-locked-badge.slain {
+      border-color: var(--green);
+      color: #6ee7b7;
+      background: rgba(16, 185, 129, 0.15);
+    }
+    .rule-box {
+      background: #0b0d13;
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -158,51 +257,106 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
 
     <div class="section-header" style="margin-top:0;">
       <h3>Active Cross-Mode Nemesis Bounty Ledger</h3>
-      <span class="hud-sub">Status Locked by Campaign Master • Slaying a Nemesis Awards +2/+3 XP &amp; +1 SPt</span>
-    </div>
-
-    <!-- INDUCTED NEMESIS #1: SAINT CELESTINE -->
-    <div class="datasheet-card" style="border-top-color:var(--gold);">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
-        <div>
-          <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">NEMESIS #01 • SESSION 0 INDUCTION (PL 4)</span>
-          <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🪽 Saint Celestine, <em>"The Ashen Seraph of the High Sanctum"</em></h3>
-          <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (High Sanctum Auditor)</div>
-        </div>
-        <select id="nemStatus1" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
-          <option value="roaming">🔒 GM Status: 🟡 Orbiting High Sanctum (Dormant)</option>
-          <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
-          <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Cooldown)</option>
-        </select>
-      </div>
-      <p class="card-desc" style="margin-top:10px;">
-        <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> After the Krieg Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em>) detonated every Sororitas war-engine around the central Landing Site, Celestine descended from the sulfuric storm-clouds directly into the Krieg rear deployment zone—slaughtering the command echelon and seizing the home objective to clinch a razor-thin 3-VP victory.
-      </p>
-      <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
-        <strong style="color:var(--gold);">Permanent Nemesis Trait — <em>Judgment of the Blackened Glass</em>:</strong> When deployed on the surface (via Orbital Descent or a Slider -3 Purge Strike), Celestine deep-strikes within 9" of the trailing player's home objective and gains <strong>[PRECISION]</strong> and <strong>[DEVASTATING WOUNDS]</strong> against units carrying Warp Counters.
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <span class="hud-sub">Status Locked by Campaign Master • Slaying a Nemesis Awards +2/+3 XP &amp; +1 SPt</span>
+        <button type="button" class="btn-ghost btn-sm" id="toggleAllNemBtn" onclick="toggleAllNemesisCards()" style="padding:4px 10px; font-size:0.72rem;">▴ Collapse All</button>
       </div>
     </div>
 
-    <!-- INDUCTED NEMESIS #2: AESTRED THURGA & AGATHAE DOLAN -->
-    <div class="datasheet-card" style="border-top-color:var(--purple);">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
-        <div>
-          <span class="rule-tag" style="border-color:var(--purple); color:var(--purple);">NEMESIS #02 • SESSION 0 INDUCTION (PL 3)</span>
-          <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🚩 Aestred Thurga &amp; Agathae Dolan, <em>"Keepers of the Penitentiary Tapestry"</em></h3>
-          <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (Reliquant &amp; Hagiolater)</div>
+    <div id="nemesisGrid" class="nemesis-grid">
+      <!-- INDUCTED NEMESIS #1: SAINT CELESTINE -->
+      <details class="datasheet-card nemesis-card" style="border-top-color:var(--gold);" open>
+        <summary class="nemesis-card-summary">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span class="rule-tag" style="border-color:var(--gold); color:var(--gold);">NEMESIS #01 • SESSION 0 INDUCTION (PL 4)</span>
+              <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🪽 Saint Celestine, <em>"The Ashen Seraph of the High Sanctum"</em></h3>
+              <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (High Sanctum Auditor)</div>
+            </div>
+            <div class="nem-status-wrap">
+              <select id="nemStatus1" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
+                <option value="roaming">🔒 GM Status: 🟡 Orbiting High Sanctum (Dormant)</option>
+                <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
+                <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Cooldown)</option>
+              </select>
+              <span class="nem-collapse-pill" aria-hidden="true"></span>
+            </div>
+          </div>
+        </summary>
+        <div class="nemesis-card-body">
+          <p class="card-desc" style="margin-top:4px;">
+            <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> After the Krieg Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em>) detonated every Sororitas war-engine around the central Landing Site, Celestine descended from the sulfuric storm-clouds directly into the Krieg rear deployment zone—slaughtering the command echelon and seizing the home objective to clinch a razor-thin 3-VP victory.
+          </p>
+          <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
+            <strong style="color:var(--gold);">Permanent Nemesis Trait — <em>Judgment of the Blackened Glass</em>:</strong> When deployed on the surface (via Orbital Descent or a Slider -3 Purge Strike), Celestine deep-strikes within 9" of the trailing player's home objective and gains <strong>[PRECISION]</strong> and <strong>[DEVASTATING WOUNDS]</strong> against units carrying Warp Counters.
+          </div>
         </div>
-        <select id="nemStatus2" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
-          <option value="roaming">🔒 GM Status: 🟡 Orbiting High Sanctum (Dormant)</option>
-          <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
-          <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Cooldown)</option>
-        </select>
-      </div>
-      <p class="card-desc" style="margin-top:10px;">
-        <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> Struck down a forward Krieg Scout Sentinel in Round 1 with <em>Devastating Wounds</em> and weathered 11 point-blank Krieg shovel strikes without failing a single 3+ save, recording every transgression into the Auto-Tapestry of Judgement.
-      </p>
-      <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
-        <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>The Unforgiving Ledger</em>:</strong> Enemy units within 6" of Aestred Thurga cannot re-roll Battle-shock tests and suffer <strong>-1 Objective Control (OC)</strong> (to a minimum of 1).
-      </div>
+      </details>
+
+      <!-- INDUCTED NEMESIS #2: AESTRED THURGA & AGATHAE DOLAN -->
+      <details class="datasheet-card nemesis-card" style="border-top-color:var(--purple);" open>
+        <summary class="nemesis-card-summary">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span class="rule-tag" style="border-color:var(--purple); color:var(--purple);">NEMESIS #02 • SESSION 0 INDUCTION (PL 3)</span>
+              <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">🚩 Aestred Thurga &amp; Agathae Dolan, <em>"Keepers of the Penitentiary Tapestry"</em></h3>
+              <div style="font-size:0.8rem; color:var(--muted);">Faction: Imperium / Adepta Sororitas (Reliquant &amp; Hagiolater)</div>
+            </div>
+            <div class="nem-status-wrap">
+              <select id="nemStatus2" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
+                <option value="roaming">🔒 GM Status: 🟡 Orbiting High Sanctum (Dormant)</option>
+                <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
+                <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Cooldown)</option>
+              </select>
+              <span class="nem-collapse-pill" aria-hidden="true"></span>
+            </div>
+          </div>
+        </summary>
+        <div class="nemesis-card-body">
+          <p class="card-desc" style="margin-top:4px;">
+            <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> Struck down a forward Krieg Scout Sentinel in Round 1 with <em>Devastating Wounds</em> and weathered 11 point-blank Krieg shovel strikes without failing a single 3+ save, recording every transgression into the Auto-Tapestry of Judgement.
+          </p>
+          <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
+            <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>The Unforgiving Ledger</em>:</strong> Enemy units within 6" of Aestred Thurga cannot re-roll Battle-shock tests and suffer <strong>-1 Objective Control (OC)</strong> (to a minimum of 1).
+          </div>
+        </div>
+      </details>
+
+      <!-- NEMESIS 3: C'TAN SHARD OF THE VOID DRAGON -->
+      <details class="datasheet-card nemesis-card" style="border-top:3px solid var(--purple);" open>
+        <summary class="nemesis-card-summary">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+            <div>
+              <span class="badge purple" style="margin-bottom:4px; display:inline-block;">Power Level 4 • Rogue Sector Apex Nemesis</span>
+              <h3 style="margin:0; color:var(--gold-bright); font-size:1.15rem;"> C'tan Shard of the Void Dragon</h3>
+              <div style="font-size:0.82rem; color:#d8b4fe; font-style:italic;">"The World-Eater of the Iron-Oxide Wastes" (Necrons // Hypercrypt Phalanx)</div>
+            </div>
+            <div class="nem-status-wrap">
+              <span id="nemBadge3" class="nem-locked-badge roaming">🟡 ROAMING WASTES</span>
+              <select id="nemStatus3" class="hidden" disabled aria-hidden="true">
+                <option value="roaming" selected>🟡 ROAMING WASTES</option>
+                <option value="deployed">🔴 DEPLOYED ON SURFACE</option>
+                <option value="slain">🟢 SLAIN (Respawn Clock)</option>
+              </select>
+              <span class="nem-collapse-pill" aria-hidden="true"></span>
+            </div>
+          </div>
+        </summary>
+        <div class="nemesis-card-body">
+          <p style="font-size:0.84rem; color:var(--text); line-height:1.5; margin-bottom:10px;">
+            <strong>Origin Feat (Rogue Sector // Southern Iron-Oxide Flats):</strong> Shrugged off point-blank salvos from Commissar Yarrick's entire armoured column—regenerating its living-metal necrodermis through concentrated fire—before shearing a super-heavy <strong>Baneblade</strong> and both attending Tech-Priest Enginseers clean in half.
+          </p>
+          <div class="rule-box" style="margin-bottom:8px; border-left-color:var(--purple);">
+            <strong style="color:#d8b4fe; font-size:0.83rem;">Boss Battle Trait — "Bane-Cleaver &amp; Matter Absorption":</strong>
+            <p style="font-size:0.81rem; margin:4px 0 0 0; color:var(--text);">
+              Start of Fight phase, select 1 enemy <strong>VEHICLE</strong> within 12": on a 2+, it suffers <strong>D3 Mortal Wounds</strong> and the Void Dragon regains that many lost Wounds. Whenever it destroys a <strong>VEHICLE</strong> or <strong>MONSTER</strong> in melee, it heals <strong>D3+1 Wounds</strong> and forces enemy units within 6" to take a Battle-shock test.
+            </p>
+          </div>
+          <div style="font-size:0.8rem; color:var(--gold); font-weight:700;">
+            🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point
+          </div>
+        </div>
+      </details>
     </div>
 
     <!-- SUBMIT NEW NEMESIS DOSSIER TO CAMPAIGN MASTER -->
@@ -641,6 +795,9 @@ async function pullSharedPoolsFromCloud() {
       if (data.nemesis_status.nem2 && document.getElementById('nemStatus2')) {
         document.getElementById('nemStatus2').value = data.nemesis_status.nem2;
       }
+      if (data.nemesis_status.nem3 && document.getElementById('nemStatus3')) {
+        document.getElementById('nemStatus3').value = data.nemesis_status.nem3;
+      }
       saveRosterPageState();
     }
 
@@ -649,6 +806,20 @@ async function pullSharedPoolsFromCloud() {
     return true;
   } catch (e) {}
   return false;
+}
+
+function toggleAllNemesisCards() {
+  if (typeof document.querySelectorAll !== 'function') return;
+  const cards = Array.from(document.querySelectorAll('#nemesisGrid details.nemesis-card'));
+  if (cards.length === 0) return;
+  const anyOpen = cards.some(c => c.open);
+  cards.forEach(c => {
+    c.open = !anyOpen;
+  });
+  const btn = document.getElementById('toggleAllNemBtn');
+  if (btn) {
+    btn.textContent = anyOpen ? '▾ Expand All' : '▴ Collapse All';
+  }
 }
 
 function renderFactionBracketTable() {
@@ -704,6 +875,7 @@ function saveRosterPageState() {
       activeRosterTab,
       nemStatus1: document.getElementById('nemStatus1')?.value || 'roaming',
       nemStatus2: document.getElementById('nemStatus2')?.value || 'roaming',
+      nemStatus3: document.getElementById('nemStatus3')?.value || 'roaming',
       nemReportChannel: document.getElementById('nemReportChannel')?.value || 'alpha',
       nemReportSector: document.getElementById('nemReportSector')?.value || '',
       nemReportUnit: document.getElementById('nemReportUnit')?.value || '',
@@ -724,13 +896,14 @@ function initRosterPage() {
     const raw = localStorage.getItem(ROSTER_STATE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (s.nemStatus1) document.getElementById('nemStatus1').value = s.nemStatus1;
-      if (s.nemStatus2) document.getElementById('nemStatus2').value = s.nemStatus2;
-      if (s.nemReportChannel) document.getElementById('nemReportChannel').value = s.nemReportChannel;
-      if (s.nemReportSector) document.getElementById('nemReportSector').value = s.nemReportSector;
-      if (s.nemReportUnit) document.getElementById('nemReportUnit').value = s.nemReportUnit;
-      if (s.nemReportFeat) document.getElementById('nemReportFeat').value = s.nemReportFeat;
-      if (s.nemReportNotes) document.getElementById('nemReportNotes').value = s.nemReportNotes;
+      if (s.nemStatus1 && document.getElementById('nemStatus1')) document.getElementById('nemStatus1').value = s.nemStatus1;
+      if (s.nemStatus2 && document.getElementById('nemStatus2')) document.getElementById('nemStatus2').value = s.nemStatus2;
+      if (s.nemStatus3 && document.getElementById('nemStatus3')) document.getElementById('nemStatus3').value = s.nemStatus3;
+      if (s.nemReportChannel && document.getElementById('nemReportChannel')) document.getElementById('nemReportChannel').value = s.nemReportChannel;
+      if (s.nemReportSector && document.getElementById('nemReportSector')) document.getElementById('nemReportSector').value = s.nemReportSector;
+      if (s.nemReportUnit && document.getElementById('nemReportUnit')) document.getElementById('nemReportUnit').value = s.nemReportUnit;
+      if (s.nemReportFeat && document.getElementById('nemReportFeat')) document.getElementById('nemReportFeat').value = s.nemReportFeat;
+      if (s.nemReportNotes && document.getElementById('nemReportNotes')) document.getElementById('nemReportNotes').value = s.nemReportNotes;
       if (s.activeRosterTab) switchRosterTab(s.activeRosterTab, false);
     }
   } catch (e) {}
@@ -743,6 +916,7 @@ function initRosterPage() {
 
 if (typeof window !== 'undefined') {
   window.switchRosterTab = switchRosterTab;
+  window.toggleAllNemesisCards = toggleAllNemesisCards;
   window.buildNemesisDossierString = buildNemesisDossierString;
   window.updateNemesisPreview = updateNemesisPreview;
   window.transmitNemesisDossier = transmitNemesisDossier;

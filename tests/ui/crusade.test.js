@@ -200,6 +200,20 @@ test('crusade: switchCrusadeTab switches tabs and persists state', () => {
   assert.equal(mockElements.cruTabBtn1.classList.contains('active'), true);
 });
 
+test('crusade: Marauders (3rd Force) default hordeSP is 1 in crusadeState and HTML scoreboard', () => {
+  assert.equal(crusade.getCrusadeState().hordeSP, 1, 'Default crusadeState.hordeSP must be 1');
+  assert.match(
+    crusadeHtml,
+    /id="hordeSP"[^>]*>1</,
+    'pages/crusade.html #hordeSP counter must default to 1'
+  );
+  assert.match(
+    crusadeHtml,
+    /id="hordeSP"[^>]*style="color:var\(--purple\);"/,
+    'pages/crusade.html #hordeSP counter must use var(--purple) styling'
+  );
+});
+
 test('crusade: adjScore modifies alliance Strategic & Campaign Points without going below 0', () => {
   crusade.adjScore('alphaSP', 5);
   assert.equal(crusade.getCrusadeState().alphaSP, 5);

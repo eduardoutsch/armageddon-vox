@@ -227,7 +227,7 @@
             <span class="hud-label">STRATEGIC PTS</span>
             <div class="hud-val-row" style="margin-top:4px;">
               <button class="mini-btn" onclick="adjScore('hordeSP', -1)">−</button>
-              <span class="hud-num" id="hordeSP" style="color:var(--red);">0</span>
+              <span id="hordeSP" class="hud-num score-val" style="color:var(--purple);">1</span>
               <button class="mini-btn" onclick="adjScore('hordeSP', 1)">+</button>
             </div>
           </div>
@@ -841,7 +841,7 @@ let crusadeState = {
   betaSP: 0,
   betaCP: 0,
   betaCacheCount: 0,
-  hordeSP: 0,
+  hordeSP: 1,
   hordeCP: 0,
   queuedRolls: [],
   // Astra Militarum Tour of Duty & Logistics State
