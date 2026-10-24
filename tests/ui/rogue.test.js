@@ -77,7 +77,8 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${rogu
   restoreRogueState,
   buildRogueDossierString,
   updateRogueDossierPreview,
-  transmitRogueDossier
+  transmitRogueDossier,
+  resetRogueDossierForm: (typeof resetRogueDossierForm !== 'undefined' ? resetRogueDossierForm : undefined)
 };`);
 
 const rogue = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
@@ -188,5 +189,30 @@ test('rogue: saveRogueState and restoreRogueState preserve and restore Rogue Dos
   assert.equal(mockElements.rogueOutcome.value, 'Xenos Victory');
   assert.equal(mockElements.rogueNemesisNominee.value, 'Hive Tyrant Apex');
   assert.equal(mockElements.rogueNotes.value, 'Spore mines detonated early.');
+});
+
+test('rogue: resetRogueDossierForm resets all Rogue Sector report form fields and preview to clean defaults', () => {
+  assert.ok(
+    rogueHtml.includes('resetRogueDossierForm()'),
+    'pages/rogue.html must include a button calling resetRogueDossierForm()'
+  );
+  assert.equal(typeof rogue.resetRogueDossierForm, 'function', 'resetRogueDossierForm must be defined');
+
+  mockElements.rogueReportChannel.value = 'beta';
+  mockElements.rogueCombatants.value = 'Orks vs Tyranids';
+  mockElements.rogueOutcome.value = 'Xenos Victory';
+  mockElements.rogueNemesisNominee.value = 'Gorgutz';
+  mockElements.rogueNotes.value = 'Custom battle notes.';
+
+  rogue.resetRogueDossierForm();
+
+  assert.equal(mockElements.rogueReportChannel.value, 'alpha');
+  assert.equal(mockElements.rogueCombatants.value, '');
+  assert.equal(mockElements.rogueOutcome.value, 'Imperium Victory');
+  assert.equal(mockElements.rogueNemesisNominee.value, '');
+  assert.equal(mockElements.rogueNotes.value, '');
+  assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('Auxiliary Forces (Unspecified Factions)'));
+  assert.equal(mockElements.rogueDossierPreviewBox.textContent.includes('Gorgutz'), false);
 });
 

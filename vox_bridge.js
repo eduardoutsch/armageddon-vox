@@ -625,6 +625,70 @@ async function drainChannelQueue(channelName, targetPage, options = {}) {
   return processedCount;
 }
 
+const DEFAULT_ANON_KEY = 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
+
+/**
+ * Publishes the live Astropathic Courier server status ('online' or 'offline')
+ * to Supabase's shared state (`nemesis_status.vox_server_heartbeat`) while preserving
+ * all existing `horde_pool` and `nemesis_status` properties.
+ *
+ * @param {'online'|'offline'} status - Current server status
+ * @param {object} [options] - Optional overrides for testing
+ * @returns {Promise<boolean>} True if heartbeat was saved to Supabase
+ */
+async function publishServerHeartbeat(status = 'online', options = {}) {
+  const fetchFn = options.fetchFn || (typeof fetch === 'function' ? fetch : null);
+  if (!fetchFn) return false;
+
+  const supabaseUrl = options.supabaseUrl || SUPABASE_URL;
+  const anonKey = options.anonKey || DEFAULT_ANON_KEY;
+  const rpcHeaders = {
+    'Content-Type': 'application/json',
+    'apikey': anonKey,
+    'Authorization': `Bearer ${anonKey}`
+  };
+
+  try {
+    let currentHordePool = {};
+    let currentNemesisStatus = {};
+
+    const getRes = await fetchFn(`${supabaseUrl}/rest/v1/rpc/get_shared_spawn_pools`, {
+      method: 'POST',
+      headers: rpcHeaders,
+      body: JSON.stringify({})
+    });
+    if (getRes && getRes.ok) {
+      const cur = await getRes.json();
+      if (cur) {
+        currentHordePool = cur.horde_pool || {};
+        currentNemesisStatus = cur.nemesis_status || {};
+      }
+    }
+
+    const nextHeartbeat = {
+      status: status === 'offline' ? 'offline' : 'online',
+      updatedAt: Date.now(),
+      manualActive: status !== 'offline'
+    };
+
+    const saveRes = await fetchFn(`${supabaseUrl}/rest/v1/rpc/save_shared_spawn_pools`, {
+      method: 'POST',
+      headers: rpcHeaders,
+      body: JSON.stringify({
+        p_horde_pool: currentHordePool,
+        p_nemesis_status: {
+          ...currentNemesisStatus,
+          vox_server_heartbeat: nextHeartbeat
+        }
+      })
+    });
+
+    return Boolean(saveRes && saveRes.ok);
+  } catch (e) {
+    return false;
+  }
+}
+
 async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}) {
   const { alphaThreadUrl, betaThreadUrl } = resolveThreadUrls(env);
 
@@ -668,6 +732,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   try {
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
     const initData = await initCheck.json();
+    await publishServerHeartbeat('online');
     logGreen('================================================================');
     logGreen('++ DUAL-CONDUIT PARALLEL BRIDGE v6.3 (THREAD-LOCKED) ONLINE ++');
     logGreen(`++ Pending Transmissions in Supabase: ${Array.isArray(initData) ? initData.length : JSON.stringify(initData)}`);
@@ -676,10 +741,27 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     logGreen(`[BOOT ERROR] Could not reach Supabase: ${e.message}`);
   }
 
+  let shuttingDown = false;
+  const handleShutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logGreen('\n[SHUTDOWN] Marking Astropathic Courier Server OFFLINE in Supabase...');
+    await publishServerHeartbeat('offline').catch(() => {});
+    process.exit(0);
+  };
+  process.once('SIGINT', handleShutdown);
+  process.once('SIGTERM', handleShutdown);
+
   let busyAlpha = false;
   let busyBeta = false;
+  let heartbeatTick = 0;
 
   setInterval(() => {
+    heartbeatTick = (heartbeatTick + 1) % 3;
+    if (heartbeatTick === 0) {
+      publishServerHeartbeat('online').catch(() => {});
+    }
+
     if (!busyAlpha) {
       busyAlpha = true;
       drainChannelQueue('alpha', alphaPage)
@@ -711,6 +793,7 @@ module.exports = {
   processSingleMessage,
   drainChannelQueue,
   runDualThreadCourier,
+  publishServerHeartbeat,
   messageAttemptTracker
 };
 

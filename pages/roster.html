@@ -409,9 +409,14 @@
 ------------------------------------------------
 REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (AGENT.md) and emit a CRT Vox-Dispatch christening its permanent Name, Title, Lore, and Boss Battle Trait!</div>
 
-      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitNemesisDossier()" style="margin-top:8px;">
-        📡 Transmit Directly via Astropathic Vox →
-      </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+        <button type="button" class="launch-btn" style="flex:1; margin:0;" data-sfx="custom" onclick="transmitNemesisDossier()">
+          📡 Transmit Directly via Astropathic Vox →
+        </button>
+        <button type="button" class="btn-ghost" onclick="resetNemesisDossierForm()">
+          🔄 Reset Nemesis Report
+        </button>
+      </div>
     </div>
   </div>
 
@@ -647,6 +652,29 @@ function transmitNemesisDossier() {
   if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox(chan, payload);
   }
+}
+
+/**
+ * Resets all New Nemesis Induction Dossier form fields back to their clean default state
+ * and refreshes the live preview and persisted localStorage state.
+ */
+function resetNemesisDossierForm() {
+  const chanEl = document.getElementById('nemReportChannel');
+  const secEl = document.getElementById('nemReportSector');
+  const unitEl = document.getElementById('nemReportUnit');
+  const featEl = document.getElementById('nemReportFeat');
+  const notesEl = document.getElementById('nemReportNotes');
+
+  if (chanEl) chanEl.value = 'alpha';
+  if (secEl) secEl.value = 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  if (unitEl) unitEl.value = '';
+  if (featEl) featEl.value = 'Slain a Player Warlord / Character in combat';
+  if (notesEl) notesEl.value = '';
+
+  if (window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+  updateNemesisPreview();
 }
 
 function getStoredPoolRoot() {

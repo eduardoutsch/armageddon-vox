@@ -1425,7 +1425,8 @@ const {
   extractCleanLastModelResponse,
   processSingleMessage,
   drainChannelQueue,
-  runDualThreadCourier
+  runDualThreadCourier,
+  publishServerHeartbeat
 } = require('../vox_bridge.js');
 
 function createMockPage({ onInsertText, evaluateResult } = {}) {
@@ -2087,6 +2088,57 @@ test('runDualThreadCourier: safely returns false and logs fatal error when threa
   assert.equal(result, false, 'runDualThreadCourier must exit early and return false');
   assert.ok(logged.some(m => m.includes('[FATAL ERROR] ALPHA_THREAD_URL and BETA_THREAD_URL must be defined in your .env file!')), 'Must log fatal error message');
 });
+
+test('publishServerHeartbeat: publishes online/offline vox_server_heartbeat to Supabase while preserving existing horde_pool and nemesis_status', async () => {
+  assert.equal(typeof publishServerHeartbeat, 'function', 'publishServerHeartbeat must be exported from vox_bridge.js');
+
+  const fetchCalls = [];
+  const mockFetch = async (url, opts = {}) => {
+    const body = opts.body ? JSON.parse(opts.body) : {};
+    fetchCalls.push({ url, body });
+    if (url.includes('get_shared_spawn_pools')) {
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          horde_pool: { b34: '10 Termagants' },
+          nemesis_status: { nem1: 'roaming', spawner_rooms: { 'HADES-01': { battleRound: 2 } } }
+        })
+      };
+    }
+    if (url.includes('save_shared_spawn_pools')) {
+      return {
+        ok: true,
+        json: async () => ({ ok: true })
+      };
+    }
+    return { ok: false };
+  };
+
+  const okOnline = await publishServerHeartbeat('online', {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co'
+  });
+  assert.equal(okOnline, true);
+
+  const saveCall = fetchCalls.find(c => c.url.includes('save_shared_spawn_pools'));
+  assert.ok(saveCall, 'Must call save_shared_spawn_pools');
+  assert.deepEqual(saveCall.body.p_horde_pool, { b34: '10 Termagants' }, 'Must preserve existing horde_pool');
+  assert.equal(saveCall.body.p_nemesis_status.nem1, 'roaming', 'Must preserve existing nemesis_status keys');
+  assert.deepEqual(saveCall.body.p_nemesis_status.spawner_rooms, { 'HADES-01': { battleRound: 2 } });
+  assert.equal(saveCall.body.p_nemesis_status.vox_server_heartbeat.status, 'online');
+  assert.equal(typeof saveCall.body.p_nemesis_status.vox_server_heartbeat.updatedAt, 'number');
+
+  fetchCalls.length = 0;
+  const okOffline = await publishServerHeartbeat('offline', {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co'
+  });
+  assert.equal(okOffline, true);
+  const saveOfflineCall = fetchCalls.find(c => c.url.includes('save_shared_spawn_pools'));
+  assert.equal(saveOfflineCall.body.p_nemesis_status.vox_server_heartbeat.status, 'offline');
+});
+
 ````
 
 ---
@@ -3022,7 +3074,8 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpS
   transmitUnboundPing,
   buildPvpVultureReportString,
   updatePvpVulturePreview,
-  transmitPvpVultureReport
+  transmitPvpVultureReport,
+  resetPvpVultureReportForm: (typeof resetPvpVultureReportForm !== 'undefined' ? resetPvpVultureReportForm : undefined)
 };`);
 
 const pvp = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
@@ -3209,6 +3262,30 @@ test('pvp: restorePvpState faithfully reconstructs UI state and Vulture report f
   assert.equal(mockElements.pvpReportNotes.value, 'Marauders claimed 4 SPts in Sector 5.');
   assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('4 SPts'));
 });
+
+test('pvp: resetPvpVultureReportForm resets Vulture SPts report fields, kill checkbox, and preview to clean defaults', () => {
+  assert.ok(
+    pvpHtml.includes('resetPvpVultureReportForm()'),
+    'pages/pvp.html must include a button calling resetPvpVultureReportForm()'
+  );
+  assert.equal(typeof pvp.resetPvpVultureReportForm, 'function', 'resetPvpVultureReportForm must be defined');
+
+  mockElements.pvpReportChannel.value = 'beta';
+  mockElements.vultureKillCheck.checked = true;
+  mockElements.pvpReportNotes.value = 'Custom vulture notes.';
+  pvp.updateVulture(true);
+
+  pvp.resetPvpVultureReportForm();
+
+  assert.equal(mockElements.pvpReportChannel.value, 'alpha');
+  assert.equal(mockElements.vultureKillCheck.checked, false);
+  assert.equal(mockElements.pvpReportNotes.value, '');
+  assert.equal(mockElements.vulturePts.innerText, '3 SPts');
+  assert.equal(mockElements.pvpReportSpBadge.textContent, '3 SPts');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('3 SPts'));
+  assert.equal(mockElements.pvpVulturePreviewBox.textContent.includes('Custom vulture notes.'), false);
+});
 ````
 
 ---
@@ -3295,7 +3372,8 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${rogu
   restoreRogueState,
   buildRogueDossierString,
   updateRogueDossierPreview,
-  transmitRogueDossier
+  transmitRogueDossier,
+  resetRogueDossierForm: (typeof resetRogueDossierForm !== 'undefined' ? resetRogueDossierForm : undefined)
 };`);
 
 const rogue = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
@@ -3406,6 +3484,31 @@ test('rogue: saveRogueState and restoreRogueState preserve and restore Rogue Dos
   assert.equal(mockElements.rogueOutcome.value, 'Xenos Victory');
   assert.equal(mockElements.rogueNemesisNominee.value, 'Hive Tyrant Apex');
   assert.equal(mockElements.rogueNotes.value, 'Spore mines detonated early.');
+});
+
+test('rogue: resetRogueDossierForm resets all Rogue Sector report form fields and preview to clean defaults', () => {
+  assert.ok(
+    rogueHtml.includes('resetRogueDossierForm()'),
+    'pages/rogue.html must include a button calling resetRogueDossierForm()'
+  );
+  assert.equal(typeof rogue.resetRogueDossierForm, 'function', 'resetRogueDossierForm must be defined');
+
+  mockElements.rogueReportChannel.value = 'beta';
+  mockElements.rogueCombatants.value = 'Orks vs Tyranids';
+  mockElements.rogueOutcome.value = 'Xenos Victory';
+  mockElements.rogueNemesisNominee.value = 'Gorgutz';
+  mockElements.rogueNotes.value = 'Custom battle notes.';
+
+  rogue.resetRogueDossierForm();
+
+  assert.equal(mockElements.rogueReportChannel.value, 'alpha');
+  assert.equal(mockElements.rogueCombatants.value, '');
+  assert.equal(mockElements.rogueOutcome.value, 'Imperium Victory');
+  assert.equal(mockElements.rogueNemesisNominee.value, '');
+  assert.equal(mockElements.rogueNotes.value, '');
+  assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('Auxiliary Forces (Unspecified Factions)'));
+  assert.equal(mockElements.rogueDossierPreviewBox.textContent.includes('Gorgutz'), false);
 });
 
 ````
@@ -3583,7 +3686,8 @@ const evalFn = new Function(
     getStoredPoolRoot,
     getFactionPoolFromStore,
     loadFactionInputs,
-    onFactionPickerChange
+    onFactionPickerChange,
+    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined)
   };`
 );
 
@@ -3885,8 +3989,30 @@ test('roster: uses valid Supabase publishable anon key, aligns #cloudSyncBadge w
   enableCloudMock = false;
 });
 
+test('roster: resetNemesisDossierForm resets all Nemesis Induction Dossier form fields and preview to clean defaults', () => {
+  assert.ok(
+    rosterHtml.includes('resetNemesisDossierForm()'),
+    'pages/roster.html must include a button calling resetNemesisDossierForm()'
+  );
+  assert.equal(typeof roster.resetNemesisDossierForm, 'function', 'resetNemesisDossierForm must be defined');
 
+  mockElements.nemReportChannel.value = 'beta';
+  mockElements.nemReportSector.value = 'Mode 3: Rogue Sector Auxiliary Clash';
+  mockElements.nemReportUnit.value = 'World Eaters — Eightbound';
+  mockElements.nemReportFeat.value = 'Epic cinematic moment / Unbelievable dice streak';
+  mockElements.nemReportNotes.value = 'Custom nemesis combat notes.';
 
+  roster.resetNemesisDossierForm();
+
+  assert.equal(mockElements.nemReportChannel.value, 'alpha');
+  assert.equal(mockElements.nemReportSector.value, 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  assert.equal(mockElements.nemReportUnit.value, '');
+  assert.equal(mockElements.nemReportFeat.value, 'Slain a Player Warlord / Character in combat');
+  assert.equal(mockElements.nemReportNotes.value, '');
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('[Unspecified Hostile Entity]'));
+  assert.equal(mockElements.nemDossierPreview.textContent.includes('Eightbound'), false);
+});
 ````
 
 ---
@@ -4624,7 +4750,9 @@ const mockElements = {
   directMessagesBox: createMockBox(),
   interferencesBox: createMockBox(),
   interferenceCountBadge: { textContent: '' },
-  questionInput: { value: '' }
+  questionInput: { value: '' },
+  serverStatusBadge: { innerHTML: '', textContent: '', classList: createMockClassList() },
+  terminalServerStatusLabel: { textContent: '', style: {} }
 };
 
 const mockDocument = {
@@ -4678,6 +4806,7 @@ const mockWindow = {
 const rpcCalls = [];
 let mockMessages = [];
 let mockInterferences = [];
+let mockServerHeartbeat = { status: 'online', updatedAt: Date.now() };
 let mockRpcHandler = async (fnName, params) => {
   rpcCalls.push({ fnName, params });
   if (fnName === 'check_channel_seal') return true;
@@ -4685,6 +4814,15 @@ let mockRpcHandler = async (fnName, params) => {
   if (fnName === 'send_vox_message') return { ok: true };
   if (fnName === 'delete_vox_entry') return { ok: true };
   if (fnName === 'get_vox_terminal_data') return { ok: true, messages: mockMessages, interferences: mockInterferences };
+  if (fnName === 'get_shared_spawn_pools') {
+    return {
+      ok: true,
+      horde_pool: {},
+      nemesis_status: {
+        vox_server_heartbeat: mockServerHeartbeat
+      }
+    };
+  }
   return null;
 };
 
@@ -4722,7 +4860,9 @@ const evalFn = new Function(
     getActivePassphrase: () => activePassphrase,
     getShowAllOlderMessages: () => showAllOlderMessages,
     getShowAllOlderInterferences: () => showAllOlderInterferences,
-    isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null)
+    isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null),
+    isVoxServerOnline: (typeof isVoxServerOnline === 'function' ? isVoxServerOnline : null),
+    checkVoxServerStatus: (typeof checkVoxServerStatus === 'function' ? checkVoxServerStatus : null)
   };`
 );
 
@@ -5180,7 +5320,39 @@ test('vox: renders Rogue Sector dual-channel interferences in a distinct color/c
   assert.ok(voxHtml.includes('.crt-intercept-card.rogue-intercept'), 'vox.html CSS must define .crt-intercept-card.rogue-intercept');
 });
 
+test('vox: displays live Astropathic Server Online/Offline status on both Auth and Terminal screens via checkVoxServerStatus', async () => {
+  assert.ok(voxHtml.includes('id="serverStatusBadge"'), 'pages/vox.html must include #serverStatusBadge on authScreen');
+  assert.ok(voxHtml.includes('id="terminalServerStatusLabel"'), 'pages/vox.html must include #terminalServerStatusLabel on terminalScreen');
+  assert.equal(typeof vox.isVoxServerOnline, 'function', 'Must define isVoxServerOnline helper');
+  assert.equal(typeof vox.checkVoxServerStatus, 'function', 'Must define checkVoxServerStatus function');
 
+  const now = 1700000000000;
+  // Fresh online heartbeat (10 seconds ago)
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 10000 }, now), true);
+  // Manual active online flag
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 500000, manualActive: true }, now), true);
+  // Stale heartbeat (5 minutes ago without manualActive)
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 300000 }, now), false);
+  // Explicit offline heartbeat
+  assert.equal(vox.isVoxServerOnline({ status: 'offline', updatedAt: now - 1000 }, now), false);
 
+  // Test checkVoxServerStatus when server is ONLINE
+  mockServerHeartbeat = { status: 'online', updatedAt: Date.now() };
+  const onlineState = await vox.checkVoxServerStatus();
+  assert.equal(onlineState, true);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('online'), true);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('offline'), false);
+  assert.ok(mockElements.serverStatusBadge.innerHTML.includes('ONLINE'));
+  assert.ok(mockElements.terminalServerStatusLabel.textContent.includes('ONLINE'));
+
+  // Test checkVoxServerStatus when server is OFFLINE
+  mockServerHeartbeat = { status: 'offline', updatedAt: Date.now() };
+  const offlineState = await vox.checkVoxServerStatus();
+  assert.equal(offlineState, false);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('offline'), true);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('online'), false);
+  assert.ok(mockElements.serverStatusBadge.innerHTML.includes('OFFLINE'));
+  assert.ok(mockElements.terminalServerStatusLabel.textContent.includes('OFFLINE'));
+});
 
 ````

@@ -77,7 +77,9 @@ const mockElements = {
   directMessagesBox: createMockBox(),
   interferencesBox: createMockBox(),
   interferenceCountBadge: { textContent: '' },
-  questionInput: { value: '' }
+  questionInput: { value: '' },
+  serverStatusBadge: { innerHTML: '', textContent: '', classList: createMockClassList() },
+  terminalServerStatusLabel: { textContent: '', style: {} }
 };
 
 const mockDocument = {
@@ -131,6 +133,7 @@ const mockWindow = {
 const rpcCalls = [];
 let mockMessages = [];
 let mockInterferences = [];
+let mockServerHeartbeat = { status: 'online', updatedAt: Date.now() };
 let mockRpcHandler = async (fnName, params) => {
   rpcCalls.push({ fnName, params });
   if (fnName === 'check_channel_seal') return true;
@@ -138,6 +141,15 @@ let mockRpcHandler = async (fnName, params) => {
   if (fnName === 'send_vox_message') return { ok: true };
   if (fnName === 'delete_vox_entry') return { ok: true };
   if (fnName === 'get_vox_terminal_data') return { ok: true, messages: mockMessages, interferences: mockInterferences };
+  if (fnName === 'get_shared_spawn_pools') {
+    return {
+      ok: true,
+      horde_pool: {},
+      nemesis_status: {
+        vox_server_heartbeat: mockServerHeartbeat
+      }
+    };
+  }
   return null;
 };
 
@@ -175,7 +187,9 @@ const evalFn = new Function(
     getActivePassphrase: () => activePassphrase,
     getShowAllOlderMessages: () => showAllOlderMessages,
     getShowAllOlderInterferences: () => showAllOlderInterferences,
-    isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null)
+    isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null),
+    isVoxServerOnline: (typeof isVoxServerOnline === 'function' ? isVoxServerOnline : null),
+    checkVoxServerStatus: (typeof checkVoxServerStatus === 'function' ? checkVoxServerStatus : null)
   };`
 );
 
@@ -633,6 +647,38 @@ test('vox: renders Rogue Sector dual-channel interferences in a distinct color/c
   assert.ok(voxHtml.includes('.crt-intercept-card.rogue-intercept'), 'vox.html CSS must define .crt-intercept-card.rogue-intercept');
 });
 
+test('vox: displays live Astropathic Server Online/Offline status on both Auth and Terminal screens via checkVoxServerStatus', async () => {
+  assert.ok(voxHtml.includes('id="serverStatusBadge"'), 'pages/vox.html must include #serverStatusBadge on authScreen');
+  assert.ok(voxHtml.includes('id="terminalServerStatusLabel"'), 'pages/vox.html must include #terminalServerStatusLabel on terminalScreen');
+  assert.equal(typeof vox.isVoxServerOnline, 'function', 'Must define isVoxServerOnline helper');
+  assert.equal(typeof vox.checkVoxServerStatus, 'function', 'Must define checkVoxServerStatus function');
 
+  const now = 1700000000000;
+  // Fresh online heartbeat (10 seconds ago)
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 10000 }, now), true);
+  // Manual active online flag
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 500000, manualActive: true }, now), true);
+  // Stale heartbeat (5 minutes ago without manualActive)
+  assert.equal(vox.isVoxServerOnline({ status: 'online', updatedAt: now - 300000 }, now), false);
+  // Explicit offline heartbeat
+  assert.equal(vox.isVoxServerOnline({ status: 'offline', updatedAt: now - 1000 }, now), false);
 
+  // Test checkVoxServerStatus when server is ONLINE
+  mockServerHeartbeat = { status: 'online', updatedAt: Date.now() };
+  const onlineState = await vox.checkVoxServerStatus();
+  assert.equal(onlineState, true);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('online'), true);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('offline'), false);
+  assert.ok(mockElements.serverStatusBadge.innerHTML.includes('ONLINE'));
+  assert.ok(mockElements.terminalServerStatusLabel.textContent.includes('ONLINE'));
+
+  // Test checkVoxServerStatus when server is OFFLINE
+  mockServerHeartbeat = { status: 'offline', updatedAt: Date.now() };
+  const offlineState = await vox.checkVoxServerStatus();
+  assert.equal(offlineState, false);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('offline'), true);
+  assert.equal(mockElements.serverStatusBadge.classList.contains('online'), false);
+  assert.ok(mockElements.serverStatusBadge.innerHTML.includes('OFFLINE'));
+  assert.ok(mockElements.terminalServerStatusLabel.textContent.includes('OFFLINE'));
+});
 

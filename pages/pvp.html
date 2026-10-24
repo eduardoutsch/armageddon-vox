@@ -114,9 +114,14 @@
 
       <div id="pvpVulturePreviewBox" class="stat-box" style="text-align:left; font-family:monospace; font-size:0.78rem; white-space:pre-wrap; line-height:1.45; color:var(--gold); margin-bottom:12px;"></div>
 
-      <button type="button" class="btn-gold" data-sfx="custom" style="width:100%; padding:12px; font-weight:800;" onclick="transmitPvpVultureReport()">
-        📡 Transmit 3rd Alliance Vulture SPts Report →
-      </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="btn-gold" data-sfx="custom" style="flex:1; padding:12px; font-weight:800;" onclick="transmitPvpVultureReport()">
+          📡 Transmit 3rd Alliance Vulture SPts Report →
+        </button>
+        <button type="button" class="btn-ghost" style="padding:12px 16px;" onclick="resetPvpVultureReportForm()">
+          🔄 Reset PvP Report
+        </button>
+      </div>
     </div>
   </div>
 
@@ -314,6 +319,25 @@ function transmitPvpVultureReport() {
   if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox(chan, payload);
   }
+}
+
+/**
+ * Resets all 1v1 Ash Wastes 3rd Alliance Vulture SPts report fields and kill checkbox
+ * back to their clean default state, updating the live preview and localStorage.
+ */
+function resetPvpVultureReportForm() {
+  const chanEl = document.getElementById('pvpReportChannel');
+  const killEl = document.getElementById('vultureKillCheck');
+  const notesEl = document.getElementById('pvpReportNotes');
+
+  if (chanEl) chanEl.value = 'alpha';
+  if (killEl) killEl.checked = false;
+  if (notesEl) notesEl.value = '';
+
+  if (window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+  updateVulture(true);
 }
 
 function transmitUnboundPing(pl, channel) {

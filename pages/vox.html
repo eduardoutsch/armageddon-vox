@@ -400,6 +400,36 @@
         padding: 6px 12px;
       }
     }
+
+    .server-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: monospace;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      transition: all 0.25s ease;
+    }
+    .server-status-pill.online {
+      background: rgba(0, 255, 136, 0.12);
+      border: 1px solid rgba(0, 255, 136, 0.45);
+      color: #00ff88;
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.18);
+    }
+    .server-status-pill.offline {
+      background: rgba(255, 71, 87, 0.12);
+      border: 1px solid rgba(255, 71, 87, 0.45);
+      color: #ff4757;
+      box-shadow: 0 0 12px rgba(255, 71, 87, 0.15);
+    }
+    .server-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+    }
   </style>
 </head>
 <body>
@@ -421,8 +451,13 @@
   <!-- STEP 1: SELECT CONDUIT & AUTHENTICATE / SEAL -->
   <div id="authScreen" class="hero-card" style="max-width:780px; margin:0 auto 22px auto;">
     <div class="hero-header">
-      <div class="status-pill" id="sealStatusBadge">
-        <span class="pulse-dot"></span> Checking Astropathic Seal...
+      <div style="display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+        <div class="status-pill" id="sealStatusBadge" style="margin:0;">
+          <span class="pulse-dot"></span> Checking Astropathic Seal...
+        </div>
+        <div class="status-pill server-status-pill online" id="serverStatusBadge" style="margin:0;">
+          <span class="server-dot"></span> 🟢 ASTROPATHIC SERVER: ONLINE
+        </div>
       </div>
       <h1 class="hero-title">Astropathic CRT Vox-Sanctum</h1>
       <p class="hero-subtitle" id="sealSubtitle">
@@ -472,9 +507,15 @@
   <!-- STEP 2: UNLOCKED CRT TERMINAL -->
   <div id="terminalScreen" class="hidden">
     <div class="hud-bar" style="margin-bottom:14px;">
-      <div class="hud-stat">
-        <span class="hud-label">LOCKED CONDUIT</span>
-        <span class="hud-num" id="activeConduitLabel" style="color:#00ff88; font-size:0.95rem; text-shadow:0 0 6px rgba(0,255,136,0.4);">TERMINAL ALPHA</span>
+      <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+        <div class="hud-stat">
+          <span class="hud-label">LOCKED CONDUIT</span>
+          <span class="hud-num" id="activeConduitLabel" style="color:#00ff88; font-size:0.95rem; text-shadow:0 0 6px rgba(0,255,136,0.4);">TERMINAL ALPHA</span>
+        </div>
+        <div class="hud-stat">
+          <span class="hud-label">ASTROPATHIC SERVER</span>
+          <span class="hud-num" id="terminalServerStatusLabel" style="color:#00ff88; font-size:0.9rem; text-shadow:0 0 6px rgba(0,255,136,0.35);">🟢 ONLINE (ACTIVE)</span>
+        </div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn-ghost btn-sm" onclick="refreshTerminal(true)">🔄 Poll Warp</button>
@@ -934,7 +975,67 @@
   }
   window.isRogueSectorInterference = isRogueSectorInterference;
 
+  /**
+   * Evaluates whether a Supabase `vox_server_heartbeat` payload indicates that the
+   * Astropathic Courier server (`vox_bridge.js`) is currently online and active.
+   *
+   * @param {object} hb - Heartbeat object `{ status, updatedAt, manualActive }`
+   * @param {number} [now=Date.now()] - Current epoch timestamp in ms
+   * @returns {boolean} True if the server is online
+   */
+  function isVoxServerOnline(hb, now = Date.now()) {
+    if (!hb || typeof hb !== 'object') return false;
+    if (hb.status !== 'online') return false;
+    if (hb.manualActive === true) return true;
+    if (typeof hb.updatedAt === 'number') {
+      return (now - hb.updatedAt) <= 90000;
+    }
+    return false;
+  }
+  window.isVoxServerOnline = isVoxServerOnline;
+
+  /**
+   * Queries Supabase for the latest Astropathic Courier heartbeat and updates
+   * both `#serverStatusBadge` (Auth screen) and `#terminalServerStatusLabel` (Terminal HUD).
+   *
+   * @returns {Promise<boolean>} True if the server is currently online
+   */
+  async function checkVoxServerStatus() {
+    let isOnline = false;
+    try {
+      const data = await rpcCall('get_shared_spawn_pools', {});
+      const hb = data && data.nemesis_status ? data.nemesis_status.vox_server_heartbeat : null;
+      isOnline = isVoxServerOnline(hb, Date.now());
+    } catch (e) {
+      isOnline = false;
+    }
+
+    const authBadge = document.getElementById('serverStatusBadge');
+    if (authBadge) {
+      authBadge.classList.toggle('online', isOnline);
+      authBadge.classList.toggle('offline', !isOnline);
+      authBadge.innerHTML = isOnline
+        ? `<span class="server-dot"></span> 🟢 ASTROPATHIC SERVER: ONLINE`
+        : `<span class="server-dot"></span> 🔴 ASTROPATHIC SERVER: OFFLINE (QUEUE MODE)`;
+    }
+
+    const termLabel = document.getElementById('terminalServerStatusLabel');
+    if (termLabel) {
+      termLabel.textContent = isOnline ? '🟢 ONLINE (ACTIVE)' : '🔴 OFFLINE (QUEUED)';
+      if (termLabel.style) {
+        termLabel.style.color = isOnline ? '#00ff88' : '#ff4757';
+        termLabel.style.textShadow = isOnline
+          ? '0 0 6px rgba(0,255,136,0.35)'
+          : '0 0 6px rgba(255,71,87,0.35)';
+      }
+    }
+
+    return isOnline;
+  }
+  window.checkVoxServerStatus = checkVoxServerStatus;
+
   async function refreshTerminal(forceScroll = false) {
+    checkVoxServerStatus().catch(() => {});
     if (!activePassphrase) return;
     try {
       const data = await rpcCall('get_vox_terminal_data', {
@@ -1173,7 +1274,15 @@
     selectConduit(selectedChannel);
   }
 
+  var serverStatusTimer = null;
+
   async function initVoxTerminalPage() {
+    checkVoxServerStatus().catch(() => {});
+    if (serverStatusTimer) clearInterval(serverStatusTimer);
+    serverStatusTimer = setInterval(() => {
+      checkVoxServerStatus().catch(() => {});
+    }, 15000);
+
     const pending = checkPendingDossierBuffer();
 
     // If an encrypted dossier or ping is awaiting transmission, NEVER bypass the terminal password!
@@ -1217,6 +1326,10 @@
       if (pollTimer) {
         clearInterval(pollTimer);
         pollTimer = null;
+      }
+      if (serverStatusTimer) {
+        clearInterval(serverStatusTimer);
+        serverStatusTimer = null;
       }
       activeStreamTimers.forEach(t => clearTimeout(t));
       activeStreamTimers = [];

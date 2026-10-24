@@ -166,7 +166,8 @@ const evalFn = new Function(
     getStoredPoolRoot,
     getFactionPoolFromStore,
     loadFactionInputs,
-    onFactionPickerChange
+    onFactionPickerChange,
+    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined)
   };`
 );
 
@@ -468,5 +469,27 @@ test('roster: uses valid Supabase publishable anon key, aligns #cloudSyncBadge w
   enableCloudMock = false;
 });
 
+test('roster: resetNemesisDossierForm resets all Nemesis Induction Dossier form fields and preview to clean defaults', () => {
+  assert.ok(
+    rosterHtml.includes('resetNemesisDossierForm()'),
+    'pages/roster.html must include a button calling resetNemesisDossierForm()'
+  );
+  assert.equal(typeof roster.resetNemesisDossierForm, 'function', 'resetNemesisDossierForm must be defined');
 
+  mockElements.nemReportChannel.value = 'beta';
+  mockElements.nemReportSector.value = 'Mode 3: Rogue Sector Auxiliary Clash';
+  mockElements.nemReportUnit.value = 'World Eaters — Eightbound';
+  mockElements.nemReportFeat.value = 'Epic cinematic moment / Unbelievable dice streak';
+  mockElements.nemReportNotes.value = 'Custom nemesis combat notes.';
 
+  roster.resetNemesisDossierForm();
+
+  assert.equal(mockElements.nemReportChannel.value, 'alpha');
+  assert.equal(mockElements.nemReportSector.value, 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  assert.equal(mockElements.nemReportUnit.value, '');
+  assert.equal(mockElements.nemReportFeat.value, 'Slain a Player Warlord / Character in combat');
+  assert.equal(mockElements.nemReportNotes.value, '');
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('[Unspecified Hostile Entity]'));
+  assert.equal(mockElements.nemDossierPreview.textContent.includes('Eightbound'), false);
+});

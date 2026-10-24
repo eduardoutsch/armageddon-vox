@@ -145,9 +145,14 @@
       <!-- LIVE DOSSIER PREVIEW -->
       <div class="master-dossier-preview" id="rogueDossierPreviewBox" style="margin-top:10px;"></div>
 
-      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitRogueDossier()" style="margin-top:12px;">
-        📡 Transmit Rogue Sector Report via Astropathic Vox →
-      </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px;">
+        <button type="button" class="launch-btn" style="flex:1; margin:0;" data-sfx="custom" onclick="transmitRogueDossier()">
+          📡 Transmit Rogue Sector Report via Astropathic Vox →
+        </button>
+        <button type="button" class="btn-ghost" onclick="resetRogueDossierForm()">
+          🔄 Reset Rogue Report
+        </button>
+      </div>
     </div>
 
   </div>
@@ -215,6 +220,29 @@ function transmitRogueDossier() {
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox(chan, payload);
   }
+}
+
+/**
+ * Resets all Rogue Sector Battle Report form fields back to their clean default state
+ * and refreshes the live dossier preview and persisted localStorage state.
+ */
+function resetRogueDossierForm() {
+  const chanEl = document.getElementById('rogueReportChannel');
+  const combEl = document.getElementById('rogueCombatants');
+  const outEl = document.getElementById('rogueOutcome');
+  const nomEl = document.getElementById('rogueNemesisNominee');
+  const notesEl = document.getElementById('rogueNotes');
+
+  if (chanEl) chanEl.value = 'alpha';
+  if (combEl) combEl.value = '';
+  if (outEl) outEl.value = 'Imperium Victory';
+  if (nomEl) nomEl.value = '';
+  if (notesEl) notesEl.value = '';
+
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+  updateRogueDossierPreview();
 }
 
 function saveRogueState() {
@@ -291,6 +319,7 @@ if (typeof window !== 'undefined') {
   window.buildRogueDossierString = buildRogueDossierString;
   window.updateRogueDossierPreview = updateRogueDossierPreview;
   window.transmitRogueDossier = transmitRogueDossier;
+  window.resetRogueDossierForm = resetRogueDossierForm;
 }
 
 restoreRogueState();

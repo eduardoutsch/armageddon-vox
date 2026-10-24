@@ -72,7 +72,8 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpS
   transmitUnboundPing,
   buildPvpVultureReportString,
   updatePvpVulturePreview,
-  transmitPvpVultureReport
+  transmitPvpVultureReport,
+  resetPvpVultureReportForm: (typeof resetPvpVultureReportForm !== 'undefined' ? resetPvpVultureReportForm : undefined)
 };`);
 
 const pvp = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
@@ -258,4 +259,28 @@ test('pvp: restorePvpState faithfully reconstructs UI state and Vulture report f
   assert.equal(mockElements.pvpReportChannel.value, 'beta');
   assert.equal(mockElements.pvpReportNotes.value, 'Marauders claimed 4 SPts in Sector 5.');
   assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('4 SPts'));
+});
+
+test('pvp: resetPvpVultureReportForm resets Vulture SPts report fields, kill checkbox, and preview to clean defaults', () => {
+  assert.ok(
+    pvpHtml.includes('resetPvpVultureReportForm()'),
+    'pages/pvp.html must include a button calling resetPvpVultureReportForm()'
+  );
+  assert.equal(typeof pvp.resetPvpVultureReportForm, 'function', 'resetPvpVultureReportForm must be defined');
+
+  mockElements.pvpReportChannel.value = 'beta';
+  mockElements.vultureKillCheck.checked = true;
+  mockElements.pvpReportNotes.value = 'Custom vulture notes.';
+  pvp.updateVulture(true);
+
+  pvp.resetPvpVultureReportForm();
+
+  assert.equal(mockElements.pvpReportChannel.value, 'alpha');
+  assert.equal(mockElements.vultureKillCheck.checked, false);
+  assert.equal(mockElements.pvpReportNotes.value, '');
+  assert.equal(mockElements.vulturePts.innerText, '3 SPts');
+  assert.equal(mockElements.pvpReportSpBadge.textContent, '3 SPts');
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('3 SPts'));
+  assert.equal(mockElements.pvpVulturePreviewBox.textContent.includes('Custom vulture notes.'), false);
 });

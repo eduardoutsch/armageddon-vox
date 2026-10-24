@@ -8,7 +8,8 @@ const {
   extractCleanLastModelResponse,
   processSingleMessage,
   drainChannelQueue,
-  runDualThreadCourier
+  runDualThreadCourier,
+  publishServerHeartbeat
 } = require('../vox_bridge.js');
 
 function createMockPage({ onInsertText, evaluateResult } = {}) {
@@ -670,3 +671,54 @@ test('runDualThreadCourier: safely returns false and logs fatal error when threa
   assert.equal(result, false, 'runDualThreadCourier must exit early and return false');
   assert.ok(logged.some(m => m.includes('[FATAL ERROR] ALPHA_THREAD_URL and BETA_THREAD_URL must be defined in your .env file!')), 'Must log fatal error message');
 });
+
+test('publishServerHeartbeat: publishes online/offline vox_server_heartbeat to Supabase while preserving existing horde_pool and nemesis_status', async () => {
+  assert.equal(typeof publishServerHeartbeat, 'function', 'publishServerHeartbeat must be exported from vox_bridge.js');
+
+  const fetchCalls = [];
+  const mockFetch = async (url, opts = {}) => {
+    const body = opts.body ? JSON.parse(opts.body) : {};
+    fetchCalls.push({ url, body });
+    if (url.includes('get_shared_spawn_pools')) {
+      return {
+        ok: true,
+        json: async () => ({
+          ok: true,
+          horde_pool: { b34: '10 Termagants' },
+          nemesis_status: { nem1: 'roaming', spawner_rooms: { 'HADES-01': { battleRound: 2 } } }
+        })
+      };
+    }
+    if (url.includes('save_shared_spawn_pools')) {
+      return {
+        ok: true,
+        json: async () => ({ ok: true })
+      };
+    }
+    return { ok: false };
+  };
+
+  const okOnline = await publishServerHeartbeat('online', {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co'
+  });
+  assert.equal(okOnline, true);
+
+  const saveCall = fetchCalls.find(c => c.url.includes('save_shared_spawn_pools'));
+  assert.ok(saveCall, 'Must call save_shared_spawn_pools');
+  assert.deepEqual(saveCall.body.p_horde_pool, { b34: '10 Termagants' }, 'Must preserve existing horde_pool');
+  assert.equal(saveCall.body.p_nemesis_status.nem1, 'roaming', 'Must preserve existing nemesis_status keys');
+  assert.deepEqual(saveCall.body.p_nemesis_status.spawner_rooms, { 'HADES-01': { battleRound: 2 } });
+  assert.equal(saveCall.body.p_nemesis_status.vox_server_heartbeat.status, 'online');
+  assert.equal(typeof saveCall.body.p_nemesis_status.vox_server_heartbeat.updatedAt, 'number');
+
+  fetchCalls.length = 0;
+  const okOffline = await publishServerHeartbeat('offline', {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co'
+  });
+  assert.equal(okOffline, true);
+  const saveOfflineCall = fetchCalls.find(c => c.url.includes('save_shared_spawn_pools'));
+  assert.equal(saveOfflineCall.body.p_nemesis_status.vox_server_heartbeat.status, 'offline');
+});
+
