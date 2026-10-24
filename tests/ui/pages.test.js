@@ -527,6 +527,24 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
   }
 });
 
+test('Documentation Boundary: README.md and bundles/README.md provide technical architecture deep-dives and explicit AI involvement disclosures', () => {
+  const rootReadme = readPage('README.md');
+  const bundlesReadme = readPage('bundles/README.md');
+
+  // Root README technical sections & AI involvement disclosure
+  assert.ok(rootReadme.includes('System Architecture'), 'README.md must include a System Architecture section');
+  assert.ok(rootReadme.includes('AI Involvement & Human-AI Collaboration'), 'README.md must disclose AI involvement at runtime and development time');
+  assert.ok(rootReadme.includes('Functional Core, Imperative Shell'), 'README.md must document the Functional Core / Dumb UI architecture');
+  assert.ok(rootReadme.includes('mulberry32'), 'README.md must document the deterministic mulberry32 PRNG engine');
+  assert.ok(rootReadme.includes('Web Audio API'), 'README.md must document the procedural Web Audio API synthesizer');
+  assert.ok(rootReadme.includes('vox_server_heartbeat'), 'README.md must document the Supabase RPC & live server heartbeat architecture');
+
+  // Bundles README technical context & AI ingestion explanation
+  assert.ok(bundlesReadme.includes('AI Context-Window Partitioning'), 'bundles/README.md must explain the AI context-window partitioning architecture');
+  assert.ok(bundlesReadme.includes('quadruple-backtick'), 'bundles/README.md must document the quadruple-backtick escaping mechanism');
+});
+
+
 
 
 

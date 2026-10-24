@@ -161,29 +161,46 @@
 const STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
 let currentAiStep = 0;
 
-function buildRogueDossierString() {
-  const chan = document.getElementById('rogueReportChannel')?.value || 'alpha';
-  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
-  const combatants = (document.getElementById('rogueCombatants')?.value || 'Auxiliary Forces (Unspecified Factions)').trim();
-  const outcome = document.getElementById('rogueOutcome')?.value || 'Imperium Victory';
-  const nominee = (document.getElementById('rogueNemesisNominee')?.value || '').trim();
-  const notes = (document.getElementById('rogueNotes')?.value || 'Auxiliary clash concluded in the disputed zone. Awaiting Campaign Master chronicle.').trim();
-
-  let planetaryImpact = '';
-  let hegemonyImpact = '';
-  if (outcome.includes('Imperium Victory')) {
-    planetaryImpact = 'Stabilizes sector: Next main game Warp Intensity drops to Minor (or -1 to 1st R1 Horde Spawn Roll)';
-    hegemonyImpact = '+1 SPt to Gatebreakers';
-  } else if (outcome.includes('Chaos Victory')) {
-    planetaryImpact = 'Widens breach: Next main game Warp Intensity escalates to Catastrophic (or triggers Banishing Rifts)';
-    hegemonyImpact = '+1 SPt to Desecrators';
-  } else if (outcome.includes('Xenos Victory')) {
-    planetaryImpact = 'Plunders vaults: Triggers Gravitic Nexus or Staggered Time Hellscape next main match';
-    hegemonyImpact = '+1 SPt to Marauders';
-  } else {
-    planetaryImpact = 'Contested / Stalemate: Zero planetary shift on next main engagement';
-    hegemonyImpact = 'Zero SPt shift (Contested)';
+/**
+ * Declarative lookup table mapping Rogue Sector battle outcomes to their
+ * planetary consequences and Alliance Hegemony Strategic Point shifts.
+ */
+const ROGUE_OUTCOME_IMPACTS = {
+  'Imperium Victory': {
+    planetaryImpact: 'Stabilizes sector: Next main game Warp Intensity drops to Minor (or -1 to 1st R1 Horde Spawn Roll)',
+    hegemonyImpact: '+1 SPt to Gatebreakers'
+  },
+  'Chaos Victory': {
+    planetaryImpact: 'Widens breach: Next main game Warp Intensity escalates to Catastrophic (or triggers Banishing Rifts)',
+    hegemonyImpact: '+1 SPt to Desecrators'
+  },
+  'Xenos Victory': {
+    planetaryImpact: 'Plunders vaults: Triggers Gravitic Nexus or Staggered Time Hellscape next main match',
+    hegemonyImpact: '+1 SPt to Marauders'
+  },
+  'Contested': {
+    planetaryImpact: 'Contested / Stalemate: Zero planetary shift on next main engagement',
+    hegemonyImpact: 'Zero SPt shift (Contested)'
   }
+};
+
+/**
+ * Pure functional core: compiles a Mode 3 Rogue Sector Battle Report string
+ * from a plain state object without touching the DOM.
+ *
+ * @param {object} [input={}] - Plain Rogue Sector battle report parameters.
+ * @returns {string} Formatted teletype dossier string.
+ */
+function compileRogueDossier(input = {}) {
+  const chan = input.channel || 'alpha';
+  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
+  const combatants = (input.combatants || '').trim() || 'Auxiliary Forces (Unspecified Factions)';
+  const outcome = input.outcome || 'Imperium Victory';
+  const nominee = (input.nominee || '').trim();
+  const notes = (input.notes || '').trim() || 'Auxiliary clash concluded in the disputed zone. Awaiting Campaign Master chronicle.';
+
+  const matchedKey = Object.keys(ROGUE_OUTCOME_IMPACTS).find((key) => outcome.includes(key)) || 'Contested';
+  const { planetaryImpact, hegemonyImpact } = ROGUE_OUTCOME_IMPACTS[matchedKey];
 
   const lines = [
     `+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++`,
@@ -206,6 +223,32 @@ function buildRogueDossierString() {
   );
 
   return lines.join('\n');
+}
+
+/**
+ * Humble View (Dumb UI) input reader: extracts current Rogue Sector form fields
+ * from the DOM into a plain data object.
+ *
+ * @returns {object} Plain input snapshot for compileRogueDossier.
+ */
+function readRogueFormInputs() {
+  return {
+    channel: document.getElementById('rogueReportChannel')?.value || 'alpha',
+    combatants: document.getElementById('rogueCombatants')?.value || '',
+    outcome: document.getElementById('rogueOutcome')?.value || 'Imperium Victory',
+    nominee: document.getElementById('rogueNemesisNominee')?.value || '',
+    notes: document.getElementById('rogueNotes')?.value || ''
+  };
+}
+
+/**
+ * Thin DOM-to-Core adapter that reads current form inputs and delegates
+ * formatting to the pure compileRogueDossier functional core.
+ *
+ * @returns {string} Formatted teletype dossier string.
+ */
+function buildRogueDossierString() {
+  return compileRogueDossier(readRogueFormInputs());
 }
 
 function updateRogueDossierPreview() {

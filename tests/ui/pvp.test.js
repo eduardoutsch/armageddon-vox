@@ -70,6 +70,7 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpS
   updateVulture,
   rollUnboundAdversary,
   transmitUnboundPing,
+  compilePvpVultureReport: (typeof compilePvpVultureReport !== 'undefined' ? compilePvpVultureReport : undefined),
   buildPvpVultureReportString,
   updatePvpVulturePreview,
   transmitPvpVultureReport,
@@ -283,4 +284,19 @@ test('pvp: resetPvpVultureReportForm resets Vulture SPts report fields, kill che
   assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
   assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('3 SPts'));
   assert.equal(mockElements.pvpVulturePreviewBox.textContent.includes('Custom vulture notes.'), false);
+});
+
+test('pvp: compilePvpVultureReport pure functional core formats Vulture SPts report from plain data without DOM dependency', () => {
+  assert.equal(typeof pvp.compilePvpVultureReport, 'function', 'Must define pure compilePvpVultureReport function');
+  const out = pvp.compilePvpVultureReport({
+    channel: 'beta',
+    killedUnit: true,
+    hellscapeIdx: 2,
+    warpIntensity: 'minor',
+    notes: 'Scavengers looted the ridge.'
+  });
+  assert.ok(out.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(out.includes('4 SPts'));
+  assert.ok(out.includes('Fading Reality // Intensity: MINOR'));
+  assert.ok(out.includes('Scavengers looted the ridge.'));
 });

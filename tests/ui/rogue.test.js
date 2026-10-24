@@ -70,11 +70,13 @@ globalThis.document = {
 // Evaluate script in mock environment
 const fn = new Function('document', 'localStorage', 'console', 'window', `${rogueScriptCode}; return {
   STORAGE_KEY_ROGUE,
+  ROGUE_OUTCOME_IMPACTS: (typeof ROGUE_OUTCOME_IMPACTS !== 'undefined' ? ROGUE_OUTCOME_IMPACTS : undefined),
   getCurrentAiStep: () => currentAiStep,
   setAiStep,
   nextAiStep,
   saveRogueState,
   restoreRogueState,
+  compileRogueDossier: (typeof compileRogueDossier !== 'undefined' ? compileRogueDossier : undefined),
   buildRogueDossierString,
   updateRogueDossierPreview,
   transmitRogueDossier,
@@ -214,5 +216,21 @@ test('rogue: resetRogueDossierForm resets all Rogue Sector report form fields an
   assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
   assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('Auxiliary Forces (Unspecified Factions)'));
   assert.equal(mockElements.rogueDossierPreviewBox.textContent.includes('Gorgutz'), false);
+});
+
+test('rogue: compileRogueDossier pure functional core formats dossier from plain data and ROGUE_OUTCOME_IMPACTS lookup table without DOM dependency', () => {
+  assert.ok(rogue.ROGUE_OUTCOME_IMPACTS, 'Must define declarative ROGUE_OUTCOME_IMPACTS lookup table');
+  assert.equal(typeof rogue.compileRogueDossier, 'function', 'Must define pure compileRogueDossier function');
+
+  const out = rogue.compileRogueDossier({
+    channel: 'beta',
+    combatants: 'Necrons vs World Eaters',
+    outcome: 'Chaos Victory',
+    nominee: '',
+    notes: 'Blood rain flooded the valley.'
+  });
+  assert.ok(out.includes('• REPORTING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(out.includes('• ALLIANCE HEGEMONY IMPACT: +1 SPt to Desecrators'));
+  assert.equal(out.includes('NEMESIS INDUCTION NOMINEE'), false);
 });
 

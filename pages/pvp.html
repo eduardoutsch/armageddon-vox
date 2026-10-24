@@ -273,26 +273,26 @@ function updateVulture(shouldSave = true) {
 }
 
 /**
- * Compiles the dedicated 1v1 Ash Wastes 3rd Alliance Vulture SPts Match Report,
- * informing the Campaign Master how many Strategic Points (3 SPts base or 4 SPts
- * with unit kill bonus) his 3rd Alliance gained during the match.
+ * Pure functional core: compiles the 1v1 Ash Wastes 3rd Alliance Vulture SPts
+ * Match Report from a plain state object without touching the DOM.
  *
+ * @param {object} [input={}] - Plain Vulture report parameters.
  * @returns {string} Formatted teletype report payload for Astropathic Vox transmission.
  */
-function buildPvpVultureReportString() {
-  const chan = document.getElementById('pvpReportChannel')?.value || 'alpha';
+function compilePvpVultureReport(input = {}) {
+  const chan = input.channel || 'alpha';
   const cmdr = chan === 'alpha'
     ? 'THE EXILE // SANCTUARY OF ASH'
     : 'LORD COMMANDER JUNEBUG';
-  const killedUnit = !!document.getElementById('vultureKillCheck')?.checked;
+  const killedUnit = !!input.killedUnit;
   const totalSp = killedUnit ? 4 : 3;
   const breakdown = killedUnit
     ? 'Base Vulture Presence (+3 SPts) + Destroyed a Player Unit (+1 SPt) = 4 SPts'
     : 'Base Vulture Presence (+3 SPts) [No Player Unit Destroyed] = 3 SPts';
-  const hellscapeIdx = parseInt(document.getElementById('hellscapeSelect')?.value, 10) || 0;
+  const hellscapeIdx = Number.isInteger(input.hellscapeIdx) ? input.hellscapeIdx : (parseInt(input.hellscapeIdx, 10) || 0);
   const hellscapeName = HELLSCAPE_NAMES[hellscapeIdx] || HELLSCAPE_NAMES[0];
-  const intensity = (document.getElementById('warpIntensity')?.value || 'major').toUpperCase();
-  const notes = (document.getElementById('pvpReportNotes')?.value || '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.').trim();
+  const intensity = String(input.warpIntensity || input.intensity || 'major').toUpperCase();
+  const notes = (input.notes || '').trim() || '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.';
 
   return [
     `+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++`,
@@ -305,6 +305,32 @@ function buildPvpVultureReportString() {
     `------------------------------------------------`,
     `REQUEST FOR CAMPAIGN MASTER: Please credit +${totalSp} Strategic Points to the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes engagement and chronicle how your scavenging forces exploited our clash!`
   ].join('\n');
+}
+
+/**
+ * Humble View (Dumb UI) input reader: extracts current 1v1 Vulture report
+ * form fields from the DOM into a plain data object.
+ *
+ * @returns {object} Plain input snapshot for compilePvpVultureReport.
+ */
+function readPvpVultureFormInputs() {
+  return {
+    channel: document.getElementById('pvpReportChannel')?.value || 'alpha',
+    killedUnit: !!document.getElementById('vultureKillCheck')?.checked,
+    hellscapeIdx: parseInt(document.getElementById('hellscapeSelect')?.value, 10) || 0,
+    warpIntensity: document.getElementById('warpIntensity')?.value || 'major',
+    notes: document.getElementById('pvpReportNotes')?.value || ''
+  };
+}
+
+/**
+ * Thin DOM-to-Core adapter that reads current Vulture report inputs and delegates
+ * formatting to the pure compilePvpVultureReport functional core.
+ *
+ * @returns {string} Formatted teletype report payload for Astropathic Vox transmission.
+ */
+function buildPvpVultureReportString() {
+  return compilePvpVultureReport(readPvpVultureFormInputs());
 }
 
 function updatePvpVulturePreview(shouldSave = true) {

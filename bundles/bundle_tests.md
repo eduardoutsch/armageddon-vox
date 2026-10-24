@@ -2675,6 +2675,24 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
   }
 });
 
+test('Documentation Boundary: README.md and bundles/README.md provide technical architecture deep-dives and explicit AI involvement disclosures', () => {
+  const rootReadme = readPage('README.md');
+  const bundlesReadme = readPage('bundles/README.md');
+
+  // Root README technical sections & AI involvement disclosure
+  assert.ok(rootReadme.includes('System Architecture'), 'README.md must include a System Architecture section');
+  assert.ok(rootReadme.includes('AI Involvement & Human-AI Collaboration'), 'README.md must disclose AI involvement at runtime and development time');
+  assert.ok(rootReadme.includes('Functional Core, Imperative Shell'), 'README.md must document the Functional Core / Dumb UI architecture');
+  assert.ok(rootReadme.includes('mulberry32'), 'README.md must document the deterministic mulberry32 PRNG engine');
+  assert.ok(rootReadme.includes('Web Audio API'), 'README.md must document the procedural Web Audio API synthesizer');
+  assert.ok(rootReadme.includes('vox_server_heartbeat'), 'README.md must document the Supabase RPC & live server heartbeat architecture');
+
+  // Bundles README technical context & AI ingestion explanation
+  assert.ok(bundlesReadme.includes('AI Context-Window Partitioning'), 'bundles/README.md must explain the AI context-window partitioning architecture');
+  assert.ok(bundlesReadme.includes('quadruple-backtick'), 'bundles/README.md must document the quadruple-backtick escaping mechanism');
+});
+
+
 
 
 
@@ -3072,6 +3090,7 @@ const fn = new Function('document', 'localStorage', 'console', 'window', `${pvpS
   updateVulture,
   rollUnboundAdversary,
   transmitUnboundPing,
+  compilePvpVultureReport: (typeof compilePvpVultureReport !== 'undefined' ? compilePvpVultureReport : undefined),
   buildPvpVultureReportString,
   updatePvpVulturePreview,
   transmitPvpVultureReport,
@@ -3286,6 +3305,21 @@ test('pvp: resetPvpVultureReportForm resets Vulture SPts report fields, kill che
   assert.ok(mockElements.pvpVulturePreviewBox.textContent.includes('3 SPts'));
   assert.equal(mockElements.pvpVulturePreviewBox.textContent.includes('Custom vulture notes.'), false);
 });
+
+test('pvp: compilePvpVultureReport pure functional core formats Vulture SPts report from plain data without DOM dependency', () => {
+  assert.equal(typeof pvp.compilePvpVultureReport, 'function', 'Must define pure compilePvpVultureReport function');
+  const out = pvp.compilePvpVultureReport({
+    channel: 'beta',
+    killedUnit: true,
+    hellscapeIdx: 2,
+    warpIntensity: 'minor',
+    notes: 'Scavengers looted the ridge.'
+  });
+  assert.ok(out.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(out.includes('4 SPts'));
+  assert.ok(out.includes('Fading Reality // Intensity: MINOR'));
+  assert.ok(out.includes('Scavengers looted the ridge.'));
+});
 ````
 
 ---
@@ -3365,11 +3399,13 @@ globalThis.document = {
 // Evaluate script in mock environment
 const fn = new Function('document', 'localStorage', 'console', 'window', `${rogueScriptCode}; return {
   STORAGE_KEY_ROGUE,
+  ROGUE_OUTCOME_IMPACTS: (typeof ROGUE_OUTCOME_IMPACTS !== 'undefined' ? ROGUE_OUTCOME_IMPACTS : undefined),
   getCurrentAiStep: () => currentAiStep,
   setAiStep,
   nextAiStep,
   saveRogueState,
   restoreRogueState,
+  compileRogueDossier: (typeof compileRogueDossier !== 'undefined' ? compileRogueDossier : undefined),
   buildRogueDossierString,
   updateRogueDossierPreview,
   transmitRogueDossier,
@@ -3509,6 +3545,22 @@ test('rogue: resetRogueDossierForm resets all Rogue Sector report form fields an
   assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
   assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('Auxiliary Forces (Unspecified Factions)'));
   assert.equal(mockElements.rogueDossierPreviewBox.textContent.includes('Gorgutz'), false);
+});
+
+test('rogue: compileRogueDossier pure functional core formats dossier from plain data and ROGUE_OUTCOME_IMPACTS lookup table without DOM dependency', () => {
+  assert.ok(rogue.ROGUE_OUTCOME_IMPACTS, 'Must define declarative ROGUE_OUTCOME_IMPACTS lookup table');
+  assert.equal(typeof rogue.compileRogueDossier, 'function', 'Must define pure compileRogueDossier function');
+
+  const out = rogue.compileRogueDossier({
+    channel: 'beta',
+    combatants: 'Necrons vs World Eaters',
+    outcome: 'Chaos Victory',
+    nominee: '',
+    notes: 'Blood rain flooded the valley.'
+  });
+  assert.ok(out.includes('• REPORTING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(out.includes('• ALLIANCE HEGEMONY IMPACT: +1 SPt to Desecrators'));
+  assert.equal(out.includes('NEMESIS INDUCTION NOMINEE'), false);
 });
 
 ````
@@ -3687,7 +3739,8 @@ const evalFn = new Function(
     getFactionPoolFromStore,
     loadFactionInputs,
     onFactionPickerChange,
-    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined)
+    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined),
+    compileNemesisDossier: (typeof compileNemesisDossier !== 'undefined' ? compileNemesisDossier : undefined)
   };`
 );
 
@@ -4013,6 +4066,26 @@ test('roster: resetNemesisDossierForm resets all Nemesis Induction Dossier form 
   assert.ok(mockElements.nemDossierPreview.textContent.includes('[Unspecified Hostile Entity]'));
   assert.equal(mockElements.nemDossierPreview.textContent.includes('Eightbound'), false);
 });
+
+test('roster: compileNemesisDossier is a pure domain compiler separated from DOM reads (Dumb UI pattern)', () => {
+  assert.equal(typeof roster.compileNemesisDossier, 'function', 'compileNemesisDossier must be defined as a pure function');
+
+  const report = roster.compileNemesisDossier({
+    channel: 'beta',
+    sector: 'Mode 2: 1v1 Ash Wastes // Vulture Raid',
+    unit: 'Orks — Deff Dread',
+    feat: 'Destroyed a Titanic / Vehicle centerpiece unit',
+    notes: 'Ripped a Rogal Dorn tank apart in melee.'
+  });
+
+  assert.ok(report.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(report.includes('• THEATRE & MODE: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
+  assert.ok(report.includes('• HOSTILE DATASHEET / FACTION: Orks — Deff Dread'));
+  assert.ok(report.includes('• TRIGGERING FEAT: Destroyed a Titanic / Vehicle centerpiece unit'));
+  assert.ok(report.includes('• EYE-WITNESS COMBAT LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+});
+
 ````
 
 ---

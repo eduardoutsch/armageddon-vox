@@ -632,13 +632,20 @@ function switchRosterTab(tab, persist = true) {
   if (persist) saveRosterPageState();
 }
 
-function buildNemesisDossierString() {
-  const chan = document.getElementById('nemReportChannel').value;
+/**
+ * Pure functional core: compiles an Ordo Malleus New Nemesis Induction Dossier
+ * from a plain state object without touching the DOM.
+ *
+ * @param {object} [input={}] - Plain Nemesis dossier parameters.
+ * @returns {string} Formatted teletype dossier string.
+ */
+function compileNemesisDossier(input = {}) {
+  const chan = input.channel || 'alpha';
   const commanderLabel = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
-  const sector = document.getElementById('nemReportSector').value;
-  const unit = (document.getElementById('nemReportUnit').value || '[Unspecified Hostile Entity]').trim();
-  const feat = document.getElementById('nemReportFeat').value;
-  const notes = (document.getElementById('nemReportNotes').value || 'Survived engagement and demonstrated anomalous lethality.').trim();
+  const sector = input.sector || 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  const unit = (input.unit || '').trim() || '[Unspecified Hostile Entity]';
+  const feat = input.feat || 'Slain a Player Warlord / Character in combat';
+  const notes = (input.notes || '').trim() || 'Survived engagement and demonstrated anomalous lethality.';
 
   return [
     `+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++`,
@@ -650,6 +657,32 @@ function buildNemesisDossierString() {
     `------------------------------------------------`,
     `REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (AGENT.md) and emit a CRT Vox-Dispatch christening its permanent Name, Title, Lore, and Boss Battle Trait!`
   ].join('\n');
+}
+
+/**
+ * Humble View (Dumb UI) input reader: extracts current Nemesis Induction Dossier
+ * form fields from the DOM into a plain data object.
+ *
+ * @returns {object} Plain input snapshot for compileNemesisDossier.
+ */
+function readNemesisFormInputs() {
+  return {
+    channel: document.getElementById('nemReportChannel')?.value || 'alpha',
+    sector: document.getElementById('nemReportSector')?.value || 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)',
+    unit: document.getElementById('nemReportUnit')?.value || '',
+    feat: document.getElementById('nemReportFeat')?.value || 'Slain a Player Warlord / Character in combat',
+    notes: document.getElementById('nemReportNotes')?.value || ''
+  };
+}
+
+/**
+ * Thin DOM-to-Core adapter that reads current Nemesis form inputs and delegates
+ * formatting to the pure compileNemesisDossier functional core.
+ *
+ * @returns {string} Formatted teletype dossier string.
+ */
+function buildNemesisDossierString() {
+  return compileNemesisDossier(readNemesisFormInputs());
 }
 
 function updateNemesisPreview() {

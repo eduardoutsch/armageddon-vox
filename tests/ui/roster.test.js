@@ -167,7 +167,8 @@ const evalFn = new Function(
     getFactionPoolFromStore,
     loadFactionInputs,
     onFactionPickerChange,
-    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined)
+    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined),
+    compileNemesisDossier: (typeof compileNemesisDossier !== 'undefined' ? compileNemesisDossier : undefined)
   };`
 );
 
@@ -493,3 +494,23 @@ test('roster: resetNemesisDossierForm resets all Nemesis Induction Dossier form 
   assert.ok(mockElements.nemDossierPreview.textContent.includes('[Unspecified Hostile Entity]'));
   assert.equal(mockElements.nemDossierPreview.textContent.includes('Eightbound'), false);
 });
+
+test('roster: compileNemesisDossier is a pure domain compiler separated from DOM reads (Dumb UI pattern)', () => {
+  assert.equal(typeof roster.compileNemesisDossier, 'function', 'compileNemesisDossier must be defined as a pure function');
+
+  const report = roster.compileNemesisDossier({
+    channel: 'beta',
+    sector: 'Mode 2: 1v1 Ash Wastes // Vulture Raid',
+    unit: 'Orks — Deff Dread',
+    feat: 'Destroyed a Titanic / Vehicle centerpiece unit',
+    notes: 'Ripped a Rogal Dorn tank apart in melee.'
+  });
+
+  assert.ok(report.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(report.includes('• THEATRE & MODE: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
+  assert.ok(report.includes('• HOSTILE DATASHEET / FACTION: Orks — Deff Dread'));
+  assert.ok(report.includes('• TRIGGERING FEAT: Destroyed a Titanic / Vehicle centerpiece unit'));
+  assert.ok(report.includes('• EYE-WITNESS COMBAT LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+});
+
