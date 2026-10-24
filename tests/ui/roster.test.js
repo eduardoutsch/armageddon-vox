@@ -154,7 +154,6 @@ const evalFn = new Function(
     CUSTOM_POOL_STORAGE_KEY,
     HORDE_FACTION_SPAWN_TABLES: (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined' ? HORDE_FACTION_SPAWN_TABLES : (window && window.HORDE_FACTION_SPAWN_TABLES)),
     switchRosterTab,
-    toggleAllNemesisCards,
     buildNemesisDossierString,
     updateNemesisPreview,
     transmitNemesisDossier,
@@ -405,10 +404,24 @@ test('roster: per-faction shelf pool storage preserves separate pools per factio
   assert.equal(mockElements.rosterPool34.value, '');
 });
 
-test('roster: Active Nemesis cards are collapsible windows and include Nemesis 3 (C\'tan Shard of the Void Dragon)', () => {
+test('roster: Active Nemesis cards are collapsible windows sharing the same design pattern without an Expand All button', () => {
+  // Verify Expand/Collapse All button is removed
+  assert.ok(!rosterHtml.includes('id="toggleAllNemBtn"'), 'Must not include #toggleAllNemBtn Expand/Collapse All button');
+  assert.ok(!rosterHtml.includes('toggleAllNemesisCards'), 'Must not include toggleAllNemesisCards handler');
+
   // Verify all 3 active nemeses are rendered as collapsible <details> windows
-  const detailsMatches = rosterHtml.match(/<details\s+class="[^"]*nemesis-card[^"]*"/g) || [];
-  assert.ok(detailsMatches.length >= 3, 'Must render at least 3 collapsible <details class="...nemesis-card..."> windows');
+  const detailsMatches = rosterHtml.match(/<details\s+class="datasheet-card nemesis-card"/g) || [];
+  assert.equal(detailsMatches.length, 3, 'Must render 3 collapsible <details class="datasheet-card nemesis-card"> windows');
+
+  // Verify all 3 share the unified rule-tag header pattern (NEMESIS #01, NEMESIS #02, NEMESIS #03)
+  assert.ok(rosterHtml.includes('NEMESIS #01 • SESSION 0 INDUCTION (PL 4)'), 'Must include NEMESIS #01 rule-tag');
+  assert.ok(rosterHtml.includes('NEMESIS #02 • SESSION 0 INDUCTION (PL 3)'), 'Must include NEMESIS #02 rule-tag');
+  assert.ok(rosterHtml.includes('NEMESIS #03 • ROGUE SECTOR APEX NEMESIS (PL 4)'), 'Must include NEMESIS #03 rule-tag');
+
+  // Verify all 3 use the unified .locked-status-select dropdown (#nemStatus1, #nemStatus2, #nemStatus3)
+  assert.match(rosterHtml, /<select\s+id="nemStatus1"\s+class="locked-status-select"/);
+  assert.match(rosterHtml, /<select\s+id="nemStatus2"\s+class="locked-status-select"/);
+  assert.match(rosterHtml, /<select\s+id="nemStatus3"\s+class="locked-status-select"/);
 
   // Verify Nemesis 3: C'tan Shard of the Void Dragon content and placement after Aestred Thurga
   const thurgaIdx = rosterHtml.indexOf('Aestred Thurga');
@@ -416,22 +429,10 @@ test('roster: Active Nemesis cards are collapsible windows and include Nemesis 3
   assert.ok(thurgaIdx > -1, 'Must include Aestred Thurga card');
   assert.ok(voidDragonIdx > thurgaIdx, "C'tan Shard of the Void Dragon card must appear after Aestred Thurga's card");
 
-  assert.ok(rosterHtml.includes('Power Level 4 • Rogue Sector Apex Nemesis'), 'Must include PL 4 Rogue Sector Apex Nemesis badge');
-  assert.ok(rosterHtml.includes('"The World-Eater of the Iron-Oxide Wastes" (Necrons // Hypercrypt Phalanx)'), 'Must include Void Dragon title and faction');
-  assert.ok(rosterHtml.includes('id="nemBadge3"'), 'Must include #nemBadge3 status badge');
-  assert.ok(rosterHtml.includes('id="nemStatus3"'), 'Must include #nemStatus3 select element');
-  assert.ok(rosterHtml.includes('Boss Battle Trait — "Bane-Cleaver &amp; Matter Absorption":'), 'Must include Boss Battle Trait');
+  assert.ok(rosterHtml.includes('"The World-Eater of the Iron-Oxide Wastes"'), 'Must include Void Dragon title');
+  assert.ok(rosterHtml.includes('Faction: Xenos / Necrons (Hypercrypt Phalanx)'), 'Must include unified Faction subtitle for Void Dragon');
+  assert.ok(rosterHtml.includes('Bane-Cleaver &amp; Matter Absorption'), 'Must include Void Dragon Boss Battle Trait');
   assert.ok(rosterHtml.includes('🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point'), 'Must include Bounty Payout');
-
-  // Verify toggleAllNemesisCards collapses all open Nemesis cards and expands them back
-  mockNemesisCards.forEach((c) => { c.open = true; });
-  roster.toggleAllNemesisCards();
-  assert.ok(mockNemesisCards.every((c) => c.open === false), 'toggleAllNemesisCards must collapse all open Nemesis cards');
-  assert.equal(mockElements.toggleAllNemBtn.textContent, '▾ Expand All');
-
-  roster.toggleAllNemesisCards();
-  assert.ok(mockNemesisCards.every((c) => c.open === true), 'toggleAllNemesisCards must expand all collapsed Nemesis cards');
-  assert.equal(mockElements.toggleAllNemBtn.textContent, '▴ Collapse All');
 });
 
 

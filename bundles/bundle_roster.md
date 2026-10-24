@@ -257,15 +257,12 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
 
     <div class="section-header" style="margin-top:0;">
       <h3>Active Cross-Mode Nemesis Bounty Ledger</h3>
-      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <span class="hud-sub">Status Locked by Campaign Master • Slaying a Nemesis Awards +2/+3 XP &amp; +1 SPt</span>
-        <button type="button" class="btn-ghost btn-sm" id="toggleAllNemBtn" onclick="toggleAllNemesisCards()" style="padding:4px 10px; font-size:0.72rem;">▴ Collapse All</button>
-      </div>
+      <span class="hud-sub">Status Locked by Campaign Master • Slaying a Nemesis Awards +2/+3 XP &amp; +1 SPt</span>
     </div>
 
     <div id="nemesisGrid" class="nemesis-grid">
       <!-- INDUCTED NEMESIS #1: SAINT CELESTINE -->
-      <details class="datasheet-card nemesis-card" style="border-top-color:var(--gold);" open>
+      <details class="datasheet-card nemesis-card" style="border-top-color:var(--gold);">
         <summary class="nemesis-card-summary">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
             <div>
@@ -287,14 +284,17 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
           <p class="card-desc" style="margin-top:4px;">
             <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> After the Krieg Leman Russ Vanquishers (<em>"The Shrine-Breakers"</em>) detonated every Sororitas war-engine around the central Landing Site, Celestine descended from the sulfuric storm-clouds directly into the Krieg rear deployment zone—slaughtering the command echelon and seizing the home objective to clinch a razor-thin 3-VP victory.
           </p>
-          <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
+          <div class="card" style="background:#0b0d13; margin:10px 0 8px 0; font-size:0.85rem; border-left-color:var(--gold);">
             <strong style="color:var(--gold);">Permanent Nemesis Trait — <em>Judgment of the Blackened Glass</em>:</strong> When deployed on the surface (via Orbital Descent or a Slider -3 Purge Strike), Celestine deep-strikes within 9" of the trailing player's home objective and gains <strong>[PRECISION]</strong> and <strong>[DEVASTATING WOUNDS]</strong> against units carrying Warp Counters.
+          </div>
+          <div style="font-size:0.8rem; color:var(--gold); font-weight:700;">
+            🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point
           </div>
         </div>
       </details>
 
       <!-- INDUCTED NEMESIS #2: AESTRED THURGA & AGATHAE DOLAN -->
-      <details class="datasheet-card nemesis-card" style="border-top-color:var(--purple);" open>
+      <details class="datasheet-card nemesis-card" style="border-top-color:var(--purple);">
         <summary class="nemesis-card-summary">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
             <div>
@@ -316,41 +316,40 @@ Complete source code for the Hostile Threat Matrix, Cross-Mode Nemesis Bounty Le
           <p class="card-desc" style="margin-top:4px;">
             <strong>Origin Feat (Golgotha Arbor-Basin — Session 0):</strong> Struck down a forward Krieg Scout Sentinel in Round 1 with <em>Devastating Wounds</em> and weathered 11 point-blank Krieg shovel strikes without failing a single 3+ save, recording every transgression into the Auto-Tapestry of Judgement.
           </p>
-          <div class="card" style="background:#0b0d13; margin:10px 0 0 0; font-size:0.85rem;">
+          <div class="card" style="background:#0b0d13; margin:10px 0 8px 0; font-size:0.85rem; border-left-color:var(--purple);">
             <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>The Unforgiving Ledger</em>:</strong> Enemy units within 6" of Aestred Thurga cannot re-roll Battle-shock tests and suffer <strong>-1 Objective Control (OC)</strong> (to a minimum of 1).
+          </div>
+          <div style="font-size:0.8rem; color:var(--gold); font-weight:700;">
+            🎯 Bounty Payout: +2 XP to killer unit &amp; +1 Strategic Point
           </div>
         </div>
       </details>
 
-      <!-- NEMESIS 3: C'TAN SHARD OF THE VOID DRAGON -->
-      <details class="datasheet-card nemesis-card" style="border-top:3px solid var(--purple);" open>
+      <!-- INDUCTED NEMESIS #3: C'TAN SHARD OF THE VOID DRAGON -->
+      <details class="datasheet-card nemesis-card" style="border-top-color:var(--purple);">
         <summary class="nemesis-card-summary">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
             <div>
-              <span class="badge purple" style="margin-bottom:4px; display:inline-block;">Power Level 4 • Rogue Sector Apex Nemesis</span>
-              <h3 style="margin:0; color:var(--gold-bright); font-size:1.15rem;"> C'tan Shard of the Void Dragon</h3>
-              <div style="font-size:0.82rem; color:#d8b4fe; font-style:italic;">"The World-Eater of the Iron-Oxide Wastes" (Necrons // Hypercrypt Phalanx)</div>
+              <span class="rule-tag" style="border-color:var(--purple); color:var(--purple);">NEMESIS #03 • ROGUE SECTOR APEX NEMESIS (PL 4)</span>
+              <h3 style="margin:6px 0 2px 0; color:#fff; font-size:1.2rem;">⚡ C'tan Shard of the Void Dragon, <em>"The World-Eater of the Iron-Oxide Wastes"</em></h3>
+              <div style="font-size:0.8rem; color:var(--muted);">Faction: Xenos / Necrons (Hypercrypt Phalanx)</div>
             </div>
             <div class="nem-status-wrap">
-              <span id="nemBadge3" class="nem-locked-badge roaming">🟡 ROAMING WASTES</span>
-              <select id="nemStatus3" class="hidden" disabled aria-hidden="true">
-                <option value="roaming" selected>🟡 ROAMING WASTES</option>
-                <option value="deployed">🔴 DEPLOYED ON SURFACE</option>
-                <option value="slain">🟢 SLAIN (Respawn Clock)</option>
+              <select id="nemStatus3" class="locked-status-select" tabindex="-1" aria-disabled="true" onchange="saveRosterPageState()">
+                <option value="roaming" selected>🔒 GM Status: 🟡 Roaming Wastes (Active Threat)</option>
+                <option value="deployed">🔒 GM Status: 🔴 Deployed on Surface (Active Threat!)</option>
+                <option value="slain">🔒 GM Status: 🟢 Slain — Reconstructing (Respawn Clock)</option>
               </select>
               <span class="nem-collapse-pill" aria-hidden="true"></span>
             </div>
           </div>
         </summary>
         <div class="nemesis-card-body">
-          <p style="font-size:0.84rem; color:var(--text); line-height:1.5; margin-bottom:10px;">
+          <p class="card-desc" style="margin-top:4px;">
             <strong>Origin Feat (Rogue Sector // Southern Iron-Oxide Flats):</strong> Shrugged off point-blank salvos from Commissar Yarrick's entire armoured column—regenerating its living-metal necrodermis through concentrated fire—before shearing a super-heavy <strong>Baneblade</strong> and both attending Tech-Priest Enginseers clean in half.
           </p>
-          <div class="rule-box" style="margin-bottom:8px; border-left-color:var(--purple);">
-            <strong style="color:#d8b4fe; font-size:0.83rem;">Boss Battle Trait — "Bane-Cleaver &amp; Matter Absorption":</strong>
-            <p style="font-size:0.81rem; margin:4px 0 0 0; color:var(--text);">
-              Start of Fight phase, select 1 enemy <strong>VEHICLE</strong> within 12": on a 2+, it suffers <strong>D3 Mortal Wounds</strong> and the Void Dragon regains that many lost Wounds. Whenever it destroys a <strong>VEHICLE</strong> or <strong>MONSTER</strong> in melee, it heals <strong>D3+1 Wounds</strong> and forces enemy units within 6" to take a Battle-shock test.
-            </p>
+          <div class="card" style="background:#0b0d13; margin:10px 0 8px 0; font-size:0.85rem; border-left-color:var(--purple);">
+            <strong style="color:var(--purple);">Permanent Nemesis Trait — <em>Bane-Cleaver &amp; Matter Absorption</em>:</strong> Start of Fight phase, select 1 enemy <strong>VEHICLE</strong> within 12": on a 2+, it suffers <strong>D3 Mortal Wounds</strong> and the Void Dragon regains that many lost Wounds. Whenever it destroys a <strong>VEHICLE</strong> or <strong>MONSTER</strong> in melee, it heals <strong>D3+1 Wounds</strong> and forces enemy units within 6" to take a Battle-shock test.
           </div>
           <div style="font-size:0.8rem; color:var(--gold); font-weight:700;">
             🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point
@@ -808,20 +807,6 @@ async function pullSharedPoolsFromCloud() {
   return false;
 }
 
-function toggleAllNemesisCards() {
-  if (typeof document.querySelectorAll !== 'function') return;
-  const cards = Array.from(document.querySelectorAll('#nemesisGrid details.nemesis-card'));
-  if (cards.length === 0) return;
-  const anyOpen = cards.some(c => c.open);
-  cards.forEach(c => {
-    c.open = !anyOpen;
-  });
-  const btn = document.getElementById('toggleAllNemBtn');
-  if (btn) {
-    btn.textContent = anyOpen ? '▾ Expand All' : '▴ Collapse All';
-  }
-}
-
 function renderFactionBracketTable() {
   const picker = document.getElementById('bracketFactionPicker');
   const box = document.getElementById('factionBracketDisplay');
@@ -916,7 +901,6 @@ function initRosterPage() {
 
 if (typeof window !== 'undefined') {
   window.switchRosterTab = switchRosterTab;
-  window.toggleAllNemesisCards = toggleAllNemesisCards;
   window.buildNemesisDossierString = buildNemesisDossierString;
   window.updateNemesisPreview = updateNemesisPreview;
   window.transmitNemesisDossier = transmitNemesisDossier;
