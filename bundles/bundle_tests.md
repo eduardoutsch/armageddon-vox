@@ -1793,6 +1793,64 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for START 
   }
 });
 
+test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship queries and Pattern 4B Flagship Bridge Logic Core readout for beta ship queries', async () => {
+  const alphaPrompts = [];
+  const alphaPage = createMockPage({
+    onInsertText: (txt) => { alphaPrompts.push(txt); }
+  });
+
+  await processSingleMessage(
+    {
+      id: 'aaaa1111-ship-alpha',
+      channel: 'alpha',
+      sender: 'The Exile',
+      question: 'Machine-Spirit, report hull integrity and Cell 09 status.'
+    },
+    alphaPage,
+    {
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      supabaseUrl: 'https://test.supabase.co',
+      serviceKey: 'valid_test_secret_key_123',
+      waitForReplyFn: async () => 'REF-ID: aaaa1111\n+++ COGITATOR READOUT +++\nHull integrity at 42%.',
+      logFn: () => {}
+    }
+  );
+
+  const alphaFull = alphaPrompts.join('\n');
+  assert.ok(
+    alphaFull.includes('Pattern 4A Ashen Spirit cogitator readout, REF-ID: aaaa1111'),
+    'Alpha ship query must use Pattern 4A Ashen Spirit cogitator readout'
+  );
+
+  const betaPrompts = [];
+  const betaPage = createMockPage({
+    onInsertText: (txt) => { betaPrompts.push(txt); }
+  });
+
+  await processSingleMessage(
+    {
+      id: 'bbbb2222-ship-beta',
+      channel: 'beta',
+      sender: 'Lord Commander Junebug',
+      question: 'Flagship Machine-Spirit, report hull and bridge logic core status.'
+    },
+    betaPage,
+    {
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      supabaseUrl: 'https://test.supabase.co',
+      serviceKey: 'valid_test_secret_key_123',
+      waitForReplyFn: async () => 'REF-ID: bbbb2222\n+++ COGITATOR READOUT +++\nBridge logic core nominal.',
+      logFn: () => {}
+    }
+  );
+
+  const betaFull = betaPrompts.join('\n');
+  assert.ok(
+    betaFull.includes("Pattern 4B Flagship Bridge Logic Core readout for Commander Beta's own separate flagship (NEVER use Ashen Spirit or The Sanctuary of Ash!), REF-ID: bbbb2222"),
+    'Beta ship query must use Pattern 4B Flagship Bridge Logic Core readout'
+  );
+});
+
 test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR AUXILIARY BATTLE REPORT and broadcasts to BOTH alpha and beta channels', async () => {
   const dispatchedPrompts = [];
   const fetchCalls = [];

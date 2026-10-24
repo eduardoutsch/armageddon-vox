@@ -673,17 +673,23 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     messageAttemptTracker.delete(msg.id);
     rawReply = prevState.text;
   } else {
+    const item = msg;
+    const refId = msgShortId;
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
-    const isAshenSpirit = isAlpha && /ashen\s*spirit|machine[\s-]*spirit|ship|hull|cell\s*09|brig/i.test(rawQ);
+    const isShipQuery = /ashen\s*spirit|machine[\s-]*spirit|flagship|bridge\s*logic\s*core|ship|hull|cell\s*09|brig/i.test(rawQ);
+
+    const shipSpeakerDesc = item.channel === 'beta'
+      ? `Pattern 4B Flagship Bridge Logic Core readout for Commander Beta's own separate flagship (NEVER use Ashen Spirit or The Sanctuary of Ash!), REF-ID: ${refId}`
+      : `Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}`;
 
     const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
     if (isAlpha) {
-      if (isAshenSpirit) {
+      if (isShipQuery) {
         promptLines = [
-          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character (Pattern 4 Ashen Spirit cogitator readout, REF-ID: ${msgShortId}) to this message from The Exile:`,
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character (${shipSpeakerDesc}) to this message from The Exile:`,
           `"${safeQuestion}"`
         ];
       } else {
@@ -693,10 +699,17 @@ async function processSingleMessage(msg, targetPage, options = {}) {
         ];
       }
     } else {
-      promptLines = [
-        `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) to this message from Lord Commander Junebug:`,
-        `"${safeQuestion}"`
-      ];
+      if (isShipQuery) {
+        promptLines = [
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), reply in-character (${shipSpeakerDesc}) to this message from Lord Commander Junebug:`,
+          `"${safeQuestion}"`
+        ];
+      } else {
+        promptLines = [
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) to this message from Lord Commander Junebug:`,
+          `"${safeQuestion}"`
+        ];
+      }
     }
 
     if (needsInterceptBleed) {
@@ -717,8 +730,8 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       await targetPage.waitForTimeout(2500);
       prevState = await extractCleanLastModelResponse(targetPage);
 
-      const recoveryPrompt = isAshenSpirit
-        ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and SHIP.md without editing any files), write the Pattern 4 readout (REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`
+      const recoveryPrompt = isShipQuery
+        ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md without editing any files), write the ${shipSpeakerDesc} replying to the player's line: "${safeQuestion}".`
         : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (Pattern 1, REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`;
 
       await typeAndSendPrompt(targetPage, inputLocator, recoveryPrompt, channelTag);
