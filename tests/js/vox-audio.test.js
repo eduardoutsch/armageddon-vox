@@ -282,6 +282,48 @@ test('vox-audio: playCloudSyncChime throttles rapid calls to play strictly once'
   assert.equal(playedSecond, false, 'Immediate consecutive chime must be suppressed by single-shot throttle');
 });
 
+test('vox-audio: recovers from browser autoplay block on user interaction and auto-skips broken tracks on error', () => {
+  const code = fs.readFileSync(VOX_AUDIO_PATH, 'utf8');
+  assert.ok(code.includes('isPlayerActuallyPlaying'), 'Must check actual YT player state via isPlayerActuallyPlaying() rather than trusting optimistic isPlaying');
+  assert.ok(code.includes('onError'), 'YT.Player events must include onError handler to automatically skip broken/unavailable tracks');
+
+  // Verify mock YT player lifecycle: when onReady fires but browser blocks autoplay (state remains UNSTARTED = -1),
+  // isPlayerActuallyPlaying() remains false so subsequent user interaction resumes playback
+  assert.equal(typeof voxModule.createPlayer, 'function', 'Must export createPlayer for testing');
+  assert.equal(typeof voxModule.isPlayerActuallyPlaying, 'function', 'Must export isPlayerActuallyPlaying for testing');
+
+  let playCalls = 0;
+  let loadCalls = 0;
+  let currentState = -1; // UNSTARTED (autoplay blocked)
+  let capturedEvents = null;
+
+  globalThis.YT = {
+    PlayerState: { ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3, CUED: 5 },
+    Player: function (_id, opts) {
+      capturedEvents = opts.events;
+      this.setVolume = () => {};
+      this.unMute = () => {};
+      this.getPlayerState = () => currentState;
+      this.playVideo = () => { playCalls++; };
+      this.loadVideoById = () => { loadCalls++; };
+    }
+  };
+
+  voxModule.createPlayer();
+  assert.ok(capturedEvents && typeof capturedEvents.onReady === 'function');
+  assert.ok(typeof capturedEvents.onError === 'function', 'Must wire onError callback on YT.Player');
+
+  // Simulate onReady firing while browser blocks autoplay (state stays -1)
+  capturedEvents.onReady({ target: { setVolume: () => {}, unMute: () => {} } });
+  assert.equal(voxModule.isPlayerActuallyPlaying(), false, 'Player must not be marked as playing when autoplay is blocked (state -1)');
+
+  // Simulate onError firing on an unavailable track -> should automatically call playNextRandomTrack (loadVideoById)
+  const prevLoadCalls = loadCalls;
+  capturedEvents.onError({ data: 150 });
+  assert.equal(loadCalls, prevLoadCalls + 1, 'onError must automatically skip to the next random track');
+});
+
+
 
 
 

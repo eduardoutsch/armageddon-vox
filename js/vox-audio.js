@@ -522,13 +522,20 @@
       }
     }
 
-    if (wantMusic && ytReady && !isPlaying && !e.target.closest('#voxMusicToggle')) {
-      resumeOrStartMusic();
+    if (wantMusic && (!e.target || !e.target.closest || !e.target.closest('#voxMusicToggle, #voxMusicSkip'))) {
+      if (!ytReady) {
+        loadYouTubeAPI();
+      } else if (!isPlayerActuallyPlaying()) {
+        resumeOrStartMusic(true);
+      }
     }
   });
 
   // Global listener: plays CRT teletype click whenever player types in an input or textarea
   document.addEventListener('keydown', (e) => {
+    if (wantMusic && ytReady && !isPlayerActuallyPlaying()) {
+      resumeOrStartMusic(true);
+    }
     const el = e.target;
     if (!el || !el.matches('input[type="text"], input[type="password"], textarea')) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.key === 'Shift' || e.key === 'Tab' || e.key === 'CapsLock') return;
@@ -538,6 +545,20 @@
   // =========================================================================
   // PART 2: TOP-NAV YOUTUBE AMBIENT PLAYLIST RANDOMIZER WITH CONTINUITY
   // =========================================================================
+  let musicRecoveryTimer = null;
+
+  function isPlayerActuallyPlaying() {
+    if (!ytPlayer || !ytReady) return false;
+    try {
+      if (typeof ytPlayer.getPlayerState === 'function') {
+        const state = ytPlayer.getPlayerState();
+        // YT.PlayerState.PLAYING === 1, YT.PlayerState.BUFFERING === 3
+        return state === 1 || state === 3;
+      }
+    } catch (e) {}
+    return isPlaying;
+  }
+
   function injectNavToggle() {
     const nav = document.querySelector('.suite-nav');
     if (!nav || document.getElementById('voxMusicToggle')) return;
@@ -649,24 +670,42 @@
       events: {
         onReady: (event) => {
           ytReady = true;
-          event.target.setVolume(35);
+          if (event && event.target) {
+            if (typeof event.target.unMute === 'function') event.target.unMute();
+            if (typeof event.target.setVolume === 'function') event.target.setVolume(35);
+          }
           if (wantMusic) {
-            resumeOrStartMusic();
+            resumeOrStartMusic(false);
           }
         },
         onStateChange: (event) => {
           if (event.data === YT.PlayerState.PLAYING) {
             isPlaying = true;
+            if (musicRecoveryTimer) {
+              clearTimeout(musicRecoveryTimer);
+              musicRecoveryTimer = null;
+            }
             updateMusicUI(true);
             startTrackingProgress();
           } else if (event.data === YT.PlayerState.ENDED) {
+            isPlaying = false;
             playNextRandomTrack();
-          } else if (event.data === YT.PlayerState.PAUSED) {
+          } else if (
+            event.data === YT.PlayerState.PAUSED ||
+            event.data === YT.PlayerState.CUED ||
+            event.data === -1
+          ) {
+            isPlaying = false;
+            stopTrackingProgress();
             if (!wantMusic) {
-              isPlaying = false;
               updateMusicUI(false);
-              stopTrackingProgress();
             }
+          }
+        },
+        onError: () => {
+          isPlaying = false;
+          if (wantMusic) {
+            playNextRandomTrack();
           }
         }
       }
@@ -713,24 +752,46 @@
     if (document.hidden) saveCurrentPosition();
   });
 
-  function resumeOrStartMusic() {
+  function resumeOrStartMusic(fromUserGesture = false) {
     if (!ytPlayer || !ytReady) return;
     try {
-      ytPlayer.setVolume(35);
-      const { videoId, startSeconds } = getActiveTrackConfig();
+      if (typeof ytPlayer.unMute === 'function') {
+        ytPlayer.unMute();
+      }
+      if (typeof ytPlayer.setVolume === 'function') {
+        ytPlayer.setVolume(35);
+      }
 
-      if (typeof ytPlayer.loadVideoById === 'function') {
+      if (isPlayerActuallyPlaying()) {
+        isPlaying = true;
+        updateMusicUI(true);
+        startTrackingProgress();
+        return;
+      }
+
+      if (typeof ytPlayer.playVideo === 'function') {
+        ytPlayer.playVideo();
+      } else if (typeof ytPlayer.loadVideoById === 'function') {
+        const { videoId, startSeconds } = getActiveTrackConfig();
         ytPlayer.loadVideoById({
           videoId: videoId,
           startSeconds: startSeconds
         });
-      } else if (typeof ytPlayer.playVideo === 'function') {
-        ytPlayer.playVideo();
       }
 
-      isPlaying = true;
       updateMusicUI(true);
-      startTrackingProgress();
+
+      // If triggered by a user gesture and the current video remains stuck/unstarted after 1.2s,
+      // automatically advance to a fresh random track (eliminating the need to press Skip manually).
+      if (fromUserGesture) {
+        if (musicRecoveryTimer) clearTimeout(musicRecoveryTimer);
+        musicRecoveryTimer = setTimeout(() => {
+          musicRecoveryTimer = null;
+          if (wantMusic && ytReady && !isPlayerActuallyPlaying()) {
+            playNextRandomTrack();
+          }
+        }, 1200);
+      }
     } catch (err) {
       console.warn('Vox-Caster resume exception, falling back to random:', err);
       playNextRandomTrack();
@@ -751,17 +812,23 @@
       localStorage.setItem(STORAGE_KEY_TRACK_INDEX, String(fullListIndex >= 0 ? fullListIndex : 0));
       localStorage.setItem(STORAGE_KEY_TRACK_TIME, '0');
 
+      if (typeof ytPlayer.unMute === 'function') {
+        ytPlayer.unMute();
+      }
       if (typeof ytPlayer.loadVideoById === 'function') {
         ytPlayer.loadVideoById({
           videoId: nextId,
           startSeconds: 0
         });
       }
+      if (typeof ytPlayer.playVideo === 'function') {
+        ytPlayer.playVideo();
+      }
 
-      ytPlayer.setVolume(35);
-      isPlaying = true;
+      if (typeof ytPlayer.setVolume === 'function') {
+        ytPlayer.setVolume(35);
+      }
       updateMusicUI(true);
-      startTrackingProgress();
     } catch (err) {
       console.warn('Vox-Caster playlist randomizer warning:', err);
     }
@@ -1041,7 +1108,11 @@
       saveCurrentPosition,
       navigateSeamlessly,
       injectNavToggle,
-      transmitToVox
+      transmitToVox,
+      createPlayer,
+      isPlayerActuallyPlaying,
+      resumeOrStartMusic,
+      playNextRandomTrack
     };
   }
 })();
