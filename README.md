@@ -1,4 +1,4 @@
-# ⚔️ Fires of Armageddon // Warhammer 40,000 Horde & Asymmetric Crusade Suite
+# Fires of Armageddon // Warhammer 40,000 Horde & Asymmetric Crusade Suite
 
 A zero-dependency, offline-tolerant web companion suite, deterministic wave spawner, and real-time AI-bridged Astropathic Vox relay designed for cooperative, solo, and asymmetric Warhammer 40,000 Crusade campaigns.
 
