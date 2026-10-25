@@ -38,6 +38,19 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
     #logisticsAllocatorGrid .hud-val-row {
       justify-content: center;
     }
+    .choice-grid {
+      align-items: end;
+    }
+    .choice-grid > div:not(.choice-card):not(.card) {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .choice-grid select,
+    .choice-grid input[type="text"] {
+      height: 42px;
+      box-sizing: border-box;
+    }
     .alliance-score-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -779,7 +792,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
     <!-- 3. NECRON DYNASTIC REQUISITIONS, AGENDAS & MASTER PROTOCOLS VAULT -->
     <div class="card" style="border-left:4px solid var(--purple); margin-bottom:18px;">
       <div class="section-header" style="margin-top:0;">
-        <h3>3. Necron Dynastic Requisitions, Awakening Agendas &amp; Master Protocols Vault</h3>
+        <h3>3. Necron Dynastic Requisitions &amp; Master Protocols Vault</h3>
         <span class="hud-sub">Attach to Master Dossier for Cryptek Lore Christening</span>
       </div>
       <p class="card-desc" style="margin-bottom:12px;">
@@ -788,7 +801,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
 
       <div class="choice-grid" style="margin-bottom:12px;">
         <div>
-          <label class="hud-label" style="display:block; margin-bottom:4px;">Select Dynastic Requisition / Awakening Protocol</label>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Select Dynastic Protocol / Requisition</label>
           <select id="necronVaultSelect" onchange="renderSelectedNecronVaultPreview()" style="width:100%; padding:10px; font-weight:700;"></select>
         </div>
         <div>
@@ -1577,7 +1590,7 @@ function renderLogisticsAllocator() {
 
     return `
       <div class="logistics-card ${stateClass}">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;">
           <strong style="color:#fff; font-size:0.9rem;">${cat.title}</strong>
           ${badgeHtml}
         </div>
@@ -1607,8 +1620,11 @@ function renderSelectedCommendationPreview() {
   if (!sel || !box) return;
   const pick = ASTRA_COMMENDATIONS_VAULT.find(c => c.id === sel.value) || ASTRA_COMMENDATIONS_VAULT[0];
   box.innerHTML = `
-    <div><span class="dice-pip-badge" style="background:var(--gold); color:#000;">${pick.type}</span> <strong style="color:#fff;">${pick.name}</strong></div>
-    <div style="margin-top:6px; font-size:0.84rem; color:var(--text);">${pick.desc}</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+      <strong style="color:#fff; font-size:0.94rem;">${pick.name}</strong>
+      <span class="dice-pip-badge" style="background:var(--gold); color:#000; margin-right:0; font-size:0.76rem;">${pick.type}</span>
+    </div>
+    <div style="font-size:0.84rem; color:var(--text);">${pick.desc}</div>
   `;
 }
 
@@ -1789,7 +1805,7 @@ function renderTombAwakeningMatrix() {
 
     return `
       <div class="logistics-card ${stateClass}">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;">
           <strong style="color:#fff; font-size:0.9rem;">${sys.title}</strong>
           ${badgeHtml}
         </div>
@@ -1829,8 +1845,11 @@ function renderSelectedNecronVaultPreview() {
   if (!sel || !box) return;
   const pick = NECRON_DYNASTIC_VAULT.find(item => item.id === sel.value) || NECRON_DYNASTIC_VAULT[0];
   box.innerHTML = `
-    <div><span class="dice-pip-badge" style="background:var(--green); color:#000;">${pick.type}</span> <strong style="color:#fff;">${pick.name}</strong></div>
-    <div style="margin-top:6px; font-size:0.84rem; color:var(--text);">${pick.desc}</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+      <strong style="color:#fff; font-size:0.94rem;">${pick.name}</strong>
+      <span class="dice-pip-badge" style="background:var(--green); color:#000; margin-right:0; font-size:0.76rem;">${pick.type}</span>
+    </div>
+    <div style="font-size:0.84rem; color:var(--text);">${pick.desc}</div>
   `;
 }
 

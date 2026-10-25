@@ -1147,6 +1147,19 @@ input, select, textarea {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 16px;
+  align-items: end;
+}
+
+.choice-grid > div:not(.choice-card):not(.card) {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.choice-grid select,
+.choice-grid input[type="text"] {
+  height: 42px;
+  box-sizing: border-box;
 }
 
 @media (max-width: 600px) {

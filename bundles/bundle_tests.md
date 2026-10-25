@@ -5616,11 +5616,23 @@ test('crusade: resetTombAwakeningTab resets Tomb World Awakening tab state, cent
     crusadeHtml.includes('#cruTabTour') && crusadeHtml.includes('#cruTabBtn3.active'),
     'pages/crusade.html must include explicit Militarum color styling for #cruTabTour and #cruTabBtn3.active'
   );
+
+  // 4. Verify choice-grid form column alignment & vault preview flex header layout
+  assert.ok(
+    crusadeHtml.includes('.choice-grid > div:not(.choice-card):not(.card)'),
+    'pages/crusade.html must align choice-grid form field columns so select and input boxes sit level'
+  );
+  crusade.renderSelectedNecronVaultPreview();
+  assert.ok(
+    mockElements.necronVaultPreviewBox.innerHTML.includes('justify-content:space-between'),
+    'renderSelectedNecronVaultPreview must use a flex header row so badge and title align cleanly'
+  );
+  crusade.renderSelectedCommendationPreview();
+  assert.ok(
+    mockElements.commendationPreviewBox.innerHTML.includes('justify-content:space-between'),
+    'renderSelectedCommendationPreview must use a flex header row so badge and title align cleanly'
+  );
 });
-
-
-
-
 
 ````
 
