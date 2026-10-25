@@ -114,6 +114,10 @@ const mockElements = {
 };
 
 const mockDocument = {
+  body: {
+    dataset: {},
+    classList: createMockClassList()
+  },
   getElementById: (id) => mockElements[id] || null
 };
 
@@ -191,6 +195,7 @@ const evalFn = new Function(
     buildTombAwakeningDossierString,
     updateTombAwakeningPreview,
     transmitTombAwakeningDossier,
+    resetTombAwakeningTab: (typeof resetTombAwakeningTab === 'function' ? resetTombAwakeningTab : null),
     attachRollToDossier,
     removeQueuedRoll,
     clearQueuedRolls,
@@ -944,6 +949,60 @@ test('crusade: Necron Dynastic Vault selection, attachNecronVaultToDossier, and 
   assert.equal(transmittedChannel, 'beta');
   assert.equal(transmittedPayload, dispatch);
 });
+
+test('crusade: resetTombAwakeningTab resets Tomb World Awakening tab state, centers stat cards & buttons, and keeps Tour of Duty tab in Militarum color', () => {
+  // 1. Verify resetTombAwakeningTab button exists in HTML and function is exported
+  assert.ok(
+    crusadeHtml.includes('resetTombAwakeningTab()'),
+    'pages/crusade.html must include a Reset button calling resetTombAwakeningTab() in #cruTabTomb'
+  );
+  assert.equal(typeof crusade.resetTombAwakeningTab, 'function', 'Must define resetTombAwakeningTab function');
+
+  // Dirty up Tomb World Awakening state
+  crusade.getCrusadeState().tombAgendasCompleted = 5;
+  crusade.getCrusadeState().tombAwakeningCycles = 3;
+  crusade.getCrusadeState().powerReservesAllocated = true;
+  crusade.getCrusadeState().tombSystems = { command: 3, reanimation: 1, translocation: 0 };
+  mockElements.powerReservesToggle.checked = true;
+  mockElements.necronRecipientUnit.value = 'Doomsday Ark #1';
+  mockElements.tombAwakeningNotes.value = 'Custom Cryptek notes to be reset.';
+  mockElements.tombResetNotice.innerHTML = 'Master System Surge!';
+
+  // Execute resetTombAwakeningTab()
+  crusade.resetTombAwakeningTab();
+
+  assert.equal(crusade.getCrusadeState().tombAgendasCompleted, 0);
+  assert.equal(crusade.getCrusadeState().tombAwakeningCycles, 0);
+  assert.equal(crusade.getCrusadeState().powerReservesAllocated, false);
+  assert.deepEqual(crusade.getCrusadeState().tombSystems, { command: 0, reanimation: 0, translocation: 0 });
+  assert.equal(mockElements.tombAgendasCompleted.textContent, '0');
+  assert.equal(mockElements.tombAwakeningCycles.textContent, '0');
+  assert.equal(mockElements.powerReservesToggle.checked, false);
+  assert.equal(mockElements.necronRecipientUnit.value, '');
+  assert.equal(mockElements.tombAwakeningNotes.value, '');
+  assert.equal(mockElements.tombMatrixAllocatedLabel.textContent, '0 / 3');
+  assert.ok(mockElements.tombMasterStatusVal.textContent.includes('DORMANT STASIS'));
+
+  // 2. Verify centered stat cards and centered button rows in #cruTabTomb
+  assert.ok(
+    crusadeHtml.includes('stat-card-centered') && crusadeHtml.includes('justify-content:center'),
+    'pages/crusade.html must center stat cards and button rows in Tomb World Awakening tab'
+  );
+
+  // 3. Verify Tour of Duty tab (#cruTabTour) always keeps Militarum color scheme (like vox.html)
+  crusade.switchCrusadeTab('tomb', false);
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Switching to Tomb World tab activates theme-necron');
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), false);
+
+  crusade.switchCrusadeTab('tour', false);
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Switching to Tour of Duty tab always activates Militarum color mode (theme-militarum)');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), false, 'Switching to Tour of Duty tab removes theme-necron');
+  assert.ok(
+    crusadeHtml.includes('#cruTabTour') && crusadeHtml.includes('#cruTabBtn3.active'),
+    'pages/crusade.html must include explicit Militarum color styling for #cruTabTour and #cruTabBtn3.active'
+  );
+});
+
 
 
 

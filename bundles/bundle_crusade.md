@@ -22,9 +22,21 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
   <style>
     .scoreboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 14px;
       margin-bottom: 20px;
+    }
+    .stat-card-centered {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .stat-card-centered .hud-val-row,
+    #tombMatrixGrid .hud-val-row,
+    #logisticsAllocatorGrid .hud-val-row {
+      justify-content: center;
     }
     .alliance-score-card {
       background: var(--surface);
@@ -102,7 +114,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
     }
     .logistics-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
       gap: 14px;
       margin-top: 12px;
     }
@@ -120,6 +132,60 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
     .logistics-card.state-deficiency {
       border-color: var(--red);
       box-shadow: 0 0 14px rgba(255, 71, 87, 0.2);
+    }
+
+    /* ========================================================================= */
+    /* FACTION-LOCKED CRUSADE TABS (TOUR OF DUTY = MILITARUM, TOMB = NECRON)     */
+    /* ========================================================================= */
+    #cruTabBtn3.active,
+    body.theme-necron #cruTabBtn3.active {
+      background: linear-gradient(135deg, rgba(212, 163, 73, 0.24) 0%, rgba(28, 25, 22, 0.96) 100%) !important;
+      color: #f5c96a !important;
+      border-color: #d4a349 !important;
+      box-shadow: 0 0 14px rgba(212, 163, 73, 0.25), inset 0 0 12px rgba(212, 163, 73, 0.2) !important;
+    }
+
+    #cruTabBtn4.active,
+    body.theme-militarum #cruTabBtn4.active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(4, 24, 18, 0.96) 100%) !important;
+      color: #6ee7b7 !important;
+      border-color: #10b981 !important;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.28), inset 0 0 12px rgba(16, 185, 129, 0.16) !important;
+    }
+
+    #cruTabTour,
+    body.theme-necron #cruTabTour {
+      --bg: #0c0b09;
+      --surface: #171512;
+      --surface-alt: #12100d;
+      --surface-hover: #24201a;
+      --border: #3a3224;
+      --border-bright: #d4a349;
+      --text: #ece6d9;
+      --muted: #a69b86;
+      --gold: #d4a349;
+      --gold-bright: #f5c96a;
+      --gold-dim: rgba(212, 163, 73, 0.14);
+      --red: #cc2936;
+      --red-bright: #ef3e4a;
+      --red-dim: rgba(204, 41, 54, 0.18);
+      --green: #10b981;
+      --blue: #3b82f6;
+      --clip-card: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+    }
+
+    body.theme-necron #cruTabTour .card {
+      background: var(--surface);
+      border-color: var(--border);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    body.theme-necron #cruTabTour .launch-btn,
+    body.theme-necron #cruTabTour .btn-red {
+      background: linear-gradient(180deg, #d83140 0%, #991a24 100%);
+      border-color: #ef3e4a;
+      color: #fff;
+      box-shadow: 0 4px 18px rgba(204, 41, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     }
   </style>
 </head>
@@ -522,7 +588,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
 
       <div class="scoreboard-grid" style="margin-bottom:12px;">
         <!-- BATTLES REMAINING -->
-        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--gold);">
+        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--gold);">
           <span class="hud-label">BATTLES REMAINING (D6+4)</span>
           <div class="hud-val-row" style="margin-top:6px;">
             <button type="button" class="mini-btn" onclick="adjTourField('tourBattlesRem', -1)">−</button>
@@ -533,7 +599,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         </div>
 
         <!-- VICTORIES REMAINING -->
-        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--green);">
+        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--green);">
           <span class="hud-label">VICTORIES REMAINING (D3+2)</span>
           <div class="hud-val-row" style="margin-top:6px;">
             <button type="button" class="mini-btn" onclick="adjTourField('tourWinsRem', -1)">−</button>
@@ -544,8 +610,8 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         </div>
 
         <!-- COMMENDATION POINTS BANK -->
-        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--blue);">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--blue);">
+          <div style="display:flex; justify-content:center; align-items:center; gap:8px; flex-wrap:wrap;">
             <span class="hud-label">COMMENDATION PTS</span>
             <span class="hud-sub">Tours Done: <strong id="toursCompletedCount">0</strong></span>
           </div>
@@ -558,7 +624,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         </div>
       </div>
 
-      <div style="flex-wrap:wrap; display:flex; gap:10px;">
+      <div style="flex-wrap:wrap; display:flex; gap:10px; justify-content:center; align-items:center;">
         <button type="button" class="btn-gold" data-sfx="custom" onclick="rollNewTourQuotas()">🎲 Roll New Tour Quotas (D6+4 / D3+2)</button>
         <button type="button" class="btn-blue" data-sfx="custom" onclick="rollVictoryCommendationPts()">🎲 Roll Victory Commendation Pts (+D3)</button>
         <button type="button" class="btn-ghost btn-sm" onclick="adjTourField('toursCompletedCount', 1)">🏆 Mark Tour Completed (+1)</button>
@@ -607,9 +673,11 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
 
       <div id="commendationPreviewBox" class="dice-result-box" style="min-height:80px; margin-bottom:12px;"></div>
 
-      <button type="button" class="btn-gold" onclick="attachCommendationToDossier()">
-        ➕ Attach Commendation to Master Dossier (Tab 2)
-      </button>
+      <div style="display:flex; justify-content:center;">
+        <button type="button" class="btn-gold" onclick="attachCommendationToDossier()">
+          ➕ Attach Commendation to Master Dossier (Tab 2)
+        </button>
+      </div>
     </div>
 
     <!-- 4. UNIQUE START OF TOUR OF DUTY DISPATCH -->
@@ -651,7 +719,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
 
       <div class="scoreboard-grid" style="margin-bottom:12px;">
         <!-- AWAKENING AGENDAS COMPLETED -->
-        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--green);">
+        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--green);">
           <span class="hud-label">AWAKENING AGENDAS LOGGED</span>
           <div class="hud-val-row" style="margin-top:6px;">
             <button type="button" class="mini-btn" onclick="adjTombField('tombAgendasCompleted', -1)">−</button>
@@ -662,7 +730,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         </div>
 
         <!-- MASTER SYSTEM MATRIX STATUS -->
-        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--blue);">
+        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--blue);">
           <span class="hud-label">MASTER SYSTEM CONDUIT</span>
           <div style="margin-top:8px;">
             <span class="hud-num" id="tombMasterStatusVal" style="color:var(--blue); font-size:1.05rem;">🟡 AWAKENING (2 / 3 PTS)</span>
@@ -671,7 +739,7 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         </div>
 
         <!-- AWAKENING CYCLES COMPLETED -->
-        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--purple);">
+        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--purple);">
           <span class="hud-label">AWAKENING CYCLES SURGED</span>
           <div class="hud-val-row" style="margin-top:6px;">
             <button type="button" class="mini-btn" onclick="adjTombField('tombAwakeningCycles', -1)">−</button>
@@ -682,10 +750,11 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
         </div>
       </div>
 
-      <div style="flex-wrap:wrap; display:flex; gap:10px;">
+      <div style="flex-wrap:wrap; display:flex; gap:10px; justify-content:center; align-items:center;">
         <button type="button" class="btn-red" data-sfx="custom" onclick="rollMasterSystemReset()">🎲 Roll Master System Overload (−D3 Awakening Pts)</button>
         <button type="button" class="btn-ghost btn-sm" onclick="adjTombField('tombAgendasCompleted', 1)">⚡ Log Awakening Agenda (+1)</button>
         <button type="button" class="btn-ghost btn-sm" onclick="adjTombField('tombAwakeningCycles', 1)">💀 Mark Awakening Cycle (+1)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="resetTombAwakeningTab()">🔄 Reset Tomb Matrix</button>
       </div>
     </div>
 
@@ -730,9 +799,11 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
 
       <div id="necronVaultPreviewBox" class="dice-result-box" style="min-height:80px; margin-bottom:12px;"></div>
 
-      <button type="button" class="btn-gold" onclick="attachNecronVaultToDossier()">
-        ➕ Attach Dynastic Protocol to Master Dossier (Tab 2)
-      </button>
+      <div style="display:flex; justify-content:center;">
+        <button type="button" class="btn-gold" onclick="attachNecronVaultToDossier()">
+          ➕ Attach Dynastic Protocol to Master Dossier (Tab 2)
+        </button>
+      </div>
     </div>
 
     <!-- 4. DEDICATED TOMB WORLD AWAKENING MATRIX DISPATCH -->
@@ -750,9 +821,14 @@ Complete source code for the 3-Way Alliance Scoreboard, 4-Phase Branching Narrat
 
       <div class="master-dossier-preview" id="tombAwakeningPreviewBox"></div>
 
-      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitTombAwakeningDossier()">
-        📡 Transmit Tomb World Awakening Dispatch →
-      </button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <button type="button" class="launch-btn" style="flex:1;" data-sfx="custom" onclick="transmitTombAwakeningDossier()">
+          📡 Transmit Tomb World Awakening Dispatch →
+        </button>
+        <button type="button" class="btn-ghost" onclick="resetTombAwakeningTab()">
+          🔄 Reset Tomb World Tab
+        </button>
+      </div>
     </div>
 
   </div>
@@ -1227,6 +1303,19 @@ function switchCrusadeTab(which, persist = true) {
   if (btn2) btn2.classList.toggle('active', which === 'forge');
   if (btn3) btn3.classList.toggle('active', which === 'tour');
   if (btn4) btn4.classList.toggle('active', which === 'tomb');
+
+  // Keep Tab 3 (Tour of Duty) always in Militarum color and Tab 4 (Tomb World) in Necron color (just like vox.html)
+  if (document.body && document.body.classList) {
+    if (which === 'tour') {
+      document.body.classList.add('theme-militarum');
+      document.body.classList.remove('theme-necron');
+    } else if (which === 'tomb') {
+      document.body.classList.add('theme-necron');
+      document.body.classList.remove('theme-militarum');
+    } else if (window.VoxAudio && typeof window.VoxAudio.syncFactionTheme === 'function') {
+      window.VoxAudio.syncFactionTheme();
+    }
+  }
 
   if (persist) saveCrusadeState();
 }
@@ -1832,6 +1921,44 @@ function transmitTombAwakeningDossier() {
   if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox('beta', payload);
   }
+}
+
+/**
+ * Resets all Tomb World Awakening Matrix counters, system point allocations,
+ * Power Reserves requisition checkbox, and dispatch notes on Tab 4 back to clean defaults.
+ */
+function resetTombAwakeningTab() {
+  crusadeState.tombAgendasCompleted = 0;
+  crusadeState.tombAwakeningCycles = 0;
+  crusadeState.powerReservesAllocated = false;
+  crusadeState.tombSystems = {
+    command: 0,
+    reanimation: 0,
+    translocation: 0
+  };
+
+  const agendasEl = document.getElementById('tombAgendasCompleted');
+  const cyclesEl = document.getElementById('tombAwakeningCycles');
+  const reservesEl = document.getElementById('powerReservesToggle');
+  const unitEl = document.getElementById('necronRecipientUnit');
+  const notesEl = document.getElementById('tombAwakeningNotes');
+  const noticeEl = document.getElementById('tombResetNotice');
+
+  if (agendasEl) agendasEl.textContent = '0';
+  if (cyclesEl) cyclesEl.textContent = '0';
+  if (reservesEl) reservesEl.checked = false;
+  if (unitEl) unitEl.value = '';
+  if (notesEl) notesEl.value = '';
+  if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
+
+  if (window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+
+  renderTombAwakeningMatrix();
+  updateMasterDossierPreview();
+  updateTombAwakeningPreview();
+  saveCrusadeState();
 }
 
 function attachRollToDossier(kind) {
