@@ -2246,8 +2246,8 @@ if (typeof window !== 'undefined') {
           <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${showVal(pool.b34, refTable.b34)}</td></tr>
           <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${showVal(pool.b56, refTable.b56)}</td></tr>
           <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${showVal(pool.b79, refTable.b79)}</td></tr>
-          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10, refTable.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
-          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13, refTable.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10, refTable.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13, refTable.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
         </tbody>
       </table>
     `;
@@ -2268,8 +2268,8 @@ if (typeof window !== 'undefined') {
       : `• ENGAGED FORCE: Main Force Battlefront (${channel === 'beta' ? 'Lord Commander Junebug' : 'The Exile'})`;
 
     const spawnZoneLine = isDistant
-      ? `• REMOTE SECTOR & BRACKET: Distant Spawn Zone ${zoneNum} rolled ${bracketLabel} + [5+ WARP-BREACH INTRUSION]!`
-      : `• SPAWN ZONE & BRACKET: Spawn Zone ${zoneNum} rolled ${bracketLabel} + [5+ WARP-BREACH INTRUSION]!`;
+      ? `• REMOTE SECTOR & BRACKET: Distant Spawn Zone ${zoneNum} rolled ${bracketLabel} + [6+ WARP-BREACH INTRUSION]!`
+      : `• SPAWN ZONE & BRACKET: Spawn Zone ${zoneNum} rolled ${bracketLabel} + [6+ WARP-BREACH INTRUSION]!`;
 
     const activeFacLine = isDistant
       ? `• ACTIVE DISTANT ENEMY FACTION: ${facStr}`
@@ -2328,7 +2328,7 @@ if (typeof window !== 'undefined') {
         intrusionRoll = Math.floor(Math.random() * 6) + 1;
       }
 
-      if (intrusionRoll >= 5) {
+      if (intrusionRoll >= 6) {
         anyIntrusionTriggered = true;
         currentWaveIntrusions.push(`${roomStr}_R${roundStr}_Z${zoneNum}_${intrusionRoll}`);
         if (!card.querySelector('.warp-intrusion-alert')) {
@@ -2338,7 +2338,7 @@ if (typeof window !== 'undefined') {
           alertDiv.style.textAlign = 'center';
           alertDiv.innerHTML = `
             <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px; text-align:center;">
-              ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${intrusionRoll} (5+) — ADVERSARY / NEMESIS HIJACK!]
+              ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${intrusionRoll} (6+) — ADVERSARY / NEMESIS HIJACK!]
             </div>
             <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px; text-align:center;">
               Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
@@ -2356,7 +2356,7 @@ if (typeof window !== 'undefined') {
           const cleanNote = document.createElement('div');
           cleanNote.className = 'intrusion-badge-clean';
           cleanNote.style.cssText = 'margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace; text-align:center;';
-          cleanNote.textContent = `[Warp-Breach Intrusion Check: D6 = ${intrusionRoll} (Needed 5+) — Standard Horde Wave Holds]`;
+          cleanNote.textContent = `[Warp-Breach Intrusion Check: D6 = ${intrusionRoll} (Needed 6+) — Standard Horde Wave Holds]`;
           card.appendChild(cleanNote);
         }
       }

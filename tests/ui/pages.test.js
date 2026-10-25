@@ -124,20 +124,19 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
     '#dossierBeta must be visible (not hidden) on load'
   );
 
-  // Verify new sealed Astropathic dispatch and clearance gate
-  assert.ok(
-    html.includes("Lord Commander Junebug's Sealed Astropathic Dispatch"),
-    'Must include Lord Commander Junebug sealed dispatch title'
-  );
-  assert.ok(
-    html.replace(/\s+/g, ' ').includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
-    'Must include Lord Commander Junebug clearance tag'
-  );
+  // Verify Royal Engram Seal clearance gate and Tomb-Ship Master Matrix / Intercepted Vox sections
   const normHtml = html.replace(/\s+/g, ' ');
   assert.ok(
-    normHtml.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
-    normHtml.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
-    'Must include The Voice in the Ash narrative section'
+    normHtml.includes('Tomb-Ship Autonomous Master Matrix &amp; Intercepted Vox'),
+    'Must include Tomb-Ship Autonomous Master Matrix & Intercepted Vox title'
+  );
+  assert.ok(
+    normHtml.includes('Royal Engram Seal • Lord Commander Junebug • Restricted Tomb-Ship Dataslate'),
+    'Must include Lord Commander Junebug Royal Engram Seal clearance tag'
+  );
+  assert.ok(
+    normHtml.includes('Intercepted Imperial Vox-Transmission (Geostationary Zenith-09)'),
+    'Must include Intercepted Imperial Vox-Transmission (Geostationary Zenith-09) section'
   );
   assert.ok(
     html.includes('unlock-btn') && html.includes("unlockTab('Beta')"),

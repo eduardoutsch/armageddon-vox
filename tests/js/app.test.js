@@ -330,7 +330,7 @@ test('app: renderLiveSpawnerBracketTable renders table with cloud pool values an
 
   assert.ok(windowEl.innerHTML.includes('Test Chaff 10'));
   assert.ok(windowEl.innerHTML.includes('Test Greater Daemon'));
-  assert.ok(windowEl.innerHTML.includes('Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)'));
+  assert.ok(windowEl.innerHTML.includes('Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)'));
 });
 
 test('app: syncSpawnerPoolFromSupabase pulls cloud pool and updates localStorage and table', async () => {
@@ -383,7 +383,7 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
   assert.equal(transmittedChan, 'beta');
   assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED'));
   assert.ok(transmittedPayload.includes('Mode 1 (Horde Breach // Room: HADES-42 // Battle Round 3)'));
-  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [6+ WARP-BREACH INTRUSION]!'));
   assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
 });
 
@@ -408,16 +408,23 @@ test('app: transmitHordeIntrusionPing formats distant intercept payload and tran
   assert.ok(transmittedPayload.includes('ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED'));
   assert.ok(transmittedPayload.includes('Distant Sector Grid 3 // Orbital Augur Intercept (Neither Main Player Fielded)'));
   assert.ok(transmittedPayload.includes('Mode 1 (Distant Solo Horde Breach // Room: HADES-99 // Battle Round 4)'));
-  assert.ok(transmittedPayload.includes('Distant Spawn Zone 3 rolled Bracket [13+] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('Distant Spawn Zone 3 rolled Bracket [13+] + [6+ WARP-BREACH INTRUSION]!'));
   assert.ok(transmittedPayload.includes('ACTIVE DISTANT ENEMY FACTION: World Eaters'));
   assert.ok(transmittedPayload.includes('broadcast the telemetry intercept to BOTH command networks'));
 });
 
-test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusion or clean wave', () => {
-  let sirenTriggered = false;
-  globalThis.window.VoxAudio = {
-    playWarpSiren: () => { sirenTriggered = true; }
-  };
+test('app: evaluateWarpBreachIntrusions inspects spawn cards and enforces >= 6 threshold (5 is clean wave, 6 triggers alert)', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const spawnerHtml = fs.readFileSync(path.resolve(__dirname, '../../pages/spawner.html'), 'utf8');
+  assert.ok(
+    spawnerHtml.includes('[10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (6+)'),
+    'pages/spawner.html Tab 4 banner must state Roll 1D6 Warp-Breach Intrusion (6+)'
+  );
+  assert.ok(
+    spawnerHtml.includes('Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (6+)'),
+    'pages/spawner.html Tab 4 section header must state Rolls 1D6 Warp-Breach Intrusion (6+)'
+  );
 
   const container = document.getElementById('spawnResultsContainer');
   let appended1 = null;
@@ -441,13 +448,21 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusi
     return [];
   };
 
-  app.evaluateWarpBreachIntrusions();
-
-  assert.ok(appended1, 'Bracket [10–12] must receive an intrusion alert or clean note');
-  assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+  const origMulberry = globalThis.mulberry32;
+  // Roll D6 = 5 (0.75 * 6 = 4.5 -> floor 4 + 1 = 5): must NOT trigger intrusion alert when threshold is 6+
+  globalThis.mulberry32 = () => () => 0.75;
+  try {
+    app.evaluateWarpBreachIntrusions();
+    assert.ok(appended1, 'Bracket [10–12] must receive a badge');
+    assert.equal(appended1.className, 'intrusion-badge-clean', 'D6 = 5 must be a clean wave (6+ required)');
+    assert.ok(appended1.textContent.includes('Needed 6+'), 'Clean wave badge must state Needed 6+');
+    assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+  } finally {
+    globalThis.mulberry32 = origMulberry;
+  }
 });
 
-test('app: evaluateWarpBreachIntrusions renders third option button for distant intercept', () => {
+test('app: evaluateWarpBreachIntrusions renders 6+ alert and third option button for distant intercept when D6 = 6', () => {
   const container = document.getElementById('spawnResultsContainer');
   let appendedAlert = null;
   const cardBig = {
@@ -463,12 +478,13 @@ test('app: evaluateWarpBreachIntrusions renders third option button for distant 
   };
 
   const origMulberry = globalThis.mulberry32;
-  globalThis.mulberry32 = () => () => 0.99; // D6 = 6 (5+)
+  globalThis.mulberry32 = () => () => 0.99; // D6 = 6 (6+)
 
   try {
     app.evaluateWarpBreachIntrusions();
     assert.ok(appendedAlert, 'Must append warp-intrusion-alert');
     const html = appendedAlert.innerHTML;
+    assert.ok(html.includes('D6 = 6 (6+)'), 'Alert badge must display D6 = 6 (6+)');
     assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'alpha')"), 'Must have Exile ping button');
     assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'beta')"), 'Must have Junebug ping button');
     assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'distant')"), 'Must have Distant Intercept ping button');

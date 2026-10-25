@@ -242,7 +242,7 @@ test('briefing: restoreBriefingState restores all user choices from localStorage
   assert.equal(briefing.getBriefingState().selectedNode, 3);
 });
 
-test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
+test('briefing: DOM includes read-only slider gauge, Operational Thresholds in Alpha, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
   // Check read-only styling
   assert.ok(
     /pointer-events:\s*none;/i.test(briefingHtml),
@@ -250,9 +250,18 @@ test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CU
   );
   assert.ok(briefingHtml.includes('aria-label="Current Shipboard Balance Gauge (Read-Only)"'), 'Must define read-only aria-label');
   
-  // Check -1 active status node
+  // Check -1 active status node and Operational Threshold terminology (no "Sweet Spot")
   assert.ok(briefingHtml.includes('id="node-1" class="slider-node active-brig"'), 'Must render node-1 as active-brig');
-  assert.ok(briefingHtml.includes('ACTIVE • Sweet Spot'), 'Must highlight ACTIVE sweet spot');
+  assert.ok(
+    briefingHtml.includes('-1 (Lower Decks Ascendant — Tier I: Ash-Hold Surge)'),
+    'Must include -1 (Lower Decks Ascendant — Tier I: Ash-Hold Surge)'
+  );
+  assert.ok(
+    briefingHtml.replace(/\s+/g, ' ').includes('Optimal Operational Thresholds are <strong>-1</strong> and <strong>+1</strong> (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit)') ||
+    briefingHtml.replace(/\s+/g, ' ').includes('Optimal Operational Thresholds are -1 and +1 (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit)'),
+    'Must include Optimal Operational Thresholds are -1 and +1'
+  );
+  assert.equal(/Sweet Spot/i.test(briefingHtml), false, 'Must not contain legacy Sweet Spot phrasing');
 
   // Check reckRow-1 highlight in Reckoning Table
   assert.ok(briefingHtml.includes('<tr id="reckRow-1" class="highlight-row">'), 'Must highlight reckRow-1');
@@ -263,7 +272,7 @@ test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CU
   assert.ok(briefingHtml.includes('selectSlider(CURRENT_SHIP_SLIDER);'), 'Must invoke selectSlider(CURRENT_SHIP_SLIDER)');
 });
 
-test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, and Flagship muster protocol', () => {
+test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, Beta Tomb-Ship Equilibrium Gauge, and Flagship muster protocol', () => {
   // Alpha telemetry & lore
   assert.ok(
     /Deck 44: The Lower Decks &amp; Bay\s+04/.test(briefingHtml) ||
@@ -289,19 +298,36 @@ test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, and 
   );
   assert.ok(briefingHtml.includes('The Wrath of the Ashen Seraph'), 'Must include chronicle pillar 3');
 
-  // Beta telemetry & muster protocol
+  // Beta telemetry, Tomb-Ship Equilibrium Gauge, & muster protocol
   const normBriefingHtml = briefingHtml.replace(/\s+/g, ' ');
-  assert.ok(normBriefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP)'), 'Must include Beta Hegemony lead telemetry');
-  assert.ok(normBriefingHtml.includes('Session 0 Legacy: Active Nemesis Echoes'), 'Must include Nemesis Echoes telemetry');
+  assert.ok(normBriefingHtml.includes('Awakening of the Undying Dynasty'), 'Must include Awakening of the Undying Dynasty heading');
+  assert.ok(normBriefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP) &amp; Marauders +1 SPt'), 'Must include Beta Hegemony lead & Marauders +1 SPt telemetry');
+  assert.ok(normBriefingHtml.includes('Roaming Star-God &amp; Orbiting Auditors'), 'Must include Roaming Star-God & Orbiting Auditors telemetry');
   assert.ok(
-    normBriefingHtml.includes('Private Conduit &amp; Psychic Bleed Array') ||
-    normBriefingHtml.includes('Private Conduit & Psychic Bleed Array'),
-    'Must include private conduit telemetry'
+    normBriefingHtml.includes('Mirror-Image Tomb-Ship Terminal &amp; Psychic Bleed'),
+    'Must include Mirror-Image Tomb-Ship Terminal & Psychic Bleed telemetry'
   );
   assert.ok(
-    normBriefingHtml.includes('Phase 1 Flagship Muster &amp; Registration Protocol') ||
-    normBriefingHtml.includes('Phase 1 Flagship Muster & Registration Protocol'),
-    'Must include Flagship Muster Protocol'
+    normBriefingHtml.includes('SHIP.md Part 2 // Tomb-Ship Engram &amp; Tesseract Equilibrium (-3 to +3)'),
+    'Must include SHIP.md Part 2 // Tomb-Ship Engram & Tesseract Equilibrium (-3 to +3) heading'
+  );
+  assert.ok(
+    normBriefingHtml.includes('id="betaNode-1" class="slider-node active-brig"'),
+    'Must include betaNode-1 active-brig slider node'
+  );
+  assert.ok(
+    normBriefingHtml.includes('-1 // Crimson Harvest Ascendant (★ TIER I: TESSERACT OVERCLOCK ★)'),
+    'Must include Beta -1 // Crimson Harvest Ascendant detail title'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Tomb-Ship 7-State Breakdown &amp; Phase Reckoning Table (If 3rd Force Wins Phase)'),
+    'Must include Beta Tomb-Ship 7-State Breakdown & Phase Reckoning Table'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Phase 1 Tomb-Ship Muster &amp; Dynastic Registration Protocol'),
+    'Must include Phase 1 Tomb-Ship Muster & Dynastic Registration Protocol'
   );
 });
+
+
 

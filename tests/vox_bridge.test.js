@@ -377,7 +377,7 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for START 
   }
 });
 
-test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship queries and Pattern 4B Flagship Bridge Logic Core readout for beta ship queries', async () => {
+test('processSingleMessage: uses mirror-image speaker routing (Alpha defaults to Vane unless ship query; Beta defaults to Tomb-Ship Master Matrix unless hailing Vane/Zenith-09)', async () => {
   const alphaPrompts = [];
   const alphaPage = createMockPage({
     onInsertText: (txt) => { alphaPrompts.push(txt); }
@@ -406,9 +406,10 @@ test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship 
     'Alpha ship query must use Pattern 4A Ashen Spirit cogitator readout'
   );
 
-  const betaPrompts = [];
+  // Beta default (no Vane/Zenith hail) -> Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave
+  const betaDefaultPrompts = [];
   const betaPage = createMockPage({
-    onInsertText: (txt) => { betaPrompts.push(txt); }
+    onInsertText: (txt) => { betaDefaultPrompts.push(txt); }
   });
 
   await processSingleMessage(
@@ -416,22 +417,59 @@ test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship 
       id: 'bbbb2222-ship-beta',
       channel: 'beta',
       sender: 'Lord Commander Junebug',
-      question: 'Flagship Machine-Spirit, report hull and bridge logic core status.'
+      question: 'Report awakening matrix status and tesseract core telemetry.'
     },
     betaPage,
     {
       fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
       supabaseUrl: 'https://test.supabase.co',
       serviceKey: 'valid_test_secret_key_123',
-      waitForReplyFn: async () => 'REF-ID: bbbb2222\n+++ COGITATOR READOUT +++\nBridge logic core nominal.',
+      waitForReplyFn: async () => 'REF-ID: bbbb2222\n+++ COGITATOR READOUT +++\nTomb-Ship Master Matrix nominal.',
       logFn: () => {}
     }
   );
 
-  const betaFull = betaPrompts.join('\n');
+  const betaDefaultFull = betaDefaultPrompts.join('\n');
   assert.ok(
-    betaFull.includes("Pattern 4B Flagship Bridge Logic Core readout for Commander Beta's own separate flagship (NEVER use Ashen Spirit or The Sanctuary of Ash!), REF-ID: bbbb2222"),
-    'Beta ship query must use Pattern 4B Flagship Bridge Logic Core readout'
+    betaDefaultFull.includes("using AGENT.md, SHIP.md Part 2, NECRONS_CRUSADE.md, WORLD.md, and NEMESIS.md in this notebook"),
+    'Beta default prompt must reference SHIP.md Part 2 and NECRONS_CRUSADE.md'
+  );
+  assert.ok(
+    betaDefaultFull.includes("reply in-character as Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave"),
+    'Beta default must reply as Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave'
+  );
+  assert.ok(
+    betaDefaultFull.includes('REF-ID: bbbb2222, knowing ONLY Beta\'s Tomb-Ship Equilibrium Index -1, Awakening Systems, and surface telemetry—NEVER reference The Sanctuary of Ash, Deck 44, or Ashen Spirit'),
+    'Beta default must enforce Tomb-Ship isolation'
+  );
+
+  // Beta explicit Vane/Zenith-09 hail -> Logis-Prefect Vane at Geostationary Zenith-09
+  const betaVanePrompts = [];
+  const betaVanePage = createMockPage({
+    onInsertText: (txt) => { betaVanePrompts.push(txt); }
+  });
+
+  await processSingleMessage(
+    {
+      id: 'cccc3333-vane-beta',
+      channel: 'beta',
+      sender: 'Lord Commander Junebug',
+      question: '[TO: VANE] Auditor at Zenith-09, state the Imperial surface coordinates.'
+    },
+    betaVanePage,
+    {
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      supabaseUrl: 'https://test.supabase.co',
+      serviceKey: 'valid_test_secret_key_123',
+      waitForReplyFn: async () => 'REF-ID: cccc3333\n+++ ORBITAL DISPATCH +++\nCoordinates logged.',
+      logFn: () => {}
+    }
+  );
+
+  const betaVaneFull = betaVanePrompts.join('\n');
+  assert.ok(
+    betaVaneFull.includes("reply in-character as Logis-Prefect Vane at Geostationary Zenith-09 (Pattern 1, REF-ID: cccc3333, orbital knowledge only—reacting with cold bureaucratic caution to JUNEBUG's hail across the open vox, and NEVER leaking Commander Alpha's Gatebreakers banner or internal ship state)"),
+    'Beta explicit hail to Vane/Zenith-09 must route to Logis-Prefect Vane at Geostationary Zenith-09'
   );
 });
 

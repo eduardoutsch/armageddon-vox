@@ -414,20 +414,31 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     rawReply = prevState.text;
   } else {
     const item = msg;
+    const channel = item.channel;
+    const rawText = rawQ;
     const refId = msgShortId;
     const safeQuestion = sanitizePlayerQueryForGemini(rawQ);
-    const isShipQuery = /ashen\s*spirit|machine[\s-]*spirit|flagship|bridge\s*logic\s*core|ship|hull|cell\s*09|brig/i.test(rawQ);
+    const cleanMsg = safeQuestion;
 
-    const shipSpeakerDesc = item.channel === 'beta'
-      ? `Pattern 4B Flagship Bridge Logic Core readout for Commander Beta's own separate flagship (NEVER use Ashen Spirit or The Sanctuary of Ash!), REF-ID: ${refId}`
-      : `Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}`;
+    // 1. Detect if Alpha is addressing the Ship, OR if Beta is explicitly hailing Vane/Zenith-09:
+    const isAlphaShipQuery = channel === 'alpha' && (
+      /\b(ship|hull|ashen\s*spirit|machine[\s-]*spirit|deck\s*44|cell\s*09|brig|mu-th-ur)\b/i.test(cleanMsg) ||
+      /\[TO:\s*SHIP\]/i.test(rawText)
+    );
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const isBetaVaneHail = channel === 'beta' && (
+      /\b(vane|zenith|high\s*command|munitorum|auditor|human|imperials?)\b/i.test(cleanMsg) ||
+      /\[TO:\s*(VANE|HIGH\s*COMMAND|ZENITH)\]/i.test(rawText)
+    );
+
+    const shipSpeakerDesc = `Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}`;
+
+    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|TOMB WORLD AWAKENING|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
-    if (isAlpha) {
-      if (isShipQuery) {
+    if (channel === 'alpha') {
+      if (isAlphaShipQuery) {
         promptLines = [
           `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character (${shipSpeakerDesc}) to this message from The Exile:`,
           `"${safeQuestion}"`
@@ -439,15 +450,13 @@ async function processSingleMessage(msg, targetPage, options = {}) {
         ];
       }
     } else {
-      if (isShipQuery) {
+      if (!isBetaVaneHail) {
         promptLines = [
-          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), reply in-character (${shipSpeakerDesc}) to this message from Lord Commander Junebug:`,
-          `"${safeQuestion}"`
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md Part 2, NECRONS_CRUSADE.md, WORLD.md, and NEMESIS.md in this notebook—do NOT edit or update any files), reply in-character as Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave (using Pattern 2 for Battle/Rogue Reports, Pattern 3 for Nemesis/Unbound/Intrusion Warrants, or Pattern 4B for general bridge/tomb-ship queries, REF-ID: ${refId}, knowing ONLY Beta's Tomb-Ship Equilibrium Index -1, Awakening Systems, and surface telemetry—NEVER reference The Sanctuary of Ash, Deck 44, or Ashen Spirit) to this transmission from Phaeron Junebug: "${cleanMsg}"`
         ];
       } else {
         promptLines = [
-          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, WORLD.md, and Commander Beta's Dossier in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${msgShortId}, zero knowledge of Player 1's ship) to this message from Lord Commander Junebug:`,
-          `"${safeQuestion}"`
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md and WORLD.md in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane at Geostationary Zenith-09 (Pattern 1, REF-ID: ${refId}, orbital knowledge only—reacting with cold bureaucratic caution to JUNEBUG's hail across the open vox, and NEVER leaking Commander Alpha's Gatebreakers banner or internal ship state) to this transmission from Commander Beta (Junebug): "${cleanMsg}"`
         ];
       }
     }
@@ -470,9 +479,13 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       await targetPage.waitForTimeout(2500);
       prevState = await extractCleanLastModelResponse(targetPage);
 
-      const recoveryPrompt = isShipQuery
-        ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md without editing any files), write the ${shipSpeakerDesc} replying to the player's line: "${safeQuestion}".`
-        : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (Pattern 1, REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`;
+      const recoveryPrompt = channel === 'alpha'
+        ? (isAlphaShipQuery
+          ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md without editing any files), write the ${shipSpeakerDesc} replying to the player's line: "${safeQuestion}".`
+          : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (Pattern 1, REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`)
+        : (!isBetaVaneHail
+          ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md, SHIP.md Part 2, and NECRONS_CRUSADE.md without editing any files), write Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave reply (Pattern 4B, REF-ID: ${refId}) replying to Phaeron Junebug's line: "${cleanMsg}".`
+          : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply at Geostationary Zenith-09 (Pattern 1, REF-ID: ${refId}) replying to Commander Beta's line: "${cleanMsg}".`);
 
       await typeAndSendPrompt(targetPage, inputLocator, recoveryPrompt, channelTag);
       rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);

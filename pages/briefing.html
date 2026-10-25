@@ -209,12 +209,11 @@
         <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
           <div class="section-header" style="margin-top:0;">
             <h3>SHIP.md // Shipboard Tug-of-War Gauge (-3 to +3)</h3>
-            <span class="hud-sub" id="shipSliderLabel">Current State: -1 (Lower Decks Favored)</span>
+            <span class="hud-sub" id="shipSliderLabel">Current State: -1 (Lower Decks Ascendant — Tier I: Ash-Hold Surge)</span>
           </div>
           <p class="card-desc" style="margin-bottom:14px;">
             Read-only hull telemetry tracking the internal struggle between <strong>Deck 44 (The Lower Decks &amp; Cell
-              09 Warrants)</strong> and <strong>Deck 01 (The High Sanctum Wardens)</strong>. Positions
-            <strong>-1</strong> and <strong>+1</strong> are the Golden Sweet Spots; pushing into <strong>±2</strong> or
+              09 Warrants)</strong> and <strong>Deck 01 (The High Sanctum Wardens)</strong>. Optimal Operational Thresholds are <strong>-1</strong> and <strong>+1</strong> (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit). Pushing into <strong>±2</strong> or
             <strong>±3</strong> triggers oppressive shipboard quicksand!
           </p>
 
@@ -230,7 +229,7 @@
             <div id="node-1" class="slider-node active-brig">
               <span class="val">-1</span>
               <span class="lbl">Lower Decks</span>
-              <span class="sweet-spot-tag">ACTIVE • Sweet Spot</span>
+              <span class="sweet-spot-tag">ACTIVE • Tier I Surge</span>
             </div>
             <div id="node0" class="slider-node">
               <span class="val">0</span>
@@ -239,7 +238,7 @@
             <div id="node1" class="slider-node">
               <span class="val">+1</span>
               <span class="lbl">High Sanctum</span>
-              <span class="sweet-spot-tag">Sweet Spot</span>
+              <span class="sweet-spot-tag">Tier I Threshold</span>
             </div>
             <div id="node2" class="slider-node">
               <span class="val">+2</span>
@@ -288,7 +287,7 @@
                       sacrifice <strong>3 XP</strong> from a Character!</td>
                   </tr>
                   <tr id="reckRow-1" class="highlight-row">
-                    <td><strong style="color:var(--green);">-1 Sweet Spot</strong></td>
+                    <td><strong style="color:var(--green);">-1 Tier I Surge</strong></td>
                     <td><strong>"Dravik's Scapegoat Execution"</strong></td>
                     <td><strong>Zero RP or CP loss!</strong> Dravik contains the fallout by executing a scapegoat junior
                       officer: <strong>1 unit on your Order of Battle loses D3 XP</strong>, and the slider resets to 0.
@@ -303,7 +302,7 @@
                     </td>
                   </tr>
                   <tr id="reckRow1">
-                    <td><strong style="color:var(--green);">+1 Sweet Spot</strong></td>
+                    <td><strong style="color:var(--green);">+1 Tier I Sanctum</strong></td>
                     <td><strong>"The Penitent Lash"</strong></td>
                     <td><strong>Zero RP or Battle Scar penalties!</strong> Aestred Thurga shields the ship in exchange
                       for a vow of fasting: start Battle 1 of next Phase with <strong>-2 SP</strong> (first 2 SP earned
@@ -431,29 +430,29 @@
               Dreir, The Unseen Jury,</em> and <em>Dravik</em>) and seizing the home objective to win the audit by a
             mere 3 VP. Yet The Exile was dragged alive from the smoking hull of <em>"Mercy's Delay"</em> once again, and
             the Vanquishers' open defiance of the Ecclesiarchy's war-engines tilted the shipboard balance to <strong>-1
-              (Lower Decks Favored)</strong>!
+              (Lower Decks Ascendant — Tier I: Ash-Hold Surge)</strong>!
           </div>
         </div>
       </div>
     </div>
 
     <!-- ================================================================= -->
-    <!-- TAB 2: LORD COMMANDER JUNEBUG (DEFAULT VISIBLE TAB)               -->
+    <!-- TAB 2: LORD COMMANDER JUNEBUG (DEFAULT VISIBLE TAB — NECRONS)     -->
     <!-- ================================================================= -->
     <div id="dossierBeta">
 
       <!-- CLEARANCE GATE BETA -->
       <div id="gateBeta" class="hero-card"
-        style="text-align:center; padding:36px 24px; border-color:rgba(255, 71, 87, 0.45);">
-        <div class="status-pill" style="margin-bottom:12px;">Clearance Vermilion • Lord Commander Junebug • Restricted
-          Dataslate</div>
-        <h2 class="hero-title" style="font-size:1.6rem;">Lord Commander Junebug's Sealed Astropathic Dispatch</h2>
-        <p class="hero-subtitle" style="max-width:520px; margin:8px auto 22px auto;">
-          Encrypted Segmentum Solar High Command transmission routed from <strong>Geostationary Zenith-09</strong>
-          exclusively to <strong>Lord Commander Junebug's Flagship Bridge</strong>.
+        style="text-align:center; padding:36px 24px; border-color:rgba(16, 185, 129, 0.45);">
+        <div class="status-pill" style="margin-bottom:12px;">Royal Engram Seal • Lord Commander Junebug • Restricted
+          Tomb-Ship Dataslate</div>
+        <h2 class="hero-title" style="font-size:1.6rem;">Tomb-Ship Autonomous Master Matrix &amp; Intercepted Vox</h2>
+        <p class="hero-subtitle" style="max-width:540px; margin:8px auto 22px auto;">
+          Phase-masked command interlink for <strong>Lord Commander Junebug</strong> (Tomb-Ship Stasis-Wake Sequence,
+          Tesseract Core Equilibrium Gauge &amp; Intercepted Zenith-09 Carrier Wave).
         </p>
         <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Beta')">
-          🔓 Authenticate &amp; Decrypt Dispatch
+          🔓 Authenticate Royal Engram Imprint
         </button>
       </div>
 
@@ -461,80 +460,242 @@
       <div id="contentBeta" class="hidden">
         <div
           style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-          <span style="font-family:monospace; font-size:0.76rem; color:var(--blue);">
-            +++ BRIDGE LOGIC CORE [UNREGISTERED HULL] // INTERLINK: GEOSTATIONARY ZENITH-09 // COMMANDER: LORD COMMANDER
-            JUNEBUG +++
+          <span style="font-family:monospace; font-size:0.76rem; color:var(--green);">
+            +++ TOMB-SHIP AUTONOMOUS MASTER MATRIX // PHASE-MASKED ORBITAL DRIFT // PHAERON: LORD COMMANDER JUNEBUG +++
           </span>
           <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Beta')">🔒 Lock Lord Commander Junebug
             Dataslate</button>
         </div>
 
-        <!-- PART 1: FLAGSHIP BRIDGE COGITATOR WAKE SEQUENCE -->
-        <div class="hero-card" style="margin-bottom:20px;">
-          <div class="status-pill">Flagship Bridge Cogitator // Cold-Standby Wake Sequence • Orbital Anchor: Sector Node
-            0</div>
-          <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">Awaiting Flagship Christening &amp; Muster
-          </h1>
+        <!-- PART 1: TOMB-SHIP MASTER MATRIX WAKE SEQUENCE -->
+        <div class="hero-card" style="margin-bottom:20px; border-color:rgba(16, 185, 129, 0.4);">
+          <div class="status-pill">Tomb-Ship Autonomous Master Matrix // Stasis-Wake Sequence • Orbital Anchor: Sector
+            Node 0</div>
+          <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">Awakening of the Undying Dynasty</h1>
 
           <div class="lore-quote" style="text-align:left; line-height:1.65;">
-            <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.82rem; color:var(--blue);">
-              <strong>+++ BRIDGE LOGIC CORE // VENTRAL AUSPEX &amp; LAUNCH BAY TELEMETRY +++</strong>
+            <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.82rem; color:var(--green);">
+              <strong>+++ TOMB-SHIP MASTER MATRIX // SUB-CRUSTAL AUGUR &amp; TRANSLOCATION TELEMETRY +++</strong>
             </p>
             <p style="margin-bottom:10px;">
-              <em>"Command imprint recognized. Welcome back to the bridge, Warlord. I have held this vessel in silent
-                geostationary drift since the smoke cleared over the Golgotha Arbor-Basin.</em>
+              <em>"Royal engram imprint recognized. Welcome back to the command throne, Phaeron. I have held this
+                Tomb-Ship in phase-masked geostationary drift since the smoke cleared over the Golgotha
+                Arbor-Basin—spoofing the abandoned Imperial transponder codes of the prologue Sisterhood vanguard so the
+                humans at <strong>Geostationary Zenith-09</strong> remain blind to our hull's true nature.</em>
             </p>
             <p style="margin-bottom:10px;">
-              <em>Through my ventral augur-arrays, I still track the smoldering craters of your first contact down in
-                that petrified jungle—where stained-glass war-engines detonated at point-blank range, enemy trench-spade
-                strikes glanced harmlessly off sacred ceramite, and wings of white fire dropped from the sulfuric clouds
-                to butcher the rival command echelon and claim the clearing by a razor's edge (<strong>+3
-                  VP</strong>).</em>
+              <em>Down in the southern iron-oxide flats (<code>REF-ID: c44c6f23</code>), our outer hypercrypt vanguard
+                has already annihilated Commissar Yarrick's armored column, unsealed the buried tomb-vaults, and
+                unleashed the <strong>C'tan Shard of the Void Dragon</strong> (<code>nem3</code>). You hold the dominant
+                foothold in <strong>Sector Node 0 (2 / 8 HP)</strong>, and our ventral <strong>Tesseract Core</strong> is
+                currently running at <strong>-1 (Crimson Harvest Ascendant — Tier I: Tesseract Overclock)</strong>,
+                bleeding raw star-god plasma into our translocation portals while the <strong>Cryptek Conclave</strong>
+                and <strong>Triarch Auditors</strong> clamor for engrammatic restraint.</em>
             </p>
             <p style="margin:0;">
-              <em>Yet my launch bays remain sealed under temporary transponders, and my machine-spirit still lacks a
-                true name. My troop holds, drop-shuttles, and teleportation matrices await your true Phase 1 Crusade
-                host. Are we unleashing the Sisterhood once more to finish what they began—or do I unseal the deeper
-                vaults for a different army entirely? Before you issue the planetfall order, be advised: our astropathic
-                receiver has locked onto an impatient Vermilion-tier carrier wave from <strong>Geostationary
-                  Zenith-09</strong>. Patching <strong>Logis-Prefect Vane</strong> to your primary hololith now..."</em>
+              <em>Yet our primary stasis-crypts, <strong>3 Tomb World Awakening Points</strong> (<code>Command</code>,
+                <code>Reanimation</code>, and <code>Translocation</code> Systems in <a href="crusade.html"
+                  style="color:var(--green);">Mode 5: Crusade Quartermaster</a>), and Dynasty designation await your
+                royal decree. Before you issue the translocation order, be advised: our quantum receivers have
+                intercepted an impatient Vermilion-tier carrier wave from <strong>Logis-Prefect Vane</strong> at
+                Zenith-09, who still believes he is hailing an Imperial flagship. Playing his intercepted broadcast
+                below—should you ever wish to address the human station directly in <a href="vox.html"
+                  style="color:var(--gold);">Mode 7: Astropath Vox</a>, simply include <strong>'Vane'</strong> or
+                <strong>'Zenith-09'</strong> in your transmission; otherwise, I and the Cryptek Conclave will answer all
+                your commands directly."</em>
             </p>
           </div>
 
-          <!-- ORBITAL TELEMETRY & SESSION 0 ADVANTAGE -->
+          <!-- ORBITAL TELEMETRY & AWAKENING ADVANTAGE -->
           <div class="telemetry-grid">
-            <div class="telemetry-box" style="border-top-color:var(--blue);">
-              <strong style="color:var(--blue); display:block; margin-bottom:4px;">🛰️ Sector Node 0 Hegemony Lead (2 /
-                8 HP)</strong>
-              Your razor-thin triumph in the Session 0 Prologue secured the dominant foothold in <strong>Sector Node 0
-                (The Golgotha Arbor-Basin)</strong> at <strong>2 / 8 HP</strong> (ahead of the rival Death Korps siege
-              column at 1 / 8 HP and the Unidentified Threat at 1 / 8 HP).
+            <div class="telemetry-box" style="border-top-color:var(--green);">
+              <strong style="color:var(--green); display:block; margin-bottom:4px;">🛰️ Sector Node 0 Hegemony Lead (2 /
+                8 HP) &amp; Marauders +1 SPt</strong>
+              You hold the leading foothold in <strong>Sector Node 0 (The Golgotha Arbor-Basin)</strong> at <strong>2 /
+                8 HP</strong>, and the southern tomb-vault awakening (<code>REF-ID: c44c6f23</code>) has already locked
+              in the <strong>Gravitic Nexus / Staggered Time</strong> Hellscapes for the next main battle!
             </div>
             <div class="telemetry-box" style="border-top-color:var(--gold);">
-              <strong style="color:var(--gold); display:block; margin-bottom:4px;">🪽 Session 0 Legacy: Active Nemesis
-                Echoes</strong>
-              Your Prologue heroines—<strong>Saint Celestine (<em>"The Ashen Seraph"</em>)</strong> and <strong>Aestred
-                Thurga &amp; Agathae Dolan</strong>—have been permanently inducted into the theatre's <a
-                href="roster.html" style="color:var(--gold);">Mode 4: Nemesis Archive</a>. If you field a different
-              faction for Phase 1, they remain in high orbit as roaming Inquisitorial Auditors!
+              <strong style="color:var(--gold); display:block; margin-bottom:4px;">🐉 Roaming Star-God &amp; Orbiting
+                Auditors</strong>
+              The <strong>C'tan Shard of the Void Dragon (<code>nem3</code>)</strong> prowls the southern wastes
+              (ready to breach if your Tomb-Ship Index hits <code>-3</code>!), while the Prologue Sisterhood
+              champions—<strong>Saint Celestine (<code>nem1</code>)</strong> and <strong>Aestred Thurga
+                (<code>nem2</code>)</strong>—orbit above as autonomous Inquisitorial Auditors in <a href="roster.html"
+                style="color:var(--gold);">Mode 4: Nemesis Archive</a>.
             </div>
             <div class="telemetry-box" style="border-top-color:var(--purple);">
-              <strong style="color:#d8b4fe; display:block; margin-bottom:4px;">📡 Private Conduit &amp; Psychic Bleed
-                Array</strong>
-              Your flagship bridge has a dedicated, passphrase-sealed terminal in <a href="vox.html"
-                style="color:#d8b4fe;">Mode 7: Astropath Vox</a> connecting you directly to <strong>Logis-Prefect
-                Vane</strong> at Geostationary Zenith-09—plus an <strong>⚡ Interferences</strong> scanner that
-              intercepts redacted psychic fragments whenever your rival transmits secret plots!
+              <strong style="color:#d8b4fe; display:block; margin-bottom:4px;">📡 Mirror-Image Tomb-Ship Terminal &amp;
+                Psychic Bleed</strong>
+              In <a href="vox.html" style="color:#d8b4fe;">Mode 7: Astropath Vox</a>, your default channel speaker is
+              your <strong>Tomb-Ship Autonomous Master Matrix &amp; Cryptek Conclave</strong> (firing Sub-Crustal
+              Quantum-Resonance Probes and inscribing Dynastic Epithets). Address <strong>"Vane"</strong> or
+              <strong>"Zenith-09"</strong> anytime you wish to hail the human orbital auditor!
             </div>
           </div>
+        </div>
+
+        <!-- READ-ONLY SHIP.MD PART 2: TOMB-SHIP ENGRAM & TESSERACT EQUILIBRIUM GAUGE (-3 TO +3) -->
+        <div class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
+          <div class="section-header" style="margin-top:0;">
+            <h3>SHIP.md Part 2 // Tomb-Ship Engram &amp; Tesseract Equilibrium (-3 to +3)</h3>
+            <span class="hud-sub" id="betaShipSliderLabel">Current State: -1 (Crimson Harvest Ascendant — Tier I:
+              Tesseract Overclock)</span>
+          </div>
+          <p class="card-desc" style="margin-bottom:14px;">
+            Read-only Tomb-Ship telemetry tracking the internal struggle between <strong>🔻 The Crimson Harvest
+              (Tesseract Reactor Core, Destroyer Cults &amp; Flayer Virus: -1 to -3)</strong> and <strong>🔺 The Triarch
+              &amp; Cryptek Conclave (Engrammatic Orthodoxy: +1 to +3)</strong>. Positions <strong>-1</strong> and
+            <strong>+1</strong> are the <strong>Optimal Operational Thresholds</strong> (unlocking the <strong>Phase-End
+              Tomb-Vault Cache: +1 RP or +100 pts Supply</strong>); pushing into <strong>±2</strong> or
+            <strong>±3</strong> triggers catastrophic Tomb-Ship extremes!
+          </p>
+
+          <div class="slider-track" aria-label="Commander Beta Tomb-Ship Equilibrium Gauge (Read-Only)">
+            <div id="betaNode-3" class="slider-node">
+              <span class="val">-3</span>
+              <span class="lbl">Core Breach</span>
+            </div>
+            <div id="betaNode-2" class="slider-node">
+              <span class="val">-2</span>
+              <span class="lbl">Tier II Leak</span>
+            </div>
+            <div id="betaNode-1" class="slider-node active-brig">
+              <span class="val">-1</span>
+              <span class="lbl">Crimson Harvest</span>
+              <span class="sweet-spot-tag">ACTIVE • Tier I</span>
+            </div>
+            <div id="betaNode0" class="slider-node">
+              <span class="val">0</span>
+              <span class="lbl">Cold Stasis</span>
+            </div>
+            <div id="betaNode1" class="slider-node">
+              <span class="val">+1</span>
+              <span class="lbl">Cryptek Conclave</span>
+              <span class="sweet-spot-tag">Tier I Optimal</span>
+            </div>
+            <div id="betaNode2" class="slider-node">
+              <span class="val">+2</span>
+              <span class="lbl">Silent Leash</span>
+            </div>
+            <div id="betaNode3" class="slider-node">
+              <span class="val">+3</span>
+              <span class="lbl">Mind-Scrub</span>
+            </div>
+          </div>
+
+          <div id="betaSliderDetailBox" class="card" style="background:#0b0d13; margin-bottom:12px;">
+            <div style="font-weight:800; color:var(--green); margin-bottom:6px;">-1 // Crimson Harvest Ascendant (★ TIER
+              I: TESSERACT OVERCLOCK ★)</div>
+            <div style="font-size:0.88rem; line-height:1.55;">
+              <strong>Active Tier I Buff (Sub-Routine Alpha):</strong> Bleeding raw star-god plasma from the Tesseract
+              Core into the translocation portals grants all friendly <strong>NECRONS</strong> units <strong>re-roll Hit
+                rolls of 1 in melee</strong> when Below Starting Strength (or <strong>+1" to Charge rolls</strong>
+              within 6" of your Warlord) and reduces the SP cost of your first <em>Reinforcements / Strike</em> Resupply
+              purchase in Horde Mode by <strong>1 SP</strong>.<br>
+              <strong>Phase-End Tomb-Vault Cache (Sub-Routine Beta):</strong> Winning/surviving the Phase at
+              <code>-1</code> or <code>+1</code> unlocks the <strong>Phase-End Tomb-Vault Cache (+1 bonus RP or +100 pts
+                Supply Limit)</strong>!
+            </div>
+          </div>
+
+          <details>
+            <summary style="cursor:pointer; font-weight:700; color:var(--green);">Tomb-Ship 7-State Breakdown &amp;
+              Phase Reckoning Table (If 3rd Force Wins Phase)</summary>
+            <div class="drawer-body" style="font-size:0.88rem; line-height:1.55; margin-top:10px;">
+              <p>Before each battle, your Tomb-Ship Master Matrix issues two conflicting directives: a <strong>🔻
+                  Tesseract Core / Destroyer Imperative (shifts -1)</strong> and a <strong>🔺 Triarch / Cryptek Conclave
+                  Decree (shifts +1)</strong>. If the <strong>3rd Force (Horde AI)</strong> wins a Campaign Phase, your
+                Tomb-Ship suffers the reckoning matching your current Equilibrium Index:</p>
+              <table class="reckoning-table">
+                <thead>
+                  <tr>
+                    <th style="width:105px;">Index</th>
+                    <th style="width:185px;">State &amp; Reckoning</th>
+                    <th>Active State Rules &amp; Phase Reckoning Consequence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>-3 Core Breach</strong></td>
+                    <td><strong>"Tesseract Core Rupture &amp; Flayer Outbreak"</strong></td>
+                    <td><strong>At -3:</strong> Phase-End Cache burned (<strong>0 RP</strong>); 1 random Necron Infantry
+                      squad starts at Half-Strength &amp; Battle-shocked (Round 1) under <code>#35 Experimental
+                        Ammunition</code>; AND <strong>C'tan Shard of the Void Dragon (<code>nem3</code>) /
+                        Iash'uddra</strong> deploys against you as a hostile PL 4 Boss!<br><strong>Phase
+                        Reckoning:</strong> Lose <strong>1 RP</strong> (or -100 pts Supply), trigger Flayer Toll +
+                      Hostile C'tan Strike next battle, and 1 Vehicle/Canoptek takes a <strong>Battle Scar</strong>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>-2 Tier II Leak</strong></td>
+                    <td><strong>"Sub-Crypt Power Starvation"</strong></td>
+                    <td><strong>At -2:</strong> Nobles/Destroyers/Flayed Ones gain <strong>[SUSTAINED HITS 1]</strong>
+                      in melee, BUT Crypteks lock out all <code>Fortify</code> Resupplies (except War Trenches) and
+                      Vehicle/Mounted guns gain <strong>[HAZARDOUS]</strong> within 18"!<br><strong>Phase
+                        Reckoning:</strong> Start Battle 1 of next Phase with <strong>0 CP</strong>, Battleline suffer
+                      <strong>-1 Ld &amp; -1 OC</strong>, and index shifts to <code>-3</code> unless a Character
+                      sacrifices <strong>3 XP</strong>.
+                    </td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td><strong style="color:var(--green);">-1 Tier I Optimal</strong></td>
+                    <td><strong>"Cryptek Scapegoat Mind-Wipe"</strong></td>
+                    <td><strong>At -1 [ACTIVE]:</strong> Friendly Necrons re-roll 1s to Hit in melee when Below Starting
+                      Strength (+1" Charge within 6" of Warlord), -1 SP on first <em>Reinforcements/Strike</em>, and
+                      Phase-End Cache armed.<br><strong>Phase Reckoning:</strong> <strong>Zero RP or CP loss!</strong> 1
+                      unit loses <strong>D3 XP</strong> (subordinate engrams purged), and index resets to 0.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>0 Cold Stasis</strong></td>
+                    <td><strong>"Conclave Calculation Deadlock"</strong></td>
+                    <td><strong>At 0:</strong> +1 starting SP in Horde Mode (or 1 free Anomaly/Spawn re-roll in 1v1),
+                      but <strong>Phase-End Tomb-Vault Cache is locked (0 RP)</strong>.<br><strong>Phase
+                        Reckoning:</strong> Hard Mode SP Cap drops from <strong>8 SP/round to 6 SP/round</strong> (or -1
+                      CP in 1v1) and no <code>Strike</code> Resupplies in Battle 1 of next Phase.</td>
+                  </tr>
+                  <tr>
+                    <td><strong style="color:var(--green);">+1 Tier I Optimal</strong></td>
+                    <td><strong>"The Triarch Tithe"</strong></td>
+                    <td><strong>At +1:</strong> Warlord's unit re-rolls 1s to Hit (+1 wound on first Reanimation), -1 SP
+                      on first <em>Strike/Fortify</em>, and Phase-End Cache armed.<br><strong>Phase Reckoning:</strong>
+                      <strong>Zero RP or Battle Scar penalties!</strong> Start Battle 1 of next Phase with <strong>-2
+                        SP</strong> (first 2 SP earned pay off the Conclave's energy tithe), and index resets to 0.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>+2 Silent Leash</strong></td>
+                    <td><strong>"Thrall-Protocol Override"</strong></td>
+                    <td><strong>At +2:</strong> Triarch Honour Lock blocks all <strong>Traitor Secret
+                        Objectives</strong>, forbids <em>Emergency Evac (5 SP)</em>, and inflicts <strong>D3 Mortal
+                        Wounds</strong> on any friendly unit that Falls Back!<br><strong>Phase Reckoning:</strong> 1
+                      Necron Infantry squad is locked into <strong>Mindless Thrall-Mode</strong> next battle (cannot
+                      perform Actions or Fall Back; must Charge if able), lose <strong>1 RP</strong>, and shift to
+                      <code>+3</code>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><strong>+3 Mind-Scrub</strong></td>
+                    <td><strong>"Total Dynastic Mind-Scrub"</strong></td>
+                    <td><strong>At +3:</strong> 1/battle change a Reanimation roll to 3, BUT the Conclave confiscates
+                      your Phase-End Cache (<strong>0 RP</strong>) and your Warlord must pass a Leadership test (-1)
+                      after every battle or take <em>Engrammatic Degradation</em>!<br><strong>Phase Reckoning:</strong>
+                      Warlord takes an automatic <strong>Battle Scar</strong>, every unit on your Order of Battle loses
+                      <strong>1 XP</strong>, and no Stratagems in Rounds 1–2 next battle!
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
         </div>
 
         <!-- PART 2: INTERCEPTED DISPATCH FROM LOGIS-PREFECT VANE & THE THREE BANNERS -->
         <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
           <div class="section-header" style="margin-top:0;">
-            <h2 style="margin:0; font-size:1.22rem; color:var(--gold);">📜 The Voice in the Ash (Your Chronicler &amp;
-              The Third Force)</h2>
-            <span class="hud-sub">Auditor: Logis-Prefect Vane • Zenith-09</span>
+            <h2 style="margin:0; font-size:1.22rem; color:var(--gold);">📜 Intercepted Imperial Vox-Transmission
+              (Geostationary Zenith-09)</h2>
+            <span class="hud-sub">Auditor: Logis-Prefect Vane • Spoofed IFF Transponder Active</span>
           </div>
 
           <div class="lore-quote" style="text-align:left; line-height:1.62; margin-bottom:16px;">
@@ -543,15 +704,15 @@
                 the pleasantries, Lord Commander Junebug. Two kilometers below my observation deck, a rival
                 siege-barge—a joyless Death Korps penitentiary hulk calling itself <strong>The Sanctuary of
                   Ash</strong>—is already cycling its drop-locks over the northern edge of your clearing. Its commander
-                survived your prologue purge, dragged half-dead from a smoking tank hull, and his gunners have spent the
+                survived the prologue purge, dragged half-dead from a smoking tank hull, and his gunners have spent the
                 past forty-eight hours loading heavy siege ordnance with your name on it.</em>
             </p>
             <p style="margin:0;">
-              <em>Right now, your fleet is a ghost in my ledgers. You hold the dominant foothold in <strong>Sector Node
-                  0 (2 / 8 HP)</strong>, yet you have registered no flagship designation, declared no Warlord, and
-                claimed none of the theatre's three warring banners. Three great movements now vie for Armageddon's
-                ashes, and your rival's banner remains sealed under encrypted cipher until your own fleet declares its
-                allegiance."</em>
+              <em>Right now, your vessel is a ghost in my ledgers. You hold the dominant foothold in <strong>Sector Node
+                  0 (2 / 8 HP)</strong>, yet your transponders remain masked behind static baffles, you have registered
+                no flagship designation, declared no Warlord, and claimed none of the theatre's three warring banners.
+                Three great movements now vie for Armageddon's ashes, and your rival's banner remains sealed under
+                encrypted cipher until your own fleet declares its allegiance."</em>
             </p>
           </div>
 
@@ -559,65 +720,66 @@
             <div class="card" style="border-top:3px solid var(--gold); margin:0;">
               <div class="choice-title">🛡️ The Gatebreakers</div>
               <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
-                Defenders of the Threshold. Sworn to hold the ancient ferrocrete bastions of the Imperator Line, purge
-                the fallen hive cities, and shatter the black monoliths anchoring the Red Angel’s Gate.
+                Wardens of the Threshold. Sworn to enforce blackstone containment across the Imperator Line, purge the
+                tainted hive cities, and seal the empyric breach of the Red Angel’s Gate.
               </p>
             </div>
             <div class="card" style="border-top:3px solid var(--red); margin:0;">
               <div class="choice-title">💀 The Desecrators</div>
               <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
-                Heralds of the Red Angel. Those who look upon a burning world and desire only to feed the flames—slaying
-                the champions of order and tearing the polar rift wide into a daemon world.
+                Harvesters of Annihilation. Those who look upon a burning world and seek total eradication—reaping
+                organic life, shattering the defenders of order, and harvesting the rift's raw energy.
               </p>
             </div>
             <div class="card" style="border-top:3px solid var(--purple); margin:0;">
               <div class="choice-title">⚔️ The Marauders</div>
               <p class="card-desc" style="font-size:0.84rem; margin-top:6px;">
-                Lords of the Endless Anarchy. Opportunistic warhosts, xenos raiders, and renegades who strike from
-                hidden haunts to plunder <strong>Antiquity Relics</strong> (ignoring rank restrictions on Phase 1
-                victory!), decapitate enemy commanders, and profit from endless war.
+                Lords of the Forgotten Vaults. Dynastic reclaimers and xenos warhosts who strike from hyperphase
+                corridors to plunder <strong>Antiquity Relics</strong> (ignoring rank restrictions on Phase 1 victory!),
+                decapitate enemy warlords, and reclaim their ancient empire.
               </p>
             </div>
           </div>
         </div>
 
-        <!-- PART 3: FLAGSHIP MUSTER & ASTROPATHIC REGISTRATION PROTOCOL -->
+        <!-- PART 3: TOMB-SHIP MUSTER & DYNASTIC REGISTRATION PROTOCOL -->
         <div class="card" style="margin-bottom:20px; border-left:4px solid var(--green);">
           <div class="section-header" style="margin-top:0;">
-            <h2 style="margin:0; font-size:1.22rem; color:var(--green);">📡 Phase 1 Flagship Muster &amp; Registration
-              Protocol</h2>
-            <span class="hud-sub">Awaiting Official Fleet Declaration on Terminal Beta</span>
+            <h2 style="margin:0; font-size:1.22rem; color:var(--green);">📡 Phase 1 Tomb-Ship Muster &amp; Dynastic
+              Registration Protocol</h2>
+            <span class="hud-sub">Awaiting Royal Decree on Terminal Beta</span>
           </div>
           <p class="card-desc" style="margin-bottom:12px;">
-            To lock in your official Phase 1 Crusade force and unlock your custom faction tables across the website,
-            step onto your bridge in <a href="vox.html" style="color:var(--green); font-weight:700;">📡 Mode 7:
-              Astropath Vox (Lord Commander Junebug Conduit)</a> and transmit your opening dispatch to
-            <strong>Logis-Prefect Vane</strong> (or your ship's machine-spirit) with:
+            Step onto your command throne in <a href="vox.html" style="color:var(--green); font-weight:700;">📡 Mode 7:
+              Astropath Vox (Lord Commander Junebug Conduit)</a> and issue your opening royal decree to your
+            <strong>Tomb-Ship Autonomous Master Matrix</strong> (or include <strong>"Vane"</strong> to uncloak and hail
+            Zenith-09 directly) with:
           </p>
           <div class="choice-grid"
             style="grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); margin-bottom:4px;">
             <div class="card" style="background:#090b10; margin:0; padding:12px;">
-              <strong style="color:var(--gold); font-size:0.88rem;">1. Faction &amp; Detachment</strong>
+              <strong style="color:var(--green); font-size:0.88rem;">1. Dynasty &amp; Detachment</strong>
               <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
-                Declare the army you are bringing to Armageddon—and as soon as your faction is logged, its bespoke
-                <strong>Codex Battle Traits, Crusade Relics, and Agendas</strong> will be welded directly into your <a
-                  href="crusade.html" style="color:var(--gold);">Mode 5 Quartermaster Rollers</a>!
+                Your <strong>11th Ed Necrons Crusade Rules &amp; Tomb World Awakening Console</strong> (Command,
+                Reanimation &amp; Translocation Systems) are already welded into <a href="crusade.html"
+                  style="color:var(--green);">Mode 5: Crusade Quartermaster</a>! Declare your Dynasty name and starting
+                Detachment.
               </p>
             </div>
             <div class="card" style="background:#090b10; margin:0; padding:12px;">
-              <strong style="color:var(--blue); font-size:0.88rem;">2. Flagship &amp; Warlord Lore</strong>
+              <strong style="color:var(--blue); font-size:0.88rem;">2. Tomb-Ship &amp; Phaeron Lore</strong>
               <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
-                Christen your orbital flagship (and its machine-spirit), name your Warlord, and list any signature units
-                on your Order of Battle (plus any <strong>Epic Hero</strong> you wish bestowed with a <strong>Mighty
-                  Champion</strong> ability!).
+                Christen your Tomb-Ship (or reclaim the <em>Oblivion's Edge</em>), name your Phaeron/Overlord and
+                Cryptek court, and declare any <strong>Epic Hero</strong> you wish bestowed with a <strong>Mighty
+                  Champion</strong> ability!
               </p>
             </div>
             <div class="card" style="background:#090b10; margin:0; padding:12px;">
-              <strong style="color:var(--red); font-size:0.88rem;">3. Pledged Alliance Banner</strong>
+              <strong style="color:var(--gold); font-size:0.88rem;">3. Pledged Alliance Banner</strong>
               <p class="card-desc" style="font-size:0.8rem; margin-top:4px;">
                 Claim your banner among the three Alliances above (<strong>Gatebreakers</strong>,
-                <strong>Desecrators</strong>, or <strong>Marauders</strong>). Whatever banner remains unclaimed by you
-                and your rival will be seized by the Unseen Third Force!
+                <strong>Desecrators</strong>, or <strong>Marauders</strong>—note that <strong>Marauders</strong> already
+                holds <strong>1 SPt</strong> from the Southern Tomb-Vault awakening!).
               </p>
             </div>
           </div>
@@ -1207,16 +1369,16 @@
         desc: "<strong>Battlefield Buffs:</strong> Krieg Infantry keep <strong>+1 to Hit in melee</strong> (below Starting Strength), AND your Vehicles gain <strong>Feel No Pain 6+ against Mortal Wounds</strong>.<br><strong>High Sanctum Cutoff &amp; Unstable Warp-Shells:</strong> Locked out of all <code>Fortify</code> Resupplies except <em>Emergency Shovel Stash (War Trench)</em>, and all Vehicle ranged weapons gain <strong>[HAZARDOUS]</strong> when firing at targets within 18\"!"
       },
       "-1": {
-        title: "-1 // Lower Decks Favored (★ THE ASH-HOLD SWEET SPOT ★)",
-        desc: "<strong>Active Sweet Spot Buff (Sub-Routine Alpha):</strong> Siphoning reactor power (<code>94.2% / 58.0 Hz</code>) to Deck 44 corpse-starch vats and siege magazines grants all 044th Krieg Infantry <strong>+1 to Hit in melee</strong> when below Starting Strength (or <em>Feel No Pain 6+</em> within 6\" of <em>The Exile</em>, plus <strong>-1 SP</strong> on your first <em>Resupply / Reinforcements</em> purchase).<br><strong>Phase-End Vault (Sub-Routine Beta):</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong> with zero High Sanctum penalties!"
+        title: "-1 (Lower Decks Ascendant — Tier I: Ash-Hold Surge)",
+        desc: "<strong>Active Operational Threshold Buff (Sub-Routine Alpha):</strong> Siphoning reactor power (<code>94.2% / 58.0 Hz</code>) to Deck 44 corpse-starch vats and siege magazines grants all 044th Krieg Infantry <strong>+1 to Hit in melee</strong> when below Starting Strength (or <em>Feel No Pain 6+</em> within 6\" of <em>The Exile</em>, plus <strong>-1 SP</strong> on your first <em>Resupply / Reinforcements</em> purchase).<br><strong>Phase-End Vault (Sub-Routine Beta):</strong> Optimal Operational Thresholds are -1 and +1 (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit) with zero High Sanctum penalties!"
       },
       "0": {
         title: "0 // Balanced Equilibrium (Synchronized Broadsides)",
         desc: "<strong>Battlefield Buff:</strong> Ship batteries fire in harmony—granting <strong>+1 starting Supply Point (SP)</strong> in Horde Mode (or <strong>1 free re-roll of an Anomaly / Spawn Roll</strong> in 1v1).<br><strong>Phase-End Vault Lock:</strong> Ending a Phase at 0 means neither deck controls the vaults—you forfeit the Phase-End Cache (+1 RP) unless you tilt the slider to -1 or +1 before the Phase ends!"
       },
       "1": {
-        title: "+1 // High Sanctum Favored (★ THE SANCTUM SWEET SPOT ★)",
-        desc: "<strong>Sweet Spot Buff:</strong> Appeasing the Sororitas Wardens grants <em>The Exile's</em> unit <strong>re-roll 1s to Hit</strong> and reduces the SP cost of your first <em>Strike</em> or <em>Fortify</em> Resupply purchase each battle by <strong>1 SP</strong>.<br><strong>Phase-End Vault:</strong> Unlocks the <strong>Phase-End Shipboard Cache (+1 bonus RP or +100 pts Supply Limit)</strong>!"
+        title: "+1 (High Sanctum Ascendant — Tier I: Sanctum Threshold)",
+        desc: "<strong>Operational Threshold Buff:</strong> Appeasing the Sororitas Wardens grants <em>The Exile's</em> unit <strong>re-roll 1s to Hit</strong> and reduces the SP cost of your first <em>Strike</em> or <em>Fortify</em> Resupply purchase each battle by <strong>1 SP</strong>.<br><strong>Phase-End Vault:</strong> Optimal Operational Thresholds are -1 and +1 (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit)!"
       },
       "2": {
         title: "+2 // Strict Atonement (No Retreat for the Condemned)",

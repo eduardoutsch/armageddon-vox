@@ -681,7 +681,7 @@ test('app: renderLiveSpawnerBracketTable renders table with cloud pool values an
 
   assert.ok(windowEl.innerHTML.includes('Test Chaff 10'));
   assert.ok(windowEl.innerHTML.includes('Test Greater Daemon'));
-  assert.ok(windowEl.innerHTML.includes('Warp-Breach Intrusion Check (5+ = Campaign Master Adversary/Nemesis!)'));
+  assert.ok(windowEl.innerHTML.includes('Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)'));
 });
 
 test('app: syncSpawnerPoolFromSupabase pulls cloud pool and updates localStorage and table', async () => {
@@ -734,7 +734,7 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
   assert.equal(transmittedChan, 'beta');
   assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED'));
   assert.ok(transmittedPayload.includes('Mode 1 (Horde Breach // Room: HADES-42 // Battle Round 3)'));
-  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [6+ WARP-BREACH INTRUSION]!'));
   assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
 });
 
@@ -759,16 +759,23 @@ test('app: transmitHordeIntrusionPing formats distant intercept payload and tran
   assert.ok(transmittedPayload.includes('ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED'));
   assert.ok(transmittedPayload.includes('Distant Sector Grid 3 // Orbital Augur Intercept (Neither Main Player Fielded)'));
   assert.ok(transmittedPayload.includes('Mode 1 (Distant Solo Horde Breach // Room: HADES-99 // Battle Round 4)'));
-  assert.ok(transmittedPayload.includes('Distant Spawn Zone 3 rolled Bracket [13+] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('Distant Spawn Zone 3 rolled Bracket [13+] + [6+ WARP-BREACH INTRUSION]!'));
   assert.ok(transmittedPayload.includes('ACTIVE DISTANT ENEMY FACTION: World Eaters'));
   assert.ok(transmittedPayload.includes('broadcast the telemetry intercept to BOTH command networks'));
 });
 
-test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusion or clean wave', () => {
-  let sirenTriggered = false;
-  globalThis.window.VoxAudio = {
-    playWarpSiren: () => { sirenTriggered = true; }
-  };
+test('app: evaluateWarpBreachIntrusions inspects spawn cards and enforces >= 6 threshold (5 is clean wave, 6 triggers alert)', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const spawnerHtml = fs.readFileSync(path.resolve(__dirname, '../../pages/spawner.html'), 'utf8');
+  assert.ok(
+    spawnerHtml.includes('[10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (6+)'),
+    'pages/spawner.html Tab 4 banner must state Roll 1D6 Warp-Breach Intrusion (6+)'
+  );
+  assert.ok(
+    spawnerHtml.includes('Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (6+)'),
+    'pages/spawner.html Tab 4 section header must state Rolls 1D6 Warp-Breach Intrusion (6+)'
+  );
 
   const container = document.getElementById('spawnResultsContainer');
   let appended1 = null;
@@ -792,13 +799,21 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusi
     return [];
   };
 
-  app.evaluateWarpBreachIntrusions();
-
-  assert.ok(appended1, 'Bracket [10–12] must receive an intrusion alert or clean note');
-  assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+  const origMulberry = globalThis.mulberry32;
+  // Roll D6 = 5 (0.75 * 6 = 4.5 -> floor 4 + 1 = 5): must NOT trigger intrusion alert when threshold is 6+
+  globalThis.mulberry32 = () => () => 0.75;
+  try {
+    app.evaluateWarpBreachIntrusions();
+    assert.ok(appended1, 'Bracket [10–12] must receive a badge');
+    assert.equal(appended1.className, 'intrusion-badge-clean', 'D6 = 5 must be a clean wave (6+ required)');
+    assert.ok(appended1.textContent.includes('Needed 6+'), 'Clean wave badge must state Needed 6+');
+    assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+  } finally {
+    globalThis.mulberry32 = origMulberry;
+  }
 });
 
-test('app: evaluateWarpBreachIntrusions renders third option button for distant intercept', () => {
+test('app: evaluateWarpBreachIntrusions renders 6+ alert and third option button for distant intercept when D6 = 6', () => {
   const container = document.getElementById('spawnResultsContainer');
   let appendedAlert = null;
   const cardBig = {
@@ -814,12 +829,13 @@ test('app: evaluateWarpBreachIntrusions renders third option button for distant 
   };
 
   const origMulberry = globalThis.mulberry32;
-  globalThis.mulberry32 = () => () => 0.99; // D6 = 6 (5+)
+  globalThis.mulberry32 = () => () => 0.99; // D6 = 6 (6+)
 
   try {
     app.evaluateWarpBreachIntrusions();
     assert.ok(appendedAlert, 'Must append warp-intrusion-alert');
     const html = appendedAlert.innerHTML;
+    assert.ok(html.includes('D6 = 6 (6+)'), 'Alert badge must display D6 = 6 (6+)');
     assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'alpha')"), 'Must have Exile ping button');
     assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'beta')"), 'Must have Junebug ping button');
     assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'distant')"), 'Must have Distant Intercept ping button');
@@ -1903,7 +1919,7 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed prompt for START 
   }
 });
 
-test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship queries and Pattern 4B Flagship Bridge Logic Core readout for beta ship queries', async () => {
+test('processSingleMessage: uses mirror-image speaker routing (Alpha defaults to Vane unless ship query; Beta defaults to Tomb-Ship Master Matrix unless hailing Vane/Zenith-09)', async () => {
   const alphaPrompts = [];
   const alphaPage = createMockPage({
     onInsertText: (txt) => { alphaPrompts.push(txt); }
@@ -1932,9 +1948,10 @@ test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship 
     'Alpha ship query must use Pattern 4A Ashen Spirit cogitator readout'
   );
 
-  const betaPrompts = [];
+  // Beta default (no Vane/Zenith hail) -> Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave
+  const betaDefaultPrompts = [];
   const betaPage = createMockPage({
-    onInsertText: (txt) => { betaPrompts.push(txt); }
+    onInsertText: (txt) => { betaDefaultPrompts.push(txt); }
   });
 
   await processSingleMessage(
@@ -1942,22 +1959,59 @@ test('processSingleMessage: uses Pattern 4A Ashen Spirit readout for alpha ship 
       id: 'bbbb2222-ship-beta',
       channel: 'beta',
       sender: 'Lord Commander Junebug',
-      question: 'Flagship Machine-Spirit, report hull and bridge logic core status.'
+      question: 'Report awakening matrix status and tesseract core telemetry.'
     },
     betaPage,
     {
       fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
       supabaseUrl: 'https://test.supabase.co',
       serviceKey: 'valid_test_secret_key_123',
-      waitForReplyFn: async () => 'REF-ID: bbbb2222\n+++ COGITATOR READOUT +++\nBridge logic core nominal.',
+      waitForReplyFn: async () => 'REF-ID: bbbb2222\n+++ COGITATOR READOUT +++\nTomb-Ship Master Matrix nominal.',
       logFn: () => {}
     }
   );
 
-  const betaFull = betaPrompts.join('\n');
+  const betaDefaultFull = betaDefaultPrompts.join('\n');
   assert.ok(
-    betaFull.includes("Pattern 4B Flagship Bridge Logic Core readout for Commander Beta's own separate flagship (NEVER use Ashen Spirit or The Sanctuary of Ash!), REF-ID: bbbb2222"),
-    'Beta ship query must use Pattern 4B Flagship Bridge Logic Core readout'
+    betaDefaultFull.includes("using AGENT.md, SHIP.md Part 2, NECRONS_CRUSADE.md, WORLD.md, and NEMESIS.md in this notebook"),
+    'Beta default prompt must reference SHIP.md Part 2 and NECRONS_CRUSADE.md'
+  );
+  assert.ok(
+    betaDefaultFull.includes("reply in-character as Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave"),
+    'Beta default must reply as Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave'
+  );
+  assert.ok(
+    betaDefaultFull.includes('REF-ID: bbbb2222, knowing ONLY Beta\'s Tomb-Ship Equilibrium Index -1, Awakening Systems, and surface telemetry—NEVER reference The Sanctuary of Ash, Deck 44, or Ashen Spirit'),
+    'Beta default must enforce Tomb-Ship isolation'
+  );
+
+  // Beta explicit Vane/Zenith-09 hail -> Logis-Prefect Vane at Geostationary Zenith-09
+  const betaVanePrompts = [];
+  const betaVanePage = createMockPage({
+    onInsertText: (txt) => { betaVanePrompts.push(txt); }
+  });
+
+  await processSingleMessage(
+    {
+      id: 'cccc3333-vane-beta',
+      channel: 'beta',
+      sender: 'Lord Commander Junebug',
+      question: '[TO: VANE] Auditor at Zenith-09, state the Imperial surface coordinates.'
+    },
+    betaVanePage,
+    {
+      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+      supabaseUrl: 'https://test.supabase.co',
+      serviceKey: 'valid_test_secret_key_123',
+      waitForReplyFn: async () => 'REF-ID: cccc3333\n+++ ORBITAL DISPATCH +++\nCoordinates logged.',
+      logFn: () => {}
+    }
+  );
+
+  const betaVaneFull = betaVanePrompts.join('\n');
+  assert.ok(
+    betaVaneFull.includes("reply in-character as Logis-Prefect Vane at Geostationary Zenith-09 (Pattern 1, REF-ID: cccc3333, orbital knowledge only—reacting with cold bureaucratic caution to JUNEBUG's hail across the open vox, and NEVER leaking Commander Alpha's Gatebreakers banner or internal ship state)"),
+    'Beta explicit hail to Vane/Zenith-09 must route to Logis-Prefect Vane at Geostationary Zenith-09'
   );
 });
 
@@ -2470,20 +2524,19 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
     '#dossierBeta must be visible (not hidden) on load'
   );
 
-  // Verify new sealed Astropathic dispatch and clearance gate
-  assert.ok(
-    html.includes("Lord Commander Junebug's Sealed Astropathic Dispatch"),
-    'Must include Lord Commander Junebug sealed dispatch title'
-  );
-  assert.ok(
-    html.replace(/\s+/g, ' ').includes('Clearance Vermilion • Lord Commander Junebug • Restricted Dataslate'),
-    'Must include Lord Commander Junebug clearance tag'
-  );
+  // Verify Royal Engram Seal clearance gate and Tomb-Ship Master Matrix / Intercepted Vox sections
   const normHtml = html.replace(/\s+/g, ' ');
   assert.ok(
-    normHtml.includes('The Voice in the Ash (Your Chronicler &amp; The Third Force)') ||
-    normHtml.includes('The Voice in the Ash (Your Chronicler & The Third Force)'),
-    'Must include The Voice in the Ash narrative section'
+    normHtml.includes('Tomb-Ship Autonomous Master Matrix &amp; Intercepted Vox'),
+    'Must include Tomb-Ship Autonomous Master Matrix & Intercepted Vox title'
+  );
+  assert.ok(
+    normHtml.includes('Royal Engram Seal • Lord Commander Junebug • Restricted Tomb-Ship Dataslate'),
+    'Must include Lord Commander Junebug Royal Engram Seal clearance tag'
+  );
+  assert.ok(
+    normHtml.includes('Intercepted Imperial Vox-Transmission (Geostationary Zenith-09)'),
+    'Must include Intercepted Imperial Vox-Transmission (Geostationary Zenith-09) section'
   );
   assert.ok(
     html.includes('unlock-btn') && html.includes("unlockTab('Beta')"),
@@ -3173,7 +3226,7 @@ test('briefing: restoreBriefingState restores all user choices from localStorage
   assert.equal(briefing.getBriefingState().selectedNode, 3);
 });
 
-test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
+test('briefing: DOM includes read-only slider gauge, Operational Thresholds in Alpha, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
   // Check read-only styling
   assert.ok(
     /pointer-events:\s*none;/i.test(briefingHtml),
@@ -3181,9 +3234,18 @@ test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CU
   );
   assert.ok(briefingHtml.includes('aria-label="Current Shipboard Balance Gauge (Read-Only)"'), 'Must define read-only aria-label');
   
-  // Check -1 active status node
+  // Check -1 active status node and Operational Threshold terminology (no "Sweet Spot")
   assert.ok(briefingHtml.includes('id="node-1" class="slider-node active-brig"'), 'Must render node-1 as active-brig');
-  assert.ok(briefingHtml.includes('ACTIVE • Sweet Spot'), 'Must highlight ACTIVE sweet spot');
+  assert.ok(
+    briefingHtml.includes('-1 (Lower Decks Ascendant — Tier I: Ash-Hold Surge)'),
+    'Must include -1 (Lower Decks Ascendant — Tier I: Ash-Hold Surge)'
+  );
+  assert.ok(
+    briefingHtml.replace(/\s+/g, ' ').includes('Optimal Operational Thresholds are <strong>-1</strong> and <strong>+1</strong> (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit)') ||
+    briefingHtml.replace(/\s+/g, ' ').includes('Optimal Operational Thresholds are -1 and +1 (Unlocking the Phase-End Shipboard Cache: +1 RP or +100 pts Supply Limit)'),
+    'Must include Optimal Operational Thresholds are -1 and +1'
+  );
+  assert.equal(/Sweet Spot/i.test(briefingHtml), false, 'Must not contain legacy Sweet Spot phrasing');
 
   // Check reckRow-1 highlight in Reckoning Table
   assert.ok(briefingHtml.includes('<tr id="reckRow-1" class="highlight-row">'), 'Must highlight reckRow-1');
@@ -3194,7 +3256,7 @@ test('briefing: DOM includes read-only slider gauge, reckRow-1 highlight, and CU
   assert.ok(briefingHtml.includes('selectSlider(CURRENT_SHIP_SLIDER);'), 'Must invoke selectSlider(CURRENT_SHIP_SLIDER)');
 });
 
-test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, and Flagship muster protocol', () => {
+test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, Beta Tomb-Ship Equilibrium Gauge, and Flagship muster protocol', () => {
   // Alpha telemetry & lore
   assert.ok(
     /Deck 44: The Lower Decks &amp; Bay\s+04/.test(briefingHtml) ||
@@ -3220,21 +3282,38 @@ test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, and 
   );
   assert.ok(briefingHtml.includes('The Wrath of the Ashen Seraph'), 'Must include chronicle pillar 3');
 
-  // Beta telemetry & muster protocol
+  // Beta telemetry, Tomb-Ship Equilibrium Gauge, & muster protocol
   const normBriefingHtml = briefingHtml.replace(/\s+/g, ' ');
-  assert.ok(normBriefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP)'), 'Must include Beta Hegemony lead telemetry');
-  assert.ok(normBriefingHtml.includes('Session 0 Legacy: Active Nemesis Echoes'), 'Must include Nemesis Echoes telemetry');
+  assert.ok(normBriefingHtml.includes('Awakening of the Undying Dynasty'), 'Must include Awakening of the Undying Dynasty heading');
+  assert.ok(normBriefingHtml.includes('Sector Node 0 Hegemony Lead (2 / 8 HP) &amp; Marauders +1 SPt'), 'Must include Beta Hegemony lead & Marauders +1 SPt telemetry');
+  assert.ok(normBriefingHtml.includes('Roaming Star-God &amp; Orbiting Auditors'), 'Must include Roaming Star-God & Orbiting Auditors telemetry');
   assert.ok(
-    normBriefingHtml.includes('Private Conduit &amp; Psychic Bleed Array') ||
-    normBriefingHtml.includes('Private Conduit & Psychic Bleed Array'),
-    'Must include private conduit telemetry'
+    normBriefingHtml.includes('Mirror-Image Tomb-Ship Terminal &amp; Psychic Bleed'),
+    'Must include Mirror-Image Tomb-Ship Terminal & Psychic Bleed telemetry'
   );
   assert.ok(
-    normBriefingHtml.includes('Phase 1 Flagship Muster &amp; Registration Protocol') ||
-    normBriefingHtml.includes('Phase 1 Flagship Muster & Registration Protocol'),
-    'Must include Flagship Muster Protocol'
+    normBriefingHtml.includes('SHIP.md Part 2 // Tomb-Ship Engram &amp; Tesseract Equilibrium (-3 to +3)'),
+    'Must include SHIP.md Part 2 // Tomb-Ship Engram & Tesseract Equilibrium (-3 to +3) heading'
+  );
+  assert.ok(
+    normBriefingHtml.includes('id="betaNode-1" class="slider-node active-brig"'),
+    'Must include betaNode-1 active-brig slider node'
+  );
+  assert.ok(
+    normBriefingHtml.includes('-1 // Crimson Harvest Ascendant (★ TIER I: TESSERACT OVERCLOCK ★)'),
+    'Must include Beta -1 // Crimson Harvest Ascendant detail title'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Tomb-Ship 7-State Breakdown &amp; Phase Reckoning Table (If 3rd Force Wins Phase)'),
+    'Must include Beta Tomb-Ship 7-State Breakdown & Phase Reckoning Table'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Phase 1 Tomb-Ship Muster &amp; Dynastic Registration Protocol'),
+    'Must include Phase 1 Tomb-Ship Muster & Dynastic Registration Protocol'
   );
 });
+
+
 
 ````
 
