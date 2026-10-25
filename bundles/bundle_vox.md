@@ -442,6 +442,104 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       background: currentColor;
       box-shadow: 0 0 8px currentColor;
     }
+
+    /* ========================================================================= */
+    /* NECRON TOMB-SHIP MASTER MATRIX PERSONAL TERMINAL (TERMINAL BETA)          */
+    /* ========================================================================= */
+    body.theme-necron #cardBeta.selected {
+      background: linear-gradient(135deg, rgba(6, 48, 36, 0.72) 0%, rgba(3, 18, 14, 0.96) 100%);
+      border-color: #10b981;
+      box-shadow: 0 0 22px rgba(16, 185, 129, 0.35), inset 0 0 14px rgba(16, 185, 129, 0.16);
+    }
+
+    body.theme-necron #cardBeta.selected .choice-title {
+      color: #6ee7b7;
+      text-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+    }
+
+    body.theme-necron .crt-monitor-frame {
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(2, 8, 6, 0.98) 72%),
+        linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+        #020806;
+      background-size: 100% 100%, 28px 28px, 28px 28px, 100% 100%;
+      border: 2px solid #10b981;
+      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+      box-shadow:
+        inset 0 0 48px rgba(0, 0, 0, 0.96),
+        inset 0 0 24px rgba(16, 185, 129, 0.15),
+        0 0 28px rgba(16, 185, 129, 0.22);
+    }
+
+    body.theme-necron .crt-monitor-frame::after {
+      background: linear-gradient(
+        rgba(16, 185, 129, 0) 50%,
+        rgba(0, 12, 8, 0.38) 50%
+      );
+      background-size: 100% 4px;
+    }
+
+    body.theme-necron .crt-msg-card {
+      background: linear-gradient(135deg, rgba(4, 24, 26, 0.92) 0%, rgba(2, 12, 14, 0.96) 100%);
+      border: 1px solid rgba(45, 212, 191, 0.45);
+      border-left: 3px solid #2dd4bf;
+      color: #ccfbf1;
+      text-shadow: 0 0 6px rgba(45, 212, 191, 0.38);
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+    }
+
+    body.theme-necron .crt-msg-header {
+      color: #5eead4;
+      border-bottom: 1px dashed rgba(45, 212, 191, 0.35);
+    }
+
+    body.theme-necron .crt-reply-card {
+      background: linear-gradient(135deg, rgba(4, 26, 18, 0.95) 0%, rgba(2, 12, 8, 0.98) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.55);
+      border-left: 3px solid #10b981;
+      color: #a7f3d0;
+      text-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    }
+
+    body.theme-necron .crt-reply-header {
+      color: #34d399;
+      border-bottom: 1px dashed rgba(16, 185, 129, 0.38);
+    }
+
+    body.theme-necron .crt-pending-line {
+      background: rgba(4, 24, 18, 0.8);
+      border: 1px dashed rgba(45, 212, 191, 0.48);
+      color: #5eead4;
+    }
+
+    body.theme-necron .crt-input-textarea {
+      background: #020907;
+      color: #6ee7b7;
+      text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+      border: 1.5px solid rgba(16, 185, 129, 0.48);
+    }
+
+    body.theme-necron .crt-input-textarea:focus {
+      border-color: #34d399;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.32);
+    }
+
+    body.theme-necron #subWinDirect button.btn-red {
+      background: linear-gradient(180deg, rgba(6, 95, 70, 0.95) 0%, rgba(4, 47, 46, 0.98) 100%);
+      border-color: #10b981;
+      color: #ecfdf5;
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
+    }
+
+    /* ========================================================================= */
+    /* ASTRA MILITARUM // SANCTUARY OF ASH PERSONAL TERMINAL (TERMINAL ALPHA)    */
+    /* ========================================================================= */
+    body.theme-militarum #cardAlpha.selected {
+      border-color: var(--gold);
+      box-shadow: 0 0 18px rgba(212, 163, 73, 0.25);
+    }
   </style>
 </head>
 <body>
@@ -681,8 +779,23 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
     }
   }
 
+  function applyVoxFactionTheme(chan, persist = false) {
+    const theme = chan === 'beta' ? 'necron' : 'militarum';
+    if (window.VoxAudio && typeof window.VoxAudio.setFactionTheme === 'function') {
+      window.VoxAudio.setFactionTheme(theme, persist);
+    }
+    if (document.body && document.body.classList) {
+      document.body.classList.toggle('theme-necron', theme === 'necron');
+      document.body.classList.toggle('theme-militarum', theme === 'militarum');
+      if (document.body.dataset) {
+        document.body.dataset.factionTheme = theme;
+      }
+    }
+  }
+
   async function selectConduit(chan, clearPendingCheck = false) {
     selectedChannel = chan;
+    applyVoxFactionTheme(chan, false);
     const cardA = document.getElementById('cardAlpha');
     const cardB = document.getElementById('cardBeta');
     const errEl = document.getElementById('authErrorMsg');
@@ -743,6 +856,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       }
 
       activePassphrase = pass;
+      applyVoxFactionTheme(selectedChannel, true);
       try {
         sessionStorage.setItem(SESSION_AUTH_KEY, JSON.stringify({ channel: selectedChannel, pass }));
       } catch (e) {}
@@ -1336,7 +1450,10 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       }
     } catch (e) {}
 
-    await selectConduit('alpha');
+    const activeTheme = (window.VoxAudio && typeof window.VoxAudio.getFactionTheme === 'function')
+      ? window.VoxAudio.getFactionTheme()
+      : null;
+    await selectConduit(activeTheme === 'necron' ? 'beta' : 'alpha');
   }
 
   window.addEventListener('DOMContentLoaded', initVoxTerminalPage);

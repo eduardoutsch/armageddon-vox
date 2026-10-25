@@ -154,11 +154,28 @@ test('briefing: showDossier switches active dossier and updates buttons', () => 
   assert.equal(parsed.activeDossier, 'atlas');
 });
 
-test('briefing: unlockTab and lockTab manage clearance gates and persist states', () => {
+test('briefing: unlockTab and lockTab manage clearance gates, persist states, and activate global Necron or Militarum color mode', () => {
   briefing.unlockTab('Beta', true);
   assert.equal(mockElements.gateBeta.classList.contains('hidden'), true);
   assert.equal(mockElements.contentBeta.classList.contains('hidden'), false);
   assert.equal(briefing.getBriefingState().unlockedBeta, true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), true, 'Unlocking Beta broadcast must activate global theme-necron');
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), false);
+  assert.equal(localStorage.getItem('foa_faction_theme_v1'), 'necron', 'Unlocking Beta broadcast must persist necron theme mode');
+
+  briefing.unlockTab('Alpha', true);
+  assert.equal(mockElements.gateAlpha.classList.contains('hidden'), true);
+  assert.equal(mockElements.contentAlpha.classList.contains('hidden'), false);
+  assert.equal(briefing.getBriefingState().unlockedAlpha, true);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true, 'Unlocking Alpha broadcast must activate global theme-militarum');
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), false);
+  assert.equal(localStorage.getItem('foa_faction_theme_v1'), 'militarum', 'Unlocking Alpha broadcast must persist militarum theme mode');
+
+  // Switching between unlocked broadcasts switches global faction color mode
+  briefing.showDossier('beta', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), true, 'Viewing unlocked Beta dossier activates theme-necron');
+  briefing.showDossier('alpha', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true, 'Viewing unlocked Alpha dossier activates theme-militarum');
 
   briefing.lockTab('Beta', true);
   assert.equal(mockElements.gateBeta.classList.contains('hidden'), false);

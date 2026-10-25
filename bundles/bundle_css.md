@@ -2517,6 +2517,220 @@ details[open] > summary {
   will-change: transform, filter;
 }
 
+/* ==========================================================================
+   GLOBAL FACTION COLOR MODES (UNLOCKED BROADCAST / CONDUIT THEME SYNC)
+   - body.theme-necron    : Lord Commander Junebug (Awakening Tomb World)
+   - body.theme-militarum : The Exile // Sanctuary of Ash (Astra Militarum)
+   ========================================================================== */
+
+body.theme-necron {
+  --bg: #020806;
+  --surface: #061410;
+  --surface-alt: #040d0a;
+  --surface-hover: #0a221b;
+  --border: #114232;
+  --border-bright: #10b981;
+  --text: #d1fae5;
+  --muted: #6ee7b7;
+  --gold: #10b981;
+  --gold-bright: #34d399;
+  --gold-dim: rgba(16, 185, 129, 0.14);
+  --red: #059669;
+  --red-bright: #10b981;
+  --red-dim: rgba(16, 185, 129, 0.18);
+  --green: #34d399;
+  --blue: #2dd4bf;
+  --side-glow-line: rgba(16, 185, 129, 0.42);
+  --side-glow-bloom: rgba(16, 185, 129, 0.14);
+  --side-glow-deep: rgba(45, 212, 191, 0.08);
+  --corner-glow-core: rgba(52, 211, 153, 0.16);
+  --corner-glow-bloom: rgba(16, 185, 129, 0.09);
+  --corner-glow-deep: rgba(6, 78, 59, 0.06);
+  --clip-card: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  background-color: #020806;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.16) 0%, transparent 65%),
+    radial-gradient(circle at 85% 20%, rgba(45, 212, 191, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 15% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(16, 185, 129, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+body.theme-necron .suite-nav {
+  background: rgba(2, 10, 8, 0.96);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.45);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(16, 185, 129, 0.18);
+}
+
+body.theme-necron .suite-brand {
+  color: #34d399;
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+body.theme-necron .suite-link.active {
+  color: #ecfdf5;
+  background: rgba(16, 185, 129, 0.16);
+  border-color: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25), inset 0 0 8px rgba(16, 185, 129, 0.15);
+}
+
+body.theme-necron .hero-card,
+body.theme-necron .card,
+body.theme-necron .hud-bar,
+body.theme-necron .round-banner {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.11) 0%, transparent 70%),
+    linear-gradient(165deg, rgba(6, 20, 15, 0.96) 0%, rgba(3, 10, 8, 0.98) 55%, rgba(5, 16, 12, 0.96) 100%);
+  border-color: rgba(16, 185, 129, 0.42);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.88),
+    0 0 22px rgba(16, 185, 129, 0.12),
+    inset 0 0 24px rgba(16, 185, 129, 0.05);
+}
+
+body.theme-necron .hero-title {
+  background: linear-gradient(90deg, #ecfdf5 0%, #6ee7b7 45%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 22px rgba(16, 185, 129, 0.28);
+}
+
+body.theme-necron .status-pill {
+  background: rgba(6, 38, 28, 0.85);
+  border-color: rgba(16, 185, 129, 0.55);
+  color: #6ee7b7;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+body.theme-necron .status-pill .pulse-dot {
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+body.theme-necron .nav-pills button.active,
+body.theme-necron .commander-switcher button.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(4, 24, 18, 0.96) 100%);
+  color: #6ee7b7;
+  border-color: #10b981;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.28), inset 0 0 12px rgba(16, 185, 129, 0.16);
+}
+
+body.theme-necron .launch-btn,
+body.theme-necron .btn-red {
+  background: linear-gradient(180deg, rgba(6, 95, 70, 0.95) 0%, rgba(4, 47, 46, 0.98) 100%);
+  border-color: #10b981;
+  color: #ecfdf5;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.28), inset 0 1px 0 rgba(167, 243, 208, 0.3);
+}
+
+body.theme-necron .launch-btn:hover,
+body.theme-necron .btn-red:hover {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.92) 0%, rgba(6, 95, 70, 0.98) 100%);
+  border-color: #6ee7b7;
+  color: #022c22;
+  box-shadow: 0 0 26px rgba(16, 185, 129, 0.55);
+}
+
+body.theme-necron code {
+  background: rgba(6, 48, 36, 0.68);
+  border: 1px solid rgba(16, 185, 129, 0.42);
+  color: #6ee7b7;
+}
+
+/* Necron Personal Terminal Overrides (pages/vox.html & global CRT widgets) */
+body.theme-necron .crt-monitor-frame {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.14) 0%, rgba(2, 8, 6, 0.98) 72%),
+    #020806;
+  border-color: #10b981;
+  box-shadow:
+    inset 0 0 48px rgba(0, 0, 0, 0.96),
+    inset 0 0 22px rgba(16, 185, 129, 0.14),
+    0 0 28px rgba(16, 185, 129, 0.2);
+}
+
+body.theme-necron .crt-msg-card {
+  background: linear-gradient(135deg, rgba(4, 24, 26, 0.92) 0%, rgba(2, 12, 14, 0.96) 100%);
+  border: 1px solid rgba(45, 212, 191, 0.42);
+  border-left: 3px solid #2dd4bf;
+  color: #ccfbf1;
+  text-shadow: 0 0 6px rgba(45, 212, 191, 0.35);
+}
+
+body.theme-necron .crt-msg-header {
+  color: #5eead4;
+  border-bottom-color: rgba(45, 212, 191, 0.32);
+}
+
+body.theme-necron .crt-reply-card {
+  background: linear-gradient(135deg, rgba(4, 26, 18, 0.94) 0%, rgba(2, 12, 8, 0.98) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.52);
+  border-left: 3px solid #10b981;
+  color: #a7f3d0;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.42);
+}
+
+body.theme-necron .crt-reply-header {
+  color: #34d399;
+  border-bottom-color: rgba(16, 185, 129, 0.35);
+}
+
+body.theme-necron .crt-pending-line {
+  background: rgba(4, 24, 18, 0.78);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #5eead4;
+}
+
+body.theme-necron .crt-input-textarea {
+  background: #020907;
+  color: #6ee7b7;
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.48);
+}
+
+body.theme-necron .crt-input-textarea:focus {
+  border-color: #34d399;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.32);
+}
+
+body.theme-necron .queued-dossier-banner {
+  background: rgba(6, 48, 36, 0.35);
+  border-color: #10b981;
+  color: #6ee7b7;
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.35);
+}
+
+/* Astra Militarum // Sanctuary of Ash Global Color Mode */
+body.theme-militarum {
+  --bg: #0c0b09;
+  --surface: #171512;
+  --surface-alt: #12100d;
+  --surface-hover: #24201a;
+  --border: #3a3224;
+  --border-bright: #d4a349;
+  --text: #ece6d9;
+  --muted: #a69b86;
+  --gold: #d4a349;
+  --gold-bright: #f5c96a;
+  --gold-dim: rgba(212, 163, 73, 0.14);
+  --red: #cc2936;
+  --red-bright: #ef3e4a;
+  --red-dim: rgba(204, 41, 54, 0.18);
+  --side-glow-line: rgba(212, 163, 73, 0.38);
+  --side-glow-bloom: rgba(212, 163, 73, 0.12);
+  --side-glow-deep: rgba(204, 41, 54, 0.08);
+  --corner-glow-core: rgba(212, 163, 73, 0.15);
+  --corner-glow-bloom: rgba(204, 41, 54, 0.08);
+  --corner-glow-deep: rgba(212, 163, 73, 0.05);
+}
+
+body.theme-militarum .suite-nav {
+  background: rgba(14, 12, 10, 0.96);
+  border-bottom: 1px solid rgba(212, 163, 73, 0.42);
+}
+
+
 
 ````
 

@@ -1299,7 +1299,26 @@ globalThis.window = {
 };
 
 const listeners = {};
+const bodyClasses = new Set();
 globalThis.document = {
+  body: {
+    dataset: {},
+    classList: {
+      add: (c) => bodyClasses.add(c),
+      remove: (c) => bodyClasses.delete(c),
+      toggle: (c, force) => {
+        if (force === undefined) {
+          if (bodyClasses.has(c)) bodyClasses.delete(c);
+          else bodyClasses.add(c);
+        } else if (force) {
+          bodyClasses.add(c);
+        } else {
+          bodyClasses.delete(c);
+        }
+      },
+      contains: (c) => bodyClasses.has(c)
+    }
+  },
   addEventListener: (event, handler) => {
     listeners[event] = handler;
   },
@@ -1527,6 +1546,60 @@ test('vox-audio: recovers from browser autoplay block on user interaction and au
   assert.equal(voxModule.normalizePathname('/index.html'), '/');
   assert.equal(voxModule.normalizePathname('/pages/vox.html'), '/pages/vox.html');
 });
+
+test('vox-audio: resolveFactionThemeFromStorage, setFactionTheme, and syncFactionTheme manage global Necron vs Militarum color modes across all pages', () => {
+  assert.equal(typeof voxModule.resolveFactionThemeFromStorage, 'function', 'Must export resolveFactionThemeFromStorage');
+  assert.equal(typeof voxModule.setFactionTheme, 'function', 'Must export setFactionTheme');
+  assert.equal(typeof voxModule.getFactionTheme, 'function', 'Must export getFactionTheme');
+  assert.equal(typeof voxModule.syncFactionTheme, 'function', 'Must export syncFactionTheme');
+  assert.equal(typeof globalThis.window.VoxAudio.setFactionTheme, 'function', 'window.VoxAudio must expose setFactionTheme');
+  assert.equal(typeof globalThis.window.VoxAudio.getFactionTheme, 'function', 'window.VoxAudio must expose getFactionTheme');
+  assert.equal(typeof globalThis.window.VoxAudio.syncFactionTheme, 'function', 'window.VoxAudio must expose syncFactionTheme');
+
+  // 1. Clean state resolves to null when no broadcast or terminal is unlocked
+  storageStore.clear();
+  sessionStore.clear();
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), null);
+
+  // 2. Unlocking Beta broadcast in foa_briefing_state_v3 resolves to 'necron'
+  storageStore.set('foa_briefing_state_v3', JSON.stringify({ unlockedBeta: true, unlockedAlpha: false, activeDossier: 'beta' }));
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'necron');
+
+  // 3. Unlocking Alpha broadcast in foa_briefing_state_v3 resolves to 'militarum'
+  storageStore.set('foa_briefing_state_v3', JSON.stringify({ unlockedBeta: false, unlockedAlpha: true, activeDossier: 'alpha' }));
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'militarum');
+
+  // 4. Active Vox session in foa_vox_active_session_v1 overrides when explicit theme key is absent
+  storageStore.clear();
+  sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'beta', pass: 'TombKey' }));
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'necron');
+
+  sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'alpha', pass: 'AshKey' }));
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'militarum');
+
+  // 5. setFactionTheme('necron') applies theme-necron to document.body and persists to foa_faction_theme_v1
+  voxModule.setFactionTheme('necron', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), true);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), false);
+  assert.equal(globalThis.document.body.dataset.factionTheme, 'necron');
+  assert.equal(globalThis.localStorage.getItem('foa_faction_theme_v1'), 'necron');
+  assert.equal(voxModule.getFactionTheme(), 'necron');
+
+  // 6. setFactionTheme('militarum') switches to theme-militarum and removes theme-necron
+  voxModule.setFactionTheme('militarum', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), false);
+  assert.equal(globalThis.document.body.dataset.factionTheme, 'militarum');
+  assert.equal(globalThis.localStorage.getItem('foa_faction_theme_v1'), 'militarum');
+  assert.equal(voxModule.getFactionTheme(), 'militarum');
+
+  // 7. Verify css/style.css defines global body.theme-necron and body.theme-militarum rules
+  const cssPath = path.join(ROOT_DIR, 'css/style.css');
+  const cssCode = fs.readFileSync(cssPath, 'utf8');
+  assert.ok(cssCode.includes('body.theme-necron'), 'css/style.css must define global body.theme-necron theme rules');
+  assert.ok(cssCode.includes('body.theme-militarum'), 'css/style.css must define global body.theme-militarum theme rules');
+});
+
 
 
 
@@ -3138,11 +3211,28 @@ test('briefing: showDossier switches active dossier and updates buttons', () => 
   assert.equal(parsed.activeDossier, 'atlas');
 });
 
-test('briefing: unlockTab and lockTab manage clearance gates and persist states', () => {
+test('briefing: unlockTab and lockTab manage clearance gates, persist states, and activate global Necron or Militarum color mode', () => {
   briefing.unlockTab('Beta', true);
   assert.equal(mockElements.gateBeta.classList.contains('hidden'), true);
   assert.equal(mockElements.contentBeta.classList.contains('hidden'), false);
   assert.equal(briefing.getBriefingState().unlockedBeta, true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), true, 'Unlocking Beta broadcast must activate global theme-necron');
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), false);
+  assert.equal(localStorage.getItem('foa_faction_theme_v1'), 'necron', 'Unlocking Beta broadcast must persist necron theme mode');
+
+  briefing.unlockTab('Alpha', true);
+  assert.equal(mockElements.gateAlpha.classList.contains('hidden'), true);
+  assert.equal(mockElements.contentAlpha.classList.contains('hidden'), false);
+  assert.equal(briefing.getBriefingState().unlockedAlpha, true);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true, 'Unlocking Alpha broadcast must activate global theme-militarum');
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), false);
+  assert.equal(localStorage.getItem('foa_faction_theme_v1'), 'militarum', 'Unlocking Alpha broadcast must persist militarum theme mode');
+
+  // Switching between unlocked broadcasts switches global faction color mode
+  briefing.showDossier('beta', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), true, 'Viewing unlocked Beta dossier activates theme-necron');
+  briefing.showDossier('alpha', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true, 'Viewing unlocked Alpha dossier activates theme-militarum');
 
   briefing.lockTab('Beta', true);
   assert.equal(mockElements.gateBeta.classList.contains('hidden'), false);
@@ -5565,6 +5655,10 @@ const mockElements = {
 };
 
 const mockDocument = {
+  body: {
+    dataset: {},
+    classList: createMockClassList()
+  },
   getElementById: (id) => mockElements[id] || null,
   createElement: (tag) => {
     let _text = '';
@@ -6200,5 +6294,31 @@ test('vox: displays live Astropathic Server Online/Offline status on both Auth a
   assert.ok(mockElements.serverStatusBadge.innerHTML.includes('OFFLINE'));
   assert.ok(mockElements.terminalServerStatusLabel.textContent.includes('OFFLINE'));
 });
+
+test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Necron vs Militarum personal terminal mode', async () => {
+  await vox.selectConduit('beta');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Selecting Terminal Beta must activate theme-necron on body');
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), false);
+
+  mockElements.passInput.value = 'JunebugRoyalKey';
+  await vox.handleSealAction();
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Unlocking Terminal Beta must preserve theme-necron');
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('LORD COMMANDER JUNEBUG'));
+
+  await vox.selectConduit('alpha');
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Selecting Terminal Alpha must activate theme-militarum on body');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), false);
+
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Unlocking Terminal Alpha must preserve theme-militarum');
+
+  // Verify pages/vox.html defines Necron personal terminal styling
+  assert.ok(voxHtml.includes('body.theme-necron .crt-monitor-frame'), 'vox.html must style .crt-monitor-frame in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-msg-card'), 'vox.html must style .crt-msg-card in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-reply-card'), 'vox.html must style .crt-reply-card in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-input-textarea'), 'vox.html must style .crt-input-textarea in Necron Tomb-Ship mode');
+});
+
 
 ````

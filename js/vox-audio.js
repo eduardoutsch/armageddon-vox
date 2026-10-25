@@ -1043,6 +1043,8 @@
         window.initRosterPage();
       }
 
+      syncFactionTheme();
+
       document.dispatchEvent(new Event('DOMContentLoaded'));
       window.dispatchEvent(new Event('vox:page-swapped'));
 
@@ -1056,6 +1058,115 @@
     } finally {
       isNavigating = false;
     }
+  }
+
+  // =========================================================================
+  // GLOBAL FACTION COLOR MODE SYNCHRONIZATION (NECRON VS MILITARUM)
+  // =========================================================================
+  const STORAGE_KEY_FACTION_THEME = 'foa_faction_theme_v1';
+
+  /**
+   * Pure functional core helper: Resolves the active global faction theme
+   * ('necron' for Lord Commander Junebug / Beta, 'militarum' for The Exile / Alpha, or null)
+   * from browser storage based on which broadcast or terminal conduit is unlocked.
+   *
+   * @param {Storage} [localStore] - localStorage-compatible store
+   * @param {Storage} [sessionStore] - sessionStorage-compatible store
+   * @returns {'necron' | 'militarum' | null} Resolved faction theme
+   */
+  function resolveFactionThemeFromStorage(localStore, sessionStore) {
+    try {
+      if (localStore && typeof localStore.getItem === 'function') {
+        const explicit = localStore.getItem(STORAGE_KEY_FACTION_THEME);
+        if (explicit === 'necron' || explicit === 'militarum') {
+          return explicit;
+        }
+      }
+    } catch (e) {}
+
+    try {
+      if (sessionStore && typeof sessionStore.getItem === 'function') {
+        const rawVoxSession = sessionStore.getItem('foa_vox_active_session_v1');
+        if (rawVoxSession) {
+          const parsedVox = JSON.parse(rawVoxSession);
+          if (parsedVox && parsedVox.channel === 'beta') return 'necron';
+          if (parsedVox && parsedVox.channel === 'alpha') return 'militarum';
+        }
+      }
+    } catch (e) {}
+
+    try {
+      if (localStore && typeof localStore.getItem === 'function') {
+        const rawBriefing = localStore.getItem('foa_briefing_state_v3');
+        if (rawBriefing) {
+          const parsedBriefing = JSON.parse(rawBriefing);
+          if (parsedBriefing) {
+            if (parsedBriefing.unlockedBeta && !parsedBriefing.unlockedAlpha) return 'necron';
+            if (parsedBriefing.unlockedAlpha && !parsedBriefing.unlockedBeta) return 'militarum';
+            if (parsedBriefing.unlockedBeta && parsedBriefing.unlockedAlpha) {
+              return parsedBriefing.activeDossier === 'alpha' ? 'militarum' : 'necron';
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    return null;
+  }
+
+  /**
+   * Applies the given faction theme ('necron' or 'militarum') to document.body
+   * and optionally persists it to localStorage across all pages.
+   *
+   * @param {'necron' | 'militarum' | null} theme - Target faction theme
+   * @param {boolean} [persist=true] - Whether to persist in localStorage
+   * @returns {'necron' | 'militarum' | null} Applied theme
+   */
+  function setFactionTheme(theme, persist = true) {
+    const normalized = theme === 'necron' ? 'necron' : (theme === 'militarum' ? 'militarum' : null);
+    if (persist) {
+      try {
+        if (normalized) {
+          localStorage.setItem(STORAGE_KEY_FACTION_THEME, normalized);
+        } else {
+          localStorage.removeItem(STORAGE_KEY_FACTION_THEME);
+        }
+      } catch (e) {}
+    }
+
+    if (document && document.body && document.body.classList) {
+      document.body.classList.toggle('theme-necron', normalized === 'necron');
+      document.body.classList.toggle('theme-militarum', normalized === 'militarum');
+      if (document.body.dataset) {
+        document.body.dataset.factionTheme = normalized || 'default';
+      }
+    }
+    return normalized;
+  }
+
+  /**
+   * Returns the currently active faction theme ('necron' | 'militarum' | null).
+   *
+   * @returns {'necron' | 'militarum' | null}
+   */
+  function getFactionTheme() {
+    return resolveFactionThemeFromStorage(
+      typeof localStorage !== 'undefined' ? localStorage : null,
+      typeof sessionStorage !== 'undefined' ? sessionStorage : null
+    );
+  }
+
+  /**
+   * Synchronizes document.body classes with the unlocked broadcast/terminal theme in storage.
+   *
+   * @returns {'necron' | 'militarum' | null}
+   */
+  function syncFactionTheme() {
+    const resolved = getFactionTheme();
+    if (resolved) {
+      setFactionTheme(resolved, false);
+    }
+    return resolved;
   }
 
   /**
@@ -1099,7 +1210,11 @@
     playAuspexLock: playAuspexLock,
     playCloudSyncChime: playCloudSyncChime,
     navigateSeamlessly: navigateSeamlessly,
-    transmitToVox: transmitToVox
+    transmitToVox: transmitToVox,
+    resolveFactionThemeFromStorage: resolveFactionThemeFromStorage,
+    setFactionTheme: setFactionTheme,
+    getFactionTheme: getFactionTheme,
+    syncFactionTheme: syncFactionTheme
   };
 
   /**
@@ -1146,8 +1261,12 @@
   });
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectNavToggle);
+    document.addEventListener('DOMContentLoaded', () => {
+      syncFactionTheme();
+      injectNavToggle();
+    });
   } else {
+    syncFactionTheme();
     injectNavToggle();
   }
 
@@ -1156,6 +1275,7 @@
     module.exports = {
       PLAYLIST_ID,
       VOX_TRACK_IDS,
+      STORAGE_KEY_FACTION_THEME,
       playTerminalClank,
       playTeletypeTick,
       playDiceClatter,
@@ -1174,7 +1294,11 @@
       isPlayerActuallyPlaying,
       resumeOrStartMusic,
       playNextRandomTrack,
-      normalizePathname
+      normalizePathname,
+      resolveFactionThemeFromStorage,
+      setFactionTheme,
+      getFactionTheme,
+      syncFactionTheme
     };
   }
 })();

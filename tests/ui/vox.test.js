@@ -83,6 +83,10 @@ const mockElements = {
 };
 
 const mockDocument = {
+  body: {
+    dataset: {},
+    classList: createMockClassList()
+  },
   getElementById: (id) => mockElements[id] || null,
   createElement: (tag) => {
     let _text = '';
@@ -718,4 +722,30 @@ test('vox: displays live Astropathic Server Online/Offline status on both Auth a
   assert.ok(mockElements.serverStatusBadge.innerHTML.includes('OFFLINE'));
   assert.ok(mockElements.terminalServerStatusLabel.textContent.includes('OFFLINE'));
 });
+
+test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Necron vs Militarum personal terminal mode', async () => {
+  await vox.selectConduit('beta');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Selecting Terminal Beta must activate theme-necron on body');
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), false);
+
+  mockElements.passInput.value = 'JunebugRoyalKey';
+  await vox.handleSealAction();
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Unlocking Terminal Beta must preserve theme-necron');
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('LORD COMMANDER JUNEBUG'));
+
+  await vox.selectConduit('alpha');
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Selecting Terminal Alpha must activate theme-militarum on body');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), false);
+
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Unlocking Terminal Alpha must preserve theme-militarum');
+
+  // Verify pages/vox.html defines Necron personal terminal styling
+  assert.ok(voxHtml.includes('body.theme-necron .crt-monitor-frame'), 'vox.html must style .crt-monitor-frame in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-msg-card'), 'vox.html must style .crt-msg-card in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-reply-card'), 'vox.html must style .crt-reply-card in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-input-textarea'), 'vox.html must style .crt-input-textarea in Necron Tomb-Ship mode');
+});
+
 

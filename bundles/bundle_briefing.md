@@ -1843,10 +1843,30 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       selectAtlasNode(briefingState.selectedNode, false);
     }
 
+    function applyGlobalFactionThemeFromBriefing(theme, persist = true) {
+      if (window.VoxAudio && typeof window.VoxAudio.setFactionTheme === 'function') {
+        window.VoxAudio.setFactionTheme(theme, persist);
+      }
+      if (document.body && document.body.classList) {
+        document.body.classList.toggle('theme-necron', theme === 'necron');
+        document.body.classList.toggle('theme-militarum', theme === 'militarum');
+      }
+      if (persist && (theme === 'necron' || theme === 'militarum')) {
+        try {
+          localStorage.setItem('foa_faction_theme_v1', theme);
+        } catch (e) {}
+      }
+    }
+
     function showDossier(which, persist = true) {
       briefingState.activeDossier = which;
       if (document.body && document.body.classList) {
         document.body.classList.toggle('necron-briefing-active', which === 'beta');
+      }
+      if (which === 'beta' && briefingState.unlockedBeta) {
+        applyGlobalFactionThemeFromBriefing('necron', persist);
+      } else if (which === 'alpha' && briefingState.unlockedAlpha) {
+        applyGlobalFactionThemeFromBriefing('militarum', persist);
       }
       const map = {
         alpha: ['dossierAlpha', 'btnAlpha'],
@@ -1874,8 +1894,14 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       const content = document.getElementById('content' + who);
       if (gate) gate.classList.add('hidden');
       if (content) content.classList.remove('hidden');
-      if (who === 'Alpha') briefingState.unlockedAlpha = true;
-      if (who === 'Beta') briefingState.unlockedBeta = true;
+      if (who === 'Alpha') {
+        briefingState.unlockedAlpha = true;
+        applyGlobalFactionThemeFromBriefing('militarum', persist);
+      }
+      if (who === 'Beta') {
+        briefingState.unlockedBeta = true;
+        applyGlobalFactionThemeFromBriefing('necron', persist);
+      }
       if (persist) saveBriefingState();
     }
 
@@ -1884,8 +1910,14 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       const content = document.getElementById('content' + who);
       if (gate) gate.classList.remove('hidden');
       if (content) content.classList.add('hidden');
-      if (who === 'Alpha') briefingState.unlockedAlpha = false;
-      if (who === 'Beta') briefingState.unlockedBeta = false;
+      if (who === 'Alpha') {
+        briefingState.unlockedAlpha = false;
+        if (briefingState.unlockedBeta) applyGlobalFactionThemeFromBriefing('necron', persist);
+      }
+      if (who === 'Beta') {
+        briefingState.unlockedBeta = false;
+        if (briefingState.unlockedAlpha) applyGlobalFactionThemeFromBriefing('militarum', persist);
+      }
       if (persist) saveBriefingState();
     }
 
