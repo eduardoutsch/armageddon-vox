@@ -140,6 +140,7 @@
       <button id="cruTabBtn1" class="active" onclick="switchCrusadeTab('board')">🏆 1. Global Scoreboard &amp; Phase Tree</button>
       <button id="cruTabBtn2" onclick="switchCrusadeTab('forge')">🎲 2. Upgrade Rollers &amp; Master Battle Dossier</button>
       <button id="cruTabBtn3" onclick="switchCrusadeTab('tour')">🦅 3. Tour of Duty &amp; Munitorum Logistics</button>
+      <button id="cruTabBtn4" onclick="switchCrusadeTab('tomb')">💀 4. Tomb World Awakening Matrix</button>
     </div>
   </div>
 
@@ -270,7 +271,7 @@
         <span class="hud-sub">"Upgrades &amp; Scars Have Stories"</span>
       </div>
       <p class="card-desc" style="margin-bottom:14px;">
-        Switch between the <strong>🌋 Armageddon Theatre</strong> and <strong>🦅 Astra Militarum Codex</strong> tables below, enter the unit's name and battlefield feat, roll the dice, and click <strong>➕ Attach</strong> so the Campaign Master can christen its custom lore name over the CRT Vox!
+        Switch between the <strong>🌋 Armageddon Theatre</strong>, <strong>🦅 Astra Militarum Codex</strong>, and <strong>💀 Necrons Codex</strong> tables below, enter the unit's name and battlefield feat, roll the dice, and click <strong>➕ Attach</strong> so the Campaign Master can christen its custom lore name over the CRT Vox!
       </p>
 
       <!-- SOURCE POOL SELECTOR & UNIT CONTEXT BAR -->
@@ -280,7 +281,7 @@
           <select id="forgeSourcePool" onchange="saveCrusadeState()" style="width:100%; padding:10px; font-weight:700;">
             <option value="Armageddon">🌋 Crusade: Armageddon Theatre (Universal — Active)</option>
             <option value="AlphaCodex">🦅 Astra Militarum Codex (The Exile — Active!)</option>
-            <option value="BetaCodex">💀 Lord Commander Junebug Faction Codex (Awaiting Roster)</option>
+            <option value="BetaCodex">💀 Necrons Codex (Commander Beta — Awakening Tomb World)</option>
           </select>
         </div>
         <div>
@@ -305,6 +306,7 @@
                 <option value="Mounted">Mounted / Cavalry</option>
                 <option value="MonsterVehicle">Vehicle / Squadron / Monster</option>
                 <option value="Character">Officer / Character</option>
+                <option value="Canoptek">Canoptek Construct (Necrons)</option>
               </select>
             </div>
             <div id="traitResultBox" class="dice-result-box">
@@ -620,6 +622,129 @@
 
   </div>
 
+  <!-- ===================================================================== -->
+  <!-- TAB 4: NECRONS TOMB WORLD AWAKENING MATRIX & DYNASTIC VAULT           -->
+  <!-- ===================================================================== -->
+  <div id="cruTabTomb" class="hidden">
+
+    <!-- 1. TOMB WORLD AWAKENING STATUS & MASTER SYSTEM OVERLOAD ROLLER -->
+    <div class="card" style="border-left:4px solid var(--green); margin-bottom:18px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>1. Cryptek Conclave // Tomb World Awakening Status &amp; Master Systems</h3>
+        <span class="hud-sub">3 Awakening Points • Command, Reanimation &amp; Translocation Systems</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:14px;">
+        As your Necron legions complete <strong>Awakening Agendas</strong> on Armageddon, allocate your <strong>3 Awakening Points</strong> across the three Tomb World Systems below. Once all <strong>3 Awakening Points</strong> are allocated, <strong>🟢 Master Systems Come Online</strong>—unlocking powerful once-per-battle Master Abilities for every active System! Expending a Master Ability in battle causes a quantum power surge: click <strong>🎲 Roll Master System Overload (−D3 Reset)</strong> below to unassign <strong>D3 Awakening Points</strong> and log a completed Awakening Cycle.
+      </p>
+
+      <div class="scoreboard-grid" style="margin-bottom:12px;">
+        <!-- AWAKENING AGENDAS COMPLETED -->
+        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--green);">
+          <span class="hud-label">AWAKENING AGENDAS LOGGED</span>
+          <div class="hud-val-row" style="margin-top:6px;">
+            <button type="button" class="mini-btn" onclick="adjTombField('tombAgendasCompleted', -1)">−</button>
+            <span class="hud-num" id="tombAgendasCompleted" style="color:var(--green); font-size:1.45rem;">0</span>
+            <button type="button" class="mini-btn" onclick="adjTombField('tombAgendasCompleted', 1)">+</button>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;">+1 per Awakening Agenda completed</div>
+        </div>
+
+        <!-- MASTER SYSTEM MATRIX STATUS -->
+        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--blue);">
+          <span class="hud-label">MASTER SYSTEM CONDUIT</span>
+          <div style="margin-top:8px;">
+            <span class="hud-num" id="tombMasterStatusVal" style="color:var(--blue); font-size:1.05rem;">🟡 AWAKENING (2 / 3 PTS)</span>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:6px;" id="tombResetNotice">Allocate 3/3 pts to unlock Master System abilities</div>
+        </div>
+
+        <!-- AWAKENING CYCLES COMPLETED -->
+        <div class="card" style="background:#090b10; margin:0; padding:14px; border-top:3px solid var(--purple);">
+          <span class="hud-label">AWAKENING CYCLES SURGED</span>
+          <div class="hud-val-row" style="margin-top:6px;">
+            <button type="button" class="mini-btn" onclick="adjTombField('tombAwakeningCycles', -1)">−</button>
+            <span class="hud-num" id="tombAwakeningCycles" style="color:#d8b4fe; font-size:1.45rem;">0</span>
+            <button type="button" class="mini-btn" onclick="adjTombField('tombAwakeningCycles', 1)">+</button>
+          </div>
+          <div style="font-size:0.75rem; color:var(--muted); margin-top:4px;">Master Ability surges &amp; Tomb reboots</div>
+        </div>
+      </div>
+
+      <div style="flex-wrap:wrap; display:flex; gap:10px;">
+        <button type="button" class="btn-red" data-sfx="custom" onclick="rollMasterSystemReset()">🎲 Roll Master System Overload (−D3 Awakening Pts)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="adjTombField('tombAgendasCompleted', 1)">⚡ Log Awakening Agenda (+1)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="adjTombField('tombAwakeningCycles', 1)">💀 Mark Awakening Cycle (+1)</button>
+      </div>
+    </div>
+
+    <!-- 2. 3-SYSTEM TOMB WORLD AWAKENING MATRIX ALLOCATOR -->
+    <div class="card" style="border-left:4px solid var(--blue); margin-bottom:18px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>2. Tomb World Awakening Matrix (Command, Reanimation &amp; Translocation)</h3>
+        <span class="hud-sub">Allocated: <strong id="tombMatrixAllocatedLabel" style="color:var(--green);">2 / 3</strong> Awakening Pts (Max 3 Per System)</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px;">
+        <p class="card-desc" style="margin:0;">
+          Distribute your <strong>3 Awakening Points</strong> across the three planetary sub-networks below (up to 3 pts in a single System or spread across all three). Each point unlocks cumulative <strong>Tier 1–3 System Bonuses</strong>, and reaching <strong>3 / 3 Total Points</strong> unlocks the <strong>⚡ Master System Ability</strong> for any System with 1+ points invested!
+        </p>
+        <label style="font-size:0.82rem; color:var(--green); font-weight:700; cursor:pointer; background:#090b10; padding:6px 10px; border-radius:8px; border:1px solid var(--border);">
+          <input type="checkbox" id="powerReservesToggle" onchange="togglePowerReserves()"> ⚡ Power Reserves Allocated Requisition (1 RP → 4 Awakening Pts &amp; Reallocate)
+        </label>
+      </div>
+
+      <div class="logistics-grid" id="tombMatrixGrid"></div>
+    </div>
+
+    <!-- 3. NECRON DYNASTIC REQUISITIONS, AGENDAS & MASTER PROTOCOLS VAULT -->
+    <div class="card" style="border-left:4px solid var(--purple); margin-bottom:18px;">
+      <div class="section-header" style="margin-top:0;">
+        <h3>3. Necron Dynastic Requisitions, Awakening Agendas &amp; Master Protocols Vault</h3>
+        <span class="hud-sub">Attach to Master Dossier for Cryptek Lore Christening</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        Select any bespoke <strong>Necron Crusade Requisition (1 RP)</strong>, <strong>Awakening Agenda Milestone</strong>, or <strong>Master System Protocol Activation</strong> below and click <strong>➕ Attach Dynastic Protocol to Master Dossier</strong> so the Campaign Master chronicles your dynasty's awakening!
+      </p>
+
+      <div class="choice-grid" style="margin-bottom:12px;">
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Select Dynastic Requisition / Awakening Protocol</label>
+          <select id="necronVaultSelect" onchange="renderSelectedNecronVaultPreview()" style="width:100%; padding:10px; font-weight:700;"></select>
+        </div>
+        <div>
+          <label class="hud-label" style="display:block; margin-bottom:4px;">Target Unit / Phalanx Name</label>
+          <input type="text" id="necronRecipientUnit" placeholder="e.g. Overlord Junebug / Canoptek Wraiths / Hypercrypt Phalanx" style="width:100%; padding:10px;">
+        </div>
+      </div>
+
+      <div id="necronVaultPreviewBox" class="dice-result-box" style="min-height:80px; margin-bottom:12px;"></div>
+
+      <button type="button" class="btn-gold" onclick="attachNecronVaultToDossier()">
+        ➕ Attach Dynastic Protocol to Master Dossier (Tab 2)
+      </button>
+    </div>
+
+    <!-- 4. DEDICATED TOMB WORLD AWAKENING MATRIX DISPATCH -->
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <div class="section-header" style="margin-top:0;">
+        <h3>4. Tomb World Awakening Matrix Dispatch (Cryptek Conclave Telemetry)</h3>
+        <span class="hud-sub">Official Tomb World Reboot &amp; System Allocation Filing</span>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        Once you have allocated your <strong>Awakening Points</strong> across the <strong>Command</strong>, <strong>Reanimation</strong>, and <strong>Translocation Systems</strong> above (or triggered a Master System Overload reset), transmit this dedicated <strong>Tomb World Awakening Matrix Dispatch</strong> over <strong>Terminal Beta</strong>!
+      </p>
+
+      <label class="hud-label" style="display:block; margin-bottom:4px;">Cryptek Conclave / Dynastic Awakening Directive (Optional)</label>
+      <textarea id="tombAwakeningNotes" oninput="updateTombAwakeningPreview()" placeholder="e.g. Routing primary reactor output to Command and Reanimation nodes beneath the Golgotha Arbor-Basin..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
+
+      <div class="master-dossier-preview" id="tombAwakeningPreviewBox"></div>
+
+      <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitTombAwakeningDossier()">
+        📡 Transmit Tomb World Awakening Dispatch →
+      </button>
+    </div>
+
+  </div>
+
 </div>
 
 <script src="../js/vox-audio.js"></script>
@@ -721,7 +846,82 @@ const BATTLE_TRAIT_TABLES = {
     { d6: 4, name: "Ward of the Gate", desc: "This model's unit has a 4+ Feel No Pain save against Mortal Wounds caused by Anomalies and Warp Counters." },
     { d6: 5, name: "Unyielding Paragon", desc: "Add +1 to the Wounds characteristic of this Character model." },
     { d6: 6, name: "Scourge of the Warp", desc: "While leading a unit, weapons in that unit gain [LETHAL HITS] when targeting units with 1+ Warp Counters or Unbound Adversaries." }
-  ]
+  ],
+  // 1. NECRONS BATTLE TRAITS (BetaCodex — 1D6 / Category Tables)
+  BetaCodex: {
+    label: "Necrons Codex (Dynastic Battle Traits)",
+    tables: {
+      "CHARACTER Units": [
+        "1 — Eternal Perfection: Each time this model makes an attack, re-roll a Hit roll of 1 and re-roll a Wound roll of 1.",
+        "2 — Endless Legions: At the end of the battle, if this model was part of your Crusade army and gained 3+ XP (excluding Marked for Greatness), you gain +1 RP.",
+        "3 — Sempiternal Strategist: Once per battle, when you target this model's unit with a Stratagem, reduce the CP cost of that Stratagem by 1 CP.",
+        "4 — Implacable Conqueror: While this model is leading a unit, add +1 to Charge rolls made for that unit.",
+        "5 — Technomantic Singularity (CRYPTEK): In your Command phase, select 1 friendly NECRONS unit within 6\"; that unit regains D3 lost wounds (or re-rolls 1s on Reanimation).",
+        "6 — Dynastic Overlord (NOBLE): Increase the range of this model's Aura abilities by +3\" (or models in its led unit gain +1 OC)."
+      ],
+      "INFANTRY Units (Excluding CHARACTERS)": [
+        "1 — Undying Revenants: Each time you make a Reanimation Protocols roll for this unit, add +1 to the result.",
+        "2 — The Will to Serve: Add +1 to the Objective Control (OC) characteristic of models in this unit while within range of an objective you control.",
+        "3 — Subdual Protocols: Each time a model in this unit makes an attack targeting an enemy unit within range of an objective marker, re-roll a Hit roll of 1.",
+        "4 — Relentless March: Add +1\" to the Move (M) characteristic of models in this unit and +1 to Advance rolls.",
+        "5 — Phasal Condenser: Ranged weapons equipped by models in this unit gain [ASSAULT] (or [IGNORES COVER] while Stationary).",
+        "6 — Butcher's Choreography (DESTROYER CULT / FLAYED ONES): Each time a model in this unit makes a melee attack, re-roll a Wound roll of 1 (or +1 AP on Critical Wounds)."
+      ],
+      "VEHICLE & MOUNTED Units (Excluding CANOPTEK)": [
+        "1 — Hypergrav Field Manipulation: Add +2\" to the Move (M) characteristic of models in this unit.",
+        "2 — Spectral Disassembly Targeters: Each time a model in this unit makes a ranged attack, re-roll a Hit roll of 1 (or ignore Cover).",
+        "3 — Quantum Deflection Matrix: Each time an attack with AP -1 or AP -2 is allocated to a model in this unit, worsen the AP by 1 (or gain 6+ FNP vs Mortal Wounds).",
+        "4 — Living Metal Resurgence: Each time you make a Reanimation Protocols roll for this unit, add +1 to the result.",
+        "5 — Entropic Impact Rams: When this unit finishes a Charge move, select 1 enemy unit within Engagement Range; on a 2+, it suffers D3 mortal wounds.",
+        "6 — Annihilation Convergence (DESTROYER CULT): Each time a model in this unit makes a ranged attack against the closest eligible target, re-roll Wound rolls of 1."
+      ],
+      "CANOPTEK Units": [
+        "1–2 — Guardian Constructs: While a friendly CRYPTEK unit is on the battlefield, each time a model in this unit makes a melee attack, re-roll a Wound roll of 1.",
+        "3–4 — Optimised Aggressors: You can re-roll Advance and Charge rolls made for this unit.",
+        "5–6 — Self-Replicator Nodes: Once per turn, one unit from your Crusade army with this Battle Trait can change the result of its Reanimation Protocols roll to 3."
+      ]
+    }
+  }
+};
+
+/**
+ * Pure parser helper: converts a Necron Codex Battle Trait or Battle Scar string
+ * formatted as "<d6> — <name>: <desc>" into a structured roller descriptor object.
+ *
+ * @param {string} line - Raw rule string.
+ * @returns {{d6: string, name: string, desc: string, raw: string}} Structured descriptor.
+ */
+function parseCodexTraitOrScarLine(line) {
+  const dashIdx = line.indexOf(' — ');
+  const d6Part = dashIdx !== -1 ? line.slice(0, dashIdx).trim() : '1';
+  const rest = dashIdx !== -1 ? line.slice(dashIdx + 3).trim() : line;
+  const colonIdx = rest.indexOf(': ');
+  const name = colonIdx !== -1 ? rest.slice(0, colonIdx).trim() : rest;
+  const desc = colonIdx !== -1 ? rest.slice(colonIdx + 2).trim() : '';
+  return { d6: d6Part, name, desc, raw: line };
+}
+
+/**
+ * Pure parser helper: converts a Necron Codex Crusade Relic string
+ * formatted as "<name>: <desc>" into a structured relic descriptor object.
+ *
+ * @param {string} line - Raw relic rule string.
+ * @returns {{name: string, desc: string, raw: string}} Structured relic descriptor.
+ */
+function parseCodexRelicLine(line) {
+  const colonIdx = line.indexOf(': ');
+  const name = colonIdx !== -1 ? line.slice(0, colonIdx).trim() : line;
+  const desc = colonIdx !== -1 ? line.slice(colonIdx + 2).trim() : '';
+  return { name, desc, raw: line };
+}
+
+const NECRONS_TRAIT_TABLES = {
+  Character: BATTLE_TRAIT_TABLES.BetaCodex.tables["CHARACTER Units"].map(parseCodexTraitOrScarLine),
+  Infantry: BATTLE_TRAIT_TABLES.BetaCodex.tables["INFANTRY Units (Excluding CHARACTERS)"].map(parseCodexTraitOrScarLine),
+  Mounted: BATTLE_TRAIT_TABLES.BetaCodex.tables["VEHICLE & MOUNTED Units (Excluding CANOPTEK)"].map(parseCodexTraitOrScarLine),
+  MonsterVehicle: BATTLE_TRAIT_TABLES.BetaCodex.tables["VEHICLE & MOUNTED Units (Excluding CANOPTEK)"].map(parseCodexTraitOrScarLine),
+  Canoptek: BATTLE_TRAIT_TABLES.BetaCodex.tables["CANOPTEK Units"].map(parseCodexTraitOrScarLine),
+  BetaCodex: BATTLE_TRAIT_TABLES.BetaCodex
 };
 
 // =========================================================================
@@ -787,7 +987,28 @@ const CRUSADE_RELIC_VAULT = {
   Legendary: [
     { name: "Vengeance Totem (Legendary • +3 CrP)", desc: "When bearer's unit is destroyed, roll 1D6 for each enemy unit within 6\": on a 4+, D3 Mortal Wounds. Then spawn an Unbound Adversaries unit with Power Level equal to bearer's Warp Counters!" },
     { name: "Empyromancer's Focus (Legendary • +3 CrP)", desc: "Once per battle round, manipulate or trigger a localized Warp Anomaly within 18\" of the bearer and add +1 to all Psychic & melee Damage." }
-  ]
+  ],
+  // 2. NECRONS CRUSADE RELICS (BetaCodex)
+  BetaCodex: {
+    Artificer: [
+      "Godpyre Mantle (Artificer — NECRONS CHARACTER): Bearer gains the Stealth ability, and enemy units cannot use rules to ignore modifiers to Hit rolls when targeting the bearer's unit.",
+      "Tachyon Field Phase Inducer (Artificer/Antiquity — NECRONS CHARACTER): Bearer's unit can Fall Back and still Shoot/Charge (or phase through models/terrain when moving)."
+    ],
+    Antiquity: [
+      "Orb of Eternity (Antiquity — NECRONS CHARACTER): While the bearer is leading a unit, each time that unit's Reanimation Protocols activate, it reanimates 3 wounds instead of D3 wounds!",
+      "Tachyon Field Phase Inducer (Antiquity — NECRONS CHARACTER): Once per battle, in your Movement phase, teleport the bearer's unit anywhere >9\" from enemies (or grant Deep Strike / phase movement)."
+    ],
+    Legendary: [
+      "Casket of Heshkefnet (Legendary — NECRONS CHARACTER): Once per battle, at the start of your Command phase, select 1 enemy unit on the battlefield. Until the start of your next Command phase, EVERY model from your Crusade army re-rolls the Hit roll when attacking that enemy unit!"
+    ]
+  }
+};
+
+const NECRONS_RELIC_VAULT = {
+  Artificer: CRUSADE_RELIC_VAULT.BetaCodex.Artificer.map(parseCodexRelicLine),
+  Antiquity: CRUSADE_RELIC_VAULT.BetaCodex.Antiquity.map(parseCodexRelicLine),
+  Legendary: CRUSADE_RELIC_VAULT.BetaCodex.Legendary.map(parseCodexRelicLine),
+  BetaCodex: CRUSADE_RELIC_VAULT.BetaCodex
 };
 
 const ASTRA_MILITARUM_RELIC_VAULT = {
@@ -815,6 +1036,17 @@ const BATTLE_SCAR_TABLE = [
   { d6: 5, name: "Mark of Shame", desc: "This unit cannot form an Attached unit, is unaffected by friendly Aura abilities, and cannot be selected for Marked for Greatness." },
   { d6: 6, name: "Deep Scars", desc: "Each time a Critical Wound is scored against this unit, that attack's AP is improved by 1." }
 ];
+
+// 3. NECRONS BESPOKE BATTLE SCARS (Optional Faction Scar Table for Necrons)
+// Roll 1D6: 1–3 = Necron Faction Battle Scar below (by keyword); 4–6 = Core Crusade Battle Scar
+const NECRON_BATTLE_SCARS = [
+  "1 (NOBLE Units) — Creeping Madness: Add +1 Strength and +1 Attacks to melee weapons equipped by this model. This unit gains Lone Operative, but LOSES the Leader ability!",
+  "2 (DESTROYER CULT Units) — Mindless Reaper: Each time a model in this unit makes an attack, you can re-roll the Hit roll, BUT worsen this unit's Leadership and Objective Control (OC) by 1.",
+  "3 (NECRONS Units, Excl. C'tan) — Engrammatic Degradation: Each time you target this unit with a Stratagem, reduce the CP cost by 1 CP for that usage, BUT this unit cannot Fall Back or Advance!",
+  "4 (CANOPTEK Units) — Depleted Transmaterial Reserves: Add +1 to the Attacks characteristic of melee weapons in this unit, BUT this unit CANNOT use its Reanimation Protocols ability!"
+];
+
+const NECRON_BATTLE_SCAR_TABLE = NECRON_BATTLE_SCARS.map(parseCodexTraitOrScarLine);
 
 // =========================================================================
 // MUNITORUM LOGISTICS CATEGORIES & COMMENDATIONS VAULT (REGULATION 884-A)
@@ -869,6 +1101,59 @@ const ASTRA_COMMENDATIONS_VAULT = [
   { id: "reg_guerrillas", type: "Regimental Commendation (8 Pts • +3 CrP • Army-Wide)", name: "Veteran Guerrillas (8 Pts — Bayonet Precision)", desc: "REGIMENT units under Fix Bayonets! gain [PRECISION] on melee weapons. [Tithe Pool Surplus]: Regiment units gain 2 XP from Battle Experience instead of 1 XP! [Morale Deficiency]: 0 RP gained on defeat." }
 ];
 
+// =========================================================================
+// NECRONS TOMB WORLD AWAKENING MATRIX & DYNASTIC VAULT (COMMANDER BETA)
+// =========================================================================
+const TOMB_WORLD_SYSTEMS = [
+  {
+    key: "command",
+    title: "👑 Command System (Dynastic Neural Network)",
+    agenda: "Awakening Agenda (Martial Dominance): Destroy 3+ enemy units with your NECRONS WARLORD or NOBLE units in a single battle to allocate +1 Awakening Point here.",
+    tiers: [
+      "Tier 1 (1 Pt — Protocols of the Undying): Select 1 NECRONS CHARACTER in your army; add +1 to that model's Toughness characteristic.",
+      "Tier 2 (2 Pts — Vengeful Bodyguards): Models in Bodyguard units led by a NECRONS CHARACTER gain a 3+ Fight-on-Death ability in melee.",
+      "Tier 3 (3 Pts — Supreme Directive): Once per battle round, one NECRONS CHARACTER unit from your army can use the Command Re-roll Stratagem for 0 CP."
+    ],
+    master: "⚡ MASTER COMMAND ABILITY (Once Per Battle): Either re-roll all Battle-shock tests for your NECRONS units OR add +1 to the Objective Control (OC) characteristic of all NECRONS models until your next Command phase (then roll D3 Awakening Point reset)."
+  },
+  {
+    key: "reanimation",
+    title: "💚 Reanimation System (Canoptek Repair Forges)",
+    agenda: "Awakening Agenda (Tireless Reconstruction): Recover threshold Wounds across your army via Reanimation Protocols during a battle to allocate +1 Awakening Point here.",
+    tiers: [
+      "Tier 1 (1 Pt — Surging Nano-Scarabs): Once per battle round, when making a Reanimation Protocols roll for a NECRONS unit, you can re-roll that dice roll.",
+      "Tier 2 (2 Pts — Critical Resurgence): Each time you make a Reanimation Protocols roll for a NECRONS unit that is Below Half-strength, add +1 to that roll.",
+      "Tier 3 (3 Pts — Emergency Reconstruction): Once per battle, immediately after a NECRONS unit drops Below Starting Strength, it immediately activates its Reanimation Protocols out of phase!"
+    ],
+    master: "⚡ MASTER REANIMATION ABILITY (Once Per Battle): In your Command phase, either select 1 NECRONS unit to activate its Reanimation Protocols twice in a row OR grant +1 to all Reanimation Protocols rolls army-wide for the phase (then roll D3 Awakening Point reset)."
+  },
+  {
+    key: "translocation",
+    title: "🌀 Translocation System (Dimensional Manifold)",
+    agenda: "Awakening Agenda (Relentless Expansion): Have 3+ NECRONS units end the battle wholly within 6\" of the opponent's battlefield edge (+3 XP) to allocate +1 Awakening Point here.",
+    tiers: [
+      "Tier 1 (1 Pt — Dimensional Lock): Each time a NECRONS unit sets up via Deep Strike or Hypercrypt Reserves, re-roll Hit rolls of 1 for that unit until the end of the turn.",
+      "Tier 2 (2 Pts — Phase-Shift Vanguard): Before the battle begins, select up to 3 NECRONS units to gain the Scouts 6\" and Fly abilities for the first battle round.",
+      "Tier 3 (3 Pts — Chrono-Spatial Surge): Select 1 NECRONS unit per turn to add +2 to its Advance and Charge rolls."
+    ],
+    master: "⚡ MASTER TRANSLOCATION ABILITY (Once Per Battle): Either swap 1 NECRONS INFANTRY unit in Reserves with 1 friendly NECRONS INFANTRY unit on the battlefield (>1\" from enemies) OR redeploy up to 3 NECRONS INFANTRY units before Battle Round 1 (then roll D3 Awakening Point reset)."
+  }
+];
+
+const NECRON_DYNASTIC_VAULT = [
+  { id: "viral_vectors", type: "Necron Requisition (1 RP • Flayer Virus)", name: "Viral Vectors (1 RP — Scars to Flayed Ones)", desc: "Replace a Battle-scarred NECRONS BATTLELINE unit on your Order of Battle with a fresh Flayed Ones unit retaining its total XP!" },
+  { id: "cunning_advisors", type: "Necron Requisition (1 RP • Cryptek Politics)", name: "Cunning Advisors (1 RP — Cryptek Greatness)", desc: "If a CRYPTEK unit destroyed 1 or more enemy units during the battle, select it as an additional Marked for Greatness (+3 XP) unit!" },
+  { id: "slow_decay", type: "Necron Requisition (1 RP • Noble Madness)", name: "The Slow Decay of Self (1 RP — Destroyer Noble)", desc: "Bestow the DESTROYER CULT and Lone Operative abilities and re-roll Hit rolls of 1 onto a NOBLE model (model loses its Leader ability)." },
+  { id: "power_reserves", type: "Necron Requisition (1 RP • Tomb Matrix Overclock)", name: "Power Reserves Allocated (1 RP — Matrix Reallocation)", desc: "Select an Awakening Agenda even when all Awakening Points are allocated, and immediately reallocate 1 Awakening Point between Tomb World Systems!" },
+  { id: "unending_tally", type: "Necron Awakening Agenda (Destroyer Cults)", name: "Unending Tally (+2 XP per 2 Kills)", desc: "Each DESTROYER CULT unit gains +2 XP every time it destroys 2 enemy units in a single battle round." },
+  { id: "supremacy_annihilation", type: "Necron Awakening Agenda (Apex Purge)", name: "Supremacy Through Annihilation (+2 XP per High-Value Kill)", desc: "The opponent's 3 highest-point units are marked for termination; gain +2 XP each time one is destroyed." },
+  { id: "territorial_imperative", type: "Necron Awakening Agenda (Tomb Reclamation)", name: "Territorial Imperative (+1 XP Kill / +2 XP Conquer)", desc: "Gain +1 XP per enemy unit destroyed within range of an objective, plus +2 XP for completing the Conquer Objective action." },
+  { id: "inescapable_retribution", type: "Necron Awakening Agenda (Relic Transmutation)", name: "Inescapable Retribution (+4 XP & Relic Swap)", desc: "NECRONS CHARACTER completes an action on a No Man's Land objective to erase the objective marker, gain +4 XP, and swap its Crusade Relic!" },
+  { id: "master_command_surge", type: "Master System Protocol (Command Matrix Surge)", name: "Master Command Protocol Unleashed (D3 Reset)", desc: "Triggered the Command System Master Ability (+1 OC army-wide or re-roll all Battle-shock tests; triggers D3 Awakening Point reset)." },
+  { id: "master_reanimation_surge", type: "Master System Protocol (Reanimation Forge Surge)", name: "Master Reanimation Protocol Unleashed (D3 Reset)", desc: "Triggered the Reanimation System Master Ability (double Reanimation activation or +1 to all Reanimation rolls; triggers D3 Awakening Point reset)." },
+  { id: "master_translocation_surge", type: "Master System Protocol (Dimensional Manifold Surge)", name: "Master Translocation Manifold Unleashed (D3 Reset)", desc: "Triggered the Translocation System Master Ability (dimensional infantry swap >1\" from enemies or 3-unit pre-battle redeployment; triggers D3 Awakening Point reset)." }
+];
+
 let crusadeState = {
   activeTab: 'board',
   selectedTree: 'Gatebreakers',
@@ -892,6 +1177,15 @@ let crusadeState = {
     materiel: 2,
     tithePool: 0,
     morale: 1
+  },
+  // Necrons Tomb World Awakening Matrix State
+  tombAgendasCompleted: 0,
+  tombAwakeningCycles: 0,
+  powerReservesAllocated: false,
+  tombSystems: {
+    command: 1,
+    reanimation: 1,
+    translocation: 0
   }
 };
 
@@ -907,16 +1201,20 @@ function switchCrusadeTab(which, persist = true) {
   const tabBoard = document.getElementById('cruTabBoard');
   const tabForge = document.getElementById('cruTabForge');
   const tabTour = document.getElementById('cruTabTour');
+  const tabTomb = document.getElementById('cruTabTomb');
   if (tabBoard) tabBoard.classList.toggle('hidden', which !== 'board');
   if (tabForge) tabForge.classList.toggle('hidden', which !== 'forge');
   if (tabTour) tabTour.classList.toggle('hidden', which !== 'tour');
+  if (tabTomb) tabTomb.classList.toggle('hidden', which !== 'tomb');
 
   const btn1 = document.getElementById('cruTabBtn1');
   const btn2 = document.getElementById('cruTabBtn2');
   const btn3 = document.getElementById('cruTabBtn3');
+  const btn4 = document.getElementById('cruTabBtn4');
   if (btn1) btn1.classList.toggle('active', which === 'board');
   if (btn2) btn2.classList.toggle('active', which === 'forge');
   if (btn3) btn3.classList.toggle('active', which === 'tour');
+  if (btn4) btn4.classList.toggle('active', which === 'tomb');
 
   if (persist) saveCrusadeState();
 }
@@ -953,8 +1251,10 @@ function rollRandomBattleTrait() {
   if (window.VoxAudio) window.VoxAudio.playDiceClatter();
   const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
   const uType = document.getElementById('traitUnitType').value || 'Infantry';
-  const activePool = poolKey === 'AlphaCodex' ? ASTRA_MILITARUM_TRAIT_TABLES : BATTLE_TRAIT_TABLES;
-  const table = activePool[uType] || BATTLE_TRAIT_TABLES.Infantry;
+  const activePool = poolKey === 'AlphaCodex'
+    ? ASTRA_MILITARUM_TRAIT_TABLES
+    : (poolKey === 'BetaCodex' ? NECRONS_TRAIT_TABLES : BATTLE_TRAIT_TABLES);
+  const table = activePool[uType] || activePool.Infantry || BATTLE_TRAIT_TABLES.Infantry;
   const pick = table[Math.floor(Math.random() * table.length)];
   lastRolledItem.trait = {
     category: `Battle Trait (${uType})`,
@@ -1002,7 +1302,9 @@ function rollRandomRelic() {
   if (window.VoxAudio) window.VoxAudio.playDiceClatter();
   const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
   const tier = document.getElementById('relicTierSelect').value || 'Artificer';
-  const activeVault = poolKey === 'AlphaCodex' ? ASTRA_MILITARUM_RELIC_VAULT : CRUSADE_RELIC_VAULT;
+  const activeVault = poolKey === 'AlphaCodex'
+    ? ASTRA_MILITARUM_RELIC_VAULT
+    : (poolKey === 'BetaCodex' ? NECRONS_RELIC_VAULT : CRUSADE_RELIC_VAULT);
   const pool = activeVault[tier] || CRUSADE_RELIC_VAULT.Artificer;
   const pick = pool[Math.floor(Math.random() * pool.length)];
 
@@ -1045,7 +1347,9 @@ function rollOutOfActionTest() {
 
 function rollRandomBattleScar() {
   if (window.VoxAudio) window.VoxAudio.playDiceClatter();
-  const pick = BATTLE_SCAR_TABLE[Math.floor(Math.random() * BATTLE_SCAR_TABLE.length)];
+  const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
+  const activeScarTable = poolKey === 'BetaCodex' ? NECRON_BATTLE_SCAR_TABLE : BATTLE_SCAR_TABLE;
+  const pick = activeScarTable[Math.floor(Math.random() * activeScarTable.length)];
 
   lastRolledItem.scar = {
     category: `Battle Scar`,
@@ -1229,6 +1533,295 @@ function attachCommendationToDossier() {
   switchCrusadeTab('forge');
 }
 
+// =========================================================================
+// NECRONS TOMB WORLD AWAKENING MATRIX & DYNASTIC VAULT FUNCTIONS
+// =========================================================================
+
+/**
+ * Adjusts numeric Tomb World Awakening counters (tombAgendasCompleted, tombAwakeningCycles),
+ * clamping at zero and synchronizing previews and storage.
+ *
+ * @param {string} field - State key to adjust.
+ * @param {number} delta - Signed increment or decrement.
+ */
+function adjTombField(field, delta) {
+  crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
+  const el = document.getElementById(field);
+  if (el) el.textContent = String(crusadeState[field]);
+  updateMasterDossierPreview();
+  updateTombAwakeningPreview();
+  saveCrusadeState();
+}
+
+/**
+ * Toggles the Power Reserves Allocated Requisition (1 RP), expanding the Tomb World
+ * Awakening Matrix capacity from 3 points to 4 points.
+ */
+function togglePowerReserves() {
+  const cb = document.getElementById('powerReservesToggle');
+  crusadeState.powerReservesAllocated = !!(cb && cb.checked);
+  renderTombAwakeningMatrix();
+  updateMasterDossierPreview();
+  updateTombAwakeningPreview();
+  saveCrusadeState();
+}
+
+/**
+ * Allocates or deallocates an Awakening Point in one of the three Tomb World Systems
+ * (command, reanimation, translocation), enforcing per-system [0..3] bounds and
+ * total Tomb Matrix capacity (3 standard, 4 with Power Reserves Allocated).
+ *
+ * @param {string} sysKey - System key ('command' | 'reanimation' | 'translocation').
+ * @param {number} delta - Signed point adjustment (+1 or -1).
+ */
+function adjTombSystemPt(sysKey, delta) {
+  if (!crusadeState.tombSystems) {
+    crusadeState.tombSystems = { command: 1, reanimation: 1, translocation: 0 };
+  }
+  const maxTotal = crusadeState.powerReservesAllocated ? 4 : 3;
+  const currentTotal = Object.values(crusadeState.tombSystems).reduce((a, b) => a + b, 0);
+  const currVal = crusadeState.tombSystems[sysKey] || 0;
+  const nextVal = currVal + delta;
+
+  if (nextVal < 0 || nextVal > 3) return;
+  if (delta > 0 && currentTotal >= maxTotal) return;
+
+  crusadeState.tombSystems[sysKey] = nextVal;
+  if (window.VoxAudio) window.VoxAudio.playClank('card');
+  renderTombAwakeningMatrix();
+  updateMasterDossierPreview();
+  updateTombAwakeningPreview();
+  saveCrusadeState();
+}
+
+/**
+ * Rolls 1D3 when a Necron Master System Ability is expended in battle, unassigning
+ * that many Awakening Points across the active Tomb World Systems and incrementing
+ * the Awakening Cycles counter.
+ */
+function rollMasterSystemReset() {
+  if (window.VoxAudio) window.VoxAudio.playDiceClatter();
+  if (!crusadeState.tombSystems) {
+    crusadeState.tombSystems = { command: 1, reanimation: 1, translocation: 0 };
+  }
+  const d3 = Math.floor(Math.random() * 3) + 1;
+  let toDeduct = d3;
+  const order = ['translocation', 'reanimation', 'command'];
+  for (const key of order) {
+    while (toDeduct > 0 && (crusadeState.tombSystems[key] || 0) > 0) {
+      crusadeState.tombSystems[key] -= 1;
+      toDeduct -= 1;
+    }
+  }
+  crusadeState.tombAwakeningCycles = (crusadeState.tombAwakeningCycles || 0) + 1;
+  const cycEl = document.getElementById('tombAwakeningCycles');
+  if (cycEl) cycEl.textContent = String(crusadeState.tombAwakeningCycles);
+  const noticeEl = document.getElementById('tombResetNotice');
+  if (noticeEl) {
+    noticeEl.innerHTML = `<strong style="color:var(--red);">Master System Surge! Rolled D3 = −${d3} Awakening Pt(s) Reset!</strong>`;
+  }
+
+  renderTombAwakeningMatrix();
+  updateMasterDossierPreview();
+  updateTombAwakeningPreview();
+  saveCrusadeState();
+
+  setTimeout(() => {
+    if (window.VoxAudio) window.VoxAudio.playScarHazard();
+  }, 240);
+}
+
+/**
+ * Idempotently renders the 3 Tomb World Awakening Systems (Command, Reanimation,
+ * Translocation) and updates Master System status indicators in Tab 4.
+ */
+function renderTombAwakeningMatrix() {
+  const grid = document.getElementById('tombMatrixGrid');
+  const label = document.getElementById('tombMatrixAllocatedLabel');
+  const statusEl = document.getElementById('tombMasterStatusVal');
+  const cb = document.getElementById('powerReservesToggle');
+
+  if (!crusadeState.tombSystems) {
+    crusadeState.tombSystems = { command: 1, reanimation: 1, translocation: 0 };
+  }
+  if (cb) cb.checked = !!crusadeState.powerReservesAllocated;
+
+  const maxTotal = crusadeState.powerReservesAllocated ? 4 : 3;
+  const currentTotal = Object.values(crusadeState.tombSystems).reduce((a, b) => a + b, 0);
+  if (label) label.textContent = `${currentTotal} / ${maxTotal}`;
+
+  const masterUnlocked = currentTotal >= 3;
+  if (statusEl) {
+    if (masterUnlocked) {
+      statusEl.textContent = `🟢 MASTER ONLINE (${currentTotal} / ${maxTotal} PTS)`;
+      if (statusEl.style) statusEl.style.color = 'var(--green)';
+    } else if (currentTotal > 0) {
+      statusEl.textContent = `🟡 AWAKENING (${currentTotal} / ${maxTotal} PTS)`;
+      if (statusEl.style) statusEl.style.color = 'var(--gold)';
+    } else {
+      statusEl.textContent = `🔴 DORMANT STASIS (0 / ${maxTotal} PTS)`;
+      if (statusEl.style) statusEl.style.color = 'var(--red)';
+    }
+  }
+
+  if (!grid) return;
+
+  grid.innerHTML = TOMB_WORLD_SYSTEMS.map(sys => {
+    const pts = crusadeState.tombSystems[sys.key] || 0;
+    const sysMasterActive = masterUnlocked && pts >= 1;
+    const stateClass = pts >= 2 || sysMasterActive ? 'state-surplus' : (pts === 0 ? 'state-deficiency' : '');
+    const badgeHtml = pts === 3
+      ? `<span class="rule-tag" style="border-color:var(--green); color:var(--green);">🟢 MAX TIER 3 (3 PTS)</span>`
+      : (pts > 0
+        ? `<span class="rule-tag" style="border-color:var(--blue); color:var(--blue);">⚡ TIER ${pts} ONLINE (${pts} PT${pts === 1 ? '' : 'S'})</span>`
+        : `<span class="rule-tag" style="border-color:var(--red); color:var(--red);">🔴 DORMANT (0 PTS)</span>`);
+
+    const tiersHtml = sys.tiers.map((t, idx) => {
+      const unlocked = pts >= idx + 1;
+      const color = unlocked ? 'var(--green)' : 'var(--muted)';
+      const icon = unlocked ? '✓' : '🔒';
+      return `<div style="color:${color}; margin-bottom:4px;">${icon} ${t}</div>`;
+    }).join('');
+
+    const masterColor = sysMasterActive ? '#d8b4fe' : 'var(--muted)';
+    const masterPrefix = sysMasterActive ? '🟢 UNLOCKED — ' : '🔒 REQUIRES 3/3 MATRIX + 1 PT HERE — ';
+
+    return `
+      <div class="logistics-card ${stateClass}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <strong style="color:#fff; font-size:0.9rem;">${sys.title}</strong>
+          ${badgeHtml}
+        </div>
+        <div class="hud-val-row" style="margin-bottom:8px;">
+          <button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', -1)">−</button>
+          <span class="hud-num" style="color:var(--green); font-size:1.2rem;">${pts} / 3 PTS</span>
+          <button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', 1)">+</button>
+        </div>
+        <div style="font-size:0.77rem; color:var(--gold); margin-bottom:6px;">${sys.agenda}</div>
+        <div style="font-size:0.79rem; line-height:1.42; margin-bottom:6px;">${tiersHtml}</div>
+        <div style="font-size:0.78rem; line-height:1.4; color:${masterColor}; border-top:1px solid var(--border); padding-top:6px;">
+          <strong>${masterPrefix}</strong>${sys.master}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Populates the Necron Dynastic Requisitions, Awakening Agendas & Master Protocols selector.
+ */
+function populateNecronDynasticVault() {
+  const sel = document.getElementById('necronVaultSelect');
+  if (!sel) return;
+  sel.innerHTML = NECRON_DYNASTIC_VAULT.map(item =>
+    `<option value="${item.id}">${item.name} — [${item.type}]</option>`
+  ).join('');
+  renderSelectedNecronVaultPreview();
+}
+
+/**
+ * Renders the currently selected Necron Dynastic Vault entry in #necronVaultPreviewBox.
+ */
+function renderSelectedNecronVaultPreview() {
+  const sel = document.getElementById('necronVaultSelect');
+  const box = document.getElementById('necronVaultPreviewBox');
+  if (!sel || !box) return;
+  const pick = NECRON_DYNASTIC_VAULT.find(item => item.id === sel.value) || NECRON_DYNASTIC_VAULT[0];
+  box.innerHTML = `
+    <div><span class="dice-pip-badge" style="background:var(--green); color:#000;">${pick.type}</span> <strong style="color:#fff;">${pick.name}</strong></div>
+    <div style="margin-top:6px; font-size:0.84rem; color:var(--text);">${pick.desc}</div>
+  `;
+}
+
+/**
+ * Attaches the selected Necron Dynastic Requisition, Awakening Agenda, or Master System
+ * Protocol to the Master Battle Dossier queue and switches to Tab 2.
+ */
+function attachNecronVaultToDossier() {
+  const sel = document.getElementById('necronVaultSelect');
+  if (!sel) return;
+  const pick = NECRON_DYNASTIC_VAULT.find(item => item.id === sel.value) || NECRON_DYNASTIC_VAULT[0];
+  const unitName = (document.getElementById('necronRecipientUnit')?.value || 'Hypercrypt Phalanx').trim();
+
+  crusadeState.queuedRolls.push({
+    unit: unitName,
+    context: `Activated via Tomb World Awakening Matrix (${pick.type})`,
+    category: pick.type,
+    roll: `Tomb World Protocol`,
+    name: pick.name,
+    desc: pick.desc
+  });
+
+  if (window.VoxAudio) window.VoxAudio.playRelicChoir();
+  renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+  switchCrusadeTab('forge');
+}
+
+/**
+ * Builds a concise single-line summary of the Necron Tomb World Awakening Matrix state.
+ *
+ * @returns {string} Formatted Tomb World Matrix telemetry summary line.
+ */
+function buildTombMatrixSummaryLine() {
+  const sys = crusadeState.tombSystems || { command: 1, reanimation: 1, translocation: 0 };
+  const maxTotal = crusadeState.powerReservesAllocated ? 4 : 3;
+  const total = (sys.command || 0) + (sys.reanimation || 0) + (sys.translocation || 0);
+  const masterStr = total >= 3 ? 'MASTER ONLINE' : (total > 0 ? 'AWAKENING' : 'DORMANT');
+  return `Allocated: ${total}/${maxTotal} Pts (Command: ${sys.command || 0}, Reanimation: ${sys.reanimation || 0}, Translocation: ${sys.translocation || 0}) | Status: [${masterStr}] | Agendas Logged: ${crusadeState.tombAgendasCompleted || 0} | Awakening Cycles: ${crusadeState.tombAwakeningCycles || 0}`;
+}
+
+/**
+ * Pure functional core: compiles the Tomb World Awakening Matrix Dispatch string.
+ *
+ * @param {object} [input={}] - Plain Tomb World Awakening state snapshot.
+ * @returns {string} Formatted Astropathic dispatch string for Commander Beta.
+ */
+function compileTombAwakeningDossier(input = {}) {
+  const agendas = input.tombAgendasCompleted || 0;
+  const cycles = input.tombAwakeningCycles || 0;
+  const reservesStr = input.powerReservesAllocated
+    ? 'ACTIVE (4 Total Awakening Pts & Matrix Reallocation)'
+    : 'INACTIVE (3 Standard Awakening Pts)';
+  const summaryLine = input.summaryLine || buildTombMatrixSummaryLine();
+  const notes = (input.notes || 'Cryptek Conclave routing power through the Awakening Tomb World Matrix beneath Armageddon.').trim();
+
+  return [
+    `+++ CRYPTEK CONCLAVE // TOMB WORLD AWAKENING MATRIX DISPATCH +++`,
+    `• REPORTING COMMANDER: LORD COMMANDER JUNEBUG (NECRONS AWAKENING TOMB WORLD)`,
+    `• AWAKENING AGENDAS COMPLETED: ${agendas} // AWAKENING CYCLES SURGED: ${cycles}`,
+    `• POWER RESERVES ALLOCATED REQUISITION (1 RP): ${reservesStr}`,
+    `• TOMB WORLD AWAKENING MATRIX TELEMETRY: ${summaryLine}`,
+    `------------------------------------------------`,
+    `• CRYPTEK CONCLAVE DIRECTIVE: "${notes}"`,
+    `------------------------------------------------`,
+    `REQUEST FOR CAMPAIGN MASTER: Please officially log this Tomb World Awakening Matrix configuration in the sector chronicle and emit an Astropathic Vox decree on Terminal Beta!`
+  ].join('\n');
+}
+
+function buildTombAwakeningDossierString() {
+  return compileTombAwakeningDossier({
+    tombAgendasCompleted: crusadeState.tombAgendasCompleted || 0,
+    tombAwakeningCycles: crusadeState.tombAwakeningCycles || 0,
+    powerReservesAllocated: !!crusadeState.powerReservesAllocated,
+    summaryLine: buildTombMatrixSummaryLine(),
+    notes: document.getElementById('tombAwakeningNotes')?.value || ''
+  });
+}
+
+function updateTombAwakeningPreview() {
+  const box = document.getElementById('tombAwakeningPreviewBox');
+  if (box) box.textContent = buildTombAwakeningDossierString();
+}
+
+function transmitTombAwakeningDossier() {
+  const payload = buildTombAwakeningDossierString();
+  if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+    window.VoxAudio.transmitToVox('beta', payload);
+  }
+}
+
 function attachRollToDossier(kind) {
   const item = lastRolledItem[kind];
   if (!item) {
@@ -1316,7 +1909,7 @@ function renderQueuedRolls() {
   if (!box) return;
 
   if (crusadeState.queuedRolls.length === 0) {
-    box.innerHTML = `<div style="font-size:0.82rem; color:var(--muted); font-style:italic;">No unit upgrades, relics, commendations, or scars attached yet. Roll on any table above (or Tab 3 Commendations) and click "➕ Attach" to include them in your Master Battle Dossier!</div>`;
+    box.innerHTML = `<div style="font-size:0.82rem; color:var(--muted); font-style:italic;">No unit upgrades, relics, commendations, or scars attached yet. Roll on any table above (or Tab 3 Commendations / Tab 4 Dynastic Vault) and click "➕ Attach" to include them in your Master Battle Dossier!</div>`;
     return;
   }
 
@@ -1433,6 +2026,11 @@ function compileMasterDossier(input = {}) {
     if (logSummary) {
       lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
     }
+  } else if (chan === 'beta') {
+    const tombSummary = input.tombSummary || (typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : '');
+    if (tombSummary) {
+      lines.push(`• TOMB WORLD AWAKENING MATRIX TELEMETRY: ${tombSummary}`);
+    }
   }
 
   lines.push(
@@ -1472,7 +2070,8 @@ function readMasterDossierFormInputs() {
     distantForce: document.getElementById('dossierDistantForce')?.value || '',
     fortifications: forts,
     queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
-    logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null
+    logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null,
+    tombSummary: typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : null
   };
 }
 
@@ -1588,7 +2187,7 @@ function initCrusadePage() {
     if (distEl) distEl.value = crusadeState.dossierDistantForce;
   }
 
-  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts', 'toursCompletedCount'].forEach(k => {
+  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts', 'toursCompletedCount', 'tombAgendasCompleted', 'tombAwakeningCycles'].forEach(k => {
     const el = document.getElementById(k);
     if (el && typeof crusadeState[k] === 'number') el.textContent = String(crusadeState[k]);
   });
@@ -1597,9 +2196,12 @@ function initCrusadePage() {
   selectAllianceTree(crusadeState.selectedTree || 'Gatebreakers', false);
   renderLogisticsAllocator();
   populateCommendationVault();
+  renderTombAwakeningMatrix();
+  populateNecronDynasticVault();
   renderQueuedRolls();
   updateMasterDossierPreview();
   updateStartOfTourPreview();
+  updateTombAwakeningPreview();
 }
 
 window.addEventListener('DOMContentLoaded', initCrusadePage);

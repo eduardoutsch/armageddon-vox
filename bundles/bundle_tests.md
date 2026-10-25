@@ -4447,9 +4447,11 @@ const mockElements = {
   cruTabBoard: { classList: createMockClassList() },
   cruTabForge: { classList: createMockClassList() },
   cruTabTour: { classList: createMockClassList() },
+  cruTabTomb: { classList: createMockClassList() },
   cruTabBtn1: { classList: createMockClassList() },
   cruTabBtn2: { classList: createMockClassList() },
   cruTabBtn3: { classList: createMockClassList() },
+  cruTabBtn4: { classList: createMockClassList() },
   treeBtnGate: { classList: createMockClassList() },
   treeBtnDes: { classList: createMockClassList() },
   treeBtnMar: { classList: createMockClassList() },
@@ -4499,7 +4501,19 @@ const mockElements = {
   commRecipientUnit: { value: '044th Krieg Regiment' },
   commendationPreviewBox: { innerHTML: '' },
   startTourNotes: { value: '' },
-  startOfTourPreviewBox: { textContent: '' }
+  startOfTourPreviewBox: { textContent: '' },
+  tombAgendasCompleted: { textContent: '0' },
+  tombAwakeningCycles: { textContent: '0' },
+  tombMasterStatusVal: { textContent: '', style: {} },
+  tombResetNotice: { innerHTML: '' },
+  powerReservesToggle: { checked: false },
+  tombMatrixAllocatedLabel: { textContent: '2 / 3' },
+  tombMatrixGrid: { innerHTML: '' },
+  necronVaultSelect: { innerHTML: '', value: 'viral_vectors' },
+  necronRecipientUnit: { value: 'Hypercrypt Phalanx' },
+  necronVaultPreviewBox: { innerHTML: '' },
+  tombAwakeningNotes: { value: '' },
+  tombAwakeningPreviewBox: { textContent: '' }
 };
 
 const mockDocument = {
@@ -4536,12 +4550,18 @@ const evalFn = new Function(
     ALLIANCE_TREES,
     BATTLE_TRAIT_TABLES,
     ASTRA_MILITARUM_TRAIT_TABLES,
+    NECRONS_TRAIT_TABLES,
     WEAPON_MOD_TABLE,
     CRUSADE_RELIC_VAULT,
     ASTRA_MILITARUM_RELIC_VAULT,
+    NECRONS_RELIC_VAULT,
     BATTLE_SCAR_TABLE,
+    NECRON_BATTLE_SCARS,
+    NECRON_BATTLE_SCAR_TABLE,
     LOGISTICS_CATEGORIES,
     ASTRA_COMMENDATIONS_VAULT,
+    TOMB_WORLD_SYSTEMS,
+    NECRON_DYNASTIC_VAULT,
     getCrusadeState: () => crusadeState,
     lastRolledItem,
     switchCrusadeTab,
@@ -4561,6 +4581,19 @@ const evalFn = new Function(
     populateCommendationVault,
     renderSelectedCommendationPreview,
     attachCommendationToDossier,
+    adjTombField,
+    rollMasterSystemReset,
+    togglePowerReserves,
+    adjTombSystemPt,
+    renderTombAwakeningMatrix,
+    populateNecronDynasticVault,
+    renderSelectedNecronVaultPreview,
+    attachNecronVaultToDossier,
+    buildTombMatrixSummaryLine,
+    compileTombAwakeningDossier,
+    buildTombAwakeningDossierString,
+    updateTombAwakeningPreview,
+    transmitTombAwakeningDossier,
     attachRollToDossier,
     removeQueuedRoll,
     clearQueuedRolls,
@@ -5135,6 +5168,186 @@ test('crusade: saveCrusadeState and initCrusadePage persist and restore distant 
   assert.equal(mockElements.dossierDistantForce.value, 'Salamanders 3rd Company Patrol');
   assert.equal(mockElements.dossierDistantForceRow.style.display, 'block');
 });
+
+test('crusade: #forgeSourcePool option label and BetaCodex Necron Battle Traits, Relics, and Battle Scars schemas', () => {
+  // 1. Check HTML option label for BetaCodex
+  assert.ok(
+    crusadeHtml.includes('<option value="BetaCodex">💀 Necrons Codex (Commander Beta — Awakening Tomb World)</option>'),
+    'pages/crusade.html must include the exact BetaCodex Necrons Codex option label inside #forgeSourcePool'
+  );
+
+  // 2. Check BATTLE_TRAIT_TABLES.BetaCodex and NECRONS_TRAIT_TABLES
+  assert.ok(crusade.BATTLE_TRAIT_TABLES.BetaCodex, 'Must define BetaCodex inside BATTLE_TRAIT_TABLES');
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.BetaCodex.label, 'Necrons Codex (Dynastic Battle Traits)');
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.BetaCodex.tables['CHARACTER Units'].length, 6);
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.BetaCodex.tables['INFANTRY Units (Excluding CHARACTERS)'].length, 6);
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.BetaCodex.tables['VEHICLE & MOUNTED Units (Excluding CANOPTEK)'].length, 6);
+  assert.equal(crusade.BATTLE_TRAIT_TABLES.BetaCodex.tables['CANOPTEK Units'].length, 3);
+
+  assert.equal(crusade.NECRONS_TRAIT_TABLES.Character.length, 6);
+  assert.equal(crusade.NECRONS_TRAIT_TABLES.Infantry.length, 6);
+  assert.equal(crusade.NECRONS_TRAIT_TABLES.Mounted.length, 6);
+  assert.equal(crusade.NECRONS_TRAIT_TABLES.MonsterVehicle.length, 6);
+  assert.equal(crusade.NECRONS_TRAIT_TABLES.Canoptek.length, 3);
+
+  // 3. Check CRUSADE_RELIC_VAULT.BetaCodex and NECRONS_RELIC_VAULT
+  assert.ok(crusade.CRUSADE_RELIC_VAULT.BetaCodex, 'Must define BetaCodex inside CRUSADE_RELIC_VAULT');
+  assert.equal(crusade.CRUSADE_RELIC_VAULT.BetaCodex.Artificer.length, 2);
+  assert.equal(crusade.CRUSADE_RELIC_VAULT.BetaCodex.Antiquity.length, 2);
+  assert.equal(crusade.CRUSADE_RELIC_VAULT.BetaCodex.Legendary.length, 1);
+
+  assert.equal(crusade.NECRONS_RELIC_VAULT.Artificer.length, 2);
+  assert.equal(crusade.NECRONS_RELIC_VAULT.Antiquity.length, 2);
+  assert.equal(crusade.NECRONS_RELIC_VAULT.Legendary.length, 1);
+
+  // 4. Check NECRON_BATTLE_SCARS and NECRON_BATTLE_SCAR_TABLE
+  assert.equal(crusade.NECRON_BATTLE_SCARS.length, 4, 'Must define 4 Necron bespoke Battle Scars');
+  assert.ok(crusade.NECRON_BATTLE_SCARS[0].includes('Creeping Madness'));
+  assert.ok(crusade.NECRON_BATTLE_SCARS[1].includes('Mindless Reaper'));
+  assert.ok(crusade.NECRON_BATTLE_SCARS[2].includes('Engrammatic Degradation'));
+  assert.ok(crusade.NECRON_BATTLE_SCARS[3].includes('Depleted Transmaterial Reserves'));
+  assert.equal(crusade.NECRON_BATTLE_SCAR_TABLE.length, 4);
+});
+
+test('crusade: Quartermaster rollers draw from BetaCodex Necron tables when forgeSourcePool is BetaCodex', () => {
+  mockElements.forgeSourcePool.value = 'BetaCodex';
+
+  // Roll Necron Character Trait
+  mockElements.traitUnitType.value = 'Character';
+  crusade.rollRandomBattleTrait();
+  assert.ok(crusade.lastRolledItem.trait);
+  const charNames = crusade.NECRONS_TRAIT_TABLES.Character.map((t) => t.name);
+  assert.ok(charNames.includes(crusade.lastRolledItem.trait.name), 'Rolled trait must come from Necron Character table');
+
+  // Roll Necron Canoptek Trait
+  mockElements.traitUnitType.value = 'Canoptek';
+  crusade.rollRandomBattleTrait();
+  const canoptekNames = crusade.NECRONS_TRAIT_TABLES.Canoptek.map((t) => t.name);
+  assert.ok(canoptekNames.includes(crusade.lastRolledItem.trait.name), 'Rolled trait must come from Necron Canoptek table');
+
+  // Roll Necron Legendary Relic
+  mockElements.relicTierSelect.value = 'Legendary';
+  crusade.rollRandomRelic();
+  assert.ok(crusade.lastRolledItem.relic.name.includes('Casket of Heshkefnet'), 'Must roll Casket of Heshkefnet for Necron Legendary Relic');
+
+  // Roll Necron Bespoke Battle Scar
+  crusade.rollRandomBattleScar();
+  const scarNames = crusade.NECRON_BATTLE_SCAR_TABLE.map((s) => s.name);
+  assert.ok(scarNames.includes(crusade.lastRolledItem.scar.name), 'Rolled scar must come from Necron Battle Scar table');
+
+  // Restore pool
+  mockElements.forgeSourcePool.value = 'Armageddon';
+});
+
+test('crusade: switchCrusadeTab handles Tab 4 Tomb World Awakening Matrix', () => {
+  crusade.switchCrusadeTab('tomb', false);
+  assert.equal(mockElements.cruTabBoard.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabForge.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabTour.classList.contains('hidden'), true);
+  assert.equal(mockElements.cruTabTomb.classList.contains('hidden'), false);
+  assert.equal(mockElements.cruTabBtn4.classList.contains('active'), true);
+  assert.equal(mockElements.cruTabBtn1.classList.contains('active'), false);
+  assert.equal(mockElements.cruTabBtn2.classList.contains('active'), false);
+  assert.equal(mockElements.cruTabBtn3.classList.contains('active'), false);
+});
+
+test('crusade: Tomb World Awakening Matrix point allocation, Master System status, D3 reset, and Power Reserves requisition', () => {
+  assert.equal(crusade.TOMB_WORLD_SYSTEMS.length, 3, 'Must define 3 Tomb World Awakening Systems');
+  assert.ok(crusade.NECRON_DYNASTIC_VAULT.length >= 8, 'Must define Necron Dynastic Requisitions, Agendas & Master Protocols');
+
+  // Reset Tomb World state
+  crusade.getCrusadeState().powerReservesAllocated = false;
+  mockElements.powerReservesToggle.checked = false;
+  crusade.getCrusadeState().tombSystems = { command: 1, reanimation: 1, translocation: 0 };
+  crusade.renderTombAwakeningMatrix();
+
+  assert.equal(mockElements.tombMatrixAllocatedLabel.textContent, '2 / 3');
+  assert.ok(mockElements.tombMasterStatusVal.textContent.includes('AWAKENING'));
+
+  // Allocate 3rd point to translocation -> reaches 3 / 3 Master Systems Online
+  crusade.adjTombSystemPt('translocation', 1);
+  assert.equal(crusade.getCrusadeState().tombSystems.translocation, 1);
+  assert.equal(mockElements.tombMatrixAllocatedLabel.textContent, '3 / 3');
+  assert.ok(mockElements.tombMasterStatusVal.textContent.includes('MASTER ONLINE'));
+
+  // Cannot exceed 3 total points without Power Reserves Allocated requisition
+  crusade.adjTombSystemPt('command', 1);
+  assert.equal(crusade.getCrusadeState().tombSystems.command, 1, 'Cannot exceed 3 total Awakening Points without Power Reserves');
+
+  // Toggle Power Reserves Allocated (1 RP) -> expands capacity to 4
+  mockElements.powerReservesToggle.checked = true;
+  crusade.togglePowerReserves();
+  assert.equal(crusade.getCrusadeState().powerReservesAllocated, true);
+  assert.equal(mockElements.tombMatrixAllocatedLabel.textContent, '3 / 4');
+
+  // Now we can allocate 1 more point
+  crusade.adjTombSystemPt('command', 1);
+  assert.equal(crusade.getCrusadeState().tombSystems.command, 2);
+  assert.equal(mockElements.tombMatrixAllocatedLabel.textContent, '4 / 4');
+
+  // Trigger Master System D3 Reset -> unassigns 1..3 Awakening Points and increments cycle counter
+  const prevTotal = Object.values(crusade.getCrusadeState().tombSystems).reduce((a, b) => a + b, 0);
+  crusade.rollMasterSystemReset();
+  const nextTotal = Object.values(crusade.getCrusadeState().tombSystems).reduce((a, b) => a + b, 0);
+  assert.ok(nextTotal < prevTotal && nextTotal >= 0, 'rollMasterSystemReset must deduct D3 Awakening Points');
+
+  // Adjust Tomb counters (tombAgendasCompleted, tombAwakeningCycles)
+  crusade.adjTombField('tombAgendasCompleted', 3);
+  assert.equal(crusade.getCrusadeState().tombAgendasCompleted, 3);
+  assert.equal(mockElements.tombAgendasCompleted.textContent, '3');
+  crusade.adjTombField('tombAgendasCompleted', -10);
+  assert.equal(crusade.getCrusadeState().tombAgendasCompleted, 0);
+});
+
+test('crusade: Necron Dynastic Vault selection, attachNecronVaultToDossier, and Tomb World Awakening Dispatch transmission', () => {
+  crusade.populateNecronDynasticVault();
+  assert.ok(mockElements.necronVaultSelect.innerHTML.includes('Viral Vectors'));
+  assert.ok(mockElements.necronVaultSelect.innerHTML.includes('The Slow Decay of Self'));
+
+  mockElements.necronVaultSelect.value = 'viral_vectors';
+  crusade.renderSelectedNecronVaultPreview();
+  assert.ok(mockElements.necronVaultPreviewBox.innerHTML.includes('Flayed Ones'));
+
+  mockElements.necronRecipientUnit.value = 'Immortal Phalanx #2';
+  const prevLen = crusade.getCrusadeState().queuedRolls.length;
+  crusade.attachNecronVaultToDossier();
+  assert.equal(crusade.getCrusadeState().queuedRolls.length, prevLen + 1);
+  assert.equal(crusade.getCrusadeState().queuedRolls[crusade.getCrusadeState().queuedRolls.length - 1].unit, 'Immortal Phalanx #2');
+  assert.equal(crusade.getCrusadeState().activeTab, 'forge');
+
+  // Verify Tomb Matrix telemetry in Beta Master Dossier and Tomb Awakening Dispatch
+  crusade.getCrusadeState().tombSystems = { command: 2, reanimation: 1, translocation: 0 };
+  crusade.getCrusadeState().tombAgendasCompleted = 4;
+  crusade.getCrusadeState().tombAwakeningCycles = 1;
+  mockElements.tombAwakeningNotes.value = 'Cryptek Conclave routing power to Command and Reanimation nodes beneath Golgotha.';
+
+  const summary = crusade.buildTombMatrixSummaryLine();
+  assert.ok(summary.includes('Command: 2'));
+  assert.ok(summary.includes('Reanimation: 1'));
+  assert.ok(summary.includes('Translocation: 0'));
+  assert.ok(summary.includes('MASTER ONLINE'));
+
+  // Beta Master Battle Dossier includes Tomb World Awakening Matrix Telemetry
+  mockElements.dossierChannel.value = 'beta';
+  mockElements.dossierModeNode.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  const betaMaster = crusade.buildMasterDossierString();
+  assert.ok(betaMaster.includes('TOMB WORLD AWAKENING MATRIX TELEMETRY:'));
+
+  // Dedicated Tomb World Awakening Dispatch
+  crusade.updateTombAwakeningPreview();
+  const dispatch = crusade.buildTombAwakeningDossierString();
+  assert.equal(mockElements.tombAwakeningPreviewBox.textContent, dispatch);
+  assert.ok(dispatch.includes('+++ CRYPTEK CONCLAVE // TOMB WORLD AWAKENING MATRIX DISPATCH +++'));
+  assert.ok(dispatch.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(dispatch.includes('Cryptek Conclave routing power to Command and Reanimation nodes'));
+
+  transmittedChannel = null;
+  transmittedPayload = null;
+  crusade.transmitTombAwakeningDossier();
+  assert.equal(transmittedChannel, 'beta');
+  assert.equal(transmittedPayload, dispatch);
+});
+
 
 
 
