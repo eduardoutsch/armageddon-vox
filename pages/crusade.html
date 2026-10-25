@@ -389,6 +389,8 @@
           <select id="dossierChannel" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
             <option value="alpha">🦅 The Exile // Sanctuary of Ash (Terminal Alpha)</option>
             <option value="beta">💀 Lord Commander Junebug (Terminal Beta)</option>
+            <option value="augur_alpha">🛰️ Orbital Augur Array // Distant Intercept (Terminal Alpha Scan)</option>
+            <option value="augur_beta">🛰️ Orbital Augur Array // Distant Intercept (Terminal Beta Scan)</option>
           </select>
         </div>
         <div>
@@ -396,11 +398,17 @@
           <select id="dossierModeNode" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
             <option value="Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Co-op Horde // Node 0 (Golgotha Jungle)</option>
             <option value="Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)">Mode 1: Solo Horde // Node 0 (Golgotha Jungle)</option>
+            <option value="Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry">Mode 1: Distant Solo Horde // Remote Sector (Augur Telemetry)</option>
             <option value="Mode 1: Horde Breach // Node 1 (Anthrand Munitions Vaults — Recon)">Mode 1: Horde // Node 1 (Anthrand Vaults — Recon)</option>
             <option value="Mode 1: Horde Breach // Node 2 (Stygies Outpost — Recon)">Mode 1: Horde // Node 2 (Stygies Outpost — Recon)</option>
             <option value="Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)">Mode 2: 1v1 PvP // Node 0 (Golgotha Jungle)</option>
           </select>
         </div>
+      </div>
+
+      <div id="dossierDistantForceRow" style="display:none; margin-bottom:12px;">
+        <label class="hud-label" style="display:block; margin-bottom:4px;">Distant Engaged Force (Off-Roster / Auxiliary Detachment — Neither Main Player Fielded)</label>
+        <input type="text" id="dossierDistantForce" oninput="updateMasterDossierPreview()" placeholder="e.g. 019th Steel Legion Outpost, Iron Warriors Contingent, Local PDF Militia, Blood Angels Strike Force" style="width:100%; padding:10px;">
       </div>
 
       <div class="choice-grid" style="margin-bottom:12px;">
@@ -1275,6 +1283,7 @@ function resetMasterDossierForm() {
   const fobEl = document.getElementById('fortFob');
   const leftEl = document.getElementById('dossierLeftoverSp');
   const notesEl = document.getElementById('dossierBattleNotes');
+  const distantForceEl = document.getElementById('dossierDistantForce');
 
   if (chanEl) chanEl.value = 'alpha';
   if (modeEl) modeEl.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
@@ -1287,8 +1296,11 @@ function resetMasterDossierForm() {
   if (fobEl) fobEl.checked = false;
   if (leftEl) leftEl.value = '0 Leftover SP';
   if (notesEl) notesEl.value = '';
+  if (distantForceEl) distantForceEl.value = '';
 
   crusadeState.queuedRolls = [];
+  crusadeState.dossierDistantForce = '';
+  crusadeState.dossierChannel = 'alpha';
   if (window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
     window.VoxAudio.playClank('card');
   }
@@ -1335,35 +1347,77 @@ function buildLogisticsSummaryLine() {
 }
 
 /**
- * Compiles the Master Post-Battle & Unit Progression Dossier string for Mode 1 (Horde)
- * and Mode 2 (1v1 PvP) Crusade engagements. Off-roster Mode 3 Rogue Sector reports
- * are handled exclusively by pages/rogue.html to avoid cross-page duplication.
+ * Toggles the visibility of the Distant Engaged Force field based on whether
+ * an Orbital Augur conduit or a Distant Solo Horde mode is currently selected.
+ */
+function updateDistantForceVisibility() {
+  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
+  const mode = document.getElementById('dossierModeNode')?.value || '';
+  const isDistant = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(mode);
+  const row = document.getElementById('dossierDistantForceRow');
+  if (row) {
+    row.style.display = isDistant ? 'block' : 'none';
+  }
+}
+
+/**
+ * Pure functional core: compiles the Master Post-Battle Dossier string from a plain data
+ * object. Supports standard Player 1 / Player 2 engagements as well as Distant Solo Horde
+ * Orbital Augur Telemetry where neither main player was fielded.
  *
+ * @param {object} [input={}] - Plain Master Battle Dossier inputs.
  * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
  */
-function buildMasterDossierString() {
-  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
-  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
-  const modeNode = document.getElementById('dossierModeNode')?.value || '';
-  const outcome = document.getElementById('dossierOutcome')?.value || '';
-  const secCode = (document.getElementById('dossierSecretCode')?.value || 'N/A').trim().toUpperCase();
-  const secTag = document.getElementById('dossierSecretTag')?.value || 'None';
-  const leftover = document.getElementById('dossierLeftoverSp')?.value || '0 Leftover SP';
-  const notes = (document.getElementById('dossierBattleNotes')?.value || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
-
-  const forts = [];
-  if (document.getElementById('fortHosp')?.checked) forts.push('Field Hospital (Auto-Pass OOA)');
-  if (document.getElementById('fortAmmo')?.checked) forts.push('Ammo Dump (Free Weapon Mod)');
-  if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
-  if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
+function compileMasterDossier(input = {}) {
+  const chan = input.channel || 'alpha';
+  const modeNode = input.modeNode || '';
+  const outcome = input.outcome || '';
+  const secCode = (input.secretCode || 'N/A').trim().toUpperCase();
+  const secTag = input.secretTag || 'None';
+  const leftover = input.leftoverSp || '0 Leftover SP';
+  const notes = (input.battleNotes || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
+  const forts = Array.isArray(input.fortifications) ? input.fortifications : [];
   const fortStr = forts.length > 0 ? forts.join(', ') : 'None';
+  const queuedRolls = Array.isArray(input.queuedRolls) ? input.queuedRolls : [];
+  const distantForce = (input.distantForce || '').trim();
 
-  const unitLines = crusadeState.queuedRolls.length > 0
-    ? crusadeState.queuedRolls.map((q, i) =>
+  const isDistantAugur = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(modeNode);
+
+  const unitLines = queuedRolls.length > 0
+    ? queuedRolls.map((q, i) =>
         `  ${i + 1}. [${q.unit}] → ${q.category}: ${q.name} (${q.roll})\n     • Battlefield Context: "${q.context}"`
       ).join('\n')
     : '  • None attached this battle.';
 
+  if (isDistantAugur) {
+    const scanningVessel = (chan === 'augur_beta' || chan === 'beta')
+      ? 'LORD COMMANDER JUNEBUG'
+      : 'THE EXILE // SANCTUARY OF ASH';
+    const forceName = distantForce || 'Unspecified Distant Auxiliary Detachment';
+
+    const lines = [
+      `+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++`,
+      `• SCANNING SENSOR ARRAY: ORBITAL AUGUR ARRAY (Relayed via ${scanningVessel})`,
+      `• ENGAGED FORCES (IN THE DISTANCE): ${forceName} (Neither Main Player Fielded)`,
+      `• ENGAGEMENT CLASSIFICATION: ${modeNode}`,
+      `• OUTCOME & SURVIVAL: ${outcome}`,
+      `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
+      `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
+      `• LEFTOVER SP SALVAGE: ${leftover}`,
+      `• STRATEGIC POINTS & ALLIANCE IMPACT: Zero Alliance SPt Shift (Off-Roster Narrative Telemetry)`,
+      `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`,
+      `------------------------------------------------`,
+      `• OBSERVED REMOTE UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES IN THE ASH-STORM"):`,
+      unitLines,
+      `------------------------------------------------`,
+      `• ORBITAL AUGUR AFTER-ACTION LOG: "${notes}"`,
+      `------------------------------------------------`,
+      `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this distant solo horde breach caught in the distance by our orbital augurs. As neither main player participated, no Alliance SPts are shifted—please chronicle the narrative fate of this remote detachment and christen custom in-universe Lore Names & Backstories for their attached unit Upgrades, Relics, and Battle Scars!`
+    ];
+    return lines.join('\n');
+  }
+
+  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
   const lines = [
     `+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++`,
     `• REPORTING COMMANDER: ${cmdr}`,
@@ -1375,7 +1429,10 @@ function buildMasterDossierString() {
   ];
 
   if (chan === 'alpha') {
-    lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${buildLogisticsSummaryLine()}`);
+    const logSummary = input.logisticsSummary || (typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : '');
+    if (logSummary) {
+      lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
+    }
   }
 
   lines.push(
@@ -1391,17 +1448,59 @@ function buildMasterDossierString() {
   return lines.join('\n');
 }
 
+/**
+ * Humble View (Dumb UI) input reader: extracts current Master Dossier form fields
+ * from the DOM into a plain data object.
+ *
+ * @returns {object} Plain input snapshot for compileMasterDossier.
+ */
+function readMasterDossierFormInputs() {
+  const forts = [];
+  if (document.getElementById('fortHosp')?.checked) forts.push('Field Hospital (Auto-Pass OOA)');
+  if (document.getElementById('fortAmmo')?.checked) forts.push('Ammo Dump (Free Weapon Mod)');
+  if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
+  if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
+
+  return {
+    channel: document.getElementById('dossierChannel')?.value || 'alpha',
+    modeNode: document.getElementById('dossierModeNode')?.value || '',
+    outcome: document.getElementById('dossierOutcome')?.value || '',
+    secretCode: document.getElementById('dossierSecretCode')?.value || '',
+    secretTag: document.getElementById('dossierSecretTag')?.value || '',
+    leftoverSp: document.getElementById('dossierLeftoverSp')?.value || '0 Leftover SP',
+    battleNotes: document.getElementById('dossierBattleNotes')?.value || '',
+    distantForce: document.getElementById('dossierDistantForce')?.value || '',
+    fortifications: forts,
+    queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
+    logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null
+  };
+}
+
+/**
+ * Compiles the Master Post-Battle & Unit Progression Dossier string for Mode 1 (Horde)
+ * and Mode 2 (1v1 PvP) Crusade engagements, delegating to the pure compileMasterDossier core.
+ * Off-roster Mode 3 Rogue Sector reports are handled exclusively by pages/rogue.html
+ * to avoid cross-page duplication.
+ *
+ * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
+ */
+function buildMasterDossierString() {
+  return compileMasterDossier(readMasterDossierFormInputs());
+}
+
 function updateMasterDossierPreview() {
+  updateDistantForceVisibility();
   const box = document.getElementById('masterDossierPreviewBox');
   if (box) box.textContent = buildMasterDossierString();
   saveCrusadeState();
 }
 
 function transmitMasterBattleDossier() {
-  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
+  const chanVal = document.getElementById('dossierChannel')?.value || 'alpha';
+  const targetChan = chanVal.startsWith('augur_') ? chanVal.replace('augur_', '') : chanVal;
   const payload = buildMasterDossierString();
   if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-    window.VoxAudio.transmitToVox(chan, payload);
+    window.VoxAudio.transmitToVox(targetChan, payload);
   }
 }
 
@@ -1450,6 +1549,18 @@ function transmitStartOfTourDossier() {
 }
 
 function saveCrusadeState() {
+  const distantForceEl = document.getElementById('dossierDistantForce');
+  if (distantForceEl) {
+    crusadeState.dossierDistantForce = distantForceEl.value;
+  }
+  const channelEl = document.getElementById('dossierChannel');
+  if (channelEl) {
+    crusadeState.dossierChannel = channelEl.value;
+  }
+  const modeNodeEl = document.getElementById('dossierModeNode');
+  if (modeNodeEl) {
+    crusadeState.dossierModeNode = modeNodeEl.value;
+  }
   try {
     localStorage.setItem(CRUSADE_STATE_KEY, JSON.stringify(crusadeState));
   } catch (e) {}
@@ -1463,6 +1574,19 @@ function initCrusadePage() {
       crusadeState = { ...crusadeState, ...parsed };
     }
   } catch (e) {}
+
+  if (crusadeState.dossierChannel) {
+    const chanEl = document.getElementById('dossierChannel');
+    if (chanEl) chanEl.value = crusadeState.dossierChannel;
+  }
+  if (crusadeState.dossierModeNode) {
+    const modeEl = document.getElementById('dossierModeNode');
+    if (modeEl) modeEl.value = crusadeState.dossierModeNode;
+  }
+  if (crusadeState.dossierDistantForce) {
+    const distEl = document.getElementById('dossierDistantForce');
+    if (distEl) distEl.value = crusadeState.dossierDistantForce;
+  }
 
   ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts', 'toursCompletedCount'].forEach(k => {
     const el = document.getElementById(k);

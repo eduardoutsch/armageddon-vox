@@ -422,7 +422,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       ? `Pattern 4B Flagship Bridge Logic Core readout for Commander Beta's own separate flagship (NEVER use Ashen Spirit or The Sanctuary of Ash!), REF-ID: ${refId}`
       : `Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}`;
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
@@ -536,7 +536,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   if (interceptPart && interceptPart.trim()) {
     const cleanIntercept = scrubArtifacts(interceptPart);
-    const isRogueBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT/i.test(rawQ);
+    const isDualBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE/i.test(rawQ);
 
     const isSelfTest =
       /simulate|test.*interference/i.test(rawQ) ||
@@ -546,9 +546,9 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     if (/target=["']?alpha/i.test(interceptAttrs)) destChannel = 'alpha';
     if (/target=["']?beta/i.test(interceptAttrs)) destChannel = 'beta';
 
-    const targetChannels = isRogueBroadcast ? ['alpha', 'beta'] : [destChannel];
+    const targetChannels = isDualBroadcast ? ['alpha', 'beta'] : [destChannel];
 
-    const destOriginLabel = isRogueBroadcast
+    const destOriginLabel = isDualBroadcast
       ? 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT'
       : (isSelfTest
         ? 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK'

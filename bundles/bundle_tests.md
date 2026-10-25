@@ -1912,6 +1912,50 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR 
   assert.ok(logged.some(m => m.includes('ALPHA & BETA')));
 });
 
+test('processSingleMessage: triggers dual-channel intercept broadcast for ORBITAL AUGUR ARRAY / DISTANT SOLO HORDE report', async () => {
+  const dispatchedPrompts = [];
+  const fetchCalls = [];
+  const logged = [];
+
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const augurMsg = {
+    id: '77889900-augur-report',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: '+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++\n• ENGAGEMENT CLASSIFICATION: Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry\n• ENGAGED FORCES (IN THE DISTANCE): 019th Steel Legion Patrol (Neither Main Player Fielded)'
+  };
+
+  const success = await processSingleMessage(augurMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 77889900\n+++ ORBITAL DECREE +++\nDistant solo horde battle logged.</DIRECT_REPLY><INTERCEPT>Distant breach signals near [REDACTED] confirmed by orbital scans.</INTERCEPT>',
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Distant solo horde augur report must trigger Pattern 5 intercept bleed instruction in prompt'
+  );
+
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCalls.length, 2, 'Distant solo horde augur intercept must be broadcast to BOTH alpha and beta');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
+});
+
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];
@@ -4180,6 +4224,8 @@ const mockElements = {
   relicResultBox: { innerHTML: '' },
   scarResultBox: { innerHTML: '' },
   dossierChannel: { value: 'alpha' },
+  dossierDistantForce: { value: '' },
+  dossierDistantForceRow: { style: { display: 'none' } },
   dossierModeNode: { value: 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)' },
   dossierOutcome: { value: 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)' },
   dossierSecretCode: { value: 'A9F' },
@@ -4273,6 +4319,9 @@ const evalFn = new Function(
     resetMasterDossierForm,
     renderQueuedRolls,
     buildLogisticsSummaryLine,
+    compileMasterDossier,
+    readMasterDossierFormInputs,
+    updateDistantForceVisibility,
     buildMasterDossierString,
     updateMasterDossierPreview,
     transmitMasterBattleDossier,
@@ -4751,6 +4800,94 @@ test('crusade: buildStartOfTourDossierString and transmitStartOfTourDossier comp
   assert.equal(transmittedChannel, 'alpha');
   assert.equal(transmittedPayload, report);
 });
+
+test('crusade: compileMasterDossier and buildMasterDossierString format Distant Solo Horde Augur Intercept for off-roster force with zero SPt shifts', () => {
+  mockElements.dossierChannel.value = 'augur_alpha';
+  mockElements.dossierModeNode.value = 'Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry';
+  mockElements.dossierDistantForce.value = '019th Steel Legion Patrol';
+  mockElements.dossierOutcome.value = 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)';
+  mockElements.dossierSecretCode.value = 'B77';
+  mockElements.dossierSecretTag.value = 'Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)';
+  mockElements.dossierBattleNotes.value = 'Ventral augurs locked onto an intense swarm breach 40km north. Remote PDF held the perimeter.';
+
+  crusade.clearQueuedRolls();
+  mockElements.rollerUnitName.value = 'Sentinel Outrider Alpha-9';
+  mockElements.rollerUnitContext.value = 'Kited the swarm behemoth across the sulfur dunes.';
+  crusade.rollRandomBattleTrait();
+  crusade.attachRollToDossier('trait');
+
+  crusade.updateDistantForceVisibility();
+  assert.equal(mockElements.dossierDistantForceRow.style.display, 'block');
+
+  const dossierStr = crusade.buildMasterDossierString();
+  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++'));
+  assert.ok(dossierStr.includes('ORBITAL AUGUR ARRAY (Relayed via THE EXILE // SANCTUARY OF ASH)'));
+  assert.ok(dossierStr.includes('019th Steel Legion Patrol (Neither Main Player Fielded)'));
+  assert.ok(dossierStr.includes('Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry'));
+  assert.ok(dossierStr.includes('Zero Alliance SPt Shift (Off-Roster Narrative Telemetry)'));
+  assert.ok(dossierStr.includes('Zero Quota Deduction (Neither Main Player Fielded)'));
+  assert.ok(!dossierStr.includes('TOUR OF DUTY & LOGISTICS TELEMETRY: Battles Rem:'));
+  assert.ok(dossierStr.includes('Sentinel Outrider Alpha-9'));
+  assert.ok(dossierStr.includes('Ventral augurs locked onto an intense swarm breach'));
+  assert.ok(dossierStr.includes('As neither main player participated, no Alliance SPts are shifted'));
+});
+
+test('crusade: compileMasterDossier supports Junebug augur_beta conduit and fallbacks for empty distant force', () => {
+  mockElements.dossierChannel.value = 'augur_beta';
+  mockElements.dossierModeNode.value = 'Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry';
+  mockElements.dossierDistantForce.value = '';
+  mockElements.dossierBattleNotes.value = 'Distant explosions recorded.';
+
+  const dossierStr = crusade.buildMasterDossierString();
+  assert.ok(dossierStr.includes('ORBITAL AUGUR ARRAY (Relayed via LORD COMMANDER JUNEBUG)'));
+  assert.ok(dossierStr.includes('Unspecified Distant Auxiliary Detachment (Neither Main Player Fielded)'));
+});
+
+test('crusade: transmitMasterBattleDossier routes augur_alpha to alpha and augur_beta to beta with dual-channel intercept payload', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.dossierChannel.value = 'augur_alpha';
+  mockElements.dossierModeNode.value = 'Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry';
+  mockElements.dossierDistantForce.value = 'Iron Warriors 77th Cohort';
+
+  crusade.transmitMasterBattleDossier();
+  assert.equal(transmittedChannel, 'alpha', 'Must route to commanding player alpha CRT terminal');
+  assert.ok(transmittedPayload.includes('ORBITAL AUGUR TELEMETRY'));
+
+  mockElements.dossierChannel.value = 'augur_beta';
+  crusade.transmitMasterBattleDossier();
+  assert.equal(transmittedChannel, 'beta', 'Must route to commanding player beta CRT terminal');
+  assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
+});
+
+test('crusade: resetMasterDossierForm clears dossierDistantForce and resets distant force visibility', () => {
+  mockElements.dossierChannel.value = 'augur_alpha';
+  mockElements.dossierDistantForce.value = 'Test Distant Auxiliary';
+  crusade.updateDistantForceVisibility();
+  assert.equal(mockElements.dossierDistantForceRow.style.display, 'block');
+
+  crusade.resetMasterDossierForm();
+  assert.equal(mockElements.dossierChannel.value, 'alpha');
+  assert.equal(mockElements.dossierDistantForce.value, '');
+  assert.equal(mockElements.dossierDistantForceRow.style.display, 'none');
+});
+
+test('crusade: saveCrusadeState and initCrusadePage persist and restore distant force and augur channel', () => {
+  mockLocalStorage.clear();
+  mockLocalStorage.setItem(crusade.CRUSADE_STATE_KEY, JSON.stringify({
+    activeTab: 'forge',
+    dossierChannel: 'augur_alpha',
+    dossierDistantForce: 'Salamanders 3rd Company Patrol'
+  }));
+
+  crusade.initCrusadePage();
+  assert.equal(crusade.getCrusadeState().dossierChannel, 'augur_alpha');
+  assert.equal(crusade.getCrusadeState().dossierDistantForce, 'Salamanders 3rd Company Patrol');
+  assert.equal(mockElements.dossierChannel.value, 'augur_alpha');
+  assert.equal(mockElements.dossierDistantForce.value, 'Salamanders 3rd Company Patrol');
+  assert.equal(mockElements.dossierDistantForceRow.style.display, 'block');
+});
+
 
 
 ````

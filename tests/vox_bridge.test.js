@@ -480,6 +480,50 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR 
   assert.ok(logged.some(m => m.includes('ALPHA & BETA')));
 });
 
+test('processSingleMessage: triggers dual-channel intercept broadcast for ORBITAL AUGUR ARRAY / DISTANT SOLO HORDE report', async () => {
+  const dispatchedPrompts = [];
+  const fetchCalls = [];
+  const logged = [];
+
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const augurMsg = {
+    id: '77889900-augur-report',
+    channel: 'alpha',
+    sender: 'The Exile',
+    question: '+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++\n• ENGAGEMENT CLASSIFICATION: Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry\n• ENGAGED FORCES (IN THE DISTANCE): 019th Steel Legion Patrol (Neither Main Player Fielded)'
+  };
+
+  const success = await processSingleMessage(augurMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 77889900\n+++ ORBITAL DECREE +++\nDistant solo horde battle logged.</DIRECT_REPLY><INTERCEPT>Distant breach signals near [REDACTED] confirmed by orbital scans.</INTERCEPT>',
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Distant solo horde augur report must trigger Pattern 5 intercept bleed instruction in prompt'
+  );
+
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCalls.length, 2, 'Distant solo horde augur intercept must be broadcast to BOTH alpha and beta');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
+});
+
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];
