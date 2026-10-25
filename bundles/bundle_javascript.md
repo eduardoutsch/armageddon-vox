@@ -960,7 +960,7 @@ function resolveRoomSyncedFaction(code) {
     picked = HORDE_FACTIONS.find(f => f.name === mode) || HORDE_FACTIONS[0];
   }
 
-  activeHordeFaction = { ...picked, syncedRoomCode: code };
+  activeHordeFaction = { ...picked, syncedRoomCode: code, syncedMode: mode };
 
   if (typeof document !== 'undefined') {
     const sel = document.getElementById('hordeFactionSelect');
@@ -970,10 +970,24 @@ function resolveRoomSyncedFaction(code) {
   saveSessionState();
 }
 
+/**
+ * Triggered whenever the user modifies the Horde Primary Faction Rule dropdown
+ * on the setup screen. Immediately resolves the room-synced faction for the current
+ * room code according to the chosen category/filter and persists state.
+ */
+function onSetupFactionModeChanged() {
+  const code = getActiveRoomCode();
+  resolveRoomSyncedFaction(code);
+  saveSessionState();
+  if (typeof debouncedPushLiveSpawnerStateToCloud === 'function') {
+    debouncedPushLiveSpawnerStateToCloud();
+  }
+}
+
 function manualChangeFaction() {
   const val = document.getElementById('hordeFactionSelect')?.value;
   const found = HORDE_FACTIONS.find(f => f.name === val) || HORDE_FACTIONS[0];
-  activeHordeFaction = { ...found, syncedRoomCode: getActiveRoomCode() };
+  activeHordeFaction = { ...found, syncedRoomCode: getActiveRoomCode(), syncedMode: val };
   renderFactionReminderBanner();
 
   // Clear stale spawns from previous faction so user never sees mismatched cards
@@ -1018,8 +1032,9 @@ function startSession() {
   isSoloMode = (mode === 'solo');
   spRoundCap = isSoloMode ? 16 : 8;
 
-  // 1. Resolve Room-Synced Horde Faction (only if not already set by cloud room sync)
-  if (!activeHordeFaction || activeHordeFaction.syncedRoomCode !== code) {
+  // 1. Resolve Room-Synced Horde Faction (only if not already set by cloud room sync or if room/mode changed)
+  const currentSetupMode = (typeof document !== 'undefined' && document.getElementById('setupFactionMode')?.value) || 'SYNC_ALL';
+  if (!activeHordeFaction || activeHordeFaction.syncedRoomCode !== code || activeHordeFaction.syncedMode !== currentSetupMode) {
     resolveRoomSyncedFaction(code);
   }
 
@@ -1873,9 +1888,16 @@ function applyRemoteSharedState(remoteState) {
   if (remoteState.activeHordeFactionName && typeof HORDE_FACTIONS !== 'undefined') {
     const found = HORDE_FACTIONS.find(f => f.name === remoteState.activeHordeFactionName);
     if (found) {
-      activeHordeFaction = { ...found, syncedRoomCode: remoteState.roomCode || getActiveRoomCode() };
+      const mode = remoteState.setupFactionMode || found.name;
+      activeHordeFaction = {
+        ...found,
+        syncedRoomCode: remoteState.roomCode || getActiveRoomCode(),
+        syncedMode: mode
+      };
       const sel = (typeof document !== 'undefined') ? document.getElementById('hordeFactionSelect') : null;
       if (sel) sel.value = found.name;
+      const setupSel = (typeof document !== 'undefined') ? document.getElementById('setupFactionMode') : null;
+      if (setupSel) setupSel.value = mode;
       renderFactionReminderBanner();
     }
   }
@@ -2132,13 +2154,16 @@ if (typeof module !== 'undefined' && module.exports) {
     getClientDeviceId,
     updateSyncBadge,
     applyRemoteSharedState,
-    triggerCardStaticShake
+    triggerCardStaticShake,
+    onSetupFactionModeChanged,
+    getActiveHordeFaction: () => activeHordeFaction
   };
 }
 
 if (typeof window !== 'undefined') {
   window.getActiveRoomCode = getActiveRoomCode;
   window.onRoomCodeChanged = onRoomCodeChanged;
+  window.onSetupFactionModeChanged = onSetupFactionModeChanged;
   window.pollLiveSpawnerStateFromCloud = pollLiveSpawnerStateFromCloud;
   window.debouncedPushLiveSpawnerStateToCloud = debouncedPushLiveSpawnerStateToCloud;
 }

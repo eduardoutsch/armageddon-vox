@@ -78,7 +78,7 @@
 
     <!-- 2. HORDE PRIMARY FACTION (SYNCED BY ROOM CODE) -->
     <label class="setup-label">2. Horde Primary Faction Rule (Section 7.5)</label>
-    <select id="setupFactionMode" style="width:100%; padding:12px; font-weight:600; background:#0b0d13;">
+    <select id="setupFactionMode" style="width:100%; padding:12px; font-weight:600; background:#0b0d13;" onchange="if(window.onSetupFactionModeChanged) onSetupFactionModeChanged()">
       <option value="SYNC_ALL">🎲 Auto-Sync Random Faction from Room Code (All 23 Factions)</option>
       <option value="SYNC_CHAOS">🎲 Auto-Sync Random CHAOS Faction from Room Code</option>
       <option value="SYNC_XENOS">🎲 Auto-Sync Random XENOS Faction from Room Code</option>

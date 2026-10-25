@@ -455,6 +455,43 @@ test('app: resolveRoomSyncedFaction deterministically selects faction', () => {
   assert.match(bannerTitle, /^HORDE FACTION:/);
 });
 
+test('app: onSetupFactionModeChanged switches faction immediately according to mode', () => {
+  assert.equal(typeof app.onSetupFactionModeChanged, 'function', 'onSetupFactionModeChanged must be exported');
+
+  const setupMode = document.getElementById('setupFactionMode');
+  setupMode.value = 'SYNC_CHAOS';
+  app.onSetupFactionModeChanged();
+
+  const activeChaos = app.activeHordeFaction;
+  assert.equal(activeChaos.group, 'Chaos', 'Selecting SYNC_CHAOS must resolve a Chaos faction');
+  assert.notEqual(activeChaos.name, "T'au Empire", 'Chaos filter must never yield T\'au Empire');
+
+  setupMode.value = 'SYNC_XENOS';
+  app.onSetupFactionModeChanged();
+  assert.equal(app.activeHordeFaction.group, 'Xenos', 'Selecting SYNC_XENOS must resolve a Xenos faction');
+
+  setupMode.value = 'SYNC_IMPERIUM';
+  app.onSetupFactionModeChanged();
+  assert.equal(app.activeHordeFaction.group, 'Imperium', 'Selecting SYNC_IMPERIUM must resolve an Imperium faction');
+});
+
+test('app: startSession re-resolves faction if setupFactionMode changed even if roomCode matches', () => {
+  // Simulate active session previously on T'au Empire with room code HADES-1
+  document.getElementById('seedInput').value = 'HADES-1';
+  document.getElementById('setupFactionMode').value = "T'au Empire";
+  app.resolveRoomSyncedFaction('HADES-1');
+  assert.equal(app.activeHordeFaction.name, "T'au Empire");
+
+  // User changes setup dropdown to SYNC_CHAOS without changing room code
+  document.getElementById('setupFactionMode').value = 'SYNC_CHAOS';
+
+  app.startSession();
+
+  const activeChaos = app.activeHordeFaction;
+  assert.equal(activeChaos.group, 'Chaos', 'startSession must re-resolve faction if setupFactionMode changed');
+  assert.notEqual(activeChaos.name, "T'au Empire");
+});
+
 test('app: startSession launches game screen from seed input', () => {
   const seedInput = document.getElementById('seedInput');
   seedInput.value = 'TERRA-99';
@@ -3703,7 +3740,11 @@ const mockElements = {
   shelfSaveNotice: { classList: createMockClassList() },
   cloudSyncBadge: { textContent: '' },
   bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
-  factionBracketDisplay: { innerHTML: '' }
+  factionBracketDisplay: { innerHTML: '' },
+  ttsUnitTypesBox: { innerHTML: '' },
+  ttsUnitCount: { textContent: '' },
+  ttsFactionName: { textContent: '' },
+  ttsCopyNotice: { classList: createMockClassList() }
 };
 
 const mockNemesisCards = [{ open: true }, { open: true }, { open: true }];
@@ -3800,7 +3841,11 @@ const evalFn = new Function(
     loadFactionInputs,
     onFactionPickerChange,
     resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined),
-    compileNemesisDossier: (typeof compileNemesisDossier !== 'undefined' ? compileNemesisDossier : undefined)
+    compileNemesisDossier: (typeof compileNemesisDossier !== 'undefined' ? compileNemesisDossier : undefined),
+    extractUniqueUnitTypes: (typeof extractUniqueUnitTypes !== 'undefined' ? extractUniqueUnitTypes : undefined),
+    formatTtsUnitList: (typeof formatTtsUnitList !== 'undefined' ? formatTtsUnitList : undefined),
+    renderTtsUnitTypes: (typeof renderTtsUnitTypes !== 'undefined' ? renderTtsUnitTypes : undefined),
+    copyTtsUnitTypesList: (typeof copyTtsUnitTypesList !== 'undefined' ? copyTtsUnitTypesList : undefined)
   };`
 );
 
@@ -4144,6 +4189,81 @@ test('roster: compileNemesisDossier is a pure domain compiler separated from DOM
   assert.ok(report.includes('• HOSTILE DATASHEET / FACTION: Orks — Deff Dread'));
   assert.ok(report.includes('• TRIGGERING FEAT: Destroyed a Titanic / Vehicle centerpiece unit'));
   assert.ok(report.includes('• EYE-WITNESS COMBAT LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+});
+
+test('roster: extractUniqueUnitTypes correctly normalizes and deduplicates unit types from faction tables and custom pools', () => {
+  assert.equal(typeof roster.extractUniqueUnitTypes, 'function', 'extractUniqueUnitTypes must be defined as a pure function');
+
+  // Test Space Marines standard table
+  const smTable = HORDE_FACTION_SPAWN_TABLES['Space Marines'];
+  const smTypes = roster.extractUniqueUnitTypes(smTable);
+
+  assert.ok(Array.isArray(smTypes), 'Must return an array of unit types');
+  assert.ok(smTypes.includes('Bladeguard Veterans'), 'Must include Bladeguard Veterans');
+  assert.equal(smTypes.includes('Bladeguard'), false, 'Must deduplicate shorthand Bladeguard into Bladeguard Veterans');
+  assert.ok(smTypes.includes('Terminator Squad'), 'Must include Terminator Squad');
+  assert.equal(smTypes.includes('Terminators'), false, 'Must deduplicate shorthand Terminators into Terminator Squad');
+  assert.ok(smTypes.includes('Land Raider Redeemer'), 'Must split compound units like 1 Land Raider Redeemer + 6 Bladeguard');
+  assert.ok(smTypes.includes('Captain'), 'Must extract Captain from 5 Terminator Squad + Captain');
+
+  // Test custom shelf pool format (comma-separated strings)
+  const customPool = {
+    b34: '10 Cadian Shock Troops, 1 Scout Sentinel',
+    b56: '1 Rogal Dorn Battle Tank',
+    b79: '',
+    b10: '1 Baneblade Super-Heavy Tank',
+    b13: ''
+  };
+  const cTypes = roster.extractUniqueUnitTypes(customPool);
+  assert.deepEqual(cTypes, [
+    'Baneblade Super-Heavy Tank',
+    'Cadian Shock Troops',
+    'Rogal Dorn Battle Tank',
+    'Scout Sentinel'
+  ]);
+
+  // Test null / empty
+  assert.deepEqual(roster.extractUniqueUnitTypes(null), []);
+  assert.deepEqual(roster.extractUniqueUnitTypes({}), []);
+});
+
+test('roster: formatTtsUnitList formats copyable Tabletop Simulator preparation checklist', () => {
+  assert.equal(typeof roster.formatTtsUnitList, 'function', 'formatTtsUnitList must be defined');
+
+  const formatted = roster.formatTtsUnitList('Space Marines', ['Bladeguard Veterans', 'Land Raider Redeemer']);
+  assert.ok(formatted.includes('+++ TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES +++'));
+  assert.ok(formatted.includes('Total Unique Unit Types Required: 2'));
+  assert.ok(formatted.includes('[ ] Bladeguard Veterans'));
+  assert.ok(formatted.includes('[ ] Land Raider Redeemer'));
+});
+
+test('roster: renderFactionBracketTable populates TTS unit types preview and count', () => {
+  storageStore.clear();
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+  roster.renderFactionBracketTable();
+
+  assert.equal(mockElements.ttsFactionName.textContent, 'Space Marines');
+  assert.ok(parseInt(mockElements.ttsUnitCount.textContent, 10) > 0, 'Must show positive unit count');
+  assert.ok(mockElements.ttsUnitTypesBox.innerHTML.includes('Bladeguard Veterans'), 'Must render Bladeguard Veterans pill/tag');
+});
+
+test('roster: copyTtsUnitTypesList copies checklist to clipboard and flashes notice', () => {
+  assert.ok(rosterHtml.includes('copyTtsUnitTypesList()'), 'pages/roster.html must have button calling copyTtsUnitTypesList()');
+  assert.equal(typeof roster.copyTtsUnitTypesList, 'function', 'copyTtsUnitTypesList must be defined');
+
+  let copiedText = null;
+  mockWindow.navigator = {
+    clipboard: {
+      writeText: async (txt) => { copiedText = txt; }
+    }
+  };
+
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+  roster.renderFactionBracketTable();
+  roster.copyTtsUnitTypesList();
+
+  assert.ok(copiedText && copiedText.includes('TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES'));
+  assert.equal(mockElements.ttsCopyNotice.classList.contains('hidden'), false);
 });
 
 ````

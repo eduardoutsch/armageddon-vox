@@ -583,6 +583,27 @@ REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mo
 
       <div id="factionBracketDisplay"></div>
     </div>
+
+    <!-- 3. TABLETOP SIMULATOR (TTS) MODEL PREPARATION CHECKLIST -->
+    <div class="card" style="border-left:4px solid var(--green); margin-top:20px;">
+      <div class="section-header" style="margin-top:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h3 style="margin:0;">3. Tabletop Simulator (TTS) Model Preparation // Used Unit Types</h3>
+            <span class="hud-sub">All Unique Unit Types Used in <span id="ttsFactionName" style="color:var(--gold);">Space Marines</span> (<span id="ttsUnitCount">0</span> Types)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="btn-ghost btn-sm" onclick="copyTtsUnitTypesList()">📋 Copy TTS Checklist</button>
+            <span id="ttsCopyNotice" style="font-size:0.8rem; color:var(--green);" class="hidden">✓ Copied to Clipboard!</span>
+          </div>
+        </div>
+      </div>
+      <p class="card-desc" style="margin-bottom:12px;">
+        To prepare this army on Tabletop Simulator, you only need to spawn at least one model of each unit type below into your staging tray. Multiple quantities across different threat brackets use these same base models.
+      </p>
+
+      <div id="ttsUnitTypesBox" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;"></div>
+    </div>
   </div>
 
 </div>
@@ -942,6 +963,182 @@ function renderFactionBracketTable() {
       </tbody>
     </table>
   `;
+
+  renderTtsUnitTypes(facName, customP, refTable);
+}
+
+/**
+ * Pure helper: normalizes raw unit text by stripping leading dice or model quantities.
+ *
+ * @param {string} raw - Raw unit text (e.g. "5 Bladeguard Veterans", "1 Land Raider Redeemer").
+ * @returns {string} Cleaned unit name.
+ */
+function normalizeUnitType(raw) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  s = s.replace(/^(?:\d+D\d+|\d+x|\d+|-|\+|D\d+)\s*/i, '');
+  return s.trim();
+}
+
+/**
+ * Pure helper: deduplicates shorter shorthand unit names when a longer, more descriptive
+ * version already exists in the list (e.g. merges 'Bladeguard' into 'Bladeguard Veterans',
+ * and 'Terminators' into 'Terminator Squad').
+ *
+ * @param {string[]} units - Array of cleaned unit type names.
+ * @returns {string[]} Deduplicated, alphabetically sorted array of unit types.
+ */
+function deduplicateSimilarUnits(units) {
+  const sorted = [...units].sort((a, b) => b.length - a.length);
+  const result = [];
+
+  for (const u of sorted) {
+    const uNorm = u.toLowerCase().replace(/\s+(?:squad|veterans|unit|models?)$/i, '').trim();
+    const exists = result.some(existing => {
+      const exNorm = existing.toLowerCase().replace(/\s+(?:squad|veterans|unit|models?)$/i, '').trim();
+      if (exNorm === uNorm) return true;
+      if (exNorm === uNorm + 's' || uNorm === exNorm + 's') return true;
+      if (exNorm.startsWith(uNorm) && (exNorm.length - uNorm.length <= 10)) return true;
+      return false;
+    });
+    if (!exists) {
+      result.push(u);
+    }
+  }
+  return result.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Pure functional core: extracts a sorted list of unique unit types used across
+ * all threat brackets from either a standard spawn table object or a custom shelf pool.
+ *
+ * @param {object|string[]} tableOrPool - Spawn table or pool containing b34..b13 brackets or string array.
+ * @returns {string[]} Sorted array of unique, normalized unit types.
+ */
+function extractUniqueUnitTypes(tableOrPool) {
+  if (!tableOrPool) return [];
+  const rawEntries = [];
+  if (Array.isArray(tableOrPool)) {
+    rawEntries.push(...tableOrPool);
+  } else if (typeof tableOrPool === 'object') {
+    const keys = ['b34', 'b56', 'b79', 'b10', 'b13'];
+    for (const k of keys) {
+      const val = tableOrPool[k];
+      if (Array.isArray(val)) {
+        rawEntries.push(...val);
+      } else if (typeof val === 'string' && val.trim()) {
+        rawEntries.push(...val.split(','));
+      }
+    }
+  }
+
+  const unitMap = new Map();
+  for (const entry of rawEntries) {
+    if (!entry) continue;
+    const subUnits = String(entry).split('+');
+    for (const sub of subUnits) {
+      const clean = normalizeUnitType(sub);
+      if (clean && clean.length > 1) {
+        const lowerKey = clean.toLowerCase();
+        if (!unitMap.has(lowerKey)) {
+          unitMap.set(lowerKey, clean);
+        }
+      }
+    }
+  }
+
+  return deduplicateSimilarUnits(Array.from(unitMap.values()));
+}
+
+/**
+ * Pure functional core: formats an ASCII/Markdown checklist of unit types
+ * ready to be copied to the clipboard for Tabletop Simulator preparation.
+ *
+ * @param {string} factionName - Name of the Horde faction.
+ * @param {string[]} unitTypes - Array of unique unit names.
+ * @returns {string} Formatted checklist string.
+ */
+function formatTtsUnitList(factionName, unitTypes = []) {
+  const title = `+++ TABLETOP SIMULATOR (TTS) PREPARATION // ${factionName ? factionName.toUpperCase() : 'HORDE ARMY'} +++`;
+  const sub = `Total Unique Unit Types Required: ${unitTypes.length}`;
+  const lines = unitTypes.map(u => `[ ] ${u}`);
+  return [title, sub, '------------------------------------------------', ...lines].join('\n');
+}
+
+/**
+ * Renders the TTS unit types checklist tags and count badge for the currently selected faction.
+ *
+ * @param {string} facName - Selected faction name.
+ * @param {object} customP - User's custom shelf pool for this faction (if any).
+ * @param {object} refTable - Standard 11th Ed reference spawn table for this faction.
+ */
+function renderTtsUnitTypes(facName, customP, refTable) {
+  const box = document.getElementById('ttsUnitTypesBox');
+  const countEl = document.getElementById('ttsUnitCount');
+  const nameEl = document.getElementById('ttsFactionName');
+  if (!box) return;
+
+  if (nameEl) nameEl.textContent = facName;
+
+  const hasCustom = Boolean(
+    (customP?.b34 && customP.b34.trim()) ||
+    (customP?.b56 && customP.b56.trim()) ||
+    (customP?.b79 && customP.b79.trim()) ||
+    (customP?.b10 && customP.b10.trim()) ||
+    (customP?.b13 && customP.b13.trim())
+  );
+  const activeSource = hasCustom ? customP : refTable;
+  const unitTypes = extractUniqueUnitTypes(activeSource);
+
+  if (countEl) countEl.textContent = String(unitTypes.length);
+
+  if (unitTypes.length === 0) {
+    box.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem; font-style:italic;">No unit types detected in this pool.</span>`;
+    return;
+  }
+
+  box.innerHTML = unitTypes.map(u => `
+    <span class="rule-tag" style="background:#0b0e17; border-color:var(--border); color:#e2e8f0; font-size:0.82rem; padding:6px 10px; display:inline-flex; align-items:center; gap:6px;">
+      <span style="color:var(--gold);">•</span> ${u}
+    </span>
+  `).join('');
+}
+
+/**
+ * Copies the Tabletop Simulator preparation checklist to the clipboard and triggers SFX.
+ */
+function copyTtsUnitTypesList() {
+  const picker = document.getElementById('bracketFactionPicker');
+  const facName = picker?.value || 'Space Marines';
+  const customP = getFactionPoolFromStore(facName);
+  const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined') ? HORDE_FACTION_SPAWN_TABLES : (typeof ROSTER_SPAWN_TABLES !== 'undefined' ? ROSTER_SPAWN_TABLES : {});
+  const refTable = tables[facName] || {};
+
+  const hasCustom = Boolean(
+    (customP?.b34 && customP.b34.trim()) ||
+    (customP?.b56 && customP.b56.trim()) ||
+    (customP?.b79 && customP.b79.trim()) ||
+    (customP?.b10 && customP.b10.trim()) ||
+    (customP?.b13 && customP.b13.trim())
+  );
+  const activeSource = hasCustom ? customP : refTable;
+  const unitTypes = extractUniqueUnitTypes(activeSource);
+  const text = formatTtsUnitList(facName, unitTypes);
+
+  const nav = (typeof window !== 'undefined' && window.navigator) ? window.navigator : (typeof navigator !== 'undefined' ? navigator : null);
+  if (nav && nav.clipboard && typeof nav.clipboard.writeText === 'function') {
+    nav.clipboard.writeText(text);
+  }
+
+  if (window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+
+  const notice = document.getElementById('ttsCopyNotice');
+  if (notice) {
+    notice.classList.remove('hidden');
+    setTimeout(() => notice.classList.add('hidden'), 2500);
+  }
 }
 
 function saveRosterPageState() {
@@ -1002,6 +1199,10 @@ if (typeof window !== 'undefined') {
   window.syncPoolsToSupabaseCloud = syncPoolsToSupabaseCloud;
   window.pullSharedPoolsFromCloud = pullSharedPoolsFromCloud;
   window.renderFactionBracketTable = renderFactionBracketTable;
+  window.extractUniqueUnitTypes = extractUniqueUnitTypes;
+  window.formatTtsUnitList = formatTtsUnitList;
+  window.renderTtsUnitTypes = renderTtsUnitTypes;
+  window.copyTtsUnitTypesList = copyTtsUnitTypesList;
   window.saveRosterPageState = saveRosterPageState;
   window.initRosterPage = initRosterPage;
 }

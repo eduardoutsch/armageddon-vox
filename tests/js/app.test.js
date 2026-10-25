@@ -104,6 +104,43 @@ test('app: resolveRoomSyncedFaction deterministically selects faction', () => {
   assert.match(bannerTitle, /^HORDE FACTION:/);
 });
 
+test('app: onSetupFactionModeChanged switches faction immediately according to mode', () => {
+  assert.equal(typeof app.onSetupFactionModeChanged, 'function', 'onSetupFactionModeChanged must be exported');
+
+  const setupMode = document.getElementById('setupFactionMode');
+  setupMode.value = 'SYNC_CHAOS';
+  app.onSetupFactionModeChanged();
+
+  const activeChaos = app.activeHordeFaction;
+  assert.equal(activeChaos.group, 'Chaos', 'Selecting SYNC_CHAOS must resolve a Chaos faction');
+  assert.notEqual(activeChaos.name, "T'au Empire", 'Chaos filter must never yield T\'au Empire');
+
+  setupMode.value = 'SYNC_XENOS';
+  app.onSetupFactionModeChanged();
+  assert.equal(app.activeHordeFaction.group, 'Xenos', 'Selecting SYNC_XENOS must resolve a Xenos faction');
+
+  setupMode.value = 'SYNC_IMPERIUM';
+  app.onSetupFactionModeChanged();
+  assert.equal(app.activeHordeFaction.group, 'Imperium', 'Selecting SYNC_IMPERIUM must resolve an Imperium faction');
+});
+
+test('app: startSession re-resolves faction if setupFactionMode changed even if roomCode matches', () => {
+  // Simulate active session previously on T'au Empire with room code HADES-1
+  document.getElementById('seedInput').value = 'HADES-1';
+  document.getElementById('setupFactionMode').value = "T'au Empire";
+  app.resolveRoomSyncedFaction('HADES-1');
+  assert.equal(app.activeHordeFaction.name, "T'au Empire");
+
+  // User changes setup dropdown to SYNC_CHAOS without changing room code
+  document.getElementById('setupFactionMode').value = 'SYNC_CHAOS';
+
+  app.startSession();
+
+  const activeChaos = app.activeHordeFaction;
+  assert.equal(activeChaos.group, 'Chaos', 'startSession must re-resolve faction if setupFactionMode changed');
+  assert.notEqual(activeChaos.name, "T'au Empire");
+});
+
 test('app: startSession launches game screen from seed input', () => {
   const seedInput = document.getElementById('seedInput');
   seedInput.value = 'TERRA-99';
