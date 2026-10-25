@@ -135,8 +135,8 @@ test('UI Boundary: pages/briefing.html defaults to Commander Beta dossier and in
     'Must include Lord Commander Junebug Royal Engram Seal clearance tag'
   );
   assert.ok(
-    normHtml.includes('Intercepted Imperial Vox-Transmission (Geostationary Zenith-09)'),
-    'Must include Intercepted Imperial Vox-Transmission (Geostationary Zenith-09) section'
+    normHtml.includes('Open-Frequency Orbital Parley (Geostationary Zenith-09)'),
+    'Must include Open-Frequency Orbital Parley (Geostationary Zenith-09) section'
   );
   assert.ok(
     html.includes('unlock-btn') && html.includes("unlockTab('Beta')"),

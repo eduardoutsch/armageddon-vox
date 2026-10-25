@@ -117,10 +117,324 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       font-size: 0.88rem;
       line-height: 1.55;
     }
+
+    /* =========================================================================
+       NECRON TOMB-SHIP THEME // LORD COMMANDER JUNEBUG (#btnBeta & #dossierBeta)
+       Aesthetic: Noctolith Obsidian, Living Metal Silver, Octagonal Cartouche
+                  & Animated Gauss Emerald / Tesseract Conduits
+       ========================================================================= */
+    @keyframes necronGaussPulse {
+      0%, 100% {
+        box-shadow: 0 0 16px rgba(16, 185, 129, 0.38), inset 0 0 10px rgba(52, 211, 153, 0.22);
+      }
+      50% {
+        box-shadow: 0 0 26px rgba(52, 211, 153, 0.65), inset 0 0 18px rgba(16, 185, 129, 0.36);
+      }
+    }
+
+    body.necron-briefing-active {
+      --side-glow-line: rgba(16, 185, 129, 0.85);
+      --side-glow-bloom: rgba(16, 185, 129, 0.38);
+      --side-glow-deep: rgba(4, 120, 87, 0.14);
+      --corner-glow-core: rgba(16, 185, 129, 0.24);
+      --corner-glow-bloom: rgba(5, 150, 105, 0.10);
+      --corner-glow-deep: rgba(6, 78, 59, 0.03);
+      background-color: #030807;
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.28) 0px,
+          rgba(0, 0, 0, 0.28) 1px,
+          transparent 1px,
+          transparent 4px
+        ),
+        linear-gradient(90deg, rgba(16, 185, 129, 0.035) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(16, 185, 129, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.22) 0%, transparent 58%),
+        radial-gradient(circle at 75% 80%, rgba(6, 182, 212, 0.09) 0%, transparent 50%);
+      background-size: 100% 100%, 44px 44px, 44px 44px, 100% 100%, 100% 100%;
+    }
+
+    body.necron-briefing-active .suite-nav {
+      background: linear-gradient(180deg, #05110e 0%, #020706 100%);
+      border-bottom-color: rgba(16, 185, 129, 0.45);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.9), 0 1px 14px rgba(16, 185, 129, 0.15);
+    }
+
+    body.necron-briefing-active .suite-link {
+      background: rgba(5, 18, 15, 0.8);
+      border-color: rgba(16, 185, 129, 0.24);
+    }
+
+    body.necron-briefing-active .suite-link.active {
+      color: #6ee7b7;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.26) 0%, rgba(4, 24, 19, 0.95) 100%);
+      border-color: var(--green);
+      box-shadow: inset 0 0 12px rgba(16, 185, 129, 0.25), 0 0 10px rgba(16, 185, 129, 0.2);
+    }
+
+    body.necron-briefing-active .nav-pills {
+      background: #040d0b;
+      border-color: rgba(16, 185, 129, 0.4);
+      box-shadow: 0 0 24px rgba(16, 185, 129, 0.12), inset 0 0 16px rgba(0, 0, 0, 0.85);
+    }
+
+    body.necron-briefing-active .terminal-link-btn {
+      background: linear-gradient(180deg, #064e3b 0%, #022c22 100%);
+      border-color: rgba(52, 211, 153, 0.55);
+      color: #ecfdf5;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.22);
+    }
+
+    body.necron-briefing-active .terminal-link-btn:hover {
+      border-color: #6ee7b7;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.38);
+    }
+
+    #btnBeta:hover {
+      color: #6ee7b7;
+      border-color: rgba(16, 185, 129, 0.55);
+      background: rgba(6, 26, 21, 0.75);
+    }
+
+    #btnBeta.active {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(4, 18, 15, 0.96) 100%);
+      color: #6ee7b7;
+      border-color: var(--green);
+      box-shadow: inset 0 0 14px rgba(16, 185, 129, 0.28), 0 0 12px rgba(16, 185, 129, 0.2);
+      text-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+    }
+
+    .necron-ankh-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 4px auto 12px auto;
+      max-width: 340px;
+      color: #34d399;
+      font-size: 1.05rem;
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px rgba(16, 185, 129, 0.75);
+      user-select: none;
+    }
+
+    .necron-ankh-divider span {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.75), transparent);
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+    }
+
+    #dossierBeta .hero-card {
+      clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.20) 0%, transparent 62%),
+        repeating-linear-gradient(
+          -45deg,
+          rgba(16, 185, 129, 0.028) 0px,
+          rgba(16, 185, 129, 0.028) 1px,
+          transparent 1px,
+          transparent 14px
+        ),
+        linear-gradient(135deg, rgba(5, 20, 17, 0.98) 0%, rgba(3, 9, 11, 0.99) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.6);
+      border-top: 2px solid #34d399;
+      border-bottom: 3px solid #020806;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.9), 0 0 28px rgba(16, 185, 129, 0.16), inset 0 0 32px rgba(16, 185, 129, 0.09);
+    }
+
+    #dossierBeta .hero-card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 26%;
+      width: 48%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #34d399, #a7f3d0, #34d399, transparent);
+      box-shadow: 0 0 16px #10b981;
+      pointer-events: none;
+    }
+
+    #dossierBeta .hero-card::before,
+    #dossierBeta .card::before {
+      border: 1px solid rgba(16, 185, 129, 0.22);
+      box-shadow: inset 0 0 14px rgba(16, 185, 129, 0.05);
+    }
+
+    #dossierBeta .hero-title {
+      background: linear-gradient(135deg, #ecfdf5 0%, #34d399 50%, #2dd4bf 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 18px rgba(16, 185, 129, 0.4);
+      letter-spacing: 2px;
+    }
+
+    #dossierBeta .status-pill {
+      background: rgba(16, 185, 129, 0.16);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.6);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.24), inset 0 0 8px rgba(16, 185, 129, 0.14);
+    }
+
+    #dossierBeta code {
+      background: rgba(6, 78, 59, 0.38);
+      color: #6ee7b7;
+      border: 1px solid rgba(52, 211, 153, 0.48);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.18);
+    }
+
+    #gateBeta .unlock-btn {
+      background: linear-gradient(135deg, #10b981 0%, #047857 55%, #064e3b 100%);
+      color: #ecfdf5;
+      border: 1px solid #34d399;
+      border-bottom: 4px solid #022c22;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
+      animation: necronGaussPulse 3.2s infinite ease-in-out;
+    }
+
+    #gateBeta .unlock-btn:hover {
+      border-color: #a7f3d0;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.55), inset 0 0 16px rgba(167, 243, 208, 0.35);
+    }
+
+    #dossierBeta .lock-toggle-btn {
+      border-color: rgba(16, 185, 129, 0.48);
+      color: #6ee7b7;
+      background: rgba(5, 20, 17, 0.85);
+    }
+
+    #dossierBeta .lock-toggle-btn:hover {
+      border-color: #34d399;
+      color: #ecfdf5;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.28);
+    }
+
+    #dossierBeta .card {
+      clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+      background:
+        linear-gradient(90deg, rgba(16, 185, 129, 0.02) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(16, 185, 129, 0.02) 1px, transparent 1px),
+        linear-gradient(180deg, #061311 0%, #03090a 100%);
+      background-size: 28px 28px, 28px 28px, 100% 100%;
+      border-color: rgba(16, 185, 129, 0.32);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.82), inset 0 0 20px rgba(16, 185, 129, 0.06);
+    }
+
+    #dossierBeta .choice-grid .card {
+      background: linear-gradient(180deg, #05100f 0%, #030809 100%) !important;
+      border-color: rgba(16, 185, 129, 0.28);
+    }
+
+    #dossierBeta .section-header {
+      border-bottom-color: rgba(16, 185, 129, 0.32);
+    }
+
+    #dossierBeta .section-header h3 {
+      color: #34d399;
+      text-shadow: 0 0 10px rgba(16, 185, 129, 0.28);
+    }
+
+    #dossierBeta .lore-quote {
+      background:
+        repeating-linear-gradient(
+          0deg,
+          rgba(16, 185, 129, 0.028) 0px,
+          rgba(16, 185, 129, 0.028) 1px,
+          transparent 1px,
+          transparent 3px
+        ),
+        rgba(2, 9, 8, 0.94);
+      border: 1px solid rgba(16, 185, 129, 0.26);
+      border-left: 4px solid var(--green);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+    }
+
+    #dossierBeta .telemetry-box {
+      background: linear-gradient(180deg, #05110f 0%, #030809 100%);
+      border-color: rgba(16, 185, 129, 0.28);
+      box-shadow: inset 0 0 16px rgba(16, 185, 129, 0.07);
+    }
+
+    #dossierBeta .slider-node {
+      background: #040c0b;
+      border-color: rgba(16, 185, 129, 0.28);
+      color: #64748b;
+      opacity: 0.72;
+    }
+
+    #dossierBeta #betaNode-3,
+    #dossierBeta #betaNode-2 {
+      background: linear-gradient(180deg, rgba(45, 10, 16, 0.78) 0%, rgba(12, 4, 6, 0.95) 100%);
+      border-color: rgba(239, 68, 68, 0.42);
+      color: #fca5a5;
+    }
+
+    #dossierBeta #betaNode0 {
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.82) 0%, rgba(7, 11, 20, 0.95) 100%);
+      border-color: rgba(148, 163, 184, 0.38);
+      color: #94a3b8;
+    }
+
+    #dossierBeta #betaNode1,
+    #dossierBeta #betaNode2,
+    #dossierBeta #betaNode3 {
+      background: linear-gradient(180deg, rgba(6, 34, 38, 0.8) 0%, rgba(4, 12, 16, 0.95) 100%);
+      border-color: rgba(45, 212, 191, 0.42);
+      color: #5eead4;
+    }
+
+    #dossierBeta .slider-node.active-brig {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.32) 0%, rgba(6, 78, 59, 0.55) 100%);
+      border-color: #34d399;
+      color: #ecfdf5;
+      opacity: 1;
+      animation: necronGaussPulse 3s infinite ease-in-out;
+    }
+
+    #dossierBeta #betaSliderDetailBox {
+      background: linear-gradient(135deg, rgba(4, 18, 15, 0.96) 0%, rgba(3, 9, 11, 0.98) 100%) !important;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+      border-left: 4px solid var(--green);
+    }
+
+    #dossierBeta details {
+      background: #040b0a;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    #dossierBeta details summary {
+      background: rgba(16, 185, 129, 0.06);
+      color: #34d399;
+    }
+
+    #dossierBeta details[open] > summary {
+      border-bottom-color: rgba(16, 185, 129, 0.28);
+      background: rgba(16, 185, 129, 0.12);
+    }
+
+    #dossierBeta .drawer-body {
+      border-top-color: rgba(16, 185, 129, 0.25);
+    }
+
+    #dossierBeta table.reckoning-table th {
+      background: #061714;
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.32);
+    }
+
+    #dossierBeta table.reckoning-table td {
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+
+    #dossierBeta tr.highlight-row {
+      background: rgba(16, 185, 129, 0.18);
+      box-shadow: inset 3px 0 0 var(--green);
+    }
   </style>
 </head>
 
-<body>
+<body class="necron-briefing-active">
 
   <!-- CAMPAIGN SUITE TOP NAVIGATION -->
   <nav class="suite-nav">
@@ -456,8 +770,9 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
       <!-- CLEARANCE GATE BETA -->
       <div id="gateBeta" class="hero-card"
         style="text-align:center; padding:36px 24px; border-color:rgba(16, 185, 129, 0.45);">
-        <div class="status-pill" style="margin-bottom:12px;">Royal Engram Seal • Lord Commander Junebug • Restricted
+        <div class="status-pill" style="margin-bottom:8px;">Royal Engram Seal • Lord Commander Junebug • Restricted
           Tomb-Ship Dataslate</div>
+        <div class="necron-ankh-divider" aria-hidden="true"><span></span>❖ ☥ ❖<span></span></div>
         <h2 class="hero-title" style="font-size:1.6rem;">Tomb-Ship Autonomous Master Matrix &amp; Intercepted Vox</h2>
         <p class="hero-subtitle" style="max-width:540px; margin:8px auto 22px auto;">
           Phase-masked command interlink for <strong>Lord Commander Junebug</strong> (Tomb-Ship Stasis-Wake Sequence,
@@ -483,17 +798,19 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
         <div class="hero-card" style="margin-bottom:20px; border-color:rgba(16, 185, 129, 0.4);">
           <div class="status-pill">Tomb-Ship Autonomous Master Matrix // Stasis-Wake Sequence • Orbital Anchor: Sector
             Node 0</div>
-          <h1 class="hero-title" style="font-size:1.85rem; margin-top:8px;">Awakening of the Undying Dynasty</h1>
+          <div class="necron-ankh-divider" aria-hidden="true"><span></span>❖ ☥ ❖<span></span></div>
+          <h1 class="hero-title" style="font-size:1.85rem; margin-top:4px;">Awakening of the Undying Dynasty</h1>
 
           <div class="lore-quote" style="text-align:left; line-height:1.65;">
             <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.82rem; color:var(--green);">
               <strong>+++ TOMB-SHIP MASTER MATRIX // SUB-CRUSTAL AUGUR &amp; TRANSLOCATION TELEMETRY +++</strong>
             </p>
             <p style="margin-bottom:10px;">
-              <em>"Royal engram imprint recognized. Welcome back to the command throne, Phaeron. I have held this
-                Tomb-Ship in phase-masked geostationary drift since the smoke cleared over the Golgotha
-                Arbor-Basin—spoofing the abandoned Imperial transponder codes of the prologue Sisterhood vanguard so the
-                humans at <strong>Geostationary Zenith-09</strong> remain blind to our hull's true nature.</em>
+              <em>"Royal engram imprint recognized. Welcome back to the command throne, Phaeron. Since the primitives'
+                prologue artillery cracked the tectonic seal beneath the Golgotha Arbor-Basin, our Tomb-Ship has risen
+                openly into low equatorial orbit above the clearing—driving the battered Sisterhood vanguard into the
+                upper thermosphere while our Quantum Shields drink the feeble targeting sweeps of the human station at
+                <strong>Geostationary Zenith-09</strong>.</em>
             </p>
             <p style="margin-bottom:10px;">
               <em>Down in the southern iron-oxide flats (<code>REF-ID: c44c6f23</code>), our outer hypercrypt vanguard
@@ -508,10 +825,11 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
               <em>Yet our primary stasis-crypts, <strong>3 Tomb World Awakening Points</strong> (<code>Command</code>,
                 <code>Reanimation</code>, and <code>Translocation</code> Systems in <a href="crusade.html"
                   style="color:var(--green);">Mode 5: Crusade Quartermaster</a>), and Dynasty designation await your
-                royal decree. Before you issue the translocation order, be advised: our quantum receivers have
-                intercepted an impatient Vermilion-tier carrier wave from <strong>Logis-Prefect Vane</strong> at
-                Zenith-09, who still believes he is hailing an Imperial flagship. Playing his intercepted broadcast
-                below—should you ever wish to address the human station directly in <a href="vox.html"
+                royal decree. Before you issue the translocation order, be advised: <strong>Logis-Prefect Vane</strong>
+                aboard Zenith-09 has correlated our Tomb-Ship's arrival with the southern massacre. Knowing his defense
+                lasers cannot pierce our Quantum Shielding—and fearing the empyric cancer of the Red Angel's Gate more
+                than our living metal—the human auditor has transmitted a formal open-frequency parley to our bridge.
+                Playing his broadcast below: should you ever deign to address the human station in <a href="vox.html"
                   style="color:var(--gold);">Mode 7: Astropath Vox</a>, simply include <strong>'Vane'</strong> or
                 <strong>'Zenith-09'</strong> in your transmission; otherwise, I and the Cryptek Conclave will answer all
                 your commands directly."</em>
@@ -705,26 +1023,27 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
         <!-- PART 2: INTERCEPTED DISPATCH FROM LOGIS-PREFECT VANE & THE THREE BANNERS -->
         <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
           <div class="section-header" style="margin-top:0;">
-            <h2 style="margin:0; font-size:1.22rem; color:var(--gold);">📜 Intercepted Imperial Vox-Transmission
+            <h2 style="margin:0; font-size:1.22rem; color:var(--gold);">📜 Open-Frequency Orbital Parley
               (Geostationary Zenith-09)</h2>
-            <span class="hud-sub">Auditor: Logis-Prefect Vane • Spoofed IFF Transponder Active</span>
+            <span class="hud-sub">Auditor: Logis-Prefect Vane • Ordo Xenos / Tactica Logis Cold Parley</span>
           </div>
 
           <div class="lore-quote" style="text-align:left; line-height:1.62; margin-bottom:16px;">
             <p style="margin-bottom:10px;">
-              <em>"Ah. Your bridge cogitator finally deigns to acknowledge my carrier wave. Allow me to dispense with
-                the pleasantries, Lord Commander Junebug. Two kilometers below my observation deck, a rival
-                siege-barge—a joyless Death Korps penitentiary hulk calling itself <strong>The Sanctuary of
-                  Ash</strong>—is already cycling its drop-locks over the northern edge of your clearing. Its commander
-                survived the prologue purge, dragged half-dead from a smoking tank hull, and his gunners have spent the
-                past forty-eight hours loading heavy siege ordnance with your name on it.</em>
+              <em>"My seismographs have already matched your Tomb-Ship's gravitic wake to the Hypercrypt phalanx and
+                Star-God shard that butchered Commissar Yarrick's column across the southern iron-oxide flats, Xenos.
+                Zenith-09 is not powering its defense lasers—first, because firing upon a Quantum-Shielded Necron
+                capital hull is an exercise in wasted promethium, and second, because in the cold arithmetic of this
+                theatre, the empyric cancer bleeding from the <strong>Red Angel's Gate</strong> threatens your ancient
+                vaults and my orbital ledger alike.</em>
             </p>
             <p style="margin:0;">
-              <em>Right now, your vessel is a ghost in my ledgers. You hold the dominant foothold in <strong>Sector Node
-                  0 (2 / 8 HP)</strong>, yet your transponders remain masked behind static baffles, you have registered
-                no flagship designation, declared no Warlord, and claimed none of the theatre's three warring banners.
-                Three great movements now vie for Armageddon's ashes, and your rival's banner remains sealed under
-                encrypted cipher until your own fleet declares its allegiance."</em>
+              <em>Consider this a formal Ordo Xenos and Tactica Logis parley, Regent of the Tomb. Two kilometers north
+                of your clearing, a Death Korps penitentiary siege-barge calling itself <strong>The Sanctuary of
+                  Ash</strong> is already cycling its drop-locks with heavy anti-titan ordnance aimed squarely at your
+                <strong>Sector Node 0 (2 / 8 HP)</strong> foothold. Three great movements now vie for Armageddon's
+                ashes—and your human rival's banner remains sealed under encrypted cipher until your own court declares
+                its intent."</em>
             </p>
           </div>
 
@@ -1526,6 +1845,9 @@ Complete source code for Commander Alpha & Beta briefings, interactive SHIP.md s
 
     function showDossier(which, persist = true) {
       briefingState.activeDossier = which;
+      if (document.body && document.body.classList) {
+        document.body.classList.toggle('necron-briefing-active', which === 'beta');
+      }
       const map = {
         alpha: ['dossierAlpha', 'btnAlpha'],
         beta: ['dossierBeta', 'btnBeta'],

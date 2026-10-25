@@ -93,6 +93,7 @@ for (let i = 0; i <= 7; i++) {
 }
 
 globalThis.document = {
+  body: createMockElement(),
   getElementById: (id) => mockElements[id] || null,
   querySelectorAll: () => []
 };
@@ -136,9 +137,13 @@ test('briefing: ATLAS_NODES and SHIP_SLIDER_DATA have complete schemas', () => {
 });
 
 test('briefing: showDossier switches active dossier and updates buttons', () => {
+  briefing.showDossier('beta', false);
+  assert.equal(globalThis.document.body.classList.contains('necron-briefing-active'), true, 'Must activate necron-briefing-active on body when Beta tab is active');
+
   briefing.showDossier('atlas', true);
 
   assert.equal(briefing.getBriefingState().activeDossier, 'atlas');
+  assert.equal(globalThis.document.body.classList.contains('necron-briefing-active'), false, 'Must deactivate necron-briefing-active on body when leaving Beta tab');
   assert.equal(mockElements.dossierAtlas.classList.contains('hidden'), false);
   assert.equal(mockElements.btnAtlas.classList.contains('active'), true);
   assert.equal(mockElements.dossierBeta.classList.contains('hidden'), true);
@@ -324,10 +329,48 @@ test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, Beta
     'Must include Beta Tomb-Ship 7-State Breakdown & Phase Reckoning Table'
   );
   assert.ok(
+    normBriefingHtml.includes('our Tomb-Ship has risen openly into low equatorial orbit above the clearing') &&
+    normBriefingHtml.includes('Quantum Shields drink the feeble targeting sweeps'),
+    'Must include open orbital arrival and Quantum Shields in Beta Part 1 opening paragraph'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Knowing his defense lasers cannot pierce our Quantum Shielding'),
+    'Must include Quantum Shielding parley rationale in Beta Part 1 closing paragraph'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Open-Frequency Orbital Parley (Geostationary Zenith-09)'),
+    'Must include Open-Frequency Orbital Parley (Geostationary Zenith-09) in Beta Part 2'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Auditor: Logis-Prefect Vane • Ordo Xenos / Tactica Logis Cold Parley'),
+    'Must include Ordo Xenos / Tactica Logis Cold Parley subheader in Beta Part 2'
+  );
+  assert.ok(
+    normBriefingHtml.includes('Quantum-Shielded Necron capital hull is an exercise in wasted promethium') &&
+    normBriefingHtml.includes('Consider this a formal Ordo Xenos and Tactica Logis parley, Regent of the Tomb.'),
+    'Must include Vane Ordo Xenos and Tactica Logis parley quote in Beta Part 2'
+  );
+  assert.ok(
     normBriefingHtml.includes('Phase 1 Tomb-Ship Muster &amp; Dynastic Registration Protocol'),
     'Must include Phase 1 Tomb-Ship Muster & Dynastic Registration Protocol'
   );
 });
+
+test('briefing: #dossierBeta, #btnBeta, and body.necron-briefing-active include Necron Noctolith, Cartouche, Ankh & Gauss Emerald styling', () => {
+  assert.ok(briefingHtml.includes('body.necron-briefing-active'), 'Must style body.necron-briefing-active for full-page Tomb-Ship atmosphere');
+  assert.ok(briefingHtml.includes('@keyframes necronGaussPulse'), 'Must define @keyframes necronGaussPulse animation');
+  assert.ok(briefingHtml.includes('.necron-ankh-divider'), 'Must define .necron-ankh-divider Royal Cartouche ornament');
+  assert.ok(briefingHtml.includes('#btnBeta.active'), 'Must style #btnBeta.active with Necron Gauss Emerald theme');
+  assert.ok(briefingHtml.includes('#dossierBeta .hero-card'), 'Must style #dossierBeta .hero-card with Noctolith Obsidian & Gauss Emerald');
+  assert.ok(briefingHtml.includes('#dossierBeta .hero-title'), 'Must style #dossierBeta .hero-title with Living Metal & Gauss Emerald gradient');
+  assert.ok(briefingHtml.includes('#gateBeta .unlock-btn'), 'Must style #gateBeta .unlock-btn with Royal Engram emerald button');
+  assert.ok(briefingHtml.includes('#dossierBeta .slider-node.active-brig'), 'Must style #dossierBeta .slider-node.active-brig with Gauss Overclock glow');
+  assert.ok(briefingHtml.includes('#dossierBeta table.reckoning-table th'), 'Must style #dossierBeta reckoning table headers with Tomb-Ship aesthetic');
+  assert.ok(briefingHtml.includes('#dossierBeta tr.highlight-row'), 'Must style #dossierBeta highlight-row with Gauss Emerald highlight');
+  assert.ok(briefingHtml.includes('#dossierBeta code'), 'Must style #dossierBeta code as Engrammatic Hex-Glyph chips');
+});
+
+
 
 
 
