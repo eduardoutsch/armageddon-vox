@@ -544,6 +544,33 @@ test('Documentation Boundary: README.md and bundles/README.md provide technical 
   assert.ok(bundlesReadme.includes('quadruple-backtick'), 'bundles/README.md must document the quadruple-backtick escaping mechanism');
 });
 
+test('UI Boundary: pages/spawner.html HUD bar keeps room info and cloud sync badge aligned on a single row without wrapping', () => {
+  const spawnerHtml = readPage('pages/spawner.html');
+  const css = readPage('css/style.css');
+
+  // Verify .cloud-sync-pill is defined in global css with white-space: nowrap
+  assert.ok(css.includes('.cloud-sync-pill'), 'css/style.css must define .cloud-sync-pill');
+  assert.match(
+    css,
+    /\.cloud-sync-pill[\s\S]*?white-space:\s*nowrap;/,
+    '.cloud-sync-pill must enforce white-space: nowrap to prevent broken multiline badges'
+  );
+
+  // Verify HUD bar session info row enforces nowrap and alignment
+  assert.match(
+    spawnerHtml,
+    /<div[^>]*style="[^"]*display:\s*flex;[^"]*align-items:\s*center;[^"]*white-space:\s*nowrap;[^"]*"[^>]*>[\s\S]*?id="hudSessionInfo"[\s\S]*?id="spawnerSyncBadge"/,
+    'HUD room info row must align hudSessionInfo and spawnerSyncBadge with white-space: nowrap'
+  );
+
+  // Verify hudRound has clean alignment
+  assert.match(
+    spawnerHtml,
+    /id="hudRound"[^>]*style="[^"]*text-align:\s*left;/,
+    '#hudRound must have text-align: left so round title aligns cleanly under room label'
+  );
+});
+
 
 
 

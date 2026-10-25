@@ -656,7 +656,12 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       const parsed = JSON.parse(raw);
       if (banner) {
         banner.classList.remove('hidden');
-        const targetName = parsed.channel === 'beta' ? 'Lord Commander Junebug (Terminal Beta)' : 'The Exile // Sanctuary of Ash (Terminal Alpha)';
+        let targetName = 'The Exile // Sanctuary of Ash (Terminal Alpha)';
+        if (parsed.channel === 'beta') {
+          targetName = 'Lord Commander Junebug (Terminal Beta)';
+        } else if (parsed.channel === 'distant' || /DISTANT|ORBITAL AUGUR/i.test(parsed.text || '')) {
+          targetName = '🛰️ Distant Intercept // Orbital Augur Array (Neither Main Player Fielded)';
+        }
         banner.innerHTML = `
           <div style="font-size:0.88rem; font-weight:800; margin-bottom:4px;">
             📡 [1 ENCRYPTED TRANSMISSION QUEUED IN BUFFER]
@@ -667,7 +672,7 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
           </div>
         `;
       }
-      if (parsed.channel && parsed.channel !== selectedChannel) {
+      if (parsed.channel && parsed.channel !== 'distant' && parsed.channel !== selectedChannel) {
         selectConduit(parsed.channel, false);
       }
       return parsed;
@@ -777,9 +782,12 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
       if (notice) notice.classList.add('hidden');
 
       if (queued && queued.text && activePassphrase) {
-        const senderName = selectedChannel === 'alpha'
-          ? 'The Exile // Sanctuary of Ash'
-          : 'Lord Commander Junebug';
+        const isDistant = queued.channel === 'distant' || /DISTANT|ORBITAL AUGUR/i.test(queued.text);
+        const senderName = isDistant
+          ? '🛰️ Orbital Augur Array // Distant Intercept'
+          : (selectedChannel === 'alpha'
+              ? 'The Exile // Sanctuary of Ash'
+              : 'Lord Commander Junebug');
 
         await rpcCall('send_vox_message', {
           p_channel: selectedChannel,

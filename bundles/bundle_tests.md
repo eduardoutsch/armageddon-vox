@@ -738,6 +738,32 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
   assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
 });
 
+test('app: transmitHordeIntrusionPing formats distant intercept payload and transmits via VoxAudio', () => {
+  let transmittedChan = null;
+  let transmittedPayload = null;
+
+  globalThis.window.VoxAudio = {
+    transmitToVox: (chan, payload) => {
+      transmittedChan = chan;
+      transmittedPayload = payload;
+    }
+  };
+
+  document.getElementById('seedInput').value = 'HADES-99';
+  document.getElementById('spawnerBtnRound').textContent = '4';
+  document.getElementById('hordeFactionSelect').value = 'World Eaters';
+
+  app.transmitHordeIntrusionPing(3, 'Bracket [13+]', 'distant');
+
+  assert.equal(transmittedChan, 'distant');
+  assert.ok(transmittedPayload.includes('ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED'));
+  assert.ok(transmittedPayload.includes('Distant Sector Grid 3 // Orbital Augur Intercept (Neither Main Player Fielded)'));
+  assert.ok(transmittedPayload.includes('Mode 1 (Distant Solo Horde Breach // Room: HADES-99 // Battle Round 4)'));
+  assert.ok(transmittedPayload.includes('Distant Spawn Zone 3 rolled Bracket [13+] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('ACTIVE DISTANT ENEMY FACTION: World Eaters'));
+  assert.ok(transmittedPayload.includes('broadcast the telemetry intercept to BOTH command networks'));
+});
+
 test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusion or clean wave', () => {
   let sirenTriggered = false;
   globalThis.window.VoxAudio = {
@@ -770,6 +796,37 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusi
 
   assert.ok(appended1, 'Bracket [10–12] must receive an intrusion alert or clean note');
   assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+});
+
+test('app: evaluateWarpBreachIntrusions renders third option button for distant intercept', () => {
+  const container = document.getElementById('spawnResultsContainer');
+  let appendedAlert = null;
+  const cardBig = {
+    textContent: 'Spawn Zone 1 • Bracket [10–12] (301–550 pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: (el) => { appendedAlert = el; }
+  };
+
+  container.querySelectorAll = (selector) => {
+    if (selector === '.spawn-zone') return [cardBig];
+    return [];
+  };
+
+  const origMulberry = globalThis.mulberry32;
+  globalThis.mulberry32 = () => () => 0.99; // D6 = 6 (5+)
+
+  try {
+    app.evaluateWarpBreachIntrusions();
+    assert.ok(appendedAlert, 'Must append warp-intrusion-alert');
+    const html = appendedAlert.innerHTML;
+    assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'alpha')"), 'Must have Exile ping button');
+    assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'beta')"), 'Must have Junebug ping button');
+    assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'distant')"), 'Must have Distant Intercept ping button');
+    assert.ok(html.includes('Ping Vox (Distant Intercept)'), 'Must have Distant Intercept button label');
+  } finally {
+    globalThis.mulberry32 = origMulberry;
+  }
 });
 
 test('app: startSession clears currentZoneSpawns and resets spawnResultsContainer placeholder', () => {
@@ -1993,6 +2050,50 @@ test('processSingleMessage: triggers dual-channel intercept broadcast for ORBITA
   assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
 });
 
+test('processSingleMessage: triggers dual-channel intercept broadcast for DISTANT WARP-BREACH ADVERSARY DETECTED ping', async () => {
+  const dispatchedPrompts = [];
+  const fetchCalls = [];
+  const logged = [];
+
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const distantAdversaryMsg = {
+    id: '11223344-distant-adversary',
+    channel: 'alpha',
+    sender: '🛰️ Orbital Augur Array // Distant Intercept',
+    question: '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++\n• THEATRE & SENSOR SWEEP: Distant Sector Grid 3 // Orbital Augur Intercept (Neither Main Player Fielded)\n• REMOTE SECTOR & BRACKET: Distant Spawn Zone 3 rolled Bracket [13+] + [5+ WARP-BREACH INTRUSION]!\n• ACTIVE DISTANT ENEMY FACTION: World Eaters'
+  };
+
+  const success = await processSingleMessage(distantAdversaryMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 11223344\n+++ ORBITAL DECREE +++\nDistant Warp-breach adversary recorded in sector 3.</DIRECT_REPLY><INTERCEPT>Distant breach signals near [REDACTED] confirmed by orbital scans.</INTERCEPT>',
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Distant warp-breach adversary ping must trigger Pattern 5 intercept bleed instruction in prompt'
+  );
+
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCalls.length, 2, 'Distant warp-breach adversary intercept must be broadcast to BOTH alpha and beta');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
+});
+
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];
@@ -2787,6 +2888,33 @@ test('Documentation Boundary: README.md and bundles/README.md provide technical 
   // Bundles README technical context & AI ingestion explanation
   assert.ok(bundlesReadme.includes('AI Context-Window Partitioning'), 'bundles/README.md must explain the AI context-window partitioning architecture');
   assert.ok(bundlesReadme.includes('quadruple-backtick'), 'bundles/README.md must document the quadruple-backtick escaping mechanism');
+});
+
+test('UI Boundary: pages/spawner.html HUD bar keeps room info and cloud sync badge aligned on a single row without wrapping', () => {
+  const spawnerHtml = readPage('pages/spawner.html');
+  const css = readPage('css/style.css');
+
+  // Verify .cloud-sync-pill is defined in global css with white-space: nowrap
+  assert.ok(css.includes('.cloud-sync-pill'), 'css/style.css must define .cloud-sync-pill');
+  assert.match(
+    css,
+    /\.cloud-sync-pill[\s\S]*?white-space:\s*nowrap;/,
+    '.cloud-sync-pill must enforce white-space: nowrap to prevent broken multiline badges'
+  );
+
+  // Verify HUD bar session info row enforces nowrap and alignment
+  assert.match(
+    spawnerHtml,
+    /<div[^>]*style="[^"]*display:\s*flex;[^"]*align-items:\s*center;[^"]*white-space:\s*nowrap;[^"]*"[^>]*>[\s\S]*?id="hudSessionInfo"[\s\S]*?id="spawnerSyncBadge"/,
+    'HUD room info row must align hudSessionInfo and spawnerSyncBadge with white-space: nowrap'
+  );
+
+  // Verify hudRound has clean alignment
+  assert.match(
+    spawnerHtml,
+    /id="hudRound"[^>]*style="[^"]*text-align:\s*left;/,
+    '#hudRound must have text-align: left so round title aligns cleanly under room label'
+  );
 });
 
 
@@ -5251,6 +5379,22 @@ test('vox: checkPendingDossierBuffer detects pending dossier payload from sessio
   assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), false);
 });
 
+test('vox: checkPendingDossierBuffer formats target description for distant intercept payload', () => {
+  sessionStore.clear();
+  const payload = {
+    channel: 'distant',
+    text: '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(payload));
+
+  const detected = vox.checkPendingDossierBuffer();
+  assert.ok(detected, 'Must detect pending distant intercept dossier');
+  assert.equal(detected.channel, 'distant');
+  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Distant Intercept // Orbital Augur Array'));
+  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Neither Main Player Fielded'));
+});
+
 test('vox: selectConduit toggles selected channel and updates UI elements', async () => {
   await vox.selectConduit('beta');
   assert.equal(vox.getSelectedChannel(), 'beta');
@@ -5320,6 +5464,27 @@ test('vox: flushPendingDossierIfAny transmits queued payload and clears sessionS
   assert.ok(sendCall, 'Must invoke send_vox_message RPC endpoint');
   assert.equal(sendCall.params.p_channel, 'alpha');
   assert.equal(sendCall.params.p_question, testPayload.text);
+});
+
+test('vox: flushPendingDossierIfAny routes distant intercept with Orbital Augur Array sender', async () => {
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  const testPayload = {
+    channel: 'distant',
+    text: '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++\n• THEATRE & SENSOR SWEEP: Distant Sector Grid 2',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(testPayload));
+
+  rpcCalls.length = 0;
+  await vox.flushPendingDossierIfAny();
+
+  assert.equal(sessionStore.has('foa_pending_vox_payload'), false, 'Must clear pending payload buffer');
+  const sendCall = rpcCalls.find(c => c.fnName === 'send_vox_message');
+  assert.ok(sendCall, 'Must invoke send_vox_message RPC endpoint');
+  assert.equal(sendCall.params.p_sender, '🛰️ Orbital Augur Array // Distant Intercept');
+  assert.ok(sendCall.params.p_question.includes('DISTANT WARP-BREACH ADVERSARY DETECTED'));
 });
 
 test('vox: lockTerminal clears passphrase and hides terminal screen', () => {

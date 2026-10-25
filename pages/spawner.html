@@ -158,12 +158,12 @@
 
     <!-- STICKY TOP HUD -->
     <div class="hud-bar">
-      <div class="hud-stat">
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span class="hud-label" id="hudSessionInfo">HADES-1 • P1</span>
-          <span id="spawnerSyncBadge" class="cloud-sync-pill" style="font-size:0.68rem; padding:2px 7px; cursor:pointer;" onclick="if(window.manualSyncSpawnerNow) manualSyncSpawnerNow()" title="Live synced across all players with this Room Code. Tap to refresh.">☁️ Room Live</span>
+      <div class="hud-stat" style="min-width:max-content; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
+          <span class="hud-label" id="hudSessionInfo" style="white-space:nowrap; margin-bottom:0;">HADES-1 • P1</span>
+          <span id="spawnerSyncBadge" class="cloud-sync-pill" style="cursor:pointer;" onclick="if(window.manualSyncSpawnerNow) manualSyncSpawnerNow()" title="Live synced across all players with this Room Code. Tap to refresh.">☁️ Room Live</span>
         </div>
-        <span class="hud-num" id="hudRound" style="color:var(--red);">Pre-Game</span>
+        <span class="hud-num" id="hudRound" style="color:var(--red); text-align:left; display:block;">Pre-Game</span>
       </div>
 
       <div class="hud-stat">

@@ -387,6 +387,32 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
   assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
 });
 
+test('app: transmitHordeIntrusionPing formats distant intercept payload and transmits via VoxAudio', () => {
+  let transmittedChan = null;
+  let transmittedPayload = null;
+
+  globalThis.window.VoxAudio = {
+    transmitToVox: (chan, payload) => {
+      transmittedChan = chan;
+      transmittedPayload = payload;
+    }
+  };
+
+  document.getElementById('seedInput').value = 'HADES-99';
+  document.getElementById('spawnerBtnRound').textContent = '4';
+  document.getElementById('hordeFactionSelect').value = 'World Eaters';
+
+  app.transmitHordeIntrusionPing(3, 'Bracket [13+]', 'distant');
+
+  assert.equal(transmittedChan, 'distant');
+  assert.ok(transmittedPayload.includes('ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED'));
+  assert.ok(transmittedPayload.includes('Distant Sector Grid 3 // Orbital Augur Intercept (Neither Main Player Fielded)'));
+  assert.ok(transmittedPayload.includes('Mode 1 (Distant Solo Horde Breach // Room: HADES-99 // Battle Round 4)'));
+  assert.ok(transmittedPayload.includes('Distant Spawn Zone 3 rolled Bracket [13+] + [5+ WARP-BREACH INTRUSION]!'));
+  assert.ok(transmittedPayload.includes('ACTIVE DISTANT ENEMY FACTION: World Eaters'));
+  assert.ok(transmittedPayload.includes('broadcast the telemetry intercept to BOTH command networks'));
+});
+
 test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusion or clean wave', () => {
   let sirenTriggered = false;
   globalThis.window.VoxAudio = {
@@ -419,6 +445,37 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and handles intrusi
 
   assert.ok(appended1, 'Bracket [10–12] must receive an intrusion alert or clean note');
   assert.equal(appended2, null, 'Bracket [3–4] must not receive an intrusion check');
+});
+
+test('app: evaluateWarpBreachIntrusions renders third option button for distant intercept', () => {
+  const container = document.getElementById('spawnResultsContainer');
+  let appendedAlert = null;
+  const cardBig = {
+    textContent: 'Spawn Zone 1 • Bracket [10–12] (301–550 pts)',
+    style: {},
+    querySelector: () => null,
+    appendChild: (el) => { appendedAlert = el; }
+  };
+
+  container.querySelectorAll = (selector) => {
+    if (selector === '.spawn-zone') return [cardBig];
+    return [];
+  };
+
+  const origMulberry = globalThis.mulberry32;
+  globalThis.mulberry32 = () => () => 0.99; // D6 = 6 (5+)
+
+  try {
+    app.evaluateWarpBreachIntrusions();
+    assert.ok(appendedAlert, 'Must append warp-intrusion-alert');
+    const html = appendedAlert.innerHTML;
+    assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'alpha')"), 'Must have Exile ping button');
+    assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'beta')"), 'Must have Junebug ping button');
+    assert.ok(html.includes("transmitHordeIntrusionPing(1, 'Bracket [10–12]', 'distant')"), 'Must have Distant Intercept ping button');
+    assert.ok(html.includes('Ping Vox (Distant Intercept)'), 'Must have Distant Intercept button label');
+  } finally {
+    globalThis.mulberry32 = origMulberry;
+  }
 });
 
 test('app: startSession clears currentZoneSpawns and resets spawnResultsContainer placeholder', () => {

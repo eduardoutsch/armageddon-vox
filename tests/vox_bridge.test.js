@@ -524,6 +524,50 @@ test('processSingleMessage: triggers dual-channel intercept broadcast for ORBITA
   assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
 });
 
+test('processSingleMessage: triggers dual-channel intercept broadcast for DISTANT WARP-BREACH ADVERSARY DETECTED ping', async () => {
+  const dispatchedPrompts = [];
+  const fetchCalls = [];
+  const logged = [];
+
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, opts, body: JSON.parse(opts.body || '{}') });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const distantAdversaryMsg = {
+    id: '11223344-distant-adversary',
+    channel: 'alpha',
+    sender: '🛰️ Orbital Augur Array // Distant Intercept',
+    question: '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++\n• THEATRE & SENSOR SWEEP: Distant Sector Grid 3 // Orbital Augur Intercept (Neither Main Player Fielded)\n• REMOTE SECTOR & BRACKET: Distant Spawn Zone 3 rolled Bracket [13+] + [5+ WARP-BREACH INTRUSION]!\n• ACTIVE DISTANT ENEMY FACTION: World Eaters'
+  };
+
+  const success = await processSingleMessage(distantAdversaryMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => '<DIRECT_REPLY>REF-ID: 11223344\n+++ ORBITAL DECREE +++\nDistant Warp-breach adversary recorded in sector 3.</DIRECT_REPLY><INTERCEPT>Distant breach signals near [REDACTED] confirmed by orbital scans.</INTERCEPT>',
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(
+    fullPrompt.includes('Pattern 5 intercept block'),
+    'Distant warp-breach adversary ping must trigger Pattern 5 intercept bleed instruction in prompt'
+  );
+
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCalls.length, 2, 'Distant warp-breach adversary intercept must be broadcast to BOTH alpha and beta');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
+});
+
 test('processSingleMessage: dispatches prompt, awaits response, and patches Supabase state', async () => {
   const dispatchedText = [];
   const clickedSelectors = [];

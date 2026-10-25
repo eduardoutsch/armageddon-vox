@@ -876,7 +876,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
   if (interceptPart && interceptPart.trim()) {
     const cleanIntercept = scrubArtifacts(interceptPart);
-    const isDualBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE/i.test(rawQ);
+    const isDualBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|DISTANT WARP-BREACH|DISTANT ADVERSARY|DISTANT INTERCEPT/i.test(rawQ);
 
     const isSelfTest =
       /simulate|test.*interference/i.test(rawQ) ||

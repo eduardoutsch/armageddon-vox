@@ -232,6 +232,22 @@ test('vox: checkPendingDossierBuffer detects pending dossier payload from sessio
   assert.equal(mockElements.pendingDossierNotice.classList.contains('hidden'), false);
 });
 
+test('vox: checkPendingDossierBuffer formats target description for distant intercept payload', () => {
+  sessionStore.clear();
+  const payload = {
+    channel: 'distant',
+    text: '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(payload));
+
+  const detected = vox.checkPendingDossierBuffer();
+  assert.ok(detected, 'Must detect pending distant intercept dossier');
+  assert.equal(detected.channel, 'distant');
+  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Distant Intercept // Orbital Augur Array'));
+  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Neither Main Player Fielded'));
+});
+
 test('vox: selectConduit toggles selected channel and updates UI elements', async () => {
   await vox.selectConduit('beta');
   assert.equal(vox.getSelectedChannel(), 'beta');
@@ -301,6 +317,27 @@ test('vox: flushPendingDossierIfAny transmits queued payload and clears sessionS
   assert.ok(sendCall, 'Must invoke send_vox_message RPC endpoint');
   assert.equal(sendCall.params.p_channel, 'alpha');
   assert.equal(sendCall.params.p_question, testPayload.text);
+});
+
+test('vox: flushPendingDossierIfAny routes distant intercept with Orbital Augur Array sender', async () => {
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  const testPayload = {
+    channel: 'distant',
+    text: '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++\n• THEATRE & SENSOR SWEEP: Distant Sector Grid 2',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(testPayload));
+
+  rpcCalls.length = 0;
+  await vox.flushPendingDossierIfAny();
+
+  assert.equal(sessionStore.has('foa_pending_vox_payload'), false, 'Must clear pending payload buffer');
+  const sendCall = rpcCalls.find(c => c.fnName === 'send_vox_message');
+  assert.ok(sendCall, 'Must invoke send_vox_message RPC endpoint');
+  assert.equal(sendCall.params.p_sender, '🛰️ Orbital Augur Array // Distant Intercept');
+  assert.ok(sendCall.params.p_question.includes('DISTANT WARP-BREACH ADVERSARY DETECTED'));
 });
 
 test('vox: lockTerminal clears passphrase and hides terminal screen', () => {
