@@ -423,14 +423,16 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     .solo-sp-pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
+      gap: 4px;
+      padding: 2px 8px;
       border-radius: 999px;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 800;
       background: rgba(59, 130, 246, 0.18);
       border: 1px solid var(--blue);
       color: #93c5fd;
+      white-space: nowrap;
+      letter-spacing: 0.4px;
     }
     .sp-quick-bar {
       display: flex;
@@ -619,13 +621,15 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
 
     <!-- STICKY TOP HUD -->
     <div class="hud-bar">
-      <div class="hud-stat" style="min-width:max-content; flex-shrink:0;">
+      <div class="hud-stat" style="flex-shrink:0;">
         <div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
           <span class="hud-label" id="hudSessionInfo" style="white-space:nowrap; margin-bottom:0;">HADES-1 • P1</span>
           <span id="spawnerSyncBadge" class="cloud-sync-pill" style="cursor:pointer;" onclick="if(window.manualSyncSpawnerNow) manualSyncSpawnerNow()" title="Live synced across all players with this Room Code. Tap to refresh.">☁️ Room Live</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+          <span class="hud-num" id="hudRound" style="color:var(--red); text-align:left; display:inline-block; min-width:auto;">Pre-Game</span>
           <span id="soloDoubleSpHudBadge" class="solo-sp-pill hidden" title="Rule 3.7: In a single-player game, double all SP gains!">⚡ SOLO 2x SP ACTIVE</span>
         </div>
-        <span class="hud-num" id="hudRound" style="color:var(--red); text-align:left; display:block;">Pre-Game</span>
       </div>
 
       <div class="hud-stat">
@@ -646,7 +650,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         </div>
       </div>
 
-      <div style="display:flex; gap:6px; align-items:center;">
+      <div class="hud-actions" style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
         <button class="btn-ghost btn-sm" onclick="resetMatchToSetup()" title="Reset battle and clear all spawner cards">🔄 Reset</button>
         <button class="btn-ghost btn-sm" onclick="leaveSession()" title="Exit to mission setup">Exit</button>
       </div>
@@ -661,12 +665,11 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       <div id="activeFactionBannerDesc" style="color:#e2e8f0;"></div>
     </div>
 
-    <!-- 4 NAVIGATION TABS (SPAWNER CAN BE DOCKED IN TAB 1 OR OPENED FULLSCREEN IN TAB 4) -->
+    <!-- 3 UNIFIED NAVIGATION TABS -->
     <div class="nav-pills">
-      <button id="tabBtn1" class="active" onclick="switchTab(1)">1. Match Command &amp; Flow</button>
+      <button id="tabBtn1" class="active" onclick="switchTab(1)">1. Match Command &amp; Spawner</button>
       <button id="tabBtn2" onclick="switchTab(2)">2. Secret Directive</button>
       <button id="tabBtn3" onclick="switchTab(3)">3. Resupply Shop</button>
-      <button id="tabBtn4" onclick="switchTab(4)">4. Spawn Matrix &amp; Pools</button>
     </div>
 
     <!-- TAB 1: REMASTERED UNIFIED BATTLE ROUND COCKPIT -->
@@ -782,20 +785,67 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         </div>
       </div>
 
-      <!-- DOCKED LIVE SPAWN ZONE RESULTS RIGHT INSIDE TAB 1 FOR ZERO-TAB-SWITCHING -->
-      <div class="card" style="border:1px solid var(--border); background:rgba(11,13,19,0.75); padding:14px; margin-bottom:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+      <!-- CONSOLIDATED LIVE HORDE SPAWN ZONES & ADVANCED CONTROLS -->
+      <div class="card" style="border:1px solid var(--border); background:rgba(11,13,19,0.85); padding:16px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
           <div>
             <span class="badge green">Live Synced Spawner Feed</span>
-            <h3 style="margin:4px 0 0 0; font-size:1.02rem;">Current Round Horde Spawn Zones</h3>
+            <h3 style="margin:4px 0 0 0; font-size:1.05rem;">Current Round Horde Spawn Zones</h3>
+            <p style="margin:4px 0 2px 0; font-size:0.8rem; color:var(--muted);">Live-Synchronized Across All Connected Players via Room Code &amp; Supabase Cloud • [10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (6+)</p>
+            <span class="hud-sub">Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (6+)</span>
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <button type="button" class="btn-green btn-sm" onclick="rollSpawnsFromCockpit()">🎲 Re-Roll / Roll Spawns</button>
-            <button type="button" class="btn-ghost btn-sm" onclick="switchTab(4)">⚙️ Spawn Modifiers &amp; Brackets (Tab 4)</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="clearSpawnerResults()" title="Clear spawn cards for this round">🧹 Clear Cards</button>
           </div>
         </div>
-        <div id="cockpitSpawnMirrorBox">
-          <p class="card-desc" style="margin:0; opacity:0.75; text-align:center;">No Horde Spawns rolled for this round yet. Click <strong>"🎲 Roll Horde Spawns"</strong> above!</p>
+
+        <!-- PRIMARY SPAWN RESULTS CONTAINER -->
+        <div id="spawnResultsContainer">
+          <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
+            <p class="card-desc">No Horde Spawns rolled for this round yet. Click <strong>"🎲 Roll Horde Spawns"</strong> above to generate synchronized brackets and units for each Spawn Zone!</p>
+          </div>
+        </div>
+        <!-- Hidden alias elements for backwards compatibility -->
+        <div id="cockpitSpawnMirrorBox" style="display:none;"></div>
+        <span id="spawnerBtnRound" style="display:none;">1</span>
+
+        <!-- COLLAPSIBLE ADVANCED MODIFIERS & ZONE CONFIGURATION -->
+        <details style="margin-top:14px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:10px 14px;">
+          <summary style="cursor:pointer; font-weight:700; color:var(--gold); font-size:0.86rem; user-select:none;">
+            ⚙️ Tactical Spawn Modifiers, Zone Count &amp; Faction Override
+          </summary>
+          <div class="drawer-body" style="padding-top:12px;">
+            <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin-bottom:12px;">
+              <select id="spawnZoneCountSelect" onchange="onChangeSpawnZoneCount()" style="flex:1; min-width:180px;">
+                <option value="3">1,000 Pts (3 Spawn Zones)</option>
+                <option value="5">2,000 Pts (5 Spawn Zones)</option>
+              </select>
+              <select id="hordeFactionSelect" onchange="manualChangeFaction()" style="flex:1; min-width:220px;"></select>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:14px; justify-content:center; align-items:center; font-size:0.84rem;">
+              <label style="display:inline-flex; align-items:center; gap:6px;">Extra Spawn Mod: <input type="number" id="extraSpawnMod" value="0" style="width:55px; padding:5px; text-align:center; font-family:var(--font-mono); font-weight:700;"></label>
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="firstRollBonusCheck" style="accent-color:var(--gold);"> +6 1st Zone (Dragon Slayer)</label>
+              <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="baitTrapBonusCheck" style="accent-color:var(--gold);"> +12 1st Zone (Baiting Trap)</label>
+            </div>
+          </div>
+        </details>
+
+        <!-- LIVE STANDARD HORDE SPAWN BRACKET MATRIX (NO NEMESIS SPOILERS) -->
+        <details style="margin-top:10px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:6px; padding:10px 14px;" ontoggle="if(this.open && typeof renderLiveSpawnerBracketTable==='function') renderLiveSpawnerBracketTable()">
+          <summary style="cursor:pointer; font-weight:800; color:var(--gold); font-size:0.86rem; user-select:none;">
+            📋 View Active Standard Horde Spawn Brackets ([3–4] to [13+] • Cloud-Synced)
+          </summary>
+          <div class="drawer-body" id="liveSpawnerBracketWindow" style="font-size:0.84rem; line-height:1.5; padding-top:12px;">
+            Loading active Cloud-Synced Standard Horde Spawn Pool...
+          </div>
+        </details>
+
+        <!-- CUSTOM COLLECTION POOL LINK (CONFIGURED IN MODE 4) -->
+        <div style="margin-top:14px; text-align:center;">
+          <a href="roster.html#brackets" class="suite-link" style="display:inline-block; font-size:0.8rem; padding:6px 14px;">
+            🎖️ Edit &amp; Cloud-Sync Standard Shelf Pool in Mode 4: Hostile Matrix →
+          </a>
         </div>
       </div>
 
@@ -920,67 +970,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       <div id="resupplyList"></div>
     </div>
 
-    <!-- TAB 4: AUTOMATED HORDE SPAWNER (n + 1 ZONES) -->
-    <div id="tab4" class="hidden">
-      <div class="round-banner" style="padding:16px;">
-        <h2>Room-Synced Horde Spawner (n + 1 Zones)</h2>
-        <p style="margin-bottom:12px;">Live-Synchronized Across All Connected Players via Room Code &amp; Supabase Cloud • [10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (6+)</p>
 
-        <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center; margin-bottom:14px; width:100%; max-width:620px;">
-          <select id="spawnZoneCountSelect" onchange="onChangeSpawnZoneCount()" style="flex:1; min-width:200px;">
-            <option value="3">1,000 Pts (3 Spawn Zones)</option>
-            <option value="5">2,000 Pts (5 Spawn Zones)</option>
-          </select>
-          <select id="hordeFactionSelect" onchange="manualChangeFaction()" style="flex:1; min-width:240px;"></select>
-        </div>
-
-        <div style="display:flex; flex-wrap:wrap; gap:14px; justify-content:center; align-items:center; margin-bottom:16px; font-size:0.85rem; width:100%; max-width:640px;">
-          <label style="display:inline-flex; align-items:center; gap:6px;">Extra Spawn Mod: <input type="number" id="extraSpawnMod" value="0" style="width:55px; padding:6px; text-align:center; font-family:var(--font-mono); font-weight:700;"></label>
-          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="firstRollBonusCheck" style="accent-color:var(--gold);"> +6 1st Zone (Dragon Slayer)</label>
-          <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" id="baitTrapBonusCheck" style="accent-color:var(--gold);"> +12 1st Zone (Baiting Trap)</label>
-        </div>
-
-        <button class="btn-green" onclick="rollAllSpawnZones()" style="width:100%; max-width:360px; padding:13px; font-size:1rem;">
-          🎲 Roll Synced Spawns for Round <span id="spawnerBtnRound">1</span>
-        </button>
-
-        <div style="display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-top:10px;">
-          <button type="button" class="btn-ghost btn-sm" onclick="clearSpawnerResults()" title="Clear spawn cards for this round">
-            🧹 Clear Spawn Cards
-          </button>
-          <button type="button" class="btn-ghost btn-sm" onclick="resetMatchToSetup()" title="Reset battle and clear spawner to mission setup">
-            🔄 End &amp; Reset Match
-          </button>
-        </div>
-      </div>
-
-      <div class="section-header">
-        <h3>Spawn Zone Results</h3>
-        <span class="hud-sub">Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (6+)</span>
-      </div>
-      <div id="spawnResultsContainer">
-        <div class="card spawn-zone" style="opacity:0.65; text-align:center;">
-          <p class="card-desc">Tap the green button above to generate synchronized brackets and units for each Spawn Zone.</p>
-        </div>
-      </div>
-
-      <!-- LIVE STANDARD HORDE SPAWN BRACKET MATRIX WINDOW (NO NEMESIS SPOILERS) -->
-      <details style="margin-top:16px;" ontoggle="if(this.open && typeof renderLiveSpawnerBracketTable==='function') renderLiveSpawnerBracketTable()">
-        <summary style="cursor:pointer; font-weight:800; color:var(--gold);">
-          📋 View Active Standard Horde Spawn Brackets ([3–4] to [13+] • Cloud-Synced)
-        </summary>
-        <div class="drawer-body" id="liveSpawnerBracketWindow" style="font-size:0.84rem; line-height:1.5;">
-          Loading active Cloud-Synced Standard Horde Spawn Pool...
-        </div>
-      </details>
-
-      <!-- CUSTOM COLLECTION POOL LINK (CONFIGURED IN MODE 4) -->
-      <div style="margin-top:14px; text-align:center;">
-        <a href="roster.html#brackets" class="suite-link" style="display:inline-block; font-size:0.84rem; padding:8px 16px;">
-          🎖️ Edit &amp; Cloud-Sync Standard Shelf Pool in Mode 4: Hostile Matrix →
-        </a>
-      </div>
-    </div>
 
   </div>
 </div>

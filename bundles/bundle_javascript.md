@@ -653,7 +653,7 @@ function saveSessionState() {
 
     // 1. Capture active tab
     let activeTab = 1;
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 3; i++) {
       const t = document.getElementById('tab' + i);
       if (t && !t.classList.contains('hidden')) activeTab = i;
     }
@@ -1105,7 +1105,8 @@ function startSession() {
 
 
 function switchTab(tabNum, persist = true) {
-  [1, 2, 3, 4].forEach(n => {
+  if (tabNum > 3 || tabNum < 1) tabNum = 1;
+  [1, 2, 3].forEach(n => {
     const tabEl = document.getElementById('tab' + n);
     const btnEl = document.getElementById('tabBtn' + n);
     if (tabEl) tabEl.classList.toggle('hidden', n !== tabNum);

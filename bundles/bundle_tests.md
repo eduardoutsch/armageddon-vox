@@ -617,6 +617,11 @@ test('app: switchTab activates specified tab and persists active tab index', () 
   const raw = localStorage.getItem('foa_horde_session_v1');
   const parsed = JSON.parse(raw);
   assert.equal(parsed.activeTab, 3);
+
+  // Tab index > 3 falls back gracefully to Tab 1
+  app.switchTab(4);
+  assert.equal(document.getElementById('tab1').classList.contains('hidden'), false);
+  assert.equal(document.getElementById('tabBtn1').classList.contains('active'), true);
 });
 
 test('app: togglePrivacy toggles privacy wrapper and button text', () => {
@@ -872,11 +877,11 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and enforces >= 6 t
   const spawnerHtml = fs.readFileSync(path.resolve(__dirname, '../../pages/spawner.html'), 'utf8');
   assert.ok(
     spawnerHtml.includes('[10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (6+)'),
-    'pages/spawner.html Tab 4 banner must state Roll 1D6 Warp-Breach Intrusion (6+)'
+    'pages/spawner.html spawner header must state Roll 1D6 Warp-Breach Intrusion (6+)'
   );
   assert.ok(
     spawnerHtml.includes('Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (6+)'),
-    'pages/spawner.html Tab 4 section header must state Rolls 1D6 Warp-Breach Intrusion (6+)'
+    'pages/spawner.html spawner header must state Rolls 1D6 Warp-Breach Intrusion (6+)'
   );
 
   const container = document.getElementById('spawnResultsContainer');
@@ -3191,6 +3196,91 @@ test('UI Boundary: pages/spawner.html HUD bar keeps room info and cloud sync bad
     /id="hudRound"[^>]*style="[^"]*text-align:\s*left;/,
     '#hudRound must have text-align: left so round title aligns cleanly under room label'
   );
+
+  // Verify .hud-bar defines safe padding and flex-wrap
+  assert.ok(css.includes('.hud-bar'), 'css/style.css must define .hud-bar');
+  assert.match(
+    css,
+    /\.hud-bar[\s\S]*?flex-wrap:\s*wrap;/,
+    '.hud-bar must support flex-wrap: wrap to prevent horizontal pixel overflow'
+  );
+
+  // Verify .hud-actions defines compact button styling
+  assert.ok(css.includes('.hud-actions'), 'css/style.css must define .hud-actions');
+  assert.match(
+    css,
+    /\.hud-actions[\s\S]*?\.btn-sm/,
+    '.hud-actions must define compact button styling'
+  );
+
+  // Verify .solo-sp-pill defines white-space: nowrap
+  assert.ok(css.includes('.solo-sp-pill'), 'css/style.css must define .solo-sp-pill');
+  assert.match(
+    css,
+    /\.solo-sp-pill[\s\S]*?white-space:\s*nowrap;/,
+    '.solo-sp-pill must enforce white-space: nowrap'
+  );
+});
+
+test('UI Boundary: pages/spawner.html HUD bar prevents pixel overflow on desktop and mobile viewports with zero clipped buttons', async () => {
+  const browser = await launchTestBrowser();
+  const page = await browser.newPage();
+
+  try {
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    // Initialize Solo mode active session
+    await page.evaluate(() => {
+      const seedInput = document.getElementById('seedInput');
+      if (seedInput) seedInput.value = 'GRIMALDUS-83';
+      if (window.selectGameMode) window.selectGameMode('solo');
+      if (window.startSession) window.startSession();
+
+      const hudSessionInfo = document.getElementById('hudSessionInfo');
+      if (hudSessionInfo) hudSessionInfo.textContent = 'GRIMALDUS-83 • SOLO';
+      const hudRound = document.getElementById('hudRound');
+      if (hudRound) hudRound.textContent = 'Round 1/6';
+      const pill = document.getElementById('soloDoubleSpHudBadge');
+      if (pill) pill.classList.remove('hidden');
+    });
+
+    // 1. Desktop check (1280px viewport)
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const desktopOverflows = await page.evaluate(() => {
+      const bar = document.querySelector('.hud-bar');
+      const barRect = bar.getBoundingClientRect();
+      const results = [];
+      for (const child of bar.children) {
+        const rect = child.getBoundingClientRect();
+        results.push(rect.right - barRect.right);
+      }
+      return results;
+    });
+
+    for (const ov of desktopOverflows) {
+      assert.ok(ov <= 0, `Desktop HUD child must not overflow bar boundary (overflow: ${ov}px)`);
+    }
+
+    // 2. Mobile check (480px viewport)
+    await page.setViewportSize({ width: 480, height: 800 });
+    const mobileOverflows = await page.evaluate(() => {
+      const bar = document.querySelector('.hud-bar');
+      const barRect = bar.getBoundingClientRect();
+      const results = [];
+      for (const child of bar.children) {
+        const rect = child.getBoundingClientRect();
+        results.push(rect.right - barRect.right);
+      }
+      return results;
+    });
+
+    for (const ov of mobileOverflows) {
+      assert.ok(ov <= 0, `Mobile HUD child must not overflow bar boundary (overflow: ${ov}px)`);
+    }
+  } finally {
+    await browser.close();
+  }
 });
 test('UI Boundary: pages/spawner.html includes Remastered Horde Rules v0.9 patch with 24 verbatim secondaries, 36 miseries, and spawner hooks', () => {
   const spawnerHtml = readPage('pages/spawner.html');

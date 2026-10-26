@@ -329,7 +329,7 @@ body::after {
    2. SHELLS, CONTAINERS & HIGH GOTHIC TYPOGRAPHY
    ========================================================================== */
 .app-shell {
-  max-width: 720px;
+  max-width: 820px;
   margin: 0 auto;
   padding: 16px;
 }
@@ -616,13 +616,59 @@ code {
   border: 1px solid var(--border-bright);
   border-top: 2px solid var(--gold);
   clip-path: var(--clip-card);
-  padding: 10px 14px;
+  padding: 10px 18px 10px 14px;
   margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.85), inset 0 2px 14px rgba(0, 0, 0, 0.95);
+}
+
+.hud-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hud-actions .btn-sm {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.solo-sp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: rgba(59, 130, 246, 0.18);
+  border: 1px solid var(--blue);
+  color: #93c5fd;
+  white-space: nowrap;
+  letter-spacing: 0.4px;
+}
+
+@media (max-width: 740px) {
+  .hud-stat:first-child {
+    order: 1;
+  }
+  .hud-actions {
+    order: 2;
+    margin-left: auto;
+  }
+  .hud-stat:nth-child(2) {
+    order: 3;
+  }
+  .hud-stat:nth-child(3) {
+    order: 4;
+  }
 }
 
 .hud-stat,
@@ -634,8 +680,14 @@ code {
 .hud-val-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 2px;
+}
+
+.hud-val-row .mini-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 1rem;
 }
 
 .hud-label {

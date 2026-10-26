@@ -266,6 +266,11 @@ test('app: switchTab activates specified tab and persists active tab index', () 
   const raw = localStorage.getItem('foa_horde_session_v1');
   const parsed = JSON.parse(raw);
   assert.equal(parsed.activeTab, 3);
+
+  // Tab index > 3 falls back gracefully to Tab 1
+  app.switchTab(4);
+  assert.equal(document.getElementById('tab1').classList.contains('hidden'), false);
+  assert.equal(document.getElementById('tabBtn1').classList.contains('active'), true);
 });
 
 test('app: togglePrivacy toggles privacy wrapper and button text', () => {
@@ -521,11 +526,11 @@ test('app: evaluateWarpBreachIntrusions inspects spawn cards and enforces >= 6 t
   const spawnerHtml = fs.readFileSync(path.resolve(__dirname, '../../pages/spawner.html'), 'utf8');
   assert.ok(
     spawnerHtml.includes('[10–12] &amp; [13+] Roll 1D6 Warp-Breach Intrusion (6+)'),
-    'pages/spawner.html Tab 4 banner must state Roll 1D6 Warp-Breach Intrusion (6+)'
+    'pages/spawner.html spawner header must state Roll 1D6 Warp-Breach Intrusion (6+)'
   );
   assert.ok(
     spawnerHtml.includes('Unmodified 2 = No Spawn • [10+] Rolls 1D6 Warp-Breach Intrusion (6+)'),
-    'pages/spawner.html Tab 4 section header must state Rolls 1D6 Warp-Breach Intrusion (6+)'
+    'pages/spawner.html spawner header must state Rolls 1D6 Warp-Breach Intrusion (6+)'
   );
 
   const container = document.getElementById('spawnResultsContainer');
