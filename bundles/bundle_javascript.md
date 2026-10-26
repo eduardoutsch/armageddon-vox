@@ -2259,38 +2259,31 @@ if (typeof window !== 'undefined') {
     const facStr = (typeof document !== 'undefined' && document.getElementById('hordeFactionSelect')?.value) || 'Horde';
 
     const isDistant = channel === 'distant';
-    const header = isDistant
-      ? `+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++`
-      : `+++ EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED +++`;
+    const isBeta = channel === 'beta';
+    const cleanBracket = bracketLabel.startsWith('Bracket') ? bracketLabel : `Bracket [${bracketLabel}]`;
 
-    const theatreLine = isDistant
-      ? `• THEATRE & SENSOR SWEEP: Distant Sector Grid ${zoneNum} // Orbital Augur Intercept (Neither Main Player Fielded)`
-      : `• ENGAGED FORCE: Main Force Battlefront (${channel === 'beta' ? 'Lord Commander Junebug' : 'The Exile'})`;
-
-    const spawnZoneLine = isDistant
-      ? `• REMOTE SECTOR & BRACKET: Distant Spawn Zone ${zoneNum} rolled ${bracketLabel} + [6+ WARP-BREACH INTRUSION]!`
-      : `• SPAWN ZONE & BRACKET: Spawn Zone ${zoneNum} rolled ${bracketLabel} + [6+ WARP-BREACH INTRUSION]!`;
-
-    const activeFacLine = isDistant
-      ? `• ACTIVE DISTANT ENEMY FACTION: ${facStr}`
-      : `• ACTIVE HORDE FACTION: ${facStr}`;
-
-    const requestLine = isDistant
-      ? `• REQUEST FOR CAMPAIGN MASTER: Long-range augurs have detected an anomalous Warp signature / Unbound Adversary tearing into a distant engagement outside the primary lines. Please execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) for this remote sector and broadcast the telemetry intercept to BOTH command networks!`
-      : `• REQUEST FOR CAMPAIGN MASTER: Please execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and reveal which Unbound Adversary, Active Surface Nemesis, or Classified Legacy Boss hijacks Spawn Zone ${zoneNum}!`;
-
-    const payload = [
-      header,
-      `• MODE & ROOM SEED: Mode 1 (${isDistant ? 'Distant Solo Horde Breach' : 'Horde Breach'} // Room: ${roomStr} // Battle Round ${roundStr})`,
-      theatreLine,
-      spawnZoneLine,
-      activeFacLine,
-      requestLine
-    ].join('\n');
+    const payload = isDistant
+      ? [
+          `+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++`,
+          `• MODE & ROOM SEED: Mode 1 (Distant Solo Horde Breach // Room: ${roomStr} // Battle Round ${roundStr})`,
+          `• THEATRE & SENSOR SWEEP: Distant Sector Grid ${zoneNum} // Orbital Augur Intercept (Neither Main Player Fielded)`,
+          `• REMOTE SECTOR & BRACKET: Distant Spawn Zone ${zoneNum} rolled ${cleanBracket} + [6+ WARP-BREACH INTRUSION]!`,
+          `• ACTIVE DISTANT ENEMY FACTION: ${facStr}`,
+          `• REQUEST FOR CAMPAIGN MASTER: Long-range augurs have detected an anomalous Warp signature / Unbound Adversary tearing into a distant engagement outside the primary lines. Please execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) for this remote sector and broadcast the telemetry intercept to BOTH command networks!`
+        ].join('\n')
+      : (isBeta
+          ? `+++ EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED +++\n• CONDUIT: TOMB-SHIP OMNICIDAL AUSPEX [PHAERON JUNEBUG]\n• MODE & ROOM SEED: Mode 1 (Horde Command // Room: ${roomStr} // Battle Round ${roundStr})\n• TRIGGER: Spawn Zone ${zoneNum} rolled ${cleanBracket} + [6+ WARP-BREACH INTRUSION] against ${facStr}!\n• REQUEST FOR TOMB-SHIP MASTER MATRIX: Execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and reveal which apex threat or Nemesis has hijacked Spawn Zone ${zoneNum}!`
+          : `+++ EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED +++\n• CONDUIT: MUNITORUM PERIMETER AUGUR [THE EXILE // 044TH KRIEG]\n• MODE & ROOM SEED: Mode 1 (Horde Command // Room: ${roomStr} // Battle Round ${roundStr})\n• TRIGGER: Spawn Zone ${zoneNum} rolled ${cleanBracket} + [6+ WARP-BREACH INTRUSION] against ${facStr}!\n• REQUEST FOR CAMPAIGN MASTER: Please execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and reveal which entity hijacks Spawn Zone ${zoneNum}!`);
 
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
       window.VoxAudio.transmitToVox(channel, payload);
     }
+  }
+
+  const transmitIntrusionPing = transmitHordeIntrusionPing;
+  if (typeof window !== 'undefined') {
+    window.transmitHordeIntrusionPing = transmitHordeIntrusionPing;
+    window.transmitIntrusionPing = transmitIntrusionPing;
   }
 
   function evaluateWarpBreachIntrusions() {
@@ -2344,8 +2337,8 @@ if (typeof window !== 'undefined') {
               Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
             </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
-              <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'alpha')">📡 Ping Vox (The Exile)</button>
-              <button type="button" class="btn-blue btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'beta')">📡 Ping Vox (Junebug)</button>
+              <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'alpha')">🦅 Ping Vox (The Exile)</button>
+              <button type="button" class="btn-green btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'beta')">💀 Ping Tomb-Ship (Junebug)</button>
               <button type="button" class="btn-gold btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${bracketLabel}', 'distant')">📡 Ping Vox (Distant Intercept)</button>
             </div>
           `;
@@ -2449,6 +2442,7 @@ if (typeof window !== 'undefined') {
       syncSpawnerPoolFromSupabase,
       renderLiveSpawnerBracketTable,
       transmitHordeIntrusionPing,
+      transmitIntrusionPing,
       evaluateWarpBreachIntrusions,
       triggerCardStaticShake
     });

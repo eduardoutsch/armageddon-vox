@@ -558,7 +558,7 @@
       <textarea id="dossierBattleNotes" oninput="updateMasterDossierPreview()" placeholder="Summarize the highlights of the match so the Campaign Master can chronicle it and christen your units' upgrades and scars..." style="width:100%; min-height:70px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
 
       <!-- LIVE MASTER DOSSIER PREVIEW -->
-      <div class="master-dossier-preview" id="masterDossierPreviewBox"></div>
+      <div class="master-dossier-preview vox-preview-alpha" id="masterDossierPreviewBox"></div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <button type="button" class="launch-btn" style="flex:1;" data-sfx="custom" onclick="transmitMasterBattleDossier()">
@@ -694,7 +694,7 @@
       <label class="hud-label" style="display:block; margin-bottom:4px;">Regimental Deployment Directive / Operational Notes (Optional)</label>
       <textarea id="startTourNotes" oninput="updateStartOfTourPreview()" placeholder="e.g. Commencing 2nd Tour of Duty in the Golgotha sector; prioritizing Materiel and Lexmechanicus Surplus..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
 
-      <div class="master-dossier-preview" id="startOfTourPreviewBox"></div>
+      <div class="master-dossier-preview vox-preview-alpha" id="startOfTourPreviewBox"></div>
 
       <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitStartOfTourDossier()">
         📡 Transmit Start of Tour of Duty Dispatch →
@@ -820,7 +820,7 @@
       <label class="hud-label" style="display:block; margin-bottom:4px;">Cryptek Conclave / Dynastic Awakening Directive (Optional)</label>
       <textarea id="tombAwakeningNotes" oninput="updateTombAwakeningPreview()" placeholder="e.g. Routing primary reactor output to Command and Reanimation nodes beneath the Golgotha Arbor-Basin..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
 
-      <div class="master-dossier-preview" id="tombAwakeningPreviewBox"></div>
+      <div class="master-dossier-preview vox-preview-beta" id="tombAwakeningPreviewBox"></div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <button type="button" class="launch-btn" style="flex:1;" data-sfx="custom" onclick="transmitTombAwakeningDossier()">
@@ -1887,25 +1887,39 @@ function buildTombMatrixSummaryLine() {
  * @returns {string} Formatted Astropathic dispatch string for Commander Beta.
  */
 function compileTombAwakeningDossier(input = {}) {
-  const agendas = input.tombAgendasCompleted || 0;
-  const cycles = input.tombAwakeningCycles || 0;
-  const reservesStr = input.powerReservesAllocated
-    ? 'ACTIVE (4 Total Awakening Pts & Matrix Reallocation)'
-    : 'INACTIVE (3 Standard Awakening Pts)';
-  const summaryLine = input.summaryLine || buildTombMatrixSummaryLine();
-  const notes = (input.notes || 'Cryptek Conclave routing power through the Awakening Tomb World Matrix beneath Armageddon.').trim();
+  const sys = input.tombSystems || (typeof crusadeState !== 'undefined' ? crusadeState.tombSystems : {}) || {};
+  const cmd = sys.command || 0;
+  const reanim = sys.reanimation || 0;
+  const trans = sys.translocation || 0;
+  const allocatedPts = (typeof input.allocatedPts === 'number') ? input.allocatedPts : (cmd + reanim + trans);
+  const maxPts = (input.powerReservesAllocated || (typeof crusadeState !== 'undefined' && crusadeState.powerReservesAllocated)) ? 4 : 3;
 
-  return [
-    `+++ CRYPTEK CONCLAVE // TOMB WORLD AWAKENING MATRIX DISPATCH +++`,
-    `• REPORTING COMMANDER: LORD COMMANDER JUNEBUG (NECRONS AWAKENING TOMB WORLD)`,
-    `• AWAKENING AGENDAS COMPLETED: ${agendas} // AWAKENING CYCLES SURGED: ${cycles}`,
-    `• POWER RESERVES ALLOCATED REQUISITION (1 RP): ${reservesStr}`,
-    `• TOMB WORLD AWAKENING MATRIX TELEMETRY: ${summaryLine}`,
+  const cmdSystemStatus = cmd > 0 ? `ACTIVE (${cmd} Pt${cmd > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)';
+  const reanimSystemStatus = reanim > 0 ? `ACTIVE (${reanim} Pt${reanim > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)';
+  const transSystemStatus = trans > 0 ? `ACTIVE (${trans} Pt${trans > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)';
+  const allThreeAllocated = allocatedPts >= 3;
+  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('tombAwakeningNotes')?.value) || '').trim();
+
+  const lines = [
+    `+++ TOMB-SHIP MASTER MATRIX // TOMB WORLD AWAKENING & SYSTEM ALLOCATION DISPATCH +++`,
+    `• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP INTERLINK`,
+    `• AWAKENING POINTS ALLOCATED: ${allocatedPts} / ${maxPts} Awakening Points Active`,
+    `• COMMAND SYSTEM (SUBJUGATION DECREE): ${cmdSystemStatus}`,
+    `• REANIMATION SYSTEM (IMMORTAL SERVITUDE): ${reanimSystemStatus}`,
+    `• TRANSLOCATION SYSTEM (RELENTLESS EXPANSION): ${transSystemStatus}`,
+    `• MASTER SYSTEM STATUS: ${allThreeAllocated ? 'ONLINE (1D3 Power Drain Ready)' : 'DORMANT (Requires 3/3 Points)'}`
+  ];
+
+  if (notes) {
+    lines.push(`• CRYPTEK CONCLAVE DIRECTIVE: "${notes}"`);
+  }
+
+  lines.push(
     `------------------------------------------------`,
-    `• CRYPTEK CONCLAVE DIRECTIVE: "${notes}"`,
-    `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please officially log this Tomb World Awakening Matrix configuration in the sector chronicle and emit an Astropathic Vox decree on Terminal Beta!`
-  ].join('\n');
+    `REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE: Please lock these Dynastic Awakening System power allocations into our Tomb-Ship hypercircuits and confirm our active Master System protocols!`
+  );
+
+  return lines.join('\n');
 }
 
 function buildTombAwakeningDossierString() {
@@ -1913,14 +1927,20 @@ function buildTombAwakeningDossierString() {
     tombAgendasCompleted: crusadeState.tombAgendasCompleted || 0,
     tombAwakeningCycles: crusadeState.tombAwakeningCycles || 0,
     powerReservesAllocated: !!crusadeState.powerReservesAllocated,
-    summaryLine: buildTombMatrixSummaryLine(),
+    tombSystems: crusadeState.tombSystems,
     notes: document.getElementById('tombAwakeningNotes')?.value || ''
   });
 }
 
 function updateTombAwakeningPreview() {
   const box = document.getElementById('tombAwakeningPreviewBox');
-  if (box) box.textContent = buildTombAwakeningDossierString();
+  if (box) {
+    box.textContent = buildTombAwakeningDossierString();
+    if (box.classList && typeof box.classList.toggle === 'function') {
+      box.classList.toggle('vox-preview-beta', true);
+      box.classList.toggle('vox-preview-alpha', false);
+    }
+  }
 }
 
 function transmitTombAwakeningDossier() {
@@ -2156,10 +2176,26 @@ function compileMasterDossier(input = {}) {
     return lines.join('\n');
   }
 
-  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
+  const isBeta = chan === 'beta';
+  const headerLine = isBeta
+    ? `+++ DYNASTIC ENGRAM-CHRONICLE // MASTER POST-BATTLE DOSSIER & AWAKENING LOG +++`
+    : `+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++`;
+
+  const cmdrLabel = isBeta
+    ? `PHAERON JUNEBUG // TOMB-SHIP COMMAND INTERLINK (NECRONS)`
+    : `THE EXILE // THE SANCTUARY OF ASH (ASTRA MILITARUM — 044TH KRIEG)`;
+
+  const upgradeSectionTitle = isBeta
+    ? `[2. CRYPTEK CONCLAVE // DYNASTIC EPITHETS, RELICS & ENGRAMMATIC FLAWS]:`
+    : `[2. QUARTERMASTER ROLLS // BATTLE HONOURS, RELICS & SCARS]:`;
+
+  const closingRequest = isBeta
+    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE: Please inscribe this engagement into the Blackstone Engram-Chronicles (Pattern 2), allocate any earned Tomb World Awakening Points or Marauder/Alliance Hegemony spoils, and bestow permanent Dynastic Epithets upon the upgraded phalanxes above!`
+    : `REQUEST FOR CAMPAIGN MASTER (LOGIS-PREFECT VANE): Please audit this after-action dossier (Pattern 2), credit our Alliance & Sector Hegemony spoils in the orbital ledger, and christen the upgraded units and scars above with permanent Munitorum lore titles!`;
+
   const lines = [
-    `+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++`,
-    `• REPORTING COMMANDER: ${cmdr}`,
+    headerLine,
+    `• REPORTING COMMANDER: ${cmdrLabel}`,
     `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
     `• OUTCOME & SURVIVAL: ${outcome}`,
     `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
@@ -2167,12 +2203,12 @@ function compileMasterDossier(input = {}) {
     `• LEFTOVER SP SALVAGE: ${leftover}`
   ];
 
-  if (chan === 'alpha') {
+  if (!isBeta) {
     const logSummary = input.logisticsSummary || (typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : '');
     if (logSummary) {
       lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
     }
-  } else if (chan === 'beta') {
+  } else {
     const tombSummary = input.tombSummary || (typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : '');
     if (tombSummary) {
       lines.push(`• TOMB WORLD AWAKENING MATRIX TELEMETRY: ${tombSummary}`);
@@ -2181,12 +2217,12 @@ function compileMasterDossier(input = {}) {
 
   lines.push(
     `------------------------------------------------`,
-    `• ROLLED UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES FOR EVERY SCAR & HONOUR"):`,
+    upgradeSectionTitle,
     unitLines,
     `------------------------------------------------`,
     `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
     `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please emit a personalized Pattern 2 Munitorum After-Action Audit & Honour Scroll christening custom in-universe Lore Names & Backstories for every attached unit Upgrade, Relic, Commendation, and Battle Scar!`
+    closingRequest
   );
 
   return lines.join('\n');
@@ -2236,7 +2272,14 @@ function buildMasterDossierString() {
 function updateMasterDossierPreview() {
   updateDistantForceVisibility();
   const box = document.getElementById('masterDossierPreviewBox');
-  if (box) box.textContent = buildMasterDossierString();
+  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
+  if (box) {
+    box.textContent = buildMasterDossierString();
+    if (box.classList && typeof box.classList.toggle === 'function') {
+      box.classList.toggle('vox-preview-beta', chan === 'beta' || chan === 'augur_beta');
+      box.classList.toggle('vox-preview-alpha', chan !== 'beta' && chan !== 'augur_beta');
+    }
+  }
   saveCrusadeState();
 }
 
@@ -2250,6 +2293,46 @@ function transmitMasterBattleDossier() {
 }
 
 /**
+ * Pure functional core: compiles the unique Start of Tour of Duty Dispatch string
+ * (Departmento Munitorum Regulation 884-Alpha).
+ *
+ * @param {object} [input={}] - Plain Tour of Duty state snapshot.
+ * @returns {string} Formatted Start of Tour of Duty dispatch payload.
+ */
+function compileTourDispatch(input = {}) {
+  const battles = (typeof input.tourBattlesRem === 'number') ? input.tourBattlesRem : (crusadeState.tourBattlesRem || 0);
+  const wins = (typeof input.tourWinsRem === 'number') ? input.tourWinsRem : (crusadeState.tourWinsRem || 0);
+  const commPts = (typeof input.commendationPts === 'number') ? input.commendationPts : (crusadeState.commendationPts || 0);
+  const log = input.logistics || (crusadeState.logistics || { lexmechanicus: 1, materiel: 1, tithePool: 1, morale: 1 });
+  const lex = log.lexmechanicus || 0;
+  const mat = log.materiel || 0;
+  const tithe = log.tithePool || 0;
+  const mor = log.morale || 0;
+  const primer = (typeof input.upliftingPrimer === 'boolean') ? input.upliftingPrimer : !!crusadeState.upliftingPrimer;
+  const maxPts = primer ? 5 : 4;
+  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('startTourNotes')?.value) || '').trim();
+
+  const lines = [
+    `+++ DEPARTMENTO MUNITORUM // TOUR OF DUTY & LOGISTICS ALLOCATION DISPATCH +++`,
+    `• REPORTING COMMANDER: THE EXILE // THE SANCTUARY OF ASH (044TH KRIEG)`,
+    `• OPERATIONAL QUOTAS: ${battles} Battles Required // ${wins} Victories Required`,
+    `• MUNITORUM LOGISTICS ALLOCATION (${maxPts} PTS): Lexmechanicus: ${lex} | Materiel: ${mat} | Tithe Pool: ${tithe} | Morale: ${mor}`,
+    `• ACTIVE COMMENDATION TALLY: ${commPts} CmP`
+  ];
+
+  if (notes) {
+    lines.push(`• REGIMENTAL DEPLOYMENT DIRECTIVE: "${notes}"`);
+  }
+
+  lines.push(
+    `------------------------------------------------`,
+    `REQUEST FOR LOGIS-PREFECT VANE: Please register this Tour of Duty operational quota and Munitorum Regulation 884-Alpha logistics distribution in the orbital ledger!`
+  );
+
+  return lines.join('\n');
+}
+
+/**
  * Compiles the unique Start of Tour of Duty Dispatch string (Munitorum Field Regulation 884-Alpha),
  * reporting newly rolled Tour Quotas (D6+4 Battles / D3+2 Victories), Uplifting Primers status,
  * and Munitorum Logistics Point allocation (Surplus vs. Deficiency) to the Campaign Master.
@@ -2257,33 +2340,25 @@ function transmitMasterBattleDossier() {
  * @returns {string} Formatted Start of Tour of Duty dispatch payload.
  */
 function buildStartOfTourDossierString() {
-  const battles = crusadeState.tourBattlesRem || 0;
-  const wins = crusadeState.tourWinsRem || 0;
-  const commPts = crusadeState.commendationPts || 0;
-  const toursDone = crusadeState.toursCompletedCount || 0;
-  const primerStr = crusadeState.upliftingPrimer
-    ? 'ACTIVE (5 Total Logistics Pts)'
-    : 'INACTIVE (4 Standard Logistics Pts)';
-  const notes = (document.getElementById('startTourNotes')?.value || 'Commencing new Astra Militarum Tour of Duty in the Armageddon sector.').trim();
-
-  return [
-    `+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++`,
-    `• REPORTING COMMANDER: THE EXILE // SANCTUARY OF ASH (044TH KRIEG SIEGE REGIMENT)`,
-    `• BATTLES REQUIRED QUOTA (D6+4): ${battles} Battles`,
-    `• VICTORIES REQUIRED QUOTA (D3+2): ${wins} Wins`,
-    `• PRIOR TOURS COMPLETED: ${toursDone} // CURRENT COMMENDATION BANK: ${commPts} Pts`,
-    `• UPLIFTING PRIMERS REQUISITION (1 RP): ${primerStr}`,
-    `• MUNITORUM LOGISTICS ALLOCATION: ${buildLogisticsSummaryLine()}`,
-    `------------------------------------------------`,
-    `• REGIMENTAL DEPLOYMENT DIRECTIVE: "${notes}"`,
-    `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please officially register this Start of Tour of Duty mandate in the Departmento Munitorum ledger and issue an opening operational decree!`
-  ].join('\n');
+  return compileTourDispatch({
+    tourBattlesRem: crusadeState.tourBattlesRem,
+    tourWinsRem: crusadeState.tourWinsRem,
+    commendationPts: crusadeState.commendationPts,
+    logistics: crusadeState.logistics,
+    upliftingPrimer: crusadeState.upliftingPrimer,
+    notes: document.getElementById('startTourNotes')?.value || ''
+  });
 }
 
 function updateStartOfTourPreview() {
-  const box = document.getElementById('startOfTourPreviewBox');
-  if (box) box.textContent = buildStartOfTourDossierString();
+  const box = document.getElementById('startOfTourPreviewBox') || document.getElementById('tourDispatchPreviewBox');
+  if (box) {
+    box.textContent = buildStartOfTourDossierString();
+    if (box.classList && typeof box.classList.toggle === 'function') {
+      box.classList.toggle('vox-preview-alpha', true);
+      box.classList.toggle('vox-preview-beta', false);
+    }
+  }
 }
 
 function transmitStartOfTourDossier() {

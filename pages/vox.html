@@ -779,6 +779,16 @@
         document.body.dataset.factionTheme = theme;
       }
     }
+    const dBox = document.getElementById('directMessagesBox');
+    const iBox = document.getElementById('interferencesBox');
+    if (dBox && dBox.classList && typeof dBox.classList.toggle === 'function') {
+      dBox.classList.toggle('vox-preview-beta', chan === 'beta');
+      dBox.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    }
+    if (iBox && iBox.classList && typeof iBox.classList.toggle === 'function') {
+      iBox.classList.toggle('vox-preview-beta', chan === 'beta');
+      iBox.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    }
   }
 
   async function selectConduit(chan, clearPendingCheck = false) {
@@ -855,11 +865,20 @@
       const authScreen = document.getElementById('authScreen');
       const termScreen = document.getElementById('terminalScreen');
       const conduitLabel = document.getElementById('activeConduitLabel');
+      const questionInput = document.getElementById('questionInput');
       if (authScreen) authScreen.classList.add('hidden');
       if (termScreen) termScreen.classList.remove('hidden');
       if (conduitLabel) {
         conduitLabel.textContent =
-          selectedChannel === 'alpha' ? '🦅 THE EXILE // SANCTUARY OF ASH' : '💀 LORD COMMANDER JUNEBUG';
+          selectedChannel === 'alpha'
+            ? '🦅 CONDUIT ALPHA // THE SANCTUARY OF ASH (044TH KRIEG)'
+            : '💀 CONDUIT BETA // TOMB-SHIP AUTONOMOUS MASTER MATRIX (NECRONS)';
+      }
+      if (questionInput) {
+        questionInput.placeholder =
+          selectedChannel === 'alpha'
+            ? "Transmit orders to Logis-Prefect Vane (Zenith-09), or type 'Ship - ...' to query The Ashen Spirit (Deck 44)..."
+            : "Issue royal decrees to your Tomb-Ship Master Matrix & Cryptek Conclave, or include 'Vane' / 'Zenith-09' to hail the human orbital station...";
       }
 
       // Check if a compiled Master Battle Dossier or Nemesis Dossier is waiting in sessionStorage!

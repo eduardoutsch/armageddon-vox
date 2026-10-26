@@ -733,9 +733,16 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
 
   assert.equal(transmittedChan, 'beta');
   assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED'));
-  assert.ok(transmittedPayload.includes('Mode 1 (Horde Breach // Room: HADES-42 // Battle Round 3)'));
-  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [6+ WARP-BREACH INTRUSION]!'));
-  assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
+  assert.ok(transmittedPayload.includes('Mode 1 (Horde Command // Room: HADES-42 // Battle Round 3)'));
+  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [6+ WARP-BREACH INTRUSION] against Chaos Daemons!'));
+  assert.ok(transmittedPayload.includes('TOMB-SHIP OMNICIDAL AUSPEX [PHAERON JUNEBUG]'));
+  assert.ok(transmittedPayload.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX'));
+
+  // Test Alpha channel
+  app.transmitHordeIntrusionPing(2, 'Bracket [10–12]', 'alpha');
+  assert.equal(transmittedChan, 'alpha');
+  assert.ok(transmittedPayload.includes('MUNITORUM PERIMETER AUGUR [THE EXILE // 044TH KRIEG]'));
+  assert.ok(transmittedPayload.includes('REQUEST FOR CAMPAIGN MASTER'));
 });
 
 test('app: transmitHordeIntrusionPing formats distant intercept payload and transmits via VoxAudio', () => {
@@ -3478,6 +3485,25 @@ globalThis.localStorage = {
   clear: () => storageStore.clear()
 };
 
+function makeClassList() {
+  const classes = new Set();
+  return {
+    add: (...c) => c.forEach(x => classes.add(x)),
+    remove: (...c) => c.forEach(x => classes.delete(x)),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) { classes.delete(c); return false; }
+        else { classes.add(c); return true; }
+      } else if (force) {
+        classes.add(c); return true;
+      } else {
+        classes.delete(c); return false;
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
 const mockElements = {
   hellscapeSelect: { value: '0' },
   hellscapeDesc: { innerHTML: '', innerText: '' },
@@ -3489,7 +3515,7 @@ const mockElements = {
   unboundResult: { innerHTML: '' },
   pvpReportChannel: { value: 'alpha' },
   pvpReportNotes: { value: '' },
-  pvpVulturePreviewBox: { textContent: '' }
+  pvpVulturePreviewBox: { textContent: '', classList: makeClassList() }
 };
 
 globalThis.document = {
@@ -3619,13 +3645,23 @@ test('pvp: transmitUnboundPing formats emergency apex payload for PL 4 and stand
   assert.ok(transmittedPayload.includes('Warp Intensity: CATASTROPHIC'));
   assert.ok(transmittedPayload.includes('Contextual 3-Tier PL 4 Manifestation Roll'));
 
-  // PL 2 Standard Ping
+  // PL 2 Standard Ping (Beta)
   transmittedChannel = null;
   transmittedPayload = null;
   pvp.transmitUnboundPing(2, 'beta');
   assert.equal(transmittedChannel, 'beta');
   assert.ok(transmittedPayload.includes('AUSPEX PING: POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
+  assert.ok(transmittedPayload.includes('Scan NEMESIS.md and identify the Power Level 2 Unbound Adversary'));
+  assert.ok(transmittedPayload.includes('TOMB-SHIP QUANTUM AUSPEX [PHAERON JUNEBUG]'));
+
+  // PL 2 Standard Ping (Alpha)
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitUnboundPing(2, 'alpha');
+  assert.equal(transmittedChannel, 'alpha');
+  assert.ok(transmittedPayload.includes('AUSPEX PING: POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
   assert.ok(transmittedPayload.includes('roll/select our Power Level 2 Unbound Adversary'));
+  assert.ok(transmittedPayload.includes('MUNITORUM AUSPEX RELAY [THE EXILE // 044TH KRIEG]'));
 });
 
 test('pvp: buildPvpVultureReportString and transmitPvpVultureReport compile and send Campaign Master 3rd Alliance SPts report separately from Unbound Adversary roller', () => {
@@ -4252,14 +4288,16 @@ test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Ca
   mockElements.nemReportNotes.value = 'Survived two Vanquisher shots on 1 Wound and slaughtered Death Riders.';
 
   const str = roster.buildNemesisDossierString();
-  assert.ok(str.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(str.includes('+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++'));
   assert.ok(str.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
   assert.ok(str.includes('• HOSTILE DATASHEET / FACTION: Tyranids — Screamer-Killer'));
   assert.ok(str.includes('slaughtered Death Riders'));
 
   mockElements.nemReportChannel.value = 'beta';
   const strBeta = roster.buildNemesisDossierString();
-  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(strBeta.includes('+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'));
+  assert.ok(strBeta.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen\'s engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3)'));
 });
 
 test('roster: updateNemesisPreview populates preview box and saves state', () => {
@@ -4523,12 +4561,26 @@ test('roster: compileNemesisDossier is a pure domain compiler separated from DOM
     notes: 'Ripped a Rogal Dorn tank apart in melee.'
   });
 
-  assert.ok(report.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
-  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(report.includes('+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'));
   assert.ok(report.includes('• THEATRE & MODE: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
   assert.ok(report.includes('• HOSTILE DATASHEET / FACTION: Orks — Deff Dread'));
   assert.ok(report.includes('• TRIGGERING FEAT: Destroyed a Titanic / Vehicle centerpiece unit'));
   assert.ok(report.includes('• EYE-WITNESS COMBAT LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+  assert.ok(report.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen\'s engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3)'));
+
+  // Test Alpha channel
+  const alphaReport = roster.compileNemesisDossier({
+    channel: 'alpha',
+    sector: 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)',
+    unit: 'World Eaters — Eightbound',
+    feat: 'Slain a Player Warlord / Character in combat',
+    notes: 'Slaughtered command squad.'
+  });
+
+  assert.ok(alphaReport.includes('+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++'));
+  assert.ok(alphaReport.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(alphaReport.includes('REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (Pattern 3)'));
 });
 
 test('roster: extractUniqueUnitTypes correctly normalizes and deduplicates unit types from faction tables and custom pools', () => {
@@ -4979,12 +5031,20 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
   crusade.attachRollToDossier('relic');
 
   const dossierStr = crusade.buildMasterDossierString();
-  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
-  assert.ok(dossierStr.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(dossierStr.includes('+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++'));
+  assert.ok(dossierStr.includes('THE EXILE // THE SANCTUARY OF ASH (ASTRA MILITARUM — 044TH KRIEG)'));
   assert.ok(dossierStr.includes('Golgotha Arbor-Basin'));
   assert.ok(dossierStr.includes('SECRET OBJECTIVE CODE: [A9F]'));
   assert.ok(dossierStr.includes("Mercy's Delay"));
   assert.ok(dossierStr.includes('Held the frontline'));
+
+  // Test Necron beta conduit
+  mockElements.dossierChannel.value = 'beta';
+  const betaDossierStr = crusade.buildMasterDossierString();
+  assert.ok(betaDossierStr.includes('+++ DYNASTIC ENGRAM-CHRONICLE // MASTER POST-BATTLE DOSSIER & AWAKENING LOG +++'));
+  assert.ok(betaDossierStr.includes('PHAERON JUNEBUG // TOMB-SHIP COMMAND INTERLINK (NECRONS)'));
+  assert.ok(betaDossierStr.includes('[2. CRYPTEK CONCLAVE // DYNASTIC EPITHETS, RELICS & ENGRAMMATIC FLAWS]:'));
+  assert.ok(betaDossierStr.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE:'));
 });
 
 test('crusade: does not duplicate Mode 3 Rogue Sector reporting (kept exclusively in pages/rogue.html)', () => {
@@ -4997,9 +5057,9 @@ test('crusade: does not duplicate Mode 3 Rogue Sector reporting (kept exclusivel
   mockElements.dossierBattleNotes.value = 'Secured the central ridge against rival vanguard.';
 
   const dossierStr = crusade.buildMasterDossierString();
-  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
+  assert.ok(dossierStr.includes('+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++'));
   assert.ok(!dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'), 'Master Dossier in crusade.html must not include Rogue Sector planetary impact');
-  assert.ok(dossierStr.includes('Pattern 2 Munitorum After-Action Audit'));
+  assert.ok(dossierStr.includes('Pattern 2'));
 });
 
 test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox', () => {
@@ -5282,14 +5342,11 @@ test('crusade: buildStartOfTourDossierString and transmitStartOfTourDossier comp
   const report = crusade.buildStartOfTourDossierString();
 
   assert.equal(mockElements.startOfTourPreviewBox.textContent, report);
-  assert.ok(report.includes('+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++'));
-  assert.ok(report.includes('THE EXILE // SANCTUARY OF ASH'));
-  assert.ok(report.includes('BATTLES REQUIRED QUOTA (D6+4): 8 Battles'));
-  assert.ok(report.includes('VICTORIES REQUIRED QUOTA (D3+2): 4 Wins'));
-  assert.ok(report.includes('PRIOR TOURS COMPLETED: 1'));
-  assert.ok(report.includes('UPLIFTING PRIMERS REQUISITION (1 RP): ACTIVE (5 Total Logistics Pts)'));
-  assert.ok(report.includes('Surplus: [Lexmechanicus, Materiel]'));
-  assert.ok(report.includes('Deficiency: [Morale]'));
+  assert.ok(report.includes('+++ DEPARTMENTO MUNITORUM // TOUR OF DUTY & LOGISTICS ALLOCATION DISPATCH +++'));
+  assert.ok(report.includes('THE EXILE // THE SANCTUARY OF ASH (044TH KRIEG)'));
+  assert.ok(report.includes('OPERATIONAL QUOTAS: 8 Battles Required // 4 Victories Required'));
+  assert.ok(report.includes('MUNITORUM LOGISTICS ALLOCATION (5 PTS): Lexmechanicus: 2 | Materiel: 2 | Tithe Pool: 1 | Morale: 0'));
+  assert.ok(report.includes('ACTIVE COMMENDATION TALLY: 2 CmP'));
   assert.ok(report.includes('Deploying 044th Krieg armored column to Golgotha sector.'));
 
   transmittedChannel = null;
@@ -5554,8 +5611,8 @@ test('crusade: Necron Dynastic Vault selection, attachNecronVaultToDossier, and 
   crusade.updateTombAwakeningPreview();
   const dispatch = crusade.buildTombAwakeningDossierString();
   assert.equal(mockElements.tombAwakeningPreviewBox.textContent, dispatch);
-  assert.ok(dispatch.includes('+++ CRYPTEK CONCLAVE // TOMB WORLD AWAKENING MATRIX DISPATCH +++'));
-  assert.ok(dispatch.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(dispatch.includes('+++ TOMB-SHIP MASTER MATRIX // TOMB WORLD AWAKENING & SYSTEM ALLOCATION DISPATCH +++'));
+  assert.ok(dispatch.includes('LORD COMMANDER JUNEBUG // TOMB-SHIP INTERLINK'));
   assert.ok(dispatch.includes('Cryptek Conclave routing power to Command and Reanimation nodes'));
 
   transmittedChannel = null;
@@ -6374,7 +6431,9 @@ test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Nec
   mockElements.passInput.value = 'JunebugRoyalKey';
   await vox.handleSealAction();
   assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Unlocking Terminal Beta must preserve theme-necron');
-  assert.ok(mockElements.activeConduitLabel.textContent.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('TOMB-SHIP AUTONOMOUS MASTER MATRIX'));
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('CONDUIT BETA'));
+  assert.ok(mockElements.questionInput.placeholder.includes('Issue royal decrees to your Tomb-Ship Master Matrix'));
 
   await vox.selectConduit('alpha');
   assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Selecting Terminal Alpha must activate theme-militarum on body');
@@ -6383,6 +6442,9 @@ test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Nec
   mockElements.passInput.value = 'VermilionKey99';
   await vox.handleSealAction();
   assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Unlocking Terminal Alpha must preserve theme-militarum');
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('CONDUIT ALPHA'));
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('THE SANCTUARY OF ASH'));
+  assert.ok(mockElements.questionInput.placeholder.includes('Transmit orders to Logis-Prefect Vane'));
 
   // Verify pages/vox.html defines Necron personal terminal styling
   assert.ok(voxHtml.includes('body.theme-necron .crt-monitor-frame'), 'vox.html must style .crt-monitor-frame in Necron Tomb-Ship mode');

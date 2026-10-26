@@ -21,6 +21,25 @@ globalThis.localStorage = {
   clear: () => storageStore.clear()
 };
 
+function makeClassList() {
+  const classes = new Set();
+  return {
+    add: (...c) => c.forEach(x => classes.add(x)),
+    remove: (...c) => c.forEach(x => classes.delete(x)),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) { classes.delete(c); return false; }
+        else { classes.add(c); return true; }
+      } else if (force) {
+        classes.add(c); return true;
+      } else {
+        classes.delete(c); return false;
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
 const mockElements = {
   hellscapeSelect: { value: '0' },
   hellscapeDesc: { innerHTML: '', innerText: '' },
@@ -32,7 +51,7 @@ const mockElements = {
   unboundResult: { innerHTML: '' },
   pvpReportChannel: { value: 'alpha' },
   pvpReportNotes: { value: '' },
-  pvpVulturePreviewBox: { textContent: '' }
+  pvpVulturePreviewBox: { textContent: '', classList: makeClassList() }
 };
 
 globalThis.document = {
@@ -162,13 +181,23 @@ test('pvp: transmitUnboundPing formats emergency apex payload for PL 4 and stand
   assert.ok(transmittedPayload.includes('Warp Intensity: CATASTROPHIC'));
   assert.ok(transmittedPayload.includes('Contextual 3-Tier PL 4 Manifestation Roll'));
 
-  // PL 2 Standard Ping
+  // PL 2 Standard Ping (Beta)
   transmittedChannel = null;
   transmittedPayload = null;
   pvp.transmitUnboundPing(2, 'beta');
   assert.equal(transmittedChannel, 'beta');
   assert.ok(transmittedPayload.includes('AUSPEX PING: POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
+  assert.ok(transmittedPayload.includes('Scan NEMESIS.md and identify the Power Level 2 Unbound Adversary'));
+  assert.ok(transmittedPayload.includes('TOMB-SHIP QUANTUM AUSPEX [PHAERON JUNEBUG]'));
+
+  // PL 2 Standard Ping (Alpha)
+  transmittedChannel = null;
+  transmittedPayload = null;
+  pvp.transmitUnboundPing(2, 'alpha');
+  assert.equal(transmittedChannel, 'alpha');
+  assert.ok(transmittedPayload.includes('AUSPEX PING: POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
   assert.ok(transmittedPayload.includes('roll/select our Power Level 2 Unbound Adversary'));
+  assert.ok(transmittedPayload.includes('MUNITORUM AUSPEX RELAY [THE EXILE // 044TH KRIEG]'));
 });
 
 test('pvp: buildPvpVultureReportString and transmitPvpVultureReport compile and send Campaign Master 3rd Alliance SPts report separately from Unbound Adversary roller', () => {

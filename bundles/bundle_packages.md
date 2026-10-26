@@ -773,7 +773,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
     const shipSpeakerDesc = `Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}`;
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|TOMB WORLD AWAKENING|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|TOMB WORLD AWAKENING|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|NEMESIS THREAT INDUCTION|NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];

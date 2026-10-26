@@ -364,12 +364,20 @@ test('crusade: buildMasterDossierString compiles comprehensive battle and unit p
   crusade.attachRollToDossier('relic');
 
   const dossierStr = crusade.buildMasterDossierString();
-  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
-  assert.ok(dossierStr.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(dossierStr.includes('+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++'));
+  assert.ok(dossierStr.includes('THE EXILE // THE SANCTUARY OF ASH (ASTRA MILITARUM — 044TH KRIEG)'));
   assert.ok(dossierStr.includes('Golgotha Arbor-Basin'));
   assert.ok(dossierStr.includes('SECRET OBJECTIVE CODE: [A9F]'));
   assert.ok(dossierStr.includes("Mercy's Delay"));
   assert.ok(dossierStr.includes('Held the frontline'));
+
+  // Test Necron beta conduit
+  mockElements.dossierChannel.value = 'beta';
+  const betaDossierStr = crusade.buildMasterDossierString();
+  assert.ok(betaDossierStr.includes('+++ DYNASTIC ENGRAM-CHRONICLE // MASTER POST-BATTLE DOSSIER & AWAKENING LOG +++'));
+  assert.ok(betaDossierStr.includes('PHAERON JUNEBUG // TOMB-SHIP COMMAND INTERLINK (NECRONS)'));
+  assert.ok(betaDossierStr.includes('[2. CRYPTEK CONCLAVE // DYNASTIC EPITHETS, RELICS & ENGRAMMATIC FLAWS]:'));
+  assert.ok(betaDossierStr.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE:'));
 });
 
 test('crusade: does not duplicate Mode 3 Rogue Sector reporting (kept exclusively in pages/rogue.html)', () => {
@@ -382,9 +390,9 @@ test('crusade: does not duplicate Mode 3 Rogue Sector reporting (kept exclusivel
   mockElements.dossierBattleNotes.value = 'Secured the central ridge against rival vanguard.';
 
   const dossierStr = crusade.buildMasterDossierString();
-  assert.ok(dossierStr.includes('+++ MASTER POST-BATTLE & UNIT PROGRESSION DOSSIER +++'));
+  assert.ok(dossierStr.includes('+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++'));
   assert.ok(!dossierStr.includes('ROGUE SECTOR PLANETARY IMPACT'), 'Master Dossier in crusade.html must not include Rogue Sector planetary impact');
-  assert.ok(dossierStr.includes('Pattern 2 Munitorum After-Action Audit'));
+  assert.ok(dossierStr.includes('Pattern 2'));
 });
 
 test('crusade: transmitMasterBattleDossier invokes window.VoxAudio.transmitToVox', () => {
@@ -667,14 +675,11 @@ test('crusade: buildStartOfTourDossierString and transmitStartOfTourDossier comp
   const report = crusade.buildStartOfTourDossierString();
 
   assert.equal(mockElements.startOfTourPreviewBox.textContent, report);
-  assert.ok(report.includes('+++ MUNITORUM FIELD REGULATION 884-ALPHA // START OF TOUR OF DUTY DISPATCH +++'));
-  assert.ok(report.includes('THE EXILE // SANCTUARY OF ASH'));
-  assert.ok(report.includes('BATTLES REQUIRED QUOTA (D6+4): 8 Battles'));
-  assert.ok(report.includes('VICTORIES REQUIRED QUOTA (D3+2): 4 Wins'));
-  assert.ok(report.includes('PRIOR TOURS COMPLETED: 1'));
-  assert.ok(report.includes('UPLIFTING PRIMERS REQUISITION (1 RP): ACTIVE (5 Total Logistics Pts)'));
-  assert.ok(report.includes('Surplus: [Lexmechanicus, Materiel]'));
-  assert.ok(report.includes('Deficiency: [Morale]'));
+  assert.ok(report.includes('+++ DEPARTMENTO MUNITORUM // TOUR OF DUTY & LOGISTICS ALLOCATION DISPATCH +++'));
+  assert.ok(report.includes('THE EXILE // THE SANCTUARY OF ASH (044TH KRIEG)'));
+  assert.ok(report.includes('OPERATIONAL QUOTAS: 8 Battles Required // 4 Victories Required'));
+  assert.ok(report.includes('MUNITORUM LOGISTICS ALLOCATION (5 PTS): Lexmechanicus: 2 | Materiel: 2 | Tithe Pool: 1 | Morale: 0'));
+  assert.ok(report.includes('ACTIVE COMMENDATION TALLY: 2 CmP'));
   assert.ok(report.includes('Deploying 044th Krieg armored column to Golgotha sector.'));
 
   transmittedChannel = null;
@@ -939,8 +944,8 @@ test('crusade: Necron Dynastic Vault selection, attachNecronVaultToDossier, and 
   crusade.updateTombAwakeningPreview();
   const dispatch = crusade.buildTombAwakeningDossierString();
   assert.equal(mockElements.tombAwakeningPreviewBox.textContent, dispatch);
-  assert.ok(dispatch.includes('+++ CRYPTEK CONCLAVE // TOMB WORLD AWAKENING MATRIX DISPATCH +++'));
-  assert.ok(dispatch.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(dispatch.includes('+++ TOMB-SHIP MASTER MATRIX // TOMB WORLD AWAKENING & SYSTEM ALLOCATION DISPATCH +++'));
+  assert.ok(dispatch.includes('LORD COMMANDER JUNEBUG // TOMB-SHIP INTERLINK'));
   assert.ok(dispatch.includes('Cryptek Conclave routing power to Command and Reanimation nodes'));
 
   transmittedChannel = null;

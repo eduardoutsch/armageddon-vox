@@ -382,9 +382,16 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
 
   assert.equal(transmittedChan, 'beta');
   assert.ok(transmittedPayload.includes('EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED'));
-  assert.ok(transmittedPayload.includes('Mode 1 (Horde Breach // Room: HADES-42 // Battle Round 3)'));
-  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [6+ WARP-BREACH INTRUSION]!'));
-  assert.ok(transmittedPayload.includes('ACTIVE HORDE FACTION: Chaos Daemons'));
+  assert.ok(transmittedPayload.includes('Mode 1 (Horde Command // Room: HADES-42 // Battle Round 3)'));
+  assert.ok(transmittedPayload.includes('Spawn Zone 2 rolled Bracket [10–12] + [6+ WARP-BREACH INTRUSION] against Chaos Daemons!'));
+  assert.ok(transmittedPayload.includes('TOMB-SHIP OMNICIDAL AUSPEX [PHAERON JUNEBUG]'));
+  assert.ok(transmittedPayload.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX'));
+
+  // Test Alpha channel
+  app.transmitHordeIntrusionPing(2, 'Bracket [10–12]', 'alpha');
+  assert.equal(transmittedChan, 'alpha');
+  assert.ok(transmittedPayload.includes('MUNITORUM PERIMETER AUGUR [THE EXILE // 044TH KRIEG]'));
+  assert.ok(transmittedPayload.includes('REQUEST FOR CAMPAIGN MASTER'));
 });
 
 test('app: transmitHordeIntrusionPing formats distant intercept payload and transmits via VoxAudio', () => {

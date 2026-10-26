@@ -112,7 +112,7 @@
       <label style="display:block; font-size:0.75rem; color:var(--muted); font-weight:700; text-transform:uppercase; margin-bottom:4px;">Vulture Interference &amp; Match Notes (Optional)</label>
       <textarea id="pvpReportNotes" oninput="updatePvpVulturePreview()" placeholder="Note which units the Unbound Adversaries harassed or destroyed, or how the 3rd Alliance capitalized on the clash..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
 
-      <div id="pvpVulturePreviewBox" class="stat-box" style="text-align:left; font-family:monospace; font-size:0.78rem; white-space:pre-wrap; line-height:1.45; color:var(--gold); margin-bottom:12px;"></div>
+      <div id="pvpVulturePreviewBox" class="stat-box vox-preview-alpha" style="text-align:left; font-family:monospace; font-size:0.78rem; white-space:pre-wrap; line-height:1.45; color:var(--gold); margin-bottom:12px;"></div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
         <button type="button" class="btn-gold" data-sfx="custom" style="flex:1; padding:12px; font-weight:800;" onclick="transmitPvpVultureReport()">
@@ -281,9 +281,10 @@ function updateVulture(shouldSave = true) {
  */
 function compilePvpVultureReport(input = {}) {
   const chan = input.channel || 'alpha';
-  const cmdr = chan === 'alpha'
-    ? 'THE EXILE // SANCTUARY OF ASH'
-    : 'LORD COMMANDER JUNEBUG';
+  const isBeta = chan === 'beta';
+  const cmdr = isBeta
+    ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP COMMAND INTERLINK'
+    : 'THE EXILE // SANCTUARY OF ASH';
   const killedUnit = !!input.killedUnit;
   const totalSp = killedUnit ? 4 : 3;
   const breakdown = killedUnit
@@ -294,6 +295,10 @@ function compilePvpVultureReport(input = {}) {
   const intensity = String(input.warpIntensity || input.intensity || 'major').toUpperCase();
   const notes = (input.notes || '').trim() || '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.';
 
+  const requestLine = isBeta
+    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please record +${totalSp} Strategic Points for the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes clash and chronicle how the outer scavengers exploited our battle!`
+    : `REQUEST FOR CAMPAIGN MASTER: Please credit +${totalSp} Strategic Points to the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes engagement and chronicle how your scavenging forces exploited our clash!`;
+
   return [
     `+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++`,
     `• REPORTING COMMANDER: ${cmdr}`,
@@ -303,7 +308,7 @@ function compilePvpVultureReport(input = {}) {
     `------------------------------------------------`,
     `• VULTURE INTERFERENCE LOG: "${notes}"`,
     `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please credit +${totalSp} Strategic Points to the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes engagement and chronicle how your scavenging forces exploited our clash!`
+    requestLine
   ].join('\n');
 }
 
@@ -335,7 +340,14 @@ function buildPvpVultureReportString() {
 
 function updatePvpVulturePreview(shouldSave = true) {
   const box = document.getElementById('pvpVulturePreviewBox');
-  if (box) box.textContent = buildPvpVultureReportString();
+  const chan = document.getElementById('pvpReportChannel')?.value || 'alpha';
+  if (box) {
+    box.textContent = buildPvpVultureReportString();
+    if (box.classList && typeof box.classList.toggle === 'function') {
+      box.classList.toggle('vox-preview-beta', chan === 'beta');
+      box.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    }
+  }
   if (shouldSave) savePvpState();
 }
 
@@ -368,9 +380,14 @@ function resetPvpVultureReportForm() {
 
 function transmitUnboundPing(pl, channel) {
   const intensity = document.getElementById('warpIntensity')?.value || 'major';
+  const isBeta = channel === 'beta';
   const payload = pl === 4
-    ? `+++ EMERGENCY AUSPEX PING: POWER LEVEL 4 APEX ANOMALY DETECTED +++\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level 4 [CLASSIFIED APEX ANOMALY] on Unbound Adversary Table!\n• REQUEST FOR CAMPAIGN MASTER: Please execute the Contextual 3-Tier PL 4 Manifestation Roll (NEMESIS.md) and reveal which entity emerges into No Man's Land!`
-    : `+++ AUSPEX PING: POWER LEVEL ${pl} UNBOUND ADVERSARY DETECTED +++\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level ${pl} on Unbound Adversary Table.\n• REQUEST FOR CAMPAIGN MASTER: Please roll/select our Power Level ${pl} Unbound Adversary (or Active Surface Nemesis) from NEMESIS.md!`;
+    ? (isBeta
+        ? `+++ EMERGENCY AUSPEX PING: POWER LEVEL 4 APEX ANOMALY DETECTED +++\n• CONDUIT: TOMB-SHIP QUANTUM AUSPEX [PHAERON JUNEBUG]\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Sub-crustal sensors registered a Power Level 4 [CLASSIFIED APEX ANOMALY] tearing into realspace!\n• REQUEST FOR TOMB-SHIP MASTER MATRIX: Execute the Contextual 3-Tier PL 4 Manifestation Roll (NEMESIS.md) and identify which apex entity emerges into No Man's Land!`
+        : `+++ EMERGENCY AUSPEX PING: POWER LEVEL 4 APEX ANOMALY DETECTED +++\n• CONDUIT: MUNITORUM AUSPEX RELAY [THE EXILE // 044TH KRIEG]\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level 4 [CLASSIFIED APEX ANOMALY] on Unbound Adversary Table!\n• REQUEST FOR CAMPAIGN MASTER: Please execute the Contextual 3-Tier PL 4 Manifestation Roll (NEMESIS.md) and reveal which entity emerges into No Man's Land!`)
+    : (isBeta
+        ? `+++ AUSPEX PING: POWER LEVEL ${pl} UNBOUND ADVERSARY DETECTED +++\n• CONDUIT: TOMB-SHIP QUANTUM AUSPEX [PHAERON JUNEBUG]\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level ${pl} on Unbound Adversary Table.\n• REQUEST FOR TOMB-SHIP MASTER MATRIX: Scan NEMESIS.md and identify the Power Level ${pl} Unbound Adversary (or Active Surface Nemesis) entering the sector!`
+        : `+++ AUSPEX PING: POWER LEVEL ${pl} UNBOUND ADVERSARY DETECTED +++\n• CONDUIT: MUNITORUM AUSPEX RELAY [THE EXILE // 044TH KRIEG]\n• MODE: Mode 2 (1v1 Ash Wastes PvP // Warp Intensity: ${intensity.toUpperCase()})\n• TRIGGER: Rolled Power Level ${pl} on Unbound Adversary Table.\n• REQUEST FOR CAMPAIGN MASTER: Please roll/select our Power Level ${pl} Unbound Adversary (or Active Surface Nemesis) from NEMESIS.md!`);
 
   if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox(channel, payload);
@@ -393,15 +410,15 @@ function rollUnboundAdversary() {
            ⚠️ [POWER LEVEL 4: CLASSIFIED APEX ANOMALY — CAMPAIGN MASTER ROLL REQUIRED]
          </div>
          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
-           <button type="button" class="btn-red btn-sm" onclick="transmitUnboundPing(4, 'alpha')">📡 Ping Vox (The Exile)</button>
-           <button type="button" class="btn-blue btn-sm" onclick="transmitUnboundPing(4, 'beta')">📡 Ping Vox (Junebug)</button>
+           <button type="button" class="btn-red btn-sm" onclick="transmitUnboundPing(4, 'alpha')">🦅 Ping Vox (The Exile)</button>
+           <button type="button" class="btn-green btn-sm" onclick="transmitUnboundPing(4, 'beta')">💀 Ping Tomb-Ship (Junebug)</button>
          </div>
        </div>`
     : `<div style="margin-top:12px; padding:10px 14px; background:rgba(0,0,0,0.28); border:1px solid rgba(255,255,255,0.08); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px;">
          <span style="font-size:0.78rem; color:var(--muted); text-align:center;">Want the Campaign Master to roll the specific PL ${pl} threat on Vox?</span>
          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
-           <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'alpha')">📡 Ping Vox (Exile)</button>
-           <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'beta')">📡 Ping Vox (Junebug)</button>
+           <button type="button" class="btn-ghost btn-sm" onclick="transmitUnboundPing(${pl}, 'alpha')">🦅 Ping Vox (The Exile)</button>
+           <button type="button" class="btn-green btn-sm" onclick="transmitUnboundPing(${pl}, 'beta')">💀 Ping Tomb-Ship (Junebug)</button>
          </div>
        </div>`;
 

@@ -243,14 +243,16 @@ test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Ca
   mockElements.nemReportNotes.value = 'Survived two Vanquisher shots on 1 Wound and slaughtered Death Riders.';
 
   const str = roster.buildNemesisDossierString();
-  assert.ok(str.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(str.includes('+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++'));
   assert.ok(str.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
   assert.ok(str.includes('• HOSTILE DATASHEET / FACTION: Tyranids — Screamer-Killer'));
   assert.ok(str.includes('slaughtered Death Riders'));
 
   mockElements.nemReportChannel.value = 'beta';
   const strBeta = roster.buildNemesisDossierString();
-  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(strBeta.includes('+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'));
+  assert.ok(strBeta.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen\'s engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3)'));
 });
 
 test('roster: updateNemesisPreview populates preview box and saves state', () => {
@@ -514,12 +516,26 @@ test('roster: compileNemesisDossier is a pure domain compiler separated from DOM
     notes: 'Ripped a Rogal Dorn tank apart in melee.'
   });
 
-  assert.ok(report.includes('+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++'));
-  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(report.includes('+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++'));
+  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'));
   assert.ok(report.includes('• THEATRE & MODE: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
   assert.ok(report.includes('• HOSTILE DATASHEET / FACTION: Orks — Deff Dread'));
   assert.ok(report.includes('• TRIGGERING FEAT: Destroyed a Titanic / Vehicle centerpiece unit'));
   assert.ok(report.includes('• EYE-WITNESS COMBAT LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+  assert.ok(report.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen\'s engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3)'));
+
+  // Test Alpha channel
+  const alphaReport = roster.compileNemesisDossier({
+    channel: 'alpha',
+    sector: 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)',
+    unit: 'World Eaters — Eightbound',
+    feat: 'Slain a Player Warlord / Character in combat',
+    notes: 'Slaughtered command squad.'
+  });
+
+  assert.ok(alphaReport.includes('+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++'));
+  assert.ok(alphaReport.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(alphaReport.includes('REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (Pattern 3)'));
 });
 
 test('roster: extractUniqueUnitTypes correctly normalizes and deduplicates unit types from faction tables and custom pools', () => {

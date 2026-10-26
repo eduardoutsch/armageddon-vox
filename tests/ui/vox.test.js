@@ -731,7 +731,9 @@ test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Nec
   mockElements.passInput.value = 'JunebugRoyalKey';
   await vox.handleSealAction();
   assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Unlocking Terminal Beta must preserve theme-necron');
-  assert.ok(mockElements.activeConduitLabel.textContent.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('TOMB-SHIP AUTONOMOUS MASTER MATRIX'));
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('CONDUIT BETA'));
+  assert.ok(mockElements.questionInput.placeholder.includes('Issue royal decrees to your Tomb-Ship Master Matrix'));
 
   await vox.selectConduit('alpha');
   assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Selecting Terminal Alpha must activate theme-militarum on body');
@@ -740,6 +742,9 @@ test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Nec
   mockElements.passInput.value = 'VermilionKey99';
   await vox.handleSealAction();
   assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Unlocking Terminal Alpha must preserve theme-militarum');
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('CONDUIT ALPHA'));
+  assert.ok(mockElements.activeConduitLabel.textContent.includes('THE SANCTUARY OF ASH'));
+  assert.ok(mockElements.questionInput.placeholder.includes('Transmit orders to Logis-Prefect Vane'));
 
   // Verify pages/vox.html defines Necron personal terminal styling
   assert.ok(voxHtml.includes('body.theme-necron .crt-monitor-frame'), 'vox.html must style .crt-monitor-frame in Necron Tomb-Ship mode');

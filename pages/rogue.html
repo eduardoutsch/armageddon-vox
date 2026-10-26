@@ -143,7 +143,7 @@
       <textarea id="rogueNotes" oninput="updateRogueDossierPreview()" placeholder="Describe key heroic moments, tragic unit wipes, or notable engagements during this auxiliary battle..." style="width:100%; min-height:70px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
 
       <!-- LIVE DOSSIER PREVIEW -->
-      <div class="master-dossier-preview" id="rogueDossierPreviewBox" style="margin-top:10px;"></div>
+      <div class="master-dossier-preview vox-preview-alpha" id="rogueDossierPreviewBox" style="margin-top:10px;"></div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:12px;">
         <button type="button" class="launch-btn" style="flex:1; margin:0;" data-sfx="custom" onclick="transmitRogueDossier()">
@@ -193,7 +193,19 @@ const ROGUE_OUTCOME_IMPACTS = {
  */
 function compileRogueDossier(input = {}) {
   const chan = input.channel || 'alpha';
-  const cmdr = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
+  const isBeta = chan === 'beta';
+  const cmdr = isBeta
+    ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP QUANTUM INTERCEPT'
+    : 'THE EXILE // SANCTUARY OF ASH';
+
+  const subHeader = isBeta
+    ? `• TELEMETRY SOURCE: SUB-CRUSTAL DOLMEN & QUANTUM AUGUR ARRAY [NECRON DYNASTY]`
+    : `• TELEMETRY SOURCE: MUNITORUM LONG-RANGE SEISMOGRAPH & AUGUR RELAY [ASTRA MILITARUM]`;
+
+  const requestLine = isBeta
+    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please emit a Dual-Channel Black-Box Interstitial Recording (Pattern 2 + Pattern 5) logging this Rogue Sector battle's planetary shift on our next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and indexing any nominated hostile specimen!`
+    : `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree (Pattern 2 + Pattern 5) logging this Rogue Sector battle's planetary consequence on the next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and reviewing any nominated hostile entity for induction into the Cross-Mode Nemesis Ledger!`;
+
   const combatants = (input.combatants || '').trim() || 'Auxiliary Forces (Unspecified Factions)';
   const outcome = input.outcome || 'Imperium Victory';
   const nominee = (input.nominee || '').trim();
@@ -205,6 +217,7 @@ function compileRogueDossier(input = {}) {
   const lines = [
     `+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++`,
     `• REPORTING COMMANDER: ${cmdr}`,
+    subHeader,
     `• THEATRE & COMBATANTS: ${combatants}`,
     `• BATTLE OUTCOME: ${outcome}`,
     `• PLANETARY SHIFT: ${planetaryImpact}`,
@@ -219,7 +232,7 @@ function compileRogueDossier(input = {}) {
     `------------------------------------------------`,
     `• EYE-WITNESS COMBAT LOG: "${notes}"`,
     `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this Rogue Sector battle's planetary consequence on the next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and reviewing any nominated hostile entity for induction into the Cross-Mode Nemesis Ledger!`
+    requestLine
   );
 
   return lines.join('\n');
@@ -253,7 +266,14 @@ function buildRogueDossierString() {
 
 function updateRogueDossierPreview() {
   const box = document.getElementById('rogueDossierPreviewBox');
-  if (box) box.textContent = buildRogueDossierString();
+  const chan = document.getElementById('rogueReportChannel')?.value || 'alpha';
+  if (box) {
+    box.textContent = buildRogueDossierString();
+    if (box.classList && typeof box.classList.toggle === 'function') {
+      box.classList.toggle('vox-preview-beta', chan === 'beta');
+      box.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    }
+  }
   saveRogueState();
 }
 

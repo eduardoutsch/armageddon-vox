@@ -400,14 +400,14 @@
       <label class="hud-label" style="display:block; margin-bottom:4px;">5. Eye-Witness Combat Log (What Happened on the Table?)</label>
       <textarea id="nemReportNotes" oninput="updateNemesisPreview()" placeholder="Describe how this enemy unit earned its infamy (e.g., 'Spawned in Zone 2, survived two Vanquisher shots on 1 Wound, and ate Dreir's Death Riders in Round 5')..." style="width:100%; min-height:74px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit;"></textarea>
 
-      <div class="dossier-preview-box" id="nemDossierPreview">+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++
+      <div class="dossier-preview-box vox-preview-alpha" id="nemDossierPreview">+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++
 • FILING COMMANDER: THE EXILE // SANCTUARY OF ASH
 • THEATRE &amp; MODE: Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)
 • HOSTILE DATASHEET / FACTION: [Unspecified Hostile Entity]
 • TRIGGERING FEAT: Slain a Player Warlord / Character in combat
 • EYE-WITNESS COMBAT LOG: "Survived engagement and demonstrated anomalous lethality."
 ------------------------------------------------
-REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (AGENT.md) and emit a CRT Vox-Dispatch christening its permanent Name, Title, Lore, and Boss Battle Trait!</div>
+REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (Pattern 3), forge their permanent In-Universe Name, Epithet, and bespoke Boss Battle Trait, and issue an Extremis Bounty Warrant!</div>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:8px;">
         <button type="button" class="launch-btn" style="flex:1; margin:0;" data-sfx="custom" onclick="transmitNemesisDossier()">
@@ -650,21 +650,33 @@ function switchRosterTab(tab, persist = true) {
  */
 function compileNemesisDossier(input = {}) {
   const chan = input.channel || 'alpha';
-  const commanderLabel = chan === 'alpha' ? 'THE EXILE // SANCTUARY OF ASH' : 'LORD COMMANDER JUNEBUG';
+  const isBeta = chan === 'beta';
+  const cmdr = isBeta
+    ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'
+    : 'THE EXILE // SANCTUARY OF ASH';
+
+  const headerBanner = isBeta
+    ? `+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++`
+    : `+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++`;
+
+  const footerRequest = isBeta
+    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen's engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3), assign its permanent Dynastic Threat Designation and custom Boss Battle Trait, and lock its extermination bounty!`
+    : `REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (Pattern 3), forge their permanent In-Universe Name, Epithet, and bespoke Boss Battle Trait, and issue an Extremis Bounty Warrant!`;
+
   const sector = input.sector || 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)';
   const unit = (input.unit || '').trim() || '[Unspecified Hostile Entity]';
   const feat = input.feat || 'Slain a Player Warlord / Character in combat';
   const notes = (input.notes || '').trim() || 'Survived engagement and demonstrated anomalous lethality.';
 
   return [
-    `+++ ORDO MALLEUS // NEW NEMESIS INDUCTION DOSSIER +++`,
-    `• FILING COMMANDER: ${commanderLabel}`,
+    headerBanner,
+    `• FILING COMMANDER: ${cmdr}`,
     `• THEATRE & MODE: ${sector}`,
     `• HOSTILE DATASHEET / FACTION: ${unit}`,
     `• TRIGGERING FEAT: ${feat}`,
     `• EYE-WITNESS COMBAT LOG: "${notes}"`,
     `------------------------------------------------`,
-    `REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (AGENT.md) and emit a CRT Vox-Dispatch christening its permanent Name, Title, Lore, and Boss Battle Trait!`
+    footerRequest
   ].join('\n');
 }
 
@@ -695,13 +707,24 @@ function buildNemesisDossierString() {
 }
 
 function updateNemesisPreview() {
-  const box = document.getElementById('nemDossierPreview');
-  if (box) box.textContent = buildNemesisDossierString();
+  const box = document.getElementById('nemDossierPreview') || document.getElementById('nemesisDossierPreviewBox');
+  const chan = document.getElementById('nemReportChannel')?.value || 'alpha';
+  if (box) {
+    box.textContent = buildNemesisDossierString();
+    if (box.classList && typeof box.classList.toggle === 'function') {
+      box.classList.toggle('vox-preview-beta', chan === 'beta');
+      box.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    }
+  }
   saveRosterPageState();
 }
 
+function updateNemesisDossierPreview() {
+  updateNemesisPreview();
+}
+
 function transmitNemesisDossier() {
-  const chan = document.getElementById('nemReportChannel').value || 'alpha';
+  const chan = document.getElementById('nemReportChannel')?.value || 'alpha';
   const payload = buildNemesisDossierString();
   if (window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox(chan, payload);
@@ -1190,6 +1213,8 @@ if (typeof window !== 'undefined') {
   window.switchRosterTab = switchRosterTab;
   window.buildNemesisDossierString = buildNemesisDossierString;
   window.updateNemesisPreview = updateNemesisPreview;
+  window.updateNemesisDossierPreview = updateNemesisDossierPreview;
+  window.compileNemesisDossier = compileNemesisDossier;
   window.transmitNemesisDossier = transmitNemesisDossier;
   window.getStoredPoolRoot = getStoredPoolRoot;
   window.getFactionPoolFromStore = getFactionPoolFromStore;
