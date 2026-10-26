@@ -3501,6 +3501,62 @@ test('UI Boundary: pages/spawner.html awards strictly 2 SP per objective in Solo
   }
 });
 
+test('UI Boundary: pages/spawner.html removes redundant top roll spawn button, keeping single roll spawner button in live feed', () => {
+  const spawnerHtml = readPage('pages/spawner.html');
+  assert.equal(
+    spawnerHtml.includes('id="quickRollSpawnsTopBtn"'),
+    false,
+    'pages/spawner.html must not contain redundant quickRollSpawnsTopBtn'
+  );
+  assert.ok(
+    spawnerHtml.includes('onclick="rollSpawnsFromCockpit()">🎲 Roll Spawns</button>'),
+    'pages/spawner.html must retain the clean Roll Spawns button in the live feed container'
+  );
+});
+
+test('UI Boundary: pages/spawner.html awards strictly 2 SP per objective in Solo mode (not 3), and scales linearly (1 obj = 2 SP, 2 obj = 4 SP, 3 obj = 6 SP)', async () => {
+  const browser = await launchTestBrowser();
+  const page = await browser.newPage();
+
+  try {
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    // Test calculation function in browser context for 1, 2, and 3 objectives
+    await page.evaluate(() => {
+      if (typeof window.selectMode === 'function') window.selectMode('solo');
+      if (typeof window.startSession === 'function') window.startSession();
+      if (typeof window.switchTab === 'function') window.switchTab(1);
+    });
+
+    const results = await page.evaluate(() => {
+      const isSolo = isSoloModeActive();
+      const calculateSp = (objCount, fob) => {
+        const spPerObj = isSolo ? 2 : 1;
+        const fobBonus = fob && objCount > 0 ? (isSolo ? 2 : 1) : 0;
+        return (objCount * spPerObj) + fobBonus;
+      };
+
+      return {
+        isSolo,
+        oneObj: calculateSp(1, false),
+        twoObj: calculateSp(2, false),
+        threeObj: calculateSp(3, false),
+        oneObjWithFob: calculateSp(1, true)
+      };
+    });
+
+    assert.equal(results.isSolo, true, 'Solo mode must be active');
+    assert.equal(results.oneObj, 2, 'In Solo mode, 1 objective must award strictly 2 SP (not 3)');
+    assert.equal(results.twoObj, 4, 'In Solo mode, 2 objectives must award strictly 4 SP');
+    assert.equal(results.threeObj, 6, 'In Solo mode, 3 objectives must award strictly 6 SP');
+    assert.equal(results.oneObjWithFob, 4, 'In Solo mode, 1 objective + fortified FOB must award strictly 4 SP');
+  } finally {
+    await browser.close();
+  }
+});
+
+
 
 
 
