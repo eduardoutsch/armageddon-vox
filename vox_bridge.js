@@ -662,7 +662,7 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
   };
 
   try {
-    let currentHordePool = {};
+    let currentHordePool = null;
     let currentNemesisStatus = {};
 
     const getRes = await fetchFn(`${supabaseUrl}/rest/v1/rpc/get_shared_spawn_pools`, {
@@ -673,7 +673,9 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
     if (getRes && getRes.ok) {
       const cur = await getRes.json();
       if (cur) {
-        currentHordePool = cur.horde_pool || {};
+        currentHordePool = (cur.horde_pool && typeof cur.horde_pool === 'object' && Object.keys(cur.horde_pool).length > 0)
+          ? cur.horde_pool
+          : null;
         currentNemesisStatus = cur.nemesis_status || {};
       }
     }

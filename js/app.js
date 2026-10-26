@@ -1236,7 +1236,7 @@ async function pushLiveSpawnerStateToCloud() {
         'Authorization': `Bearer ${supabaseKey}`
       },
       body: JSON.stringify({
-        p_horde_pool: currentHordePool,
+        p_horde_pool: null,
         p_nemesis_status: {
           ...currentNemesisStatus,
           spawner_rooms: spawnerRooms
@@ -1587,8 +1587,24 @@ if (typeof window !== 'undefined') {
       });
       if (!res || !res.ok) return;
       const data = await res.json();
-      if (data && data.ok && data.horde_pool && Object.keys(data.horde_pool).length > 0) {
-        localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(data.horde_pool));
+      if (data && data.ok && data.horde_pool && typeof data.horde_pool === 'object' && Object.keys(data.horde_pool).length > 0) {
+        if (data.horde_pool.byFaction) {
+          const localRaw = localStorage.getItem('foa_custom_shelf_pool_v1');
+          let localPool = {};
+          try { localPool = localRaw ? JSON.parse(localRaw) : {}; } catch (e) {}
+          const mergedByFaction = {
+            ...(localPool.byFaction || {}),
+            ...data.horde_pool.byFaction
+          };
+          const mergedPool = {
+            ...localPool,
+            ...data.horde_pool,
+            byFaction: mergedByFaction
+          };
+          localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(mergedPool));
+        } else {
+          localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(data.horde_pool));
+        }
         renderLiveSpawnerBracketTable();
       }
     } catch (e) {}

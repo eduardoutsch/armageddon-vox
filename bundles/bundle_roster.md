@@ -809,7 +809,7 @@ function onFactionPickerChange() {
   saveRosterPageState();
 }
 
-function saveShelfBarracks() {
+async function saveShelfBarracks() {
   if (window.VoxAudio && typeof window.VoxAudio.playCloudSyncChime === 'function') {
     window.VoxAudio.playCloudSyncChime();
   }
@@ -836,15 +836,28 @@ function saveShelfBarracks() {
     localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(poolObj));
   } catch (e) {}
 
-  const notice = document.getElementById('shelfSaveNotice');
-  if (notice) {
-    notice.textContent = '✓ Synced with Supabase Cloud & Mode 1 Spawner!';
-    notice.classList.remove('hidden');
-    setTimeout(() => notice.classList.add('hidden'), 3000);
-  }
   renderFactionBracketTable();
   saveRosterPageState();
-  syncPoolsToSupabaseCloud(poolObj);
+
+  const notice = document.getElementById('shelfSaveNotice');
+  if (notice) {
+    notice.textContent = '⏳ Syncing with Supabase Cloud...';
+    if (notice.style) notice.style.color = 'var(--gold)';
+    notice.classList.remove('hidden');
+  }
+
+  const ok = await syncPoolsToSupabaseCloud(poolObj);
+  if (notice) {
+    if (ok) {
+      notice.textContent = '✓ Synced with Supabase Cloud & Mode 1 Spawner!';
+      if (notice.style) notice.style.color = 'var(--green)';
+    } else {
+      notice.textContent = '⚠️ Saved locally, but Cloud Sync failed (Check connection)!';
+      if (notice.style) notice.style.color = 'var(--red)';
+    }
+    setTimeout(() => notice.classList.add('hidden'), 3500);
+  }
+  return ok;
 }
 
 async function syncPoolsToSupabaseCloud(poolObj) {
@@ -893,8 +906,22 @@ async function pullSharedPoolsFromCloud(isManual = false) {
 
     const facName = document.getElementById('bracketFactionPicker')?.value || 'Space Marines';
 
-    if (data.horde_pool && Object.keys(data.horde_pool).length > 0) {
-      localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(data.horde_pool));
+    if (data.horde_pool && typeof data.horde_pool === 'object' && Object.keys(data.horde_pool).length > 0) {
+      if (data.horde_pool.byFaction) {
+        const localRoot = getStoredPoolRoot();
+        const mergedByFaction = {
+          ...(localRoot.byFaction || {}),
+          ...data.horde_pool.byFaction
+        };
+        const mergedPool = {
+          ...localRoot,
+          ...data.horde_pool,
+          byFaction: mergedByFaction
+        };
+        localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(mergedPool));
+      } else {
+        localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(data.horde_pool));
+      }
       loadFactionInputs(facName);
     }
 
@@ -1180,6 +1207,7 @@ function saveRosterPageState() {
   try {
     const state = {
       activeRosterTab,
+      bracketFactionPicker: document.getElementById('bracketFactionPicker')?.value || 'Space Marines',
       nemStatus1: document.getElementById('nemStatus1')?.value || 'roaming',
       nemStatus2: document.getElementById('nemStatus2')?.value || 'roaming',
       nemStatus3: document.getElementById('nemStatus3')?.value || 'roaming',
@@ -1199,10 +1227,15 @@ function initRosterPage() {
     picker.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.group})</option>`).join('');
   }
 
+  let savedFaction = 'Space Marines';
   try {
     const raw = localStorage.getItem(ROSTER_STATE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
+      if (s.bracketFactionPicker && picker) {
+        picker.value = s.bracketFactionPicker;
+        savedFaction = s.bracketFactionPicker;
+      }
       if (s.nemStatus1 && document.getElementById('nemStatus1')) document.getElementById('nemStatus1').value = s.nemStatus1;
       if (s.nemStatus2 && document.getElementById('nemStatus2')) document.getElementById('nemStatus2').value = s.nemStatus2;
       if (s.nemStatus3 && document.getElementById('nemStatus3')) document.getElementById('nemStatus3').value = s.nemStatus3;
@@ -1215,7 +1248,8 @@ function initRosterPage() {
     }
   } catch (e) {}
 
-  loadFactionInputs(picker?.value || 'Space Marines');
+  const activeFac = (picker && picker.value) ? picker.value : savedFaction;
+  loadFactionInputs(activeFac);
   updateNemesisPreview();
   renderFactionBracketTable();
   pullSharedPoolsFromCloud();
