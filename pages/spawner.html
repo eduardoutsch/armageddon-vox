@@ -34,6 +34,147 @@
       text-transform: uppercase;
       letter-spacing: 0.6px;
     }
+
+    /* Remastered Guided Match Flow Stepper & Cockpit */
+    .phase-stepper {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 720px) {
+      .phase-stepper {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    .phase-step-btn {
+      background: #0b0d13;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      color: var(--muted);
+    }
+    .phase-step-btn:hover {
+      border-color: var(--gold);
+      color: var(--text);
+    }
+    .phase-step-btn.active-step {
+      background: rgba(255, 71, 87, 0.14);
+      border-color: var(--red);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 71, 87, 0.22);
+    }
+    .phase-step-num {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--gold);
+    }
+    .phase-step-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-top: 2px;
+      display: block;
+    }
+
+    .flow-guide-banner {
+      background: linear-gradient(135deg, rgba(16, 20, 30, 0.96), rgba(26, 15, 23, 0.92));
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .flow-guide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .solo-sp-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      background: rgba(59, 130, 246, 0.18);
+      border: 1px solid var(--blue);
+      color: #93c5fd;
+    }
+    .sp-quick-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      background: rgba(11, 13, 19, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+    }
+    .misery-card-official {
+      border-left: 4px solid var(--red);
+      background: linear-gradient(145deg, rgba(28, 13, 18, 0.95), rgba(15, 17, 25, 0.95));
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 71, 87, 0.35);
+      border-left-width: 4px;
+    }
+    .misery-meta-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .misery-card-num {
+      font-family: var(--font-mono, monospace);
+      font-size: 0.74rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255, 71, 87, 0.2);
+      color: #fda4af;
+      border: 1px solid rgba(255, 71, 87, 0.4);
+    }
+    .misery-timing-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--gold);
+      border: 1px solid rgba(234, 179, 8, 0.35);
+    }
+    .misery-verbatim-body {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: #f1f5f9;
+      margin: 6px 0 8px 0;
+    }
+    .misery-tactical-note {
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      background: rgba(0, 0, 0, 0.35);
+      border-left: 2px solid var(--gold);
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin-top: 6px;
+    }
   </style>
 </head>
 <body>
@@ -116,12 +257,12 @@
       <div id="modeCardCoop" class="choice-card selected-red" onclick="selectMode('coop')">
         <span class="choice-icon">⚔️</span>
         <div class="choice-title">Co-op Strike Team</div>
-        <div class="choice-sub">2 Players • Max 8 SP/Rnd • Full 34 Secret Deck</div>
+        <div class="choice-sub">2 Players • 1x SP Rate (Max 8 SP/Rnd) • Full 34 Secret Deck</div>
       </div>
       <div id="modeCardSolo" class="choice-card" onclick="selectMode('solo')">
         <span class="choice-icon">🛡️</span>
-        <div class="choice-title">Solo Last Stand</div>
-        <div class="choice-sub">1 Player • Max 16 SP/Rnd • Blocks Multiplayer Secrets</div>
+        <div class="choice-title">Solo Last Stand (2x SP)</div>
+        <div class="choice-sub">1 Player • 2x All SP Gains (Max 16 SP/Rnd) • Solo Secret Deck</div>
       </div>
     </div>
 
@@ -143,9 +284,9 @@
     </div>
 
     <div class="rules-strip">
-      <span class="rule-tag"><strong>Difficulty:</strong> Hard Mode</span>
+      <span class="rule-tag"><strong>Difficulty:</strong> Hard Mode v0.9</span>
       <span class="rule-tag"><strong>Spawn Zones:</strong> n + 1 (3 @ 1k / 5 @ 2k)</span>
-      <span class="rule-tag"><strong>Duration:</strong> 6 Rounds (Final Stand)</span>
+      <span class="rule-tag"><strong>Solo Rule 3.7:</strong> 2x SP Gains (Cap 16/Rnd)</span>
     </div>
 
     <button class="launch-btn" onclick="startSession()">
@@ -162,6 +303,7 @@
         <div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
           <span class="hud-label" id="hudSessionInfo" style="white-space:nowrap; margin-bottom:0;">HADES-1 • P1</span>
           <span id="spawnerSyncBadge" class="cloud-sync-pill" style="cursor:pointer;" onclick="if(window.manualSyncSpawnerNow) manualSyncSpawnerNow()" title="Live synced across all players with this Room Code. Tap to refresh.">☁️ Room Live</span>
+          <span id="soloDoubleSpHudBadge" class="solo-sp-pill hidden" title="Rule 3.7: In a single-player game, double all SP gains!">⚡ SOLO 2x SP ACTIVE</span>
         </div>
         <span class="hud-num" id="hudRound" style="color:var(--red); text-align:left; display:block;">Pre-Game</span>
       </div>
@@ -171,7 +313,7 @@
         <div class="hud-val-row">
           <button class="mini-btn" onclick="loseSP(1)" title="Reduce 1 SP">−</button>
           <span class="hud-num" id="hudSp" style="color:var(--blue);">0</span>
-          <button class="mini-btn" onclick="gainSP(1)" title="Gain 1 SP">+</button>
+          <button class="mini-btn" id="hudGainSpBtn" onclick="gainSP(1)" title="Gain SP (+1 in Co-op / +2 in Solo)">+</button>
         </div>
       </div>
 
@@ -199,51 +341,162 @@
       <div id="activeFactionBannerDesc" style="color:#e2e8f0;"></div>
     </div>
 
-    <!-- 4 NAVIGATION TABS -->
+    <!-- 4 NAVIGATION TABS (SPAWNER CAN BE DOCKED IN TAB 1 OR OPENED FULLSCREEN IN TAB 4) -->
     <div class="nav-pills">
-      <button id="tabBtn1" class="active" onclick="switchTab(1)">1. Battle Round</button>
-      <button id="tabBtn2" onclick="switchTab(2)">2. Secret Obj</button>
-      <button id="tabBtn3" onclick="switchTab(3)">3. Resupply</button>
-      <button id="tabBtn4" onclick="switchTab(4)">4. Spawner</button>
+      <button id="tabBtn1" class="active" onclick="switchTab(1)">1. Match Command &amp; Flow</button>
+      <button id="tabBtn2" onclick="switchTab(2)">2. Secret Directive</button>
+      <button id="tabBtn3" onclick="switchTab(3)">3. Resupply Shop</button>
+      <button id="tabBtn4" onclick="switchTab(4)">4. Spawn Matrix &amp; Pools</button>
     </div>
 
-    <!-- TAB 1: BATTLE ROUND -->
+    <!-- TAB 1: REMASTERED UNIFIED BATTLE ROUND COCKPIT -->
     <div id="tab1">
-      <div class="round-banner">
-        <h2 id="roundTitle">Deployment &amp; Setup</h2>
-        <p id="spawnModDisplay">Open Tab 4 (Spawner) to roll Round 1 Horde Spawns!</p>
-        <button class="btn-red" id="nextRoundBtn" onclick="advanceBattleRound()" style="width:100%; max-width:340px;">
-          Begin Battle Round 1
+
+      <!-- ROUND CONTROL & ONE-CLICK FLOW BANNER -->
+      <div class="round-banner" style="padding:18px;">
+        <div style="display:flex; justify-content:center; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+          <span class="badge red" id="roundHardModeBadge">Hard Mode v0.9 • 6 Rounds</span>
+          <span class="badge gold" id="roundRuleSummaryBadge">Pre-Game Deployment: Roll Round 1 Spawns First!</span>
+        </div>
+        <h2 id="roundTitle" style="margin-top:4px;">Deployment &amp; Setup</h2>
+        <p id="spawnModDisplay" style="margin-bottom:12px;">Step 1: Roll your initial Round 1 Horde Spawns below, lock your Secret Objective, then click Begin Battle Round 1!</p>
+
+        <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; width:100%; max-width:680px; margin:0 auto;">
+          <button class="btn-green" id="quickRollSpawnsTopBtn" onclick="rollSpawnsFromCockpit()" style="flex:1; min-width:220px; padding:12px; font-weight:800;">
+            🎲 Roll Round <span id="cockpitSpawnBtnRound">1</span> Horde Spawns
+          </button>
+          <button class="btn-red" id="nextRoundBtn" onclick="advanceBattleRound()" style="flex:1; min-width:220px; padding:12px; font-weight:800;">
+            Begin Battle Round 1 →
+          </button>
+        </div>
+
+        <div style="margin-top:10px; display:flex; justify-content:center; gap:14px; flex-wrap:wrap; font-size:0.8rem; color:var(--muted);">
+          <label style="cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+            <input type="checkbox" id="autoRollSpawnsOnAdvanceCheck" checked style="accent-color:var(--gold);">
+            Auto-roll Horde Spawns when advancing Rounds 2–5
+          </label>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE 5-STEP BATTLE ROUND PHASE STEPPER -->
+      <div class="phase-stepper" id="roundPhaseStepper">
+        <button type="button" class="phase-step-btn active-step" data-step="1" onclick="setGuidedPhaseStep(1)">
+          <span class="phase-step-num">Phase 1 • Start of Round</span>
+          <span class="phase-step-title">1. Misery, Secondary &amp; Spawns</span>
+        </button>
+        <button type="button" class="phase-step-btn" data-step="2" onclick="setGuidedPhaseStep(2)">
+          <span class="phase-step-num">Phase 2 • Horde Turn</span>
+          <span class="phase-step-title">2. Horde Move, Shoot &amp; Fight</span>
+        </button>
+        <button type="button" class="phase-step-btn" data-step="3" onclick="setGuidedPhaseStep(3)">
+          <span class="phase-step-num">Phase 3 • Player Command</span>
+          <span class="phase-step-title">3. Objectives SP &amp; Resupply</span>
+        </button>
+        <button type="button" class="phase-step-btn" data-step="4" onclick="setGuidedPhaseStep(4)">
+          <span class="phase-step-num">Phase 4 • Player Turn</span>
+          <span class="phase-step-title">4. Actions, Combat &amp; Kills</span>
+        </button>
+        <button type="button" class="phase-step-btn" data-step="5" onclick="setGuidedPhaseStep(5)">
+          <span class="phase-step-num">Phase 5 • End of Round</span>
+          <span class="phase-step-title">5. Resolve Secondary Mission</span>
         </button>
       </div>
 
-      <div class="section-header">
-        <h3>Active Secondary Mission</h3>
-        <span id="secDeckCount" class="hud-sub"></span>
+      <!-- CONTEXTUAL PHASE CHECKLIST & SOLO 2X SP CALCULATOR -->
+      <div class="flow-guide-banner" id="guidedPhaseBanner">
+        <div class="flow-guide-header">
+          <div>
+            <span class="badge gold" id="guidedPhaseBadge">STEP 1 OF 5 • START OF ROUND</span>
+            <h4 id="guidedPhaseHeading" style="margin:4px 0 0 0; font-size:1rem;">Reveal Misery, Secondary Mission &amp; Spawn the Horde</h4>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn-ghost btn-sm" onclick="stepGuidedPhase(-1)">← Prev Step</button>
+            <button type="button" class="btn-gold btn-sm" onclick="stepGuidedPhase(1)">Next Step →</button>
+          </div>
+        </div>
+        <div id="guidedPhaseInstructions" style="font-size:0.86rem; color:#cbd5e1; line-height:1.5;">
+          During Deployment (Rule 2.9), roll your Round 1 Horde Spawns first. Then click <strong>Begin Battle Round 1</strong> above to draw Round 1's Misery Card (Hard Mode: 1 Misery, +0 Spawn Mod) and Secondary Mission!
+        </div>
       </div>
-      <div id="activeSecondariesBox"></div>
 
-      <div class="section-header">
-        <h3>Active Misery Cards</h3>
-        <span id="misDeckCount" class="hud-sub"></span>
+      <!-- QUICK SUPPLY POINT (SP) INCOME & KILL TRACKER BAR -->
+      <div class="sp-quick-bar">
+        <div style="display:flex; align-items:center; gap:6px; margin-right:auto;">
+          <span style="font-size:0.78rem; font-weight:800; text-transform:uppercase; color:var(--gold);">⚡ Quick SP Income:</span>
+          <span id="spMultiplierStatusText" style="font-size:0.76rem; color:var(--muted);">Co-op (1x Base SP)</span>
+        </div>
+
+        <button type="button" class="btn-blue btn-sm" onclick="awardHordeKillSP(1)" id="btnQuickKillSp" title="Rule 3.7: Gain SP for destroying a Horde unit (Doubled in Solo Mode)">
+          💀 +1 Horde Unit Destroyed (<span class="sp-unit-val">+1</span> SP)
+        </button>
+
+        <div style="display:inline-flex; align-items:center; gap:4px; background:#141824; padding:4px 8px; border-radius:6px; border:1px solid var(--border);">
+          <span style="font-size:0.75rem; color:var(--text);">Controlled Obj:</span>
+          <input type="number" id="quickObjCountInput" value="2" min="0" max="8" style="width:42px; padding:3px; text-align:center; font-weight:700; background:#0b0d13; color:var(--gold); border:1px solid var(--border); border-radius:4px;">
+          <button type="button" class="btn-gold btn-sm" onclick="awardCommandPhaseObjectiveSP()" title="Rule 3.7: Gain 1 SP per controlled objective (+1 if FOB fortified). Automatically doubled in Solo Mode!">
+            🚩 Claim Command SP
+          </button>
+        </div>
+
+        <button type="button" class="btn-ghost btn-sm" onclick="switchTab(3)" title="Open Resupply Shop to spend SP">
+          🛒 Open Resupply Shop →
+        </button>
       </div>
-      <div id="activeMiseriesBox"></div>
 
+      <!-- ACTIVE SECONDARY MISSION & ACTIVE MISERY CARDS (SIDE-BY-SIDE ON DESKTOP) -->
+      <div class="grid-2" style="align-items:start; gap:14px; margin-bottom:16px;">
+        <div>
+          <div class="section-header" style="margin-top:0;">
+            <h3>🎯 Active Secondary Mission</h3>
+            <span id="secDeckCount" class="hud-sub"></span>
+          </div>
+          <div id="activeSecondariesBox"></div>
+        </div>
+
+        <div>
+          <div class="section-header" style="margin-top:0;">
+            <h3>☠️ Active Misery Cards (Verbatim v0.9)</h3>
+            <span id="misDeckCount" class="hud-sub"></span>
+          </div>
+          <div id="activeMiseriesBox"></div>
+        </div>
+      </div>
+
+      <!-- DOCKED LIVE SPAWN ZONE RESULTS RIGHT INSIDE TAB 1 FOR ZERO-TAB-SWITCHING -->
+      <div class="card" style="border:1px solid var(--border); background:rgba(11,13,19,0.75); padding:14px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <div>
+            <span class="badge green">Live Synced Spawner Feed</span>
+            <h3 style="margin:4px 0 0 0; font-size:1.02rem;">Current Round Horde Spawn Zones</h3>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-green btn-sm" onclick="rollSpawnsFromCockpit()">🎲 Re-Roll / Roll Spawns</button>
+            <button type="button" class="btn-ghost btn-sm" onclick="switchTab(4)">⚙️ Spawn Modifiers &amp; Brackets (Tab 4)</button>
+          </div>
+        </div>
+        <div id="cockpitSpawnMirrorBox">
+          <p class="card-desc" style="margin:0; opacity:0.75; text-align:center;">No Horde Spawns rolled for this round yet. Click <strong>"🎲 Roll Horde Spawns"</strong> above!</p>
+        </div>
+      </div>
+
+      <!-- MANUAL CARD DRAWS & PUNISHMENT TRIGGERS -->
       <details>
-        <summary>Manual Card Draws &amp; Punishment Triggers</summary>
+        <summary>Manual Card Draws, Specific Misery Search &amp; Punishment Triggers</summary>
         <div class="drawer-body">
           <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; justify-content:center;">
             <button class="btn-gold btn-sm" onclick="drawSecondary(false)">+1 Secondary (Tempt Fate)</button>
             <button class="btn-ghost btn-sm" onclick="replaceSecondary()">Replace Secondary (Advanced Tactics)</button>
             <button class="btn-red btn-sm" onclick="drawMisery(1)">+1 Misery Card</button>
-            <button class="btn-red btn-sm" onclick="drawMisery(2)">+2 Misery Cards</button>
+            <button class="btn-red btn-sm" onclick="drawMisery(2)">+2 Misery Cards (Lamentable / Solo)</button>
           </div>
-          <div style="display:flex; gap:8px; align-items:center; justify-content:center; max-width:480px; margin:0 auto;">
+          <div style="display:flex; gap:8px; align-items:center; justify-content:center; max-width:520px; margin:0 auto;">
             <select id="specificMiserySelect" style="flex:1; padding:8px;">
-              <option value="6">#6 Stray Orbital Bombardment</option>
-              <option value="13">#13 Pincer Maneuver</option>
-              <option value="22">#22 Comms Jammed</option>
-              <option value="31">#31 Debris Storm</option>
+              <option value="6">#6 Stray Orbital Bombardment (Paint Targets Failed)</option>
+              <option value="13">#13 Pincer Maneuver (Tactical Withdrawal Failed)</option>
+              <option value="14">#14 No Hard Feelings (0 SP / Solo +2 Misery)</option>
+              <option value="20">#20 Lamentable Luck (Reveal +2 Misery)</option>
+              <option value="22">#22 Comms Jammed (Secure the LZ Failed)</option>
+              <option value="31">#31 Debris Storm (Destroy the Evidence)</option>
             </select>
             <button class="btn-ghost btn-sm" onclick="triggerSpecificMisery()">Trigger Specific</button>
           </div>
@@ -291,11 +544,11 @@
 
     <!-- TAB 3: RESUPPLY SHOP -->
     <div id="tab3" class="hidden">
-      <details style="margin-top:0; margin-bottom:16px;">
+      <details open style="margin-top:0; margin-bottom:16px;">
         <summary>Active Fortifications &amp; Field Markers</summary>
         <div class="drawer-body">
           <div class="fort-grid">
-            <label class="fort-item"><span>FOB (+1 SP)</span><input type="checkbox"></label>
+            <label class="fort-item"><span>FOB (+1 SP / +2 Solo)</span><input type="checkbox" id="fobFortCheck"></label>
             <label class="fort-item"><span>Warp-Relic (3 MW)</span><input type="checkbox"></label>
             <label class="fort-item"><span>War Trench (+1S/AP)</span><input type="checkbox"></label>
             <label class="fort-item"><span>Field Hospital (3W)</span><input type="checkbox"></label>
@@ -327,10 +580,10 @@
         </div>
       </details>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span class="hud-label">Filter Resupply Options</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <span class="hud-label">Filter Resupply Options (Rule 3.8: Command Phase Resupply Step)</span>
         <label style="font-size:0.8rem; color:var(--red); cursor:pointer;">
-          <input type="checkbox" id="doubleCostToggle" onchange="renderResupplyTable()"> Seller's Market (2x Cost)
+          <input type="checkbox" id="doubleCostToggle" onchange="renderResupplyTable()"> Seller's Market (#24 • 2x Cost)
         </label>
       </div>
 
@@ -417,5 +670,600 @@
   <script src="../js/spawner.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/vox-audio.js"></script>
+
+  <!-- REMASTERED HORDE RULES v0.9 PATCH: SOLO 2x SP, VERBATIM MISERY ASSETS & GUIDED FLOW -->
+  <script>
+  (function() {
+    /**
+     * Authoritative 36-Card Misery Deck Asset Database (11th Ed Horde Mode v0.9 PDFs)
+     * Includes exact card text, card number (X/36), timing tag, and tactical reminder.
+     */
+    const MISERY_CARD_OFFICIAL_OVERRIDES = {
+      1: {
+        id: 1, num: "1/36", name: "Unnatural Stamina",
+        timing: "Persistent • Horde Movement, Shooting & Charge",
+        desc: "Horde units are eligible to shoot and declare a charge in a turn in which they made an advance move.",
+        note: "Tactical Reminder: Every Horde unit that Advances this round can still Shoot AND Charge!"
+      },
+      2: {
+        id: 2, num: "2/36", name: "Grudge Match",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Horde unit attacks have +1 to hit rolls and +1 to wound rolls.",
+        note: "Tactical Reminder: Applies to all ranged and melee attacks made by Horde units this round."
+      },
+      3: {
+        id: 3, num: "3/36", name: "Rip and Tear",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Horde unit attacks have +1 AP.",
+        note: "Tactical Reminder: Improves AP by 1 on all Horde ranged and melee weapons this round."
+      },
+      4: {
+        id: 4, num: "4/36", name: "Blistering Speed",
+        timing: "Persistent • Horde Movement & Charge Phases",
+        desc: "Do not roll advance or charge rolls for the Horde. The Horde's advance rolls are automatically 6 and charge rolls are automatically 12.",
+        note: "Tactical Reminder: Horde units automatically Advance +6\" and auto-roll 12\" on Charges!"
+      },
+      5: {
+        id: 5, num: "5/36", name: "Untouchable",
+        timing: "Persistent • All Saves Made by Horde Models",
+        desc: "Horde models have a 4+ invulnerable save. Horde models that already had a 4+ invulnerable save instead improve their invulnerable save by 1.",
+        note: "Tactical Reminder: Models with a 4+ Invuln become 3+ Invuln; all other Horde models gain 4+ Invuln."
+      },
+      6: {
+        id: 6, num: "6/36", name: "Stray Orbital Bombardment",
+        timing: "Immediate Resolution • Start of Battle Round",
+        desc: "Split the battlefield evenly into a 2x3 grid. Assign each area a different number from 1 to 6. Roll one D6. Each unit within the rolled area suffers 2D3 mortal wounds.",
+        note: "Affects ALL units (both Player and Horde) inside the rolled 2x3 sector!",
+        actionType: "ORBITAL_GRID_ROLL"
+      },
+      7: {
+        id: 7, num: "7/36", name: "Unlucky Night",
+        timing: "Persistent • Spawning the Horde Step",
+        desc: "When making Spawn Rolls for the Horde, roll 3D6 and discard the lowest.",
+        note: "Tactical Reminder: All Horde Spawn Zone rolls this round roll 3D6 drop lowest!"
+      },
+      8: {
+        id: 8, num: "8/36", name: "Death Denied",
+        timing: "Immediate Resolution • Start of Battle Round",
+        desc: "Each Horde unit heals 13 wounds.",
+        note: "Tactical Reminder: Heal up to 13 lost wounds on every damaged Horde unit currently on the battlefield."
+      },
+      9: {
+        id: 9, num: "9/36", name: "Terrifying Shockwave",
+        timing: "Persistent • All Player Battle-Shock Tests",
+        desc: "All Player battle-shock rolls automatically fail.",
+        note: "Tactical Reminder: Any Player unit required to take a Battle-shock test this round automatically fails it!"
+      },
+      10: {
+        id: 10, num: "10/36", name: "Planetquake",
+        timing: "Immediate Resolution • Terrain Area Strike",
+        desc: "Select one terrain area wholly outside of the Attacker's deployment zone at random. Air Strike (see 7.1) activates, targeting that terrain area.",
+        note: "Air Strike (7.1): Roll 1D6 for each unit within the terrain feature; on a 2–5 suffer D3 MW, on a 6 suffer D6 MW."
+      },
+      11: {
+        id: 11, num: "11/36", name: "Errant Explosion",
+        timing: "Immediate Resolution • No Man's Land Objective",
+        desc: "Randomly select one objective in No Man's Land. Destroy that objective.",
+        note: "Tactical Reminder: Remove the randomly selected No Man's Land objective marker from the battlefield permanently."
+      },
+      12: {
+        id: 12, num: "12/36", name: "Nowhere is Safe",
+        timing: "Immediate Resolution • Defender Deployment Zone",
+        desc: "Destroy all objectives in the Defender's deployment zone.",
+        note: "Tactical Reminder: Remove all objective markers located inside the Player (Defender) deployment zone."
+      },
+      13: {
+        id: 13, num: "13/36", name: "Pincer Maneuver",
+        timing: "Immediate + Horde Movement Phase Deep Strike",
+        desc: "Spawn an extra Horde unit into the Horde's strategic reserves, following the normal sequence. That unit gains Deep Strike and makes an ingress move during the Horde's next Movement phase, except it may be set up anywhere that is more than 3\" from all Player units. It deploys within the Players' deployment zone if able. If unable, it deploys within No Man's Land if able.",
+        note: "Tactical Reminder: Roll 2D6 to spawn 1 extra Horde unit into Reserves; it drops >3\" away from Player units (prioritizing Player DZ)!"
+      },
+      14: {
+        id: 14, num: "14/36", name: "No Hard Feelings",
+        timing: "Immediate Resolution • Supply Points / Solo Escalation",
+        desc: "Randomly select a player. Set their SP to 0. If playing Single Player, instead reveal 2 more Misery Cards.",
+        note: "In Co-op: 1 random player's SP becomes 0. In Solo Mode: Your SP is untouched, but you MUST reveal +2 Misery Cards!",
+        actionType: "NO_HARD_FEELINGS"
+      },
+      15: {
+        id: 15, num: "15/36", name: "Bad Investment",
+        timing: "Immediate Resolution • All Players Lose 5 SP",
+        desc: "Remove 5SP from all players. (The minimum SP is 0.)",
+        note: "Click the quick button below to deduct 5 SP (down to a minimum of 0 SP).",
+        actionType: "LOSE_5_SP"
+      },
+      16: {
+        id: 16, num: "16/36", name: "Fair and Balanced",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Horde unit attacks have [DEVASTATING WOUNDS].",
+        note: "Tactical Reminder: Unmodified Wound rolls of 6 by Horde models inflict Mortal Wounds bypassing normal saves!"
+      },
+      17: {
+        id: 17, num: "17/36", name: "Unfettered Fury",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Horde unit attacks have [SUSTAINED HITS 1] and [LETHAL HITS 1].",
+        note: "Tactical Reminder: Unmodified Hit rolls of 6 by Horde models score 1 extra hit AND automatically wound!"
+      },
+      18: {
+        id: 18, num: "18/36", name: "A Worthless Sacrifice",
+        timing: "Immediate Resolution • Secret Player Vote",
+        desc: "Players discuss and then secretly vote for a Player unit to be destroyed by the Horde. If the result of the vote is not unanimous, randomly select a unit to be destroyed from among all of the units that received at least one vote.",
+        note: "Tactical Reminder: One Player unit on the battlefield is immediately destroyed!"
+      },
+      19: {
+        id: 19, num: "19/36", name: "Fog of War",
+        timing: "Persistent • Player Shooting Phase",
+        desc: "Horde models have Stealth and are Hidden.",
+        note: "Tactical Reminder: Ranged attacks against Horde units suffer -1 to Hit (Stealth) and cannot target them from >18\" away (Hidden)!"
+      },
+      20: {
+        id: 20, num: "20/36", name: "Lamentable Luck",
+        timing: "Immediate Chain Draw • Reveal +2 Misery Cards",
+        desc: "Reveal 2 more Misery cards.",
+        note: "Click the button below to immediately reveal 2 additional Misery cards from the deck.",
+        actionType: "DRAW_2_MISERY"
+      },
+      21: {
+        id: 21, num: "21/36", name: "Bunkers Busted",
+        timing: "Immediate + Persistent Resupply Lockout",
+        desc: "Remove all fortified markers from all objectives. Players cannot make Fortify purchases.",
+        note: "Lockout: Strip all Fortified markers (FOB, Trench, Hospital, Jammer, etc.) and block [Fortify] shop purchases this round!"
+      },
+      22: {
+        id: 22, num: "22/36", name: "Comms Jammed",
+        timing: "Persistent • Command Point & Resupply Lockout",
+        desc: "Players cannot use stratagems or spend Command Points. Players cannot make Supply, Spawn, or Strike purchases.",
+        note: "Lockout: No Stratagems/CP spending allowed, and [Supply], [Spawn], and [Strike] shop purchases are blocked this round!"
+      },
+      23: {
+        id: 23, num: "23/36", name: "The Mind Killer",
+        timing: "Immediate Battle-Shock + Tactics Lockout",
+        desc: "Player units must each make a battle-shock roll, then remove all Enhancements and Upgrades from battle-shocked units. Players cannot make Tactics purchases.",
+        note: "Lockout: Test Battle-shock for every Player unit now (strip Enhancements/Upgrades if failed). Blocks [Tactics] purchases!"
+      },
+      24: {
+        id: 24, num: "24/36", name: "Seller's Market",
+        timing: "Persistent • Resupply Step (2x SP Cost)",
+        desc: "The SP cost of all purchases is doubled.",
+        note: "Automatically enables the 2x Seller's Market toggle in the Resupply Shop for this round.",
+        actionType: "SELLERS_MARKET"
+      },
+      25: {
+        id: 25, num: "25/36", name: "Hotter Shots",
+        timing: "Persistent • Horde Shooting Phase",
+        desc: "Horde unit ranged attacks have [MELTA 1].",
+        note: "Tactical Reminder: Horde ranged weapons deal +1 Damage when targeting units within half range."
+      },
+      26: {
+        id: 26, num: "26/36", name: "Sinking Showboats",
+        timing: "Persistent • Horde Shooting Phase",
+        desc: "Horde unit ranged attacks have [PRECISION] and [IGNORE COVER].",
+        note: "Tactical Reminder: Horde ranged attacks ignore Benefit of Cover and can allocate wounds directly to attached Player CHARACTERS!"
+      },
+      27: {
+        id: 27, num: "27/36", name: "Chitinous Growths",
+        timing: "Persistent • Player Shooting & Fight Phases",
+        desc: "Attacks that target Horde units have -1 S and -1 AP.",
+        note: "Tactical Reminder: Subtract 1 Strength and worsen AP by 1 on all Player attacks targeting Horde units."
+      },
+      28: {
+        id: 28, num: "28/36", name: "They Fly Now",
+        timing: "Persistent • Horde Movement & Shooting Phases",
+        desc: "Horde units have the FLY and TOWERING keywords. Ignore all terrain when determining visibility for ranged attacks made by Horde models.",
+        note: "Tactical Reminder: Horde units move over terrain/models (FLY) and have true line-of-sight through all terrain!"
+      },
+      29: {
+        id: 29, num: "29/36", name: "Fate's Fetters",
+        timing: "Immediate Resolution + Secondary Lockout",
+        desc: "Remove 4SP from the player with the most SP. Reveal 3 extra Secondary Missions. Ignore the limit on Secondary Missions this battle round. Players cannot make Secondary purchases.",
+        note: "Deduct 4 SP from highest-SP player, draw +3 Secondary Missions now, and block [Secondary] Resupply purchases!",
+        actionType: "FATES_FETTERS"
+      },
+      30: {
+        id: 30, num: "30/36", name: "Aim for the Heads",
+        timing: "Persistent • Shoot/Fight on Death (4+)",
+        desc: "Each time a Horde model is destroyed, roll one D6: on a 4+, do not remove it from play. After the attacking model's unit has finished making its attacks, the destroyed model may fight if it is the Fight phase, or shoot if it is not. The destroyed model is then removed from play.",
+        note: "Tactical Reminder: Roll 1D6 for every slain Horde model—on a 4+, it shoots back (or fights back in melee) before dying!"
+      },
+      31: {
+        id: 31, num: "31/36", name: "Debris Storm",
+        timing: "Persistent • Player Shooting & Fight Phases",
+        desc: "Player units must re-roll unmodified hit rolls of 6.",
+        note: "Tactical Reminder: Any natural 6 to Hit rolled by a Player unit must be re-rolled!"
+      },
+      32: {
+        id: 32, num: "32/36", name: "Glowing Eyes",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Each time a Horde model makes an attack, they may re-roll the hit roll.",
+        note: "Tactical Reminder: Full Hit re-rolls on all Horde ranged and melee attacks this round!"
+      },
+      33: {
+        id: 33, num: "33/36", name: "Danger Close",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Horde unit ranged attacks have [BLAST 1]. Horde unit melee attacks have [CLEAVE 1].",
+        note: "Tactical Reminder: Horde ranged weapons gain [BLAST 1]; Horde melee weapons gain [CLEAVE 1]."
+      },
+      34: {
+        id: 34, num: "34/36", name: "Surging Power",
+        timing: "Persistent • Horde Shooting & Fight Phases",
+        desc: "Horde unit attacks have +1 S and [PSYCHIC].",
+        note: "Tactical Reminder: Add +1 Strength and the [PSYCHIC] keyword to all Horde ranged and melee attacks."
+      },
+      35: {
+        id: 35, num: "35/36", name: "Experimental Ammunition",
+        timing: "Persistent • Player Shooting Phase",
+        desc: "Player unit ranged attacks have +1 S, +1 AP, and [HAZARDOUS].",
+        note: "Tactical Reminder: All Player ranged weapons get +1 Strength and +1 AP, but you MUST roll Hazardous tests after shooting!"
+      },
+      36: {
+        id: 36, num: "36/36", name: "Flash Flood",
+        timing: "Persistent • Player Movement & Charge Phases",
+        desc: "Player units have -2\" M (to a minimum 4\") and subtract 2 from advance and charge rolls. (to a minimum 1).",
+        note: "Tactical Reminder: Player Move reduced by 2\" (min 4\"), and -2 to Player Advance and Charge rolls!"
+      }
+    };
+
+    // Patch global MISERY_DECK / MISERY_CARDS in js/data.js with verbatim rules
+    const deckRef = (typeof MISERY_DECK !== 'undefined') ? MISERY_DECK : (window.MISERY_DECK || window.MISERY_CARDS || []);
+    if (Array.isArray(deckRef)) {
+      deckRef.forEach(card => {
+        const official = MISERY_CARD_OFFICIAL_OVERRIDES[card.id];
+        if (official) {
+          card.name = official.name;
+          card.desc = official.desc;
+          card.effect = official.desc;
+          card.num = official.num;
+          card.timing = official.timing;
+          card.note = official.note;
+          card.actionType = official.actionType || null;
+        }
+      });
+    }
+    window.MISERY_CARD_OFFICIAL_OVERRIDES = MISERY_CARD_OFFICIAL_OVERRIDES;
+
+    /**
+     * Checks whether the current session is in Solo Mode.
+     */
+    function isSoloModeActive() {
+      if (typeof state !== 'undefined' && state && state.mode === 'solo') return true;
+      const soloCard = document.getElementById('modeCardSolo');
+      return !!(soloCard && (soloCard.classList.contains('selected') || soloCard.classList.contains('selected-red')));
+    }
+    window.isSoloModeActive = isSoloModeActive;
+
+    /**
+     * Updates HUD badges and Quick SP buttons to reflect Solo 2x SP Rule (Section 3.7).
+     */
+    function syncSoloSpUiIndicators() {
+      const solo = isSoloModeActive();
+      const pill = document.getElementById('soloDoubleSpHudBadge');
+      if (pill) pill.classList.toggle('hidden', !solo);
+
+      const statusText = document.getElementById('spMultiplierStatusText');
+      if (statusText) {
+        statusText.innerHTML = solo
+          ? '<strong style="color:#60a5fa;">🛡️ Solo Mode (Rule 3.7): All SP Gains Doubled (2x SP • Cap 16/Rnd)</strong>'
+          : '⚔️ Co-op Mode (1x Base SP • Cap 8/Rnd)';
+      }
+
+      const unitSpans = document.querySelectorAll('.sp-unit-val');
+      unitSpans.forEach(el => { el.textContent = solo ? '+2' : '+1'; });
+
+      const hudGainBtn = document.getElementById('hudGainSpBtn');
+      if (hudGainBtn) {
+        hudGainBtn.title = solo
+          ? 'Gain SP (Solo Mode: +2 SP per click, or hold Shift for +1 SP)'
+          : 'Gain 1 SP';
+      }
+    }
+    window.syncSoloSpUiIndicators = syncSoloSpUiIndicators;
+
+    // Wrap gainSP so that in Solo Mode, standard SP gains are automatically doubled per Rule 3.7
+    const origGainSP = window.gainSP;
+    if (typeof origGainSP === 'function') {
+      window.gainSP = function(amount, options = {}) {
+        const solo = isSoloModeActive();
+        const shouldDouble = solo && !options.alreadyDoubled && !options.rawSingle;
+        const finalAmount = shouldDouble ? (Number(amount) || 0) * 2 : (Number(amount) || 0);
+        return origGainSP(finalAmount);
+      };
+    }
+
+    // Wrap selectMode and startSession to keep Solo UI indicators synced
+    const origSelectMode = window.selectMode;
+    if (typeof origSelectMode === 'function') {
+      window.selectMode = function(mode) {
+        const res = origSelectMode.apply(this, arguments);
+        syncSoloSpUiIndicators();
+        return res;
+      };
+    }
+
+    const origStartSession = window.startSession;
+    if (typeof origStartSession === 'function') {
+      window.startSession = function() {
+        const res = origStartSession.apply(this, arguments);
+        syncSoloSpUiIndicators();
+        updateGuidedFlowForRound();
+        mirrorSpawnerToCockpit();
+        return res;
+      };
+    }
+
+    /**
+     * Awards SP for destroying a Horde unit (1 SP base -> 2 SP in Solo Mode).
+     */
+    window.awardHordeKillSP = function(kills = 1) {
+      if (typeof window.gainSP === 'function') {
+        window.gainSP(kills);
+      }
+    };
+
+    /**
+     * Awards Command Phase Objective Control SP (Rule 3.7):
+     * 1 SP per objective controlled by any player (+1 SP if FOB fortified).
+     * Automatically doubled in Solo Mode via wrapped gainSP!
+     */
+    window.awardCommandPhaseObjectiveSP = function() {
+      const objInput = document.getElementById('quickObjCountInput');
+      const count = Math.max(0, parseInt(objInput?.value, 10) || 0);
+      const hasFob = !!document.getElementById('fobFortCheck')?.checked;
+      const baseSp = count + (hasFob && count > 0 ? 1 : 0);
+      if (baseSp <= 0) return;
+      if (typeof window.gainSP === 'function') {
+        window.gainSP(baseSp);
+      }
+      setGuidedPhaseStep(3);
+    };
+
+    /**
+     * Enhanced Misery Card Renderer: displays verbatim card text, X/36 badge,
+     * timing tag, tactical note, and 1-click resolution helpers.
+     */
+    const origRenderActiveMiseries = window.renderActiveMiseries;
+    window.renderActiveMiseries = function() {
+      const box = document.getElementById('activeMiseriesBox');
+      if (!box || typeof state === 'undefined' || !state) {
+        if (typeof origRenderActiveMiseries === 'function') return origRenderActiveMiseries();
+        return;
+      }
+
+      const deckEl = document.getElementById('misDeckCount');
+      if (deckEl && Array.isArray(state.miseryDeck)) {
+        deckEl.textContent = `${state.miseryDeck.length} left in deck`;
+      }
+
+      const activeList = state.activeMiseries || [];
+      if (activeList.length === 0) {
+        box.innerHTML = `<div class="card" style="opacity:0.65; text-align:center; padding:14px;">
+          <p class="card-desc" style="margin:0;">No active Misery cards right now.</p>
+        </div>`;
+        return;
+      }
+
+      // Auto-sync Seller's Market (#24) checkbox
+      const hasSellersMarket = activeList.some(c => c.id === 24);
+      const dblToggle = document.getElementById('doubleCostToggle');
+      if (dblToggle && hasSellersMarket && !dblToggle.checked) {
+        dblToggle.checked = true;
+        if (typeof window.renderResupplyTable === 'function') window.renderResupplyTable();
+      }
+
+      box.innerHTML = activeList.map((rawCard, idx) => {
+        const official = MISERY_CARD_OFFICIAL_OVERRIDES[rawCard.id] || rawCard;
+        const numBadge = official.num || `#${rawCard.id}/36`;
+        const timingBadge = official.timing || 'Active Misery Effect';
+        const verbatimDesc = official.desc || rawCard.desc || rawCard.effect || '';
+        const tacticalNote = official.note || '';
+
+        let actionButtonsHtml = '';
+        if (rawCard.id === 6) {
+          actionButtonsHtml = `<button type="button" class="btn-red btn-sm" onclick="resolveOrbitalBombardmentRoll(${idx})">🎲 Roll Sector (1D6) &amp; 2D3 Mortal Wounds</button><div id="orbitalRollResult_${idx}" style="margin-top:6px; font-size:0.8rem; color:var(--gold);"></div>`;
+        } else if (rawCard.id === 14) {
+          actionButtonsHtml = isSoloModeActive()
+            ? `<button type="button" class="btn-red btn-sm" onclick="drawMisery(2)">🛡️ Solo Rule: Reveal +2 Misery Cards Now</button>`
+            : `<button type="button" class="btn-red btn-sm" onclick="if(typeof state!=='undefined'){loseSP(state.sp || 99);}">💸 Set My SP to 0 (If Selected)</button>`;
+        } else if (rawCard.id === 15) {
+          actionButtonsHtml = `<button type="button" class="btn-red btn-sm" onclick="loseSP(5)">💸 Deduct 5 SP (Min 0)</button>`;
+        } else if (rawCard.id === 20) {
+          actionButtonsHtml = `<button type="button" class="btn-red btn-sm" onclick="drawMisery(2)">🎲 Reveal +2 Misery Cards (Lamentable Luck)</button>`;
+        } else if (rawCard.id === 29) {
+          actionButtonsHtml = `<button type="button" class="btn-gold btn-sm" onclick="drawSecondary(false); drawSecondary(false); drawSecondary(false);">🎯 Reveal +3 Extra Secondary Missions</button>
+                               <button type="button" class="btn-red btn-sm" onclick="loseSP(4)">💸 Deduct 4 SP (Most SP)</button>`;
+        }
+
+        return `
+          <div class="misery-card-official">
+            <div class="misery-meta-row">
+              <span class="misery-card-num">MISERY ${numBadge}</span>
+              <span class="misery-timing-tag">${timingBadge}</span>
+            </div>
+            <h4 style="margin:2px 0 4px 0; color:#fff; font-size:1.05rem;">#${rawCard.id} — ${official.name}</h4>
+            <div class="misery-verbatim-body">${verbatimDesc}</div>
+            ${tacticalNote ? `<div class="misery-tactical-note">${tacticalNote}</div>` : ''}
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px;">
+              ${actionButtonsHtml}
+              <button type="button" class="btn-ghost btn-sm" style="margin-left:auto;" onclick="if(typeof nullifyMisery==='function') nullifyMisery(${idx}); else if(state && state.activeMiseries){state.activeMiseries.splice(${idx},1); renderActiveMiseries();}">
+                🛡️ Nullify / Discard
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    window.resolveOrbitalBombardmentRoll = function(idx) {
+      const sector = Math.floor(Math.random() * 6) + 1;
+      const d3a = Math.floor(Math.random() * 3) + 1;
+      const d3b = Math.floor(Math.random() * 3) + 1;
+      const mw = d3a + d3b;
+      const el = document.getElementById(`orbitalRollResult_${idx}`);
+      if (el) {
+        el.innerHTML = `💥 <strong>Grid Sector #${sector} Hit!</strong> Every unit in Sector #${sector} suffers <strong>${mw} Mortal Wounds</strong> (2D3: ${d3a}+${d3b})!`;
+      }
+    };
+
+    /**
+     * Mirrors the Spawn Zone cards from #spawnResultsContainer into Tab 1's #cockpitSpawnMirrorBox
+     * so players never have to switch tabs during a round.
+     */
+    function mirrorSpawnerToCockpit() {
+      const src = document.getElementById('spawnResultsContainer');
+      const dest = document.getElementById('cockpitSpawnMirrorBox');
+      if (!src || !dest) return;
+      dest.innerHTML = src.innerHTML;
+
+      const spawnerRoundEl = document.getElementById('spawnerBtnRound');
+      const cockpitRoundEl = document.getElementById('cockpitSpawnBtnRound');
+      if (spawnerRoundEl && cockpitRoundEl) {
+        cockpitRoundEl.textContent = spawnerRoundEl.textContent;
+      }
+    }
+    window.mirrorSpawnerToCockpit = mirrorSpawnerToCockpit;
+
+    // Hook rollAllSpawnZones and clearSpawnerResults to auto-mirror into Tab 1
+    const origRollAllSpawnZones = window.rollAllSpawnZones;
+    if (typeof origRollAllSpawnZones === 'function') {
+      window.rollAllSpawnZones = function() {
+        const res = origRollAllSpawnZones.apply(this, arguments);
+        mirrorSpawnerToCockpit();
+        return res;
+      };
+    }
+
+    const origClearSpawnerResults = window.clearSpawnerResults;
+    if (typeof origClearSpawnerResults === 'function') {
+      window.clearSpawnerResults = function() {
+        const res = origClearSpawnerResults.apply(this, arguments);
+        mirrorSpawnerToCockpit();
+        return res;
+      };
+    }
+
+    const origTriggerZoneRollDown = window.triggerZoneRollDown;
+    if (typeof origTriggerZoneRollDown === 'function') {
+      window.triggerZoneRollDown = function() {
+        const res = origTriggerZoneRollDown.apply(this, arguments);
+        mirrorSpawnerToCockpit();
+        return res;
+      };
+    }
+
+    window.rollSpawnsFromCockpit = function() {
+      if (typeof window.rollAllSpawnZones === 'function') {
+        window.rollAllSpawnZones();
+      }
+      mirrorSpawnerToCockpit();
+    };
+
+    // Guided 5-Step Phase Tracker Logic
+    let currentGuidedStep = 1;
+    const PHASE_STEP_GUIDES = {
+      1: {
+        badge: "STEP 1 OF 5 • START OF BATTLE ROUND (RULE 3.2)",
+        heading: "1. Reveal Misery, Secondary Mission & Spawn the Horde",
+        body: "1) Discard last round's Misery cards & reveal this round's new Misery & Secondary cards.<br>2) <strong>Round 1:</strong> Spawns were rolled during Deployment (Rule 2.9). <strong>Rounds 2–5:</strong> Roll 2D6 for each Horde Spawn Zone below! (<strong>Round 6 Final Stand:</strong> 3 Misery cards, NO new Horde spawns)."
+      },
+      2: {
+        badge: "STEP 2 OF 5 • HORDE TURN (RULE 3.1 & SECTION 5)",
+        heading: "2. Horde Movement, Shooting, Charge & Fight",
+        body: "The Horde always has the first turn! Move, Shoot, Charge, and Fight with all Horde units using the active <strong>Horde Primary Faction Rule</strong> (top banner) and any active <strong>Misery Card</strong> buffs below. Horde units within a Spawn Zone have Benefit of Cover and are Hidden."
+      },
+      3: {
+        badge: "STEP 3 OF 5 • PLAYER COMMAND & RESUPPLY STEP (RULE 3.7 & 3.8)",
+        heading: "3. Battle-Shock, Claim Objective SP & Spend Resupply SP",
+        body: "1) Take Battle-shock tests for Player units below Half-strength (Note: Players do NOT gain core 1 CP in the Command Phase!).<br>2) Click <strong>🚩 Claim Command SP</strong> below to gain 1 SP per controlled objective (+1 for FOB) — <strong>automatically doubled to 2 SP per objective in Solo Mode!</strong><br>3) Open the <strong>Resupply Shop (Tab 3)</strong> to buy Fortifications, Strikes, or Reinforcements."
+      },
+      4: {
+        badge: "STEP 4 OF 5 • PLAYER TURN (MOVE / SHOOT / CHARGE / FIGHT)",
+        heading: "4. Execute Secondary Mission Actions & Destroy the Horde",
+        body: "Players move through phases together as a single team! Whenever your attack, ability, or action destroys a Horde unit, click <strong>💀 +1 Horde Unit Destroyed</strong> below (+1 SP in Co-op / <strong>+2 SP in Solo Mode</strong>, up to your 8 or 16 SP round cap)."
+      },
+      5: {
+        badge: "STEP 5 OF 5 • END OF BATTLE ROUND (RULE 3.6)",
+        heading: "5. Resolve Secondary Mission Rewards or Punishments",
+        body: "Check your Active Secondary Mission condition below: claim its <strong>Reward</strong> (SP rewards are automatically doubled in Solo Mode!) or apply its <strong>Punishment</strong> (+Misery cards or +Spawn Roll modifiers carry into next round). Then click the red <strong>Advance to Next Battle Round</strong> button at the top!"
+      }
+    };
+
+    window.setGuidedPhaseStep = function(stepNum) {
+      currentGuidedStep = Math.max(1, Math.min(5, Number(stepNum) || 1));
+      const buttons = document.querySelectorAll('#roundPhaseStepper .phase-step-btn');
+      buttons.forEach(btn => {
+        const s = parseInt(btn.getAttribute('data-step'), 10);
+        btn.classList.toggle('active-step', s === currentGuidedStep);
+      });
+
+      const info = PHASE_STEP_GUIDES[currentGuidedStep];
+      if (info) {
+        const bEl = document.getElementById('guidedPhaseBadge');
+        const hEl = document.getElementById('guidedPhaseHeading');
+        const dEl = document.getElementById('guidedPhaseInstructions');
+        if (bEl) bEl.textContent = info.badge;
+        if (hEl) hEl.textContent = info.heading;
+        if (dEl) dEl.innerHTML = info.body;
+      }
+    };
+
+    window.stepGuidedPhase = function(delta) {
+      let next = currentGuidedStep + delta;
+      if (next > 5) next = 1;
+      if (next < 1) next = 5;
+      window.setGuidedPhaseStep(next);
+    };
+
+    function updateGuidedFlowForRound() {
+      const r = (typeof state !== 'undefined' && state) ? (state.round || 0) : 0;
+      const summaryBadge = document.getElementById('roundRuleSummaryBadge');
+      const cockpitRoundEl = document.getElementById('cockpitSpawnBtnRound');
+      if (cockpitRoundEl) cockpitRoundEl.textContent = String(r > 0 ? r : 1);
+
+      if (summaryBadge) {
+        if (r === 0) {
+          summaryBadge.textContent = 'Deployment Step 2.9: Roll Round 1 Spawns First!';
+        } else if (r === 1) {
+          summaryBadge.textContent = 'Hard Mode Rnd 1: 1 Misery • +0 Spawn Mod (Spawns Rolled in Deployment)';
+        } else if (r === 2) {
+          summaryBadge.textContent = 'Hard Mode Rnd 2: 1 Misery • +1 Spawn Mod';
+        } else if (r === 3) {
+          summaryBadge.textContent = 'Hard Mode Rnd 3: 2 Misery • +2 Spawn Mod';
+        } else if (r === 4) {
+          summaryBadge.textContent = 'Hard Mode Rnd 4: 2 Misery • +3 Spawn Mod';
+        } else if (r === 5) {
+          summaryBadge.textContent = 'Hard Mode Rnd 5: 3 Misery • +3 Spawn Mod';
+        } else {
+          summaryBadge.textContent = 'Hard Mode Rnd 6 (Final Stand): 3 Misery • NO New Spawns • Horde Turn Only!';
+        }
+      }
+      window.setGuidedPhaseStep(1);
+    }
+
+    // Wrap advanceBattleRound so advancing a round updates the guided cockpit and auto-rolls spawns on Rounds 2-5
+    const origAdvanceBattleRound = window.advanceBattleRound;
+    if (typeof origAdvanceBattleRound === 'function') {
+      window.advanceBattleRound = function() {
+        const res = origAdvanceBattleRound.apply(this, arguments);
+        syncSoloSpUiIndicators();
+        updateGuidedFlowForRound();
+
+        const r = (typeof state !== 'undefined' && state) ? (state.round || 0) : 0;
+        const autoRoll = !!document.getElementById('autoRollSpawnsOnAdvanceCheck')?.checked;
+        if (autoRoll && r >= 2 && r <= 5 && typeof window.rollAllSpawnZones === 'function') {
+          window.rollAllSpawnZones();
+        } else {
+          mirrorSpawnerToCockpit();
+        }
+        return res;
+      };
+    }
+
+    // Initial sync on load
+    syncSoloSpUiIndicators();
+    if (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries)) {
+      window.renderActiveMiseries();
+    }
+    setTimeout(mirrorSpawnerToCockpit, 150);
+  })();
+  </script>
 </body>
 </html>
