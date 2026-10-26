@@ -167,20 +167,29 @@ test('app: session state persists to localStorage and can be restored across tab
   // 2. Mutate state with gainSP and adjCP
   app.gainSP(5);
   app.adjCP(1);
+  document.getElementById('quickObjCountInput').value = '3';
+  globalThis.window.lastClaimedCommandRound = app.battleRound;
+  app.saveSessionState();
 
   const updatedRaw = localStorage.getItem('foa_horde_session_v1');
   const updatedParsed = JSON.parse(updatedRaw);
   assert.equal(updatedParsed.sp, 5);
   assert.equal(updatedParsed.cp, 3);
+  assert.equal(updatedParsed.quickObjCount, 3);
+  assert.equal(updatedParsed.lastClaimedCommandRound, app.battleRound);
 
   // 3. Simulate reload or tab switch and restore
   document.getElementById('gameScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('quickObjCountInput').value = '0';
+  globalThis.window.lastClaimedCommandRound = 0;
 
   const restored = app.restoreSessionState();
   assert.equal(restored, true, 'restoreSessionState must return true when active session exists');
   assert.equal(document.getElementById('gameScreen').classList.contains('hidden'), false);
   assert.equal(document.getElementById('setupScreen').classList.contains('hidden'), true);
+  assert.equal(document.getElementById('quickObjCountInput').value, 3);
+  assert.equal(globalThis.window.lastClaimedCommandRound, app.battleRound);
 
   // 4. Test leaveSession deactivates active session
   globalThis.confirm = () => true;

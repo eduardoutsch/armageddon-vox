@@ -673,6 +673,8 @@ function saveSessionState() {
     const firstRollBonus = !!document.getElementById('firstRollBonusCheck')?.checked;
     const baitTrapBonus = !!document.getElementById('baitTrapBonusCheck')?.checked;
     const doubleCost = !!document.getElementById('doubleCostToggle')?.checked;
+    const quickObjCount = parseInt(document.getElementById('quickObjCountInput')?.value || '2', 10);
+    const lastClaimedCommandRound = (typeof window !== 'undefined' && window.lastClaimedCommandRound) ? window.lastClaimedCommandRound : 0;
 
     const data = {
       hasActiveSession: isSessionActive,
@@ -707,7 +709,9 @@ function saveSessionState() {
       extraSpawnMod,
       firstRollBonus,
       baitTrapBonus,
-      doubleCost
+      doubleCost,
+      quickObjCount,
+      lastClaimedCommandRound
     };
     localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
     if (typeof debouncedPushLiveSpawnerStateToCloud === 'function') {
@@ -752,6 +756,27 @@ function restoreSessionState() {
     bankedSpLost = (typeof data.bankedSpLost === 'number') ? data.bankedSpLost : 0;
     cp = (typeof data.cp === 'number') ? data.cp : 2;
     stratCount = data.stratCount || 0;
+
+    if (typeof data.quickObjCount === 'number' && document.getElementById('quickObjCountInput')) {
+      document.getElementById('quickObjCountInput').value = data.quickObjCount;
+    }
+    if (typeof window !== 'undefined') {
+      if (data.lastClaimedCommandRound && data.lastClaimedCommandRound === battleRound && battleRound > 0) {
+        window.lastClaimedCommandRound = data.lastClaimedCommandRound;
+        if (typeof window.updateCommandObjectiveClaimButton === 'function') {
+          const count = typeof data.quickObjCount === 'number' ? data.quickObjCount : 2;
+          const hasFob = !!document.getElementById('fobFortCheck')?.checked;
+          const baseSp = count + (hasFob && count > 0 ? 1 : 0);
+          const awardedSp = isSoloMode ? baseSp * 2 : baseSp;
+          window.updateCommandObjectiveClaimButton(true, battleRound, awardedSp);
+        }
+      } else {
+        window.lastClaimedCommandRound = 0;
+        if (typeof window.updateCommandObjectiveClaimButton === 'function') {
+          window.updateCommandObjectiveClaimButton(false);
+        }
+      }
+    }
 
     activeCard = data.activeCard || null;
     currentChoices = data.currentChoices || [];
@@ -1098,6 +1123,9 @@ function startSession() {
   updateHUD();
   renderSharedDecks();
   renderResupplyTable();
+  if (typeof window !== 'undefined' && typeof window.resetCommandObjectiveClaimState === 'function') {
+    window.resetCommandObjectiveClaimState();
+  }
   switchTab(2);
   saveSessionState();
   debouncedPushLiveSpawnerStateToCloud();
@@ -1214,6 +1242,9 @@ function advanceBattleRound() {
   spGainedThisRound = 0;
   bankedSpLost = 0;
   lastWarpSirenSeedKey = '';
+  if (typeof window !== 'undefined' && typeof window.resetCommandObjectiveClaimState === 'function') {
+    window.resetCommandObjectiveClaimState();
+  }
 
   const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)];
   document.getElementById('roundTitle').innerText = `Battle Round ${battleRound}`;
@@ -1300,7 +1331,7 @@ function renderSharedDecks() {
 
   const secBox = document.getElementById('activeSecondariesBox');
   if (activeSecondaries.length === 0) {
-    secBox.innerHTML = `<div class="card secondary" style="opacity:0.6;"><p class="card-desc">No active Secondary Mission.</p></div>`;
+    secBox.innerHTML = `<div class="card secondary" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;"><p class="card-desc" style="margin:0;">No active Secondary Mission.</p></div>`;
   } else {
     secBox.innerHTML = activeSecondaries.map(s => `
       <div class="card secondary">
@@ -1317,7 +1348,7 @@ function renderSharedDecks() {
 
   const misBox = document.getElementById('activeMiseriesBox');
   if (activeMiseries.length === 0) {
-    misBox.innerHTML = `<div class="card misery" style="opacity:0.6;"><p class="card-desc">No active Misery Cards.</p></div>`;
+    misBox.innerHTML = `<div class="card misery" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;"><p class="card-desc" style="margin:0;">No active Misery Cards.</p></div>`;
   } else {
     misBox.innerHTML = activeMiseries.map(m => `
       <div class="card misery">
@@ -1700,6 +1731,9 @@ function resetMatchToSetup() {
   clearSessionState();
   currentZoneSpawns = [];
   lastWarpSirenSeedKey = '';
+  if (typeof window !== 'undefined' && typeof window.resetCommandObjectiveClaimState === 'function') {
+    window.resetCommandObjectiveClaimState();
+  }
 
   battleRound = 0;
   activeCard = null;

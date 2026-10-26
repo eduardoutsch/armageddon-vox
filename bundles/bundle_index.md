@@ -436,15 +436,125 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     }
     .sp-quick-bar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
+      flex-direction: column;
+      gap: 10px;
       background: rgba(11, 13, 19, 0.85);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: 10px 14px;
       margin-bottom: 16px;
     }
+    .sp-quick-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .sp-quick-title-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .sp-quick-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .sp-action-btn {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      box-sizing: border-box;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .sp-obj-group {
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #141824;
+      padding: 0 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      box-sizing: border-box;
+      margin: 0;
+    }
+    .sp-obj-label {
+      font-size: 0.75rem;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .sp-obj-input {
+      width: 42px;
+      height: 26px;
+      padding: 2px 4px;
+      text-align: center;
+      font-weight: 700;
+      background: #0b0d13;
+      color: var(--gold);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    .sp-obj-btn {
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      font-size: 0.78rem;
+      border-radius: 4px;
+      box-sizing: border-box;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .sp-quick-shop-btn {
+      height: 30px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 10px;
+      font-size: 0.76rem;
+      border-radius: 6px;
+      box-sizing: border-box;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .card-dock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 8px;
+      margin: 0 0 10px 0;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed var(--border);
+      min-height: 28px;
+      box-sizing: border-box;
+    }
+    .card-dock-header h3 {
+      margin: 0;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gold);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-dock-header .hud-sub {
+      white-space: nowrap;
+      flex-shrink: 0;
+      font-size: 0.74rem;
+    }
+
     .misery-card-official {
       border-left: 4px solid var(--red);
       background: linear-gradient(145deg, rgba(28, 13, 18, 0.95), rgba(15, 17, 25, 0.95));
@@ -744,44 +854,47 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
 
       <!-- QUICK SUPPLY POINT (SP) INCOME & KILL TRACKER BAR -->
       <div class="sp-quick-bar">
-        <div style="display:flex; align-items:center; gap:6px; margin-right:auto;">
-          <span style="font-size:0.78rem; font-weight:800; text-transform:uppercase; color:var(--gold);">⚡ Quick SP Income:</span>
-          <span id="spMultiplierStatusText" style="font-size:0.76rem; color:var(--muted);">Co-op (1x Base SP)</span>
-        </div>
-
-        <button type="button" class="btn-blue btn-sm" onclick="awardHordeKillSP(1)" id="btnQuickKillSp" title="Rule 3.7: Gain SP for destroying a Horde unit (Doubled in Solo Mode)">
-          💀 +1 Horde Unit Destroyed (<span class="sp-unit-val">+1</span> SP)
-        </button>
-
-        <div style="display:inline-flex; align-items:center; gap:4px; background:#141824; padding:4px 8px; border-radius:6px; border:1px solid var(--border);">
-          <span style="font-size:0.75rem; color:var(--text);">Controlled Obj:</span>
-          <input type="number" id="quickObjCountInput" value="2" min="0" max="8" style="width:42px; padding:3px; text-align:center; font-weight:700; background:#0b0d13; color:var(--gold); border:1px solid var(--border); border-radius:4px;">
-          <button type="button" class="btn-gold btn-sm" onclick="awardCommandPhaseObjectiveSP()" title="Rule 3.7: Gain 1 SP per controlled objective (+1 if FOB fortified). Automatically doubled in Solo Mode!">
-            🚩 Claim Command SP
+        <div class="sp-quick-header">
+          <div class="sp-quick-title-group">
+            <span style="font-size:0.78rem; font-weight:800; text-transform:uppercase; color:var(--gold);">⚡ Quick SP Income:</span>
+            <span id="spMultiplierStatusText" style="font-size:0.76rem; color:var(--muted);">Co-op (1x Base SP)</span>
+          </div>
+          <button type="button" class="btn-ghost btn-sm sp-quick-shop-btn" onclick="switchTab(3)" title="Open Resupply Shop to spend SP">
+            🛒 Open Resupply Shop →
           </button>
         </div>
 
-        <button type="button" class="btn-ghost btn-sm" onclick="switchTab(3)" title="Open Resupply Shop to spend SP">
-          🛒 Open Resupply Shop →
-        </button>
+        <div class="sp-quick-actions">
+          <button type="button" class="btn-blue btn-sm sp-action-btn" onclick="awardHordeKillSP(1)" id="btnQuickKillSp" title="Rule 3.7: Gain SP for destroying a Horde unit (Doubled in Solo Mode)">
+            💀 +1 Horde Unit Destroyed (<span class="sp-unit-val">+1</span> SP)
+          </button>
+
+          <div class="sp-obj-group">
+            <span class="sp-obj-label">Controlled Obj:</span>
+            <input type="number" id="quickObjCountInput" value="2" min="0" max="8" class="sp-obj-input" onchange="if(typeof saveSessionState==='function')saveSessionState();">
+            <button type="button" class="btn-gold btn-sm sp-obj-btn" id="btnClaimCommandSp" onclick="awardCommandPhaseObjectiveSP()" title="Rule 3.7: Gain 1 SP per controlled objective (+1 if FOB fortified). Automatically doubled in Solo Mode!">
+              🚩 Claim Command SP
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- ACTIVE SECONDARY MISSION & ACTIVE MISERY CARDS (SIDE-BY-SIDE ON DESKTOP) -->
-      <div class="grid-2" style="align-items:start; gap:14px; margin-bottom:16px;">
-        <div>
-          <div class="section-header" style="margin-top:0;">
+      <div class="grid-2" style="align-items:stretch; gap:14px; margin-bottom:16px;">
+        <div style="display:flex; flex-direction:column;">
+          <div class="card-dock-header">
             <h3>🎯 Active Secondary Mission</h3>
             <span id="secDeckCount" class="hud-sub"></span>
           </div>
-          <div id="activeSecondariesBox"></div>
+          <div id="activeSecondariesBox" style="flex:1; display:flex; flex-direction:column;"></div>
         </div>
 
-        <div>
-          <div class="section-header" style="margin-top:0;">
-            <h3>☠️ Active Misery Cards (Verbatim v0.9)</h3>
+        <div style="display:flex; flex-direction:column;">
+          <div class="card-dock-header">
+            <h3>☠️ Active Misery Cards</h3>
             <span id="misDeckCount" class="hud-sub"></span>
           </div>
-          <div id="activeMiseriesBox"></div>
+          <div id="activeMiseriesBox" style="flex:1; display:flex; flex-direction:column;"></div>
         </div>
       </div>
 
@@ -1537,6 +1650,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     window.savedSecondaryRewards = window.savedSecondaryRewards || [];
 
     function isSoloModeActive() {
+      if (typeof isSoloMode !== 'undefined') return !!isSoloMode;
       if (typeof state !== 'undefined' && state && state.mode === 'solo') return true;
       const soloCard = document.getElementById('modeCardSolo');
       return !!(soloCard && (soloCard.classList.contains('selected') || soloCard.classList.contains('selected-red')));
@@ -1568,36 +1682,44 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     }
     window.syncSoloSpUiIndicators = syncSoloSpUiIndicators;
 
-    // Wrap gainSP so Solo Mode automatically doubles SP gains per Rule 3.7
-    const origGainSP = window.gainSP;
-    if (typeof origGainSP === 'function') {
-      window.gainSP = function(amount, options = {}) {
+    // Wrap gainSP so Solo Mode automatically doubles SP gains per Rule 3.7 (guarded against re-entrant wrapping)
+    if (typeof window.gainSP === 'function' && !window.gainSP._isSoloDoubleWrapped) {
+      const baseGainSP = window.gainSP;
+      const wrappedGainSP = function(amount, options = {}) {
         const solo = isSoloModeActive();
         const shouldDouble = solo && !options.alreadyDoubled && !options.rawSingle;
         const finalAmount = shouldDouble ? (Number(amount) || 0) * 2 : (Number(amount) || 0);
-        return origGainSP(finalAmount);
+        return baseGainSP(finalAmount, options);
       };
+      wrappedGainSP._isSoloDoubleWrapped = true;
+      wrappedGainSP._baseGainSP = baseGainSP;
+      window.gainSP = wrappedGainSP;
     }
 
-    // Wrap selectMode and startSession to keep Solo UI indicators synced
-    const origSelectMode = window.selectMode;
-    if (typeof origSelectMode === 'function') {
-      window.selectMode = function(mode) {
+    // Wrap selectMode and startSession to keep Solo UI indicators synced (guarded against re-entrant wrapping)
+    if (typeof window.selectMode === 'function' && !window.selectMode._isSoloSyncWrapped) {
+      const origSelectMode = window.selectMode;
+      const wrappedSelectMode = function(mode) {
         const res = origSelectMode.apply(this, arguments);
         syncSoloSpUiIndicators();
         return res;
       };
+      wrappedSelectMode._isSoloSyncWrapped = true;
+      window.selectMode = wrappedSelectMode;
     }
 
-    const origStartSession = window.startSession;
-    if (typeof origStartSession === 'function') {
-      window.startSession = function() {
+    if (typeof window.startSession === 'function' && !window.startSession._isSoloSyncWrapped) {
+      const origStartSession = window.startSession;
+      const wrappedStartSession = function() {
         const res = origStartSession.apply(this, arguments);
         syncSoloSpUiIndicators();
         updateGuidedFlowForRound();
+        resetCommandObjectiveClaimState();
         mirrorSpawnerToCockpit();
         return res;
       };
+      wrappedStartSession._isSoloSyncWrapped = true;
+      window.startSession = wrappedStartSession;
     }
 
     window.awardHordeKillSP = function(kills = 1) {
@@ -1607,16 +1729,82 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       if (typeof window.gainSP === 'function') window.gainSP(kills);
     };
 
+    function getCurrentBattleRound() {
+      if (typeof battleRound !== 'undefined') return battleRound;
+      if (typeof state !== 'undefined' && state && typeof state.round === 'number') return state.round;
+      const text = document.getElementById('hudRound')?.innerText || '';
+      const match = text.match(/\d+/);
+      return match ? parseInt(match[0], 10) : 0;
+    }
+    window.getCurrentBattleRound = getCurrentBattleRound;
+
+    window.lastClaimedCommandRound = window.lastClaimedCommandRound || 0;
+
+    function updateCommandObjectiveClaimButton(isClaimed, roundNum, gainedSp) {
+      const btn = document.getElementById('btnClaimCommandSp');
+      if (!btn) return;
+      if (isClaimed) {
+        btn.disabled = true;
+        btn.style.opacity = '0.65';
+        btn.style.cursor = 'not-allowed';
+        const spLabel = gainedSp ? ` (+${gainedSp} SP)` : '';
+        btn.innerHTML = `✓ Claimed for Rnd ${roundNum}${spLabel}`;
+        btn.title = `Rule 3.7: Command Phase SP already claimed for Battle Round ${roundNum}. Resets upon advancing to the next round.`;
+      } else {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.innerHTML = '🚩 Claim Command SP';
+        btn.title = 'Rule 3.7: Gain 1 SP per controlled objective (+1 if FOB fortified). Automatically doubled in Solo Mode!';
+      }
+    }
+    window.updateCommandObjectiveClaimButton = updateCommandObjectiveClaimButton;
+
+    function resetCommandObjectiveClaimState() {
+      window.lastClaimedCommandRound = 0;
+      updateCommandObjectiveClaimButton(false);
+    }
+    window.resetCommandObjectiveClaimState = resetCommandObjectiveClaimState;
+
     window.awardCommandPhaseObjectiveSP = function() {
+      const currentRnd = getCurrentBattleRound();
+      if (currentRnd > 0 && window.lastClaimedCommandRound === currentRnd) {
+        if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playErrorBeep === 'function') {
+          window.VoxAudio.playErrorBeep();
+        }
+        alert(`Command Phase SP has already been claimed for Battle Round ${currentRnd}! It will reset when you advance to the next round.`);
+        return;
+      }
+
       const objInput = document.getElementById('quickObjCountInput');
       const count = Math.max(0, parseInt(objInput?.value, 10) || 0);
       const hasFob = !!document.getElementById('fobFortCheck')?.checked;
       const baseSp = count + (hasFob && count > 0 ? 1 : 0);
-      if (baseSp <= 0) return;
+      if (baseSp <= 0) {
+        alert('No controlled objectives to claim! Set Controlled Obj to at least 1.');
+        return;
+      }
+
       if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
         window.VoxAudio.playPowerSurge();
       }
-      if (typeof window.gainSP === 'function') window.gainSP(baseSp);
+
+      const solo = isSoloModeActive();
+      const awardedSp = solo ? baseSp * 2 : baseSp;
+
+      if (typeof window.gainSP === 'function') {
+        window.gainSP(baseSp);
+      }
+
+      if (currentRnd > 0) {
+        window.lastClaimedCommandRound = currentRnd;
+        updateCommandObjectiveClaimButton(true, currentRnd, awardedSp);
+      }
+
+      if (typeof saveSessionState === 'function') {
+        saveSessionState();
+      }
+
       window.setGuidedPhaseStep(3);
     };
 
@@ -1798,8 +1986,8 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
 
       const activeList = state.activeMiseries || [];
       if (activeList.length === 0) {
-        box.innerHTML = `<div class="card" style="opacity:0.65; text-align:center; padding:14px;">
-          <p class="card-desc" style="margin:0;">No active Misery cards right now.</p>
+        box.innerHTML = `<div class="card misery" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;">
+          <p class="card-desc" style="margin:0;">No active Misery Cards.</p>
         </div>`;
         return;
       }
@@ -2007,8 +2195,8 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       const solo = isSoloModeActive();
 
       const cardsHtml = activeList.length === 0
-        ? `<div class="card" style="opacity:0.65; text-align:center; padding:14px;">
-             <p class="card-desc" style="margin:0;">No active Secondary Mission right now.</p>
+        ? `<div class="card secondary" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;">
+             <p class="card-desc" style="margin:0;">No active Secondary Mission.</p>
            </div>`
         : activeList.map((rawCard, idx) => {
             const official = SECONDARY_MISSION_OFFICIAL_OVERRIDES[rawCard.id] || rawCard;
@@ -2099,8 +2287,8 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
      * 6. PATCH rollAllSpawnZones SO UNLUCKY NIGHT (#7) AUTOMATICALLY ROLLS 3D6 DROP LOWEST
      */
     const origRollAllSpawnZones = window.rollAllSpawnZones;
-    if (typeof origRollAllSpawnZones === 'function') {
-      window.rollAllSpawnZones = function() {
+    if (typeof origRollAllSpawnZones === 'function' && !window.rollAllSpawnZones._isUnluckyNightWrapped) {
+      const wrappedRoll = function() {
         ensureMiserySpawnerControls();
         window.syncMiserySpawnerBanner();
         const res = origRollAllSpawnZones.apply(this, arguments);
@@ -2128,24 +2316,30 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         mirrorSpawnerToCockpit();
         return res;
       };
+      wrappedRoll._isUnluckyNightWrapped = true;
+      window.rollAllSpawnZones = wrappedRoll;
     }
 
     const origClearSpawnerResults = window.clearSpawnerResults;
-    if (typeof origClearSpawnerResults === 'function') {
-      window.clearSpawnerResults = function() {
+    if (typeof origClearSpawnerResults === 'function' && !window.clearSpawnerResults._isMirrorWrapped) {
+      const wrappedClear = function() {
         const res = origClearSpawnerResults.apply(this, arguments);
         mirrorSpawnerToCockpit();
         return res;
       };
+      wrappedClear._isMirrorWrapped = true;
+      window.clearSpawnerResults = wrappedClear;
     }
 
     const origTriggerZoneRollDown = window.triggerZoneRollDown;
-    if (typeof origTriggerZoneRollDown === 'function') {
-      window.triggerZoneRollDown = function() {
+    if (typeof origTriggerZoneRollDown === 'function' && !window.triggerZoneRollDown._isMirrorWrapped) {
+      const wrappedTrigger = function() {
         const res = origTriggerZoneRollDown.apply(this, arguments);
         mirrorSpawnerToCockpit();
         return res;
       };
+      wrappedTrigger._isMirrorWrapped = true;
+      window.triggerZoneRollDown = wrappedTrigger;
     }
 
     function mirrorSpawnerToCockpit() {
@@ -2230,7 +2424,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     };
 
     function updateGuidedFlowForRound() {
-      const r = (typeof state !== 'undefined' && state) ? (state.round || 0) : 0;
+      const r = getCurrentBattleRound();
       const summaryBadge = document.getElementById('roundRuleSummaryBadge');
       const cockpitRoundEl = document.getElementById('cockpitSpawnBtnRound');
       if (cockpitRoundEl) cockpitRoundEl.textContent = String(r > 0 ? r : 1);
@@ -2255,18 +2449,19 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       window.setGuidedPhaseStep(1);
     }
 
-    // Wrap advanceBattleRound so advancing a round updates the guided cockpit and auto-rolls spawns on Rounds 2-5
-    const origAdvanceBattleRound = window.advanceBattleRound;
-    if (typeof origAdvanceBattleRound === 'function') {
-      window.advanceBattleRound = function() {
+    // Wrap advanceBattleRound so advancing a round updates the guided cockpit and auto-rolls spawns on Rounds 2-5 (guarded against re-entrant wrapping)
+    if (typeof window.advanceBattleRound === 'function' && !window.advanceBattleRound._isGuidedFlowWrapped) {
+      const origAdvanceBattleRound = window.advanceBattleRound;
+      const wrappedAdvance = function() {
         if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarhorn === 'function') {
           window.VoxAudio.playWarhorn();
         }
         const res = origAdvanceBattleRound.apply(this, arguments);
         syncSoloSpUiIndicators();
         updateGuidedFlowForRound();
+        resetCommandObjectiveClaimState();
 
-        const r = (typeof state !== 'undefined' && state) ? (state.round || 0) : 0;
+        const r = getCurrentBattleRound();
         const autoRoll = !!document.getElementById('autoRollSpawnsOnAdvanceCheck')?.checked;
         if (autoRoll && r >= 2 && r <= 5 && typeof window.rollAllSpawnZones === 'function') {
           window.rollAllSpawnZones();
@@ -2275,6 +2470,8 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         }
         return res;
       };
+      wrappedAdvance._isGuidedFlowWrapped = true;
+      window.advanceBattleRound = wrappedAdvance;
     }
 
     // Initialize on load

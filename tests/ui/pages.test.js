@@ -679,4 +679,192 @@ test('UI Boundary: pages/spawner.html includes Remastered Horde Rules v0.9 patch
   assert.ok(spawnerHtml.includes('redeemSavedSecondaryCard'), 'Must implement redeemSavedSecondaryCard');
 });
 
+test('UI Boundary: pages/spawner.html aligns Secondary Mission and Misery Cards side-by-side and aligns Quick SP Income action controls', async () => {
+  const browser = await launchTestBrowser();
+  const page = await browser.newPage();
+
+  try {
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    // Enable Solo Mode to test the longer multiplier banner as well
+    await page.evaluate(() => {
+      if (typeof window.selectGameMode === 'function') window.selectGameMode('solo');
+      if (typeof window.syncSoloSpUiIndicators === 'function') window.syncSoloSpUiIndicators();
+    });
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    const layout = await page.evaluate(() => {
+      const secBox = document.getElementById('activeSecondariesBox');
+      const misBox = document.getElementById('activeMiseriesBox');
+      const secRect = secBox ? secBox.getBoundingClientRect() : null;
+      const misRect = misBox ? misBox.getBoundingClientRect() : null;
+
+      const killBtn = document.getElementById('btnQuickKillSp');
+      const objGroup = document.querySelector('.sp-obj-group') || document.querySelector('#quickObjCountInput')?.parentElement;
+      const killRect = killBtn ? killBtn.getBoundingClientRect() : null;
+      const objRect = objGroup ? objGroup.getBoundingClientRect() : null;
+
+      return {
+        secTop: secRect ? secRect.top : null,
+        misTop: misRect ? misRect.top : null,
+        killTop: killRect ? killRect.top : null,
+        objTop: objRect ? objRect.top : null,
+        killHeight: killRect ? killRect.height : null,
+        objHeight: objRect ? objRect.height : null
+      };
+    });
+
+    // 1. Verify Active Secondary Mission box and Active Misery Cards box are horizontally aligned at the top
+    assert.ok(layout.secTop !== null && layout.misTop !== null, 'Both card boxes must exist in DOM');
+    const cardTopDiff = Math.abs(layout.secTop - layout.misTop);
+    assert.ok(
+      cardTopDiff <= 2,
+      `Secondary Mission top (${layout.secTop}px) and Misery Cards top (${layout.misTop}px) must be horizontally aligned (diff: ${cardTopDiff}px)`
+    );
+
+    // 2. Verify Quick SP Kill button and Controlled Obj control group are vertically aligned with matching height
+    assert.ok(layout.killTop !== null && layout.objTop !== null, 'Quick SP action controls must exist in DOM');
+    const actionTopDiff = Math.abs(layout.killTop - layout.objTop);
+    assert.ok(
+      actionTopDiff <= 2,
+      `Quick SP Kill button top (${layout.killTop}px) and Controlled Obj group top (${layout.objTop}px) must be vertically aligned (diff: ${actionTopDiff}px)`
+    );
+
+    const actionHeightDiff = Math.abs(layout.killHeight - layout.objHeight);
+    assert.ok(
+      actionHeightDiff <= 2,
+      `Quick SP Kill button height (${layout.killHeight}px) and Controlled Obj group height (${layout.objHeight}px) must match (diff: ${actionHeightDiff}px)`
+    );
+  } finally {
+    await browser.close();
+  }
+});
+
+test('UI Boundary: pages/spawner.html awards strictly 2 SP per objective in Solo mode, guards against seamless navigation multiplier stacking, and enforces once-per-round claim limit', async () => {
+  const http = require('node:http');
+  const server = http.createServer((req, res) => {
+    let reqPath = req.url.split('?')[0];
+    if (reqPath === '/') reqPath = '/index.html';
+    const filePath = path.join(ROOT_DIR, reqPath);
+    if (fs.existsSync(filePath)) {
+      if (filePath.endsWith('.html')) res.setHeader('Content-Type', 'text/html');
+      else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+      else if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
+      res.writeHead(200);
+      res.end(fs.readFileSync(filePath));
+    } else {
+      res.writeHead(404);
+      res.end('Not found');
+    }
+  });
+
+  const port = await new Promise((resolve) => {
+    server.listen(0, () => resolve(server.address().port));
+  });
+
+  let browser;
+  try {
+    browser = await launchTestBrowser();
+    const page = await browser.newPage();
+
+    // 1. Initial load on spawner.html
+    await page.goto(`http://localhost:${port}/pages/spawner.html`, { waitUntil: 'load' });
+
+    // 2. Start Session in Solo Mode
+    await page.evaluate(() => {
+      if (typeof window.selectMode === 'function') window.selectMode('solo');
+      if (typeof window.startSession === 'function') window.startSession();
+      if (typeof window.switchTab === 'function') window.switchTab(1);
+    });
+
+    // 3. Advance to Round 1
+    await page.evaluate(() => {
+      if (typeof window.advanceBattleRound === 'function') window.advanceBattleRound();
+    });
+
+    // 4. Seamlessly navigate to roster.html, then back to spawner.html
+    const rosterLink = await page.$('a[href*="roster.html"]');
+    if (rosterLink) {
+      await rosterLink.click();
+      await page.waitForTimeout(350);
+      const spawnerLink = await page.$('a[href*="spawner.html"]');
+      if (spawnerLink) {
+        await spawnerLink.click();
+        await page.waitForTimeout(350);
+      }
+    }
+
+    // 5. Set Controlled Obj to 1
+    await page.evaluate(() => {
+      const input = document.getElementById('quickObjCountInput');
+      if (input) {
+        input.value = '1';
+        input.dispatchEvent(new Event('change'));
+      }
+    });
+
+    // Initial SP must be 0
+    let hudSp = await page.$eval('#hudSp', el => parseInt(el.innerText, 10));
+    assert.equal(hudSp, 0, 'Initial SP must be 0');
+
+    // 6. Click Claim Command SP (Controlled Obj: 1 in Solo Mode = 2 SP)
+    const claimBtnSelector = '#btnClaimCommandSp, [onclick*="awardCommandPhaseObjectiveSP"]';
+    await page.click(claimBtnSelector);
+
+    hudSp = await page.$eval('#hudSp', el => parseInt(el.innerText, 10));
+    assert.equal(hudSp, 2, 'In Solo Mode with 1 objective, exactly 2 SP must be awarded (not 4 or 8 SP after navigation)');
+
+    // 7. Verify button feedback and disabled state
+    const btnState = await page.$eval(claimBtnSelector, el => ({
+      text: el.innerText,
+      disabled: el.disabled
+    }));
+    assert.ok(btnState.text.toLowerCase().includes('claimed'), `Button text should show Claimed, got: ${btnState.text}`);
+    assert.equal(btnState.disabled, true, 'Button should be disabled once claimed for the current round');
+
+    // 8. Click again in the same round: must NOT award duplicate SP
+    await page.evaluate(() => {
+      if (typeof window.awardCommandPhaseObjectiveSP === 'function') {
+        window.awardCommandPhaseObjectiveSP();
+      }
+    });
+    hudSp = await page.$eval('#hudSp', el => parseInt(el.innerText, 10));
+    assert.equal(hudSp, 2, 'SP must not increase when claiming again in the same round');
+
+    // 9. Advance to Round 2
+    await page.evaluate(() => {
+      if (typeof window.advanceBattleRound === 'function') window.advanceBattleRound();
+    });
+
+    // 10. Verify button is re-enabled and reset for Round 2
+    const btnReset = await page.$eval(claimBtnSelector, el => ({
+      text: el.innerText,
+      disabled: el.disabled
+    }));
+    assert.ok(btnReset.text.toLowerCase().includes('claim command sp'), `Button text should reset to Claim Command SP, got: ${btnReset.text}`);
+    assert.equal(btnReset.disabled, false, 'Button should be re-enabled for Round 2');
+
+    // 11. In Round 2, set Controlled Obj to 2: should award 4 SP (total SP goes from 2 to 6)
+    await page.evaluate(() => {
+      const input = document.getElementById('quickObjCountInput');
+      if (input) {
+        input.value = '2';
+        input.dispatchEvent(new Event('change'));
+      }
+    });
+    await page.click(claimBtnSelector);
+
+    hudSp = await page.$eval('#hudSp', el => parseInt(el.innerText, 10));
+    assert.equal(hudSp, 6, 'In Round 2 with 2 objectives in Solo Mode, exactly 4 additional SP should be awarded (total: 6 SP)');
+  } finally {
+    if (browser) await browser.close();
+    server.close();
+  }
+});
+
+
+
+
 
