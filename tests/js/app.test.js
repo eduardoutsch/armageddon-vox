@@ -297,6 +297,101 @@ test('app: resource economy (SP & CP) functions update counters and tally', () =
   assert.ok(document.getElementById('hudStratTally').innerText.includes('1 Strats'));
 });
 
+test('app: reducing SP and increasing it again does not falsely increment finite round cap tally (x/8)', () => {
+  // Start from clean reset
+  app.loseSP(100);
+  assert.equal(app.sp, 0);
+  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+
+  // Gain 1 SP
+  app.gainSP(1);
+  assert.equal(app.sp, 1);
+  assert.equal(app.spGainedThisRound, 1);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
+
+  // Reduce 1 SP (should decrement round tally back to 0/8)
+  app.loseSP(1);
+  assert.equal(app.sp, 0);
+  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+
+  // Increase 1 SP again (should be 1/8, NOT 2/8!)
+  app.gainSP(1);
+  assert.equal(app.sp, 1);
+  assert.equal(app.spGainedThisRound, 1);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
+
+  // Toggle reduce/increase 5 times to ensure no phantom cap accumulation
+  for (let i = 0; i < 5; i++) {
+    app.loseSP(1);
+    assert.equal(app.sp, 0);
+    assert.equal(app.spGainedThisRound, 0);
+    assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+
+    app.gainSP(1);
+    assert.equal(app.sp, 1);
+    assert.equal(app.spGainedThisRound, 1);
+    assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
+  }
+});
+
+test('app: reducing banked SP from previous rounds and increasing it does not consume finite round cap', () => {
+  // Reset
+  app.loseSP(100);
+  // Gain 4 SP in round 1
+  app.gainSP(4);
+  assert.equal(app.sp, 4);
+
+  // Advance round -> spGainedThisRound resets to 0, SP stays at 4 banked
+  app.advanceBattleRound();
+  assert.equal(app.sp, 4);
+  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+
+  // Player reduces banked SP from 4 to 3
+  app.loseSP(1);
+  assert.equal(app.sp, 3);
+  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+
+  // Player increases SP back from 3 to 4 (restoring banked SP, NOT gaining round SP!)
+  app.gainSP(1);
+  assert.equal(app.sp, 4);
+  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+
+  // Now player legitimately gains SP beyond banked baseline (4 -> 5)
+  app.gainSP(1);
+  assert.equal(app.sp, 5);
+  assert.equal(app.spGainedThisRound, 1);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
+
+  // Player reduces back to 4 -> round tally drops back to 0/8
+  app.loseSP(1);
+  assert.equal(app.sp, 4);
+  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+});
+
+test('app: adjustSpRoundTally and adjustStratTally allow manual correction of tallies', () => {
+  const origPrompt = globalThis.prompt;
+  try {
+    globalThis.prompt = () => '3';
+    app.adjustSpRoundTally();
+    assert.equal(app.spGainedThisRound, 3);
+    assert.equal(document.getElementById('hudSpCap').innerText, '(3/8)');
+
+    globalThis.prompt = () => '5';
+    app.adjustStratTally();
+    assert.equal(app.stratCount, 5);
+    assert.ok(document.getElementById('hudStratTally').innerText.includes('5 Strats'));
+  } finally {
+    globalThis.prompt = origPrompt;
+  }
+});
+
+
 test('app: saveCustomPool and loadCustomPool persist custom units to localStorage', () => {
   document.getElementById('pool34').value = '10 Termagants';
   document.getElementById('pool56').value = '5 Genestealers';

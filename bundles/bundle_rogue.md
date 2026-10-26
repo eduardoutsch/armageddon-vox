@@ -226,8 +226,16 @@ function compileRogueDossier(input = {}) {
   const matchedKey = Object.keys(ROGUE_OUTCOME_IMPACTS).find((key) => outcome.includes(key)) || 'Contested';
   const { planetaryImpact, hegemonyImpact } = ROGUE_OUTCOME_IMPACTS[matchedKey];
 
+  const headerBanner = isBeta
+    ? `+++ TOMB-SHIP QUANTUM SURVEILLANCE // ROGUE SECTOR AUXILIARY BATTLE REPORT +++`
+    : `+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++`;
+
+  const logLabel = isBeta
+    ? `• CANOPTEK SENSOR OVERVIEW & ENGRAMMATIC LOG:`
+    : `• EYE-WITNESS COMBAT LOG:`;
+
   const lines = [
-    `+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++`,
+    headerBanner,
     `• REPORTING COMMANDER: ${cmdr}`,
     subHeader,
     `• THEATRE & COMBATANTS: ${combatants}`,
@@ -237,12 +245,13 @@ function compileRogueDossier(input = {}) {
   ];
 
   if (nominee) {
-    lines.push(`• NEMESIS INDUCTION NOMINEE: ${nominee}`);
+    const nomLabel = isBeta ? `• SPECIMEN TARGETING NOMINEE:` : `• NEMESIS INDUCTION NOMINEE:`;
+    lines.push(`${nomLabel} ${nominee}`);
   }
 
   lines.push(
     `------------------------------------------------`,
-    `• EYE-WITNESS COMBAT LOG: "${notes}"`,
+    `${logLabel} "${notes}"`,
     `------------------------------------------------`,
     requestLine
   );

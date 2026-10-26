@@ -630,6 +630,7 @@ let currentShopFilter = 'All';
 let sp = 0;
 let spGainedThisRound = 0;
 let spRoundCap = 8;
+let bankedSpLost = 0;
 let cp = 2;
 let stratCount = 0;
 let currentZoneSpawns = [];
@@ -685,6 +686,7 @@ function saveSessionState() {
       sp,
       spGainedThisRound,
       spRoundCap,
+      bankedSpLost,
       cp,
       stratCount,
       activeCard,
@@ -747,6 +749,7 @@ function restoreSessionState() {
     battleRound = (typeof data.battleRound === 'number') ? data.battleRound : 0;
     sp = (typeof data.sp === 'number') ? data.sp : 0;
     spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
+    bankedSpLost = (typeof data.bankedSpLost === 'number') ? data.bankedSpLost : 0;
     cp = (typeof data.cp === 'number') ? data.cp : 2;
     stratCount = data.stratCount || 0;
 
@@ -1208,6 +1211,7 @@ function advanceBattleRound() {
   }
   battleRound++;
   spGainedThisRound = 0;
+  bankedSpLost = 0;
   lastWarpSirenSeedKey = '';
 
   const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)];
@@ -1487,22 +1491,102 @@ function renderSpawnZones() {
 }
 
 // --- SP, CP & RESUPPLY SHOP ---
+/**
+ * Increases Supply Points (SP).
+ * Accounts for previously reduced banked SP (restoring banked balance without consuming
+ * from the finite round cap), and enforces the per-round finite cap (spRoundCap).
+ * @param {number} amount
+ */
 function gainSP(amount) {
-  const remainingCap = spRoundCap - spGainedThisRound;
-  if (remainingCap <= 0) {
-    if (!confirm(`Round cap of ${spRoundCap} SP reached! Add SP anyway?`)) return;
-    sp += amount;
-  } else {
-    const actual = Math.min(amount, remainingCap);
-    sp += actual;
-    spGainedThisRound += actual;
+  let toAdd = amount;
+  if (bankedSpLost > 0) {
+    const restore = Math.min(toAdd, bankedSpLost);
+    bankedSpLost -= restore;
+    sp += restore;
+    toAdd -= restore;
+  }
+  if (toAdd > 0) {
+    const remainingCap = spRoundCap - spGainedThisRound;
+    if (remainingCap <= 0) {
+      if (typeof confirm === 'function' && !confirm(`Round cap of ${spRoundCap} SP reached! Add SP anyway?`)) {
+        updateHUD();
+        return;
+      }
+      sp += toAdd;
+    } else {
+      const actual = Math.min(toAdd, remainingCap);
+      sp += actual;
+      spGainedThisRound += actual;
+      const overflow = toAdd - actual;
+      if (overflow > 0) {
+        if (typeof confirm === 'function' && !confirm(`Round cap of ${spRoundCap} SP reached! Add SP anyway?`)) {
+          updateHUD();
+          return;
+        }
+        sp += overflow;
+      }
+    }
   }
   updateHUD();
 }
 
+/**
+ * Decreases Supply Points (SP).
+ * Symmetrically decrements the current round's earned tally (spGainedThisRound)
+ * so that reducing and increasing SP does not consume finite round cap allocations.
+ * Any reduction beyond round-earned SP is tracked in bankedSpLost so restoring it
+ * later does not falsely consume from the finite round cap.
+ * @param {number} amount
+ */
 function loseSP(amount) {
+  const prevSp = sp;
   sp = Math.max(0, sp - amount);
+  const actualLost = prevSp - sp;
+  if (actualLost > 0) {
+    if (spGainedThisRound > 0) {
+      const capReduction = Math.min(spGainedThisRound, actualLost);
+      spGainedThisRound -= capReduction;
+      const remainingLost = actualLost - capReduction;
+      bankedSpLost += remainingLost;
+    } else {
+      bankedSpLost += actualLost;
+    }
+  }
+  if (sp === 0) {
+    bankedSpLost = 0;
+  }
   updateHUD();
+}
+
+/**
+ * Manually adjusts or resets the SP gained this round tally via prompt.
+ */
+function adjustSpRoundTally() {
+  if (typeof prompt !== 'function') return;
+  const input = prompt(`Set SP gained this round (0 to ${spRoundCap}):`, String(spGainedThisRound));
+  if (input !== null) {
+    const val = parseInt(input, 10);
+    if (!isNaN(val) && val >= 0) {
+      spGainedThisRound = Math.min(val, spRoundCap);
+      bankedSpLost = 0;
+      updateHUD();
+    }
+  }
+}
+
+/**
+ * Manually adjusts or resets the Stratagems used tally via prompt.
+ */
+function adjustStratTally() {
+  if (typeof prompt !== 'function') return;
+  const input = prompt("Set Stratagems used tally (or 0 to reset):", String(stratCount));
+  if (input !== null) {
+    const val = parseInt(input, 10);
+    if (!isNaN(val) && val >= 0) {
+      stratCount = val;
+      updateHUD();
+    }
+  }
 }
 
 function adjCP(delta) {
@@ -1626,6 +1710,7 @@ function resetMatchToSetup() {
   currentChoices = [];
   sp = 0;
   spGainedThisRound = 0;
+  bankedSpLost = 0;
   cp = 2;
   stratCount = 0;
 
@@ -2113,6 +2198,10 @@ if (typeof module !== 'undefined' && module.exports) {
     get selectedRoleVal() { return selectedRoleVal; },
     get cp() { return cp; },
     get sp() { return sp; },
+    get spGainedThisRound() { return spGainedThisRound; },
+    get spRoundCap() { return spRoundCap; },
+    get bankedSpLost() { return bankedSpLost; },
+    get stratCount() { return stratCount; },
     get currentZoneSpawns() { return currentZoneSpawns; },
     get activeMiseries() { return activeMiseries; },
     get activeSecondaries() { return activeSecondaries; },
@@ -2126,6 +2215,8 @@ if (typeof module !== 'undefined' && module.exports) {
     updateHUD,
     gainSP,
     loseSP,
+    adjustSpRoundTally,
+    adjustStratTally,
     adjCP,
     spendCPForStrat,
     buyResupply,

@@ -250,12 +250,14 @@ test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Ca
 
   mockElements.nemReportChannel.value = 'beta';
   const strBeta = roster.buildNemesisDossierString();
-  assert.ok(strBeta.includes('+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++'));
-  assert.ok(strBeta.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'));
-  assert.ok(strBeta.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen\'s engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3)'));
+  assert.ok(strBeta.includes('+++ TOMB-SHIP MASTER MATRIX // DYNASTIC NEMESIS INDUCTION ENGRAM +++'));
+  assert.ok(!strBeta.includes('ORDO MALLEUS'), 'Beta report must NEVER contain ORDO MALLEUS');
+  assert.ok(strBeta.includes('• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP PHAERON INTERLINK'));
+  assert.ok(strBeta.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this hostile specimen\'s engrammatic threat profile into the Dynastic Nemesis Matrix (Pattern 3)'));
 });
 
 test('roster: updateNemesisPreview populates preview box and saves state', () => {
+  mockElements.nemReportChannel.value = 'alpha';
   roster.updateNemesisPreview();
   assert.ok(mockElements.nemDossierPreview.textContent.includes('ORDO MALLEUS'));
 
@@ -273,7 +275,8 @@ test('roster: transmitNemesisDossier triggers window.VoxAudio.transmitToVox with
   roster.transmitNemesisDossier();
   assert.equal(transmittedChannel, 'beta');
   assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
-  assert.ok(transmittedPayload.includes('ORDO MALLEUS'));
+  assert.ok(!transmittedPayload.includes('ORDO MALLEUS'), 'Beta transmission must NEVER contain ORDO MALLEUS');
+  assert.ok(transmittedPayload.includes('DYNASTIC NEMESIS INDUCTION ENGRAM'));
 });
 
 test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
@@ -516,13 +519,14 @@ test('roster: compileNemesisDossier is a pure domain compiler separated from DOM
     notes: 'Ripped a Rogal Dorn tank apart in melee.'
   });
 
-  assert.ok(report.includes('+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++'));
-  assert.ok(report.includes('• FILING COMMANDER: LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'));
-  assert.ok(report.includes('• THEATRE & MODE: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
-  assert.ok(report.includes('• HOSTILE DATASHEET / FACTION: Orks — Deff Dread'));
-  assert.ok(report.includes('• TRIGGERING FEAT: Destroyed a Titanic / Vehicle centerpiece unit'));
-  assert.ok(report.includes('• EYE-WITNESS COMBAT LOG: "Ripped a Rogal Dorn tank apart in melee."'));
-  assert.ok(report.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen\'s engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3)'));
+  assert.ok(report.includes('+++ TOMB-SHIP MASTER MATRIX // DYNASTIC NEMESIS INDUCTION ENGRAM +++'));
+  assert.ok(!report.includes('ORDO MALLEUS'), 'Beta report must not contain ORDO MALLEUS');
+  assert.ok(report.includes('• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP PHAERON INTERLINK'));
+  assert.ok(report.includes('• ENGAGEMENT THEATRE & SECTOR: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
+  assert.ok(report.includes('• TARGET SPECIMEN / INTRUDER FACTION: Orks — Deff Dread'));
+  assert.ok(report.includes('• OBSERVED ANOMALY / SLAIN DYNASTIC ASSETS: Destroyed a Titanic / Vehicle centerpiece unit'));
+  assert.ok(report.includes('• CANOPTEK TELEMETRY & ENGRAMMATIC LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+  assert.ok(report.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this hostile specimen\'s engrammatic threat profile into the Dynastic Nemesis Matrix (Pattern 3)'));
 
   // Test Alpha channel
   const alphaReport = roster.compileNemesisDossier({

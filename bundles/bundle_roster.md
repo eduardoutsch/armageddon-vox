@@ -664,15 +664,15 @@ function compileNemesisDossier(input = {}) {
   const chan = input.channel || 'alpha';
   const isBeta = chan === 'beta';
   const cmdr = isBeta
-    ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP DYNASTIC INTERLINK'
+    ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP PHAERON INTERLINK'
     : 'THE EXILE // SANCTUARY OF ASH';
 
   const headerBanner = isBeta
-    ? `+++ TOMB-SHIP OMNICIDAL AUSPEX // ORDO MALLEUS NEMESIS INDUCTION DOSSIER +++`
+    ? `+++ TOMB-SHIP MASTER MATRIX // DYNASTIC NEMESIS INDUCTION ENGRAM +++`
     : `+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++`;
 
   const footerRequest = isBeta
-    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this specimen's engrammatic threat profile into the Cross-Mode Nemesis Archive (Pattern 3), assign its permanent Dynastic Threat Designation and custom Boss Battle Trait, and lock its extermination bounty!`
+    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this hostile specimen's engrammatic threat profile into the Dynastic Nemesis Matrix (Pattern 3), assign its permanent Dynastic Threat Designation and bespoke Boss Battle Trait, and lock its extermination protocol!`
     : `REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (Pattern 3), forge their permanent In-Universe Name, Epithet, and bespoke Boss Battle Trait, and issue an Extremis Bounty Warrant!`;
 
   const sector = input.sector || 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)';
@@ -680,13 +680,27 @@ function compileNemesisDossier(input = {}) {
   const feat = input.feat || 'Slain a Player Warlord / Character in combat';
   const notes = (input.notes || '').trim() || 'Survived engagement and demonstrated anomalous lethality.';
 
+  const labels = isBeta ? {
+    cmdr: '• REPORTING PHAERON:',
+    sector: '• ENGAGEMENT THEATRE & SECTOR:',
+    unit: '• TARGET SPECIMEN / INTRUDER FACTION:',
+    feat: '• OBSERVED ANOMALY / SLAIN DYNASTIC ASSETS:',
+    notes: '• CANOPTEK TELEMETRY & ENGRAMMATIC LOG:'
+  } : {
+    cmdr: '• FILING COMMANDER:',
+    sector: '• THEATRE & MODE:',
+    unit: '• HOSTILE DATASHEET / FACTION:',
+    feat: '• TRIGGERING FEAT:',
+    notes: '• EYE-WITNESS COMBAT LOG:'
+  };
+
   return [
     headerBanner,
-    `• FILING COMMANDER: ${cmdr}`,
-    `• THEATRE & MODE: ${sector}`,
-    `• HOSTILE DATASHEET / FACTION: ${unit}`,
-    `• TRIGGERING FEAT: ${feat}`,
-    `• EYE-WITNESS COMBAT LOG: "${notes}"`,
+    `${labels.cmdr} ${cmdr}`,
+    `${labels.sector} ${sector}`,
+    `${labels.unit} ${unit}`,
+    `${labels.feat} ${feat}`,
+    `${labels.notes} "${notes}"`,
     `------------------------------------------------`,
     footerRequest
   ].join('\n');

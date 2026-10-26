@@ -487,20 +487,20 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       </div>
 
       <div class="hud-stat">
-        <span class="hud-label">Supply (SP) <span id="hudSpCap" class="hud-sub">(0/8)</span></span>
+        <span class="hud-label">Supply (SP) <span id="hudSpCap" class="hud-sub" style="cursor:pointer;" onclick="adjustSpRoundTally()" title="Click to manually adjust Round SP tally (finite round cap)">(0/8)</span></span>
         <div class="hud-val-row">
-          <button class="mini-btn" onclick="loseSP(1)">−</button>
+          <button class="mini-btn" onclick="loseSP(1)" title="Reduce 1 SP">−</button>
           <span class="hud-num" id="hudSp" style="color:var(--blue);">0</span>
-          <button class="mini-btn" onclick="gainSP(1)">+</button>
+          <button class="mini-btn" onclick="gainSP(1)" title="Gain 1 SP">+</button>
         </div>
       </div>
 
       <div class="hud-stat">
-        <span class="hud-label">Command (CP) <span id="hudStratTally" class="hud-sub">(0 Strats)</span></span>
+        <span class="hud-label">Command (CP) <span id="hudStratTally" class="hud-sub" style="cursor:pointer;" onclick="adjustStratTally()" title="Click to adjust or reset Stratagems used count">(0 Strats)</span></span>
         <div class="hud-val-row">
-          <button class="mini-btn" onclick="spendCPForStrat()">−</button>
+          <button class="mini-btn" onclick="spendCPForStrat()" title="Spend 1 CP on Stratagem">−</button>
           <span class="hud-num" id="hudCp" style="color:var(--purple);">2</span>
-          <button class="mini-btn" onclick="adjCP(1)">+</button>
+          <button class="mini-btn" onclick="adjCP(1)" title="Add 1 CP">+</button>
         </div>
       </div>
 

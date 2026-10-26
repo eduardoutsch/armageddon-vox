@@ -293,20 +293,30 @@ function compilePvpVultureReport(input = {}) {
   const hellscapeIdx = Number.isInteger(input.hellscapeIdx) ? input.hellscapeIdx : (parseInt(input.hellscapeIdx, 10) || 0);
   const hellscapeName = HELLSCAPE_NAMES[hellscapeIdx] || HELLSCAPE_NAMES[0];
   const intensity = String(input.warpIntensity || input.intensity || 'major').toUpperCase();
-  const notes = (input.notes || '').trim() || '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.';
+  const notes = (input.notes || '').trim() || (isBeta
+    ? '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Tomb-Ship Master Matrix.'
+    : '1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.');
+
+  const headerBanner = isBeta
+    ? `+++ TOMB-SHIP SENSOR SWEEP // 1V1 ASH WASTES VULTURE SPTS REPORT +++`
+    : `+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++`;
+
+  const logLabel = isBeta
+    ? `• CANOPTEK SENSOR & INTERFERENCE LOG:`
+    : `• VULTURE INTERFERENCE LOG:`;
 
   const requestLine = isBeta
-    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please record +${totalSp} Strategic Points for the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes clash and chronicle how the outer scavengers exploited our battle!`
+    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please record +${totalSp} Strategic Points for the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes clash and chronicle how the vermin scavengers exploited our dynastic engagement!`
     : `REQUEST FOR CAMPAIGN MASTER: Please credit +${totalSp} Strategic Points to the 3rd Alliance (Marauders) Global Scoreboard from this 1v1 Ash Wastes engagement and chronicle how your scavenging forces exploited our clash!`;
 
   return [
-    `+++ 1V1 ASH WASTES // 3RD ALLIANCE VULTURE SPTS REPORT +++`,
+    headerBanner,
     `• REPORTING COMMANDER: ${cmdr}`,
     `• CAMPAIGN MASTER (3RD ALLIANCE) VULTURED SPTS: ${totalSp} SPts`,
     `• VULTURE SPTS BREAKDOWN: ${breakdown}`,
     `• ACTIVE HELLSCAPE & WARP INTENSITY: ${hellscapeName} // Intensity: ${intensity}`,
     `------------------------------------------------`,
-    `• VULTURE INTERFERENCE LOG: "${notes}"`,
+    `${logLabel} "${notes}"`,
     `------------------------------------------------`,
     requestLine
   ].join('\n');

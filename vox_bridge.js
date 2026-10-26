@@ -433,7 +433,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
     const shipSpeakerDesc = `Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}`;
 
-    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|TOMB WORLD AWAKENING|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|NEMESIS THREAT INDUCTION|NEMESIS INDUCTION|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
+    const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|TOMB WORLD AWAKENING|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|NEMESIS THREAT INDUCTION|NEMESIS INDUCTION|DYNASTIC NEMESIS|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
     // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
     let promptLines = [];
@@ -452,7 +452,7 @@ async function processSingleMessage(msg, targetPage, options = {}) {
     } else {
       if (!isBetaVaneHail) {
         promptLines = [
-          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md Part 2, NECRONS_CRUSADE.md, WORLD.md, and NEMESIS.md in this notebook—do NOT edit or update any files), reply in-character as Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave (using Pattern 2 for Battle/Rogue Reports, Pattern 3 for Nemesis/Unbound/Intrusion Warrants, or Pattern 4B for general bridge/tomb-ship queries, REF-ID: ${refId}, knowing ONLY Beta's Tomb-Ship Equilibrium Index -1, Awakening Systems, and surface telemetry—NEVER reference The Sanctuary of Ash, Deck 44, or Ashen Spirit) to this transmission from Phaeron Junebug: "${cleanMsg}"`
+          `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md Part 2, NECRONS_CRUSADE.md, WORLD.md, and NEMESIS.md in this notebook—do NOT edit or update any files), reply in-character as Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave (using Pattern 2 for Battle/Rogue Reports, Pattern 3 for Nemesis/Unbound/Intrusion Warrants, or Pattern 4B for general bridge/tomb-ship queries, REF-ID: ${refId}, knowing ONLY Beta's Tomb-Ship Equilibrium Index -1, Awakening Systems, and surface telemetry—NEVER reference The Sanctuary of Ash, Deck 44, or Ashen Spirit, and NEVER use Imperial Astra Militarum, Departmento Munitorum, or Ordo Malleus titles) to this transmission from Phaeron Junebug: "${cleanMsg}"`
         ];
       } else {
         promptLines = [
