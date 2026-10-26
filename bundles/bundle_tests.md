@@ -6,6 +6,9 @@ Unit, boundary, integration, and UI verification test suites for all game modes,
 - [tests/js/data.test.js](#file-testsjsdatatestjs)
 - [tests/js/rng.test.js](#file-testsjsrngtestjs)
 - [tests/js/spawner.test.js](#file-testsjsspawnertestjs)
+- [tests/js/spawner-cards.test.js](#file-testsjsspawnercardstestjs)
+- [tests/js/spawner-cockpit.test.js](#file-testsjsspawnercockpittestjs)
+- [tests/js/spawner-resupply.test.js](#file-testsjsspawnerresupplytestjs)
 - [tests/js/app.test.js](#file-testsjsapptestjs)
 - [tests/js/vox-audio.test.js](#file-testsjsvoxaudiotestjs)
 - [tests/vox_bridge.test.js](#file-testsvoxbridgetestjs)
@@ -341,6 +344,275 @@ test('pickSyncedUnitFromBracket: falls back to canonical HORDE_FACTION_SPAWN_TAB
 
   delete globalThis.HORDE_FACTION_SPAWN_TABLES;
   delete globalThis.document;
+});
+````
+
+---
+
+## File: `tests/js/spawner-cards.test.js` <a id="file-testsjsspawnercardstestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  MISERY_CARD_OFFICIAL_OVERRIDES,
+  SECONDARY_MISSION_OFFICIAL_OVERRIDES,
+  RESUPPLY_OFFICIAL_OVERRIDES,
+  applyAuthoritativeCardOverrides
+} = require('../../js/spawner-cards.js');
+
+test('Spawner Cards: MISERY_CARD_OFFICIAL_OVERRIDES contains all 36 verbatim cards', () => {
+  const keys = Object.keys(MISERY_CARD_OFFICIAL_OVERRIDES).map(Number);
+  assert.equal(keys.length, 36, 'Must define exactly 36 Misery overrides');
+
+  for (let i = 1; i <= 36; i++) {
+    const card = MISERY_CARD_OFFICIAL_OVERRIDES[i];
+    assert.ok(card, `Misery card #${i} must exist`);
+    assert.equal(card.id, i, `Card #${i} id must match`);
+    assert.ok(card.name && card.name.length > 0, `Card #${i} must have a name`);
+    assert.ok(card.desc && card.desc.length > 0, `Card #${i} must have verbatim desc`);
+  }
+
+  // Key rules assertions
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[1].name, 'Unnatural Stamina');
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[7].spawnerEffect, 'UNLUCKY_NIGHT_3D6');
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[13].spawnerEffect, 'PINCER_MANEUVER_EXTRA_SPAWN');
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[21].name, 'Bunkers Busted');
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[22].name, 'Comms Jammed');
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[23].name, 'The Mind Killer');
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[29].name, "Fate's Fetters");
+  assert.equal(MISERY_CARD_OFFICIAL_OVERRIDES[36].name, 'Flash Flood');
+});
+
+test('Spawner Cards: SECONDARY_MISSION_OFFICIAL_OVERRIDES contains all 24 verbatim cards', () => {
+  const keys = Object.keys(SECONDARY_MISSION_OFFICIAL_OVERRIDES).map(Number);
+  assert.equal(keys.length, 24, 'Must define exactly 24 Secondary Mission overrides');
+
+  for (let i = 1; i <= 24; i++) {
+    const mission = SECONDARY_MISSION_OFFICIAL_OVERRIDES[i];
+    assert.ok(mission, `Secondary mission #${i} must exist`);
+    assert.equal(mission.id, i, `Mission #${i} id must match`);
+    assert.ok(mission.name && mission.name.length > 0, `Mission #${i} must have a name`);
+    assert.ok(mission.cond && mission.cond.length > 0, `Mission #${i} must have condition`);
+    assert.ok(mission.rew && mission.rew.length > 0, `Mission #${i} must have reward`);
+    assert.ok(mission.pun && mission.pun.length > 0, `Mission #${i} must have punishment`);
+  }
+
+  // Key rules assertions
+  assert.equal(SECONDARY_MISSION_OFFICIAL_OVERRIDES[1].name, 'Secure Drop Zones');
+  assert.equal(SECONDARY_MISSION_OFFICIAL_OVERRIDES[2].hasTally, true);
+  assert.equal(SECONDARY_MISSION_OFFICIAL_OVERRIDES[2].rewardSpFormula, 'X_PLUS_1');
+  assert.equal(SECONDARY_MISSION_OFFICIAL_OVERRIDES[13].round1Restricted, true);
+  assert.equal(SECONDARY_MISSION_OFFICIAL_OVERRIDES[18].hasTally, true);
+  assert.equal(SECONDARY_MISSION_OFFICIAL_OVERRIDES[24].name, 'VIP Delivery');
+});
+
+test('Spawner Cards: RESUPPLY_OFFICIAL_OVERRIDES contains all 26 authoritative options', () => {
+  const expectedCards = [
+    'A Name Earned', 'Basic Tactics', 'Deploy Minefield', 'Deploy Razor Wire',
+    'Air Strike', 'Deploy Short Range Teleporter', 'Forward Operating Base',
+    'Pizza Party', 'Share Supplies', 'Supply Drop', 'Arm Experimental Defenses',
+    'Defensive Positions', 'Emergency Shovel Stash', 'Field Hospital', 'Tempt Fate',
+    'Activate Jamming Station', 'Advanced Tactics', 'Ammo Supplies', 'Emergency Evac',
+    'Activate Shield Generator', 'A Change of Plans', 'Artillery Strike',
+    'Reinforcements Arrive', 'Patched Up', 'Deploy Fortification', 'Field Promotion'
+  ];
+
+  assert.equal(Object.keys(RESUPPLY_OFFICIAL_OVERRIDES).length, 26, 'Must define 26 Resupply overrides');
+
+  for (const name of expectedCards) {
+    const card = RESUPPLY_OFFICIAL_OVERRIDES[name];
+    assert.ok(card, `Resupply card "${name}" must exist`);
+    assert.ok(Array.isArray(card.tags), `Resupply card "${name}" tags must be an array`);
+    assert.ok(card.desc && card.desc.length > 0, `Resupply card "${name}" must have description`);
+    assert.ok(card.limit && card.limit.length > 0, `Resupply card "${name}" must have usage limit`);
+  }
+
+  // Specific cost and property checks
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Basic Tactics'].cost, 2);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Basic Tactics'].autoEffect, 'GAIN_1_CP');
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Deploy Minefield'].cost, 2);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Deploy Razor Wire'].cost, 2);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Air Strike'].cost, 3);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Air Strike'].hasAirStrikeRoller, true);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Forward Operating Base'].cost, 3);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Forward Operating Base'].autoEffect, 'FORT_FOB');
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Reinforcements Arrive'].cost, 12);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Reinforcements Arrive'].hasReinforcementsRoller, true);
+
+  // Variable X checks
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Patched Up'].isVariable, true);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Patched Up'].varType, 'PATCHED_UP');
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Deploy Fortification'].isVariable, true);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Deploy Fortification'].varType, 'DEPLOY_FORT');
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Field Promotion'].isVariable, true);
+  assert.equal(RESUPPLY_OFFICIAL_OVERRIDES['Field Promotion'].varType, 'FIELD_PROMO');
+});
+
+test('Spawner Cards: applyAuthoritativeCardOverrides cleanly patches global databases', () => {
+  globalThis.MISERIES = [
+    { id: 1, name: 'Old Stamina', desc: 'Old' },
+    { id: 7, name: 'Old Night', desc: 'Old' }
+  ];
+  globalThis.SECONDARIES = [
+    { id: 1, name: 'Old Zones', cond: 'Old', rew: 'Old', pun: 'Old' }
+  ];
+  globalThis.RESUPPLIES = [
+    { name: 'Basic Tactics', cost: 2, desc: 'Old' },
+    { name: 'Short Range Teleporter', cost: 3, desc: 'Old' }
+  ];
+
+  applyAuthoritativeCardOverrides();
+
+  assert.equal(globalThis.MISERIES[0].name, 'Unnatural Stamina');
+  assert.equal(globalThis.MISERIES[1].name, 'Unlucky Night');
+  assert.equal(globalThis.SECONDARIES[0].name, 'Secure Drop Zones');
+  assert.equal(globalThis.RESUPPLIES[0].autoEffect, 'GAIN_1_CP');
+  assert.equal(globalThis.RESUPPLIES[1].name, 'Deploy Short Range Teleporter');
+  assert.equal(globalThis.RESUPPLIES[1].autoEffect, 'MARKER_TELE');
+});
+````
+
+---
+
+## File: `tests/js/spawner-cockpit.test.js` <a id="file-testsjsspawnercockpittestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  isSoloModeActive,
+  getCurrentBattleRound,
+  setGuidedPhaseStep,
+  stepGuidedPhase,
+  awardCommandPhaseObjectiveSP,
+  awardHordeKillSP
+} = require('../../js/spawner-cockpit.js');
+
+test('Spawner Cockpit: isSoloModeActive detects solo mode correctly', () => {
+  globalThis.selectedModeVal = 'solo';
+  assert.equal(isSoloModeActive(), true);
+
+  globalThis.selectedModeVal = 'coop';
+  globalThis.isSoloMode = false;
+  globalThis.state = { mode: 'coop' };
+  assert.equal(isSoloModeActive(), false);
+});
+
+test('Spawner Cockpit: getCurrentBattleRound reads state and falls back correctly', () => {
+  globalThis.state = { round: 3 };
+  assert.equal(getCurrentBattleRound(), 3);
+
+  globalThis.state = null;
+  globalThis.battleRound = 2;
+  assert.equal(getCurrentBattleRound(), 2);
+});
+
+test('Spawner Cockpit: Guided phase step controls clamp and cycle within 1 to 5', () => {
+  setGuidedPhaseStep(1);
+  stepGuidedPhase(1); // steps to 2
+  stepGuidedPhase(4); // cycle around
+  setGuidedPhaseStep(5);
+  stepGuidedPhase(1); // cycle back to 1
+  assert.ok(true, 'Guided stepper safely cycled');
+});
+````
+
+---
+
+## File: `tests/js/spawner-resupply.test.js` <a id="file-testsjsspawnerresupplytestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+require('../../js/spawner-cards.js');
+const {
+  getMiseryLockoutReason,
+  adjPatchedUpWounds,
+  setFortBracketCost,
+  setPromoBaseMin,
+  rollFieldPromotionCost,
+  rollAirStrikeDamage,
+  rollReinforcementsBracket,
+  executeEnhancedResupplyPurchase
+} = require('../../js/spawner-resupply.js');
+
+test('Spawner Resupply: getMiseryLockoutReason identifies active Misery lockouts', () => {
+  globalThis.state = {
+    activeMiseries: [{ id: 21 }]
+  };
+  assert.ok(
+    getMiseryLockoutReason(['Fortify']).includes('Bunkers Busted'),
+    'Misery #21 must block Fortify'
+  );
+  assert.equal(getMiseryLockoutReason(['Tactics']), null);
+
+  globalThis.state.activeMiseries = [{ id: 22 }];
+  assert.ok(
+    getMiseryLockoutReason(['Supply']).includes('Comms Jammed'),
+    'Misery #22 must block Supply'
+  );
+  assert.ok(
+    getMiseryLockoutReason(['Strike']).includes('Comms Jammed'),
+    'Misery #22 must block Strike'
+  );
+  assert.ok(
+    getMiseryLockoutReason(['Spawn']).includes('Comms Jammed'),
+    'Misery #22 must block Spawn'
+  );
+  assert.equal(getMiseryLockoutReason(['Tactics']), null);
+
+  globalThis.state.activeMiseries = [{ id: 23 }];
+  assert.ok(
+    getMiseryLockoutReason(['Tactics']).includes('The Mind Killer'),
+    'Misery #23 must block Tactics'
+  );
+
+  globalThis.state.activeMiseries = [{ id: 29 }];
+  assert.ok(
+    getMiseryLockoutReason(['Secondary']).includes("Fate's Fetters"),
+    "Misery #29 must block Secondary"
+  );
+});
+
+test('Spawner Resupply: Variable X state handlers clamp and adjust correctly', () => {
+  globalThis.resupplyVarState = {
+    patchedUpWounds: 3,
+    fortBracketCost: 5,
+    promoBaseMin: 3,
+    promoLastRoll: null
+  };
+
+  adjPatchedUpWounds(2);
+  assert.equal(globalThis.resupplyVarState.patchedUpWounds, 5);
+  adjPatchedUpWounds(-10);
+  assert.equal(globalThis.resupplyVarState.patchedUpWounds, 1, 'Min wound must clamp to 1');
+
+  setFortBracketCost('7');
+  assert.equal(globalThis.resupplyVarState.fortBracketCost, 7);
+
+  setPromoBaseMin('5');
+  assert.equal(globalThis.resupplyVarState.promoBaseMin, 5);
+
+  rollFieldPromotionCost();
+  assert.ok(globalThis.resupplyVarState.promoLastRoll);
+  assert.ok(globalThis.resupplyVarState.promoLastRoll.d6 >= 1 && globalThis.resupplyVarState.promoLastRoll.d6 <= 6);
+  assert.equal(
+    globalThis.resupplyVarState.promoLastRoll.totalCost,
+    globalThis.resupplyVarState.promoLastRoll.d6 + 5
+  );
+});
+
+test('Spawner Resupply: executeEnhancedResupplyPurchase checks SP and triggers card side effects', () => {
+  let spLost = 0;
+  globalThis.state = { sp: 10, activeMiseries: [] };
+  globalThis.loseSP = (amount) => { spLost += amount; globalThis.state.sp -= amount; };
+  globalThis.adjCP = (delta) => { globalThis.testCp = (globalThis.testCp || 0) + delta; };
+
+  executeEnhancedResupplyPurchase('Basic Tactics', 2);
+  assert.equal(spLost, 2);
+  assert.equal(globalThis.state.sp, 8);
+  assert.equal(globalThis.testCp, 1, 'Basic Tactics auto-effect gains 1 CP');
 });
 ````
 
@@ -2669,6 +2941,9 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
   assert.ok(spawnerHtml.includes('<script src="../js/spawner.js"></script>'));
   assert.ok(spawnerHtml.includes('<script src="../js/app.js"></script>'));
   assert.ok(spawnerHtml.includes('<script src="../js/vox-audio.js"></script>'), 'spawner.html must link to js/vox-audio.js');
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner-cards.js"></script>'), 'spawner.html must link to js/spawner-cards.js');
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner-cockpit.js"></script>'), 'spawner.html must link to js/spawner-cockpit.js');
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner-resupply.js"></script>'), 'spawner.html must link to js/spawner-resupply.js');
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
@@ -3293,27 +3568,52 @@ test('UI Boundary: pages/spawner.html HUD bar prevents pixel overflow on desktop
 });
 test('UI Boundary: pages/spawner.html includes Remastered Horde Rules v0.9 patch with 24 verbatim secondaries, 36 miseries, and spawner hooks', () => {
   const spawnerHtml = readPage('pages/spawner.html');
+  const spawnerCards = readPage('js/spawner-cards.js');
+  const spawnerCockpit = readPage('js/spawner-cockpit.js');
+
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner-cards.js"></script>'), 'Must link to js/spawner-cards.js');
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner-cockpit.js"></script>'), 'Must link to js/spawner-cockpit.js');
 
   // 1. Verbatim Misery Overrides (36 cards)
-  assert.ok(spawnerHtml.includes('MISERY_CARD_OFFICIAL_OVERRIDES'), 'Must define MISERY_CARD_OFFICIAL_OVERRIDES');
-  assert.ok(spawnerHtml.includes('UNLUCKY_NIGHT_3D6'), 'Must configure #7 Unlucky Night 3D6 Drop Lowest hook');
-  assert.ok(spawnerHtml.includes('PINCER_MANEUVER_EXTRA_SPAWN'), 'Must configure #13 Pincer Maneuver extra spawn hook');
-  assert.ok(spawnerHtml.includes('Flash Flood'), 'Must include Misery #36 Flash Flood');
+  assert.ok(spawnerCards.includes('MISERY_CARD_OFFICIAL_OVERRIDES'), 'Must define MISERY_CARD_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerCards.includes('UNLUCKY_NIGHT_3D6'), 'Must configure #7 Unlucky Night 3D6 Drop Lowest hook');
+  assert.ok(spawnerCards.includes('PINCER_MANEUVER_EXTRA_SPAWN'), 'Must configure #13 Pincer Maneuver extra spawn hook');
+  assert.ok(spawnerCards.includes('Flash Flood'), 'Must include Misery #36 Flash Flood');
 
   // 2. Verbatim Secondary Mission Overrides (24 missions)
-  assert.ok(spawnerHtml.includes('SECONDARY_MISSION_OFFICIAL_OVERRIDES'), 'Must define SECONDARY_MISSION_OFFICIAL_OVERRIDES');
-  assert.ok(spawnerHtml.includes('Secure Drop Zones'), 'Must include Secondary #1 Secure Drop Zones');
-  assert.ok(spawnerHtml.includes('Back to Basics'), 'Must include Secondary #2 Back to Basics with X tally');
-  assert.ok(spawnerHtml.includes('VIP Delivery'), 'Must include Secondary #24 VIP Delivery');
-  assert.ok(spawnerHtml.includes('Saved Secondary Reward Cards'), 'Must include Saved Secondary Reward Card vault');
+  assert.ok(spawnerCards.includes('SECONDARY_MISSION_OFFICIAL_OVERRIDES'), 'Must define SECONDARY_MISSION_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerCards.includes('Secure Drop Zones'), 'Must include Secondary #1 Secure Drop Zones');
+  assert.ok(spawnerCards.includes('Back to Basics'), 'Must include Secondary #2 Back to Basics with X tally');
+  assert.ok(spawnerCards.includes('VIP Delivery'), 'Must include Secondary #24 VIP Delivery');
+  assert.ok(spawnerCockpit.includes('Saved Secondary Reward Cards'), 'Must include Saved Secondary Reward Card vault');
 
   // 3. Live Spawner Misery Hooks & Controls
-  assert.ok(spawnerHtml.includes('unluckyNightSpawnerCheck'), 'Must create #unluckyNightSpawnerCheck toggle');
-  assert.ok(spawnerHtml.includes('miserySpawnerStatusBanner'), 'Must create #miserySpawnerStatusBanner');
-  assert.ok(spawnerHtml.includes('rollPincerManeuverExtraSpawn'), 'Must implement rollPincerManeuverExtraSpawn');
-  assert.ok(spawnerHtml.includes('adjSecondaryTally'), 'Must implement adjSecondaryTally');
-  assert.ok(spawnerHtml.includes('resolveSecondaryOutcome'), 'Must implement resolveSecondaryOutcome');
-  assert.ok(spawnerHtml.includes('redeemSavedSecondaryCard'), 'Must implement redeemSavedSecondaryCard');
+  assert.ok(spawnerCockpit.includes('unluckyNightSpawnerCheck'), 'Must create #unluckyNightSpawnerCheck toggle');
+  assert.ok(spawnerCockpit.includes('miserySpawnerStatusBanner'), 'Must create #miserySpawnerStatusBanner');
+  assert.ok(spawnerCockpit.includes('rollPincerManeuverExtraSpawn'), 'Must implement rollPincerManeuverExtraSpawn');
+  assert.ok(spawnerCockpit.includes('adjSecondaryTally'), 'Must implement adjSecondaryTally');
+  assert.ok(spawnerCockpit.includes('resolveSecondaryOutcome'), 'Must implement resolveSecondaryOutcome');
+  assert.ok(spawnerCockpit.includes('redeemSavedSecondaryCard'), 'Must implement redeemSavedSecondaryCard');
+});
+
+test('UI Boundary: pages/spawner.html and js/spawner-cards.js include Authoritative Section 7.1 Resupply Overrides with Misery Lockouts', () => {
+  const spawnerHtml = readPage('pages/spawner.html');
+  const spawnerCards = readPage('js/spawner-cards.js');
+  const spawnerResupply = readPage('js/spawner-resupply.js');
+
+  assert.ok(spawnerHtml.includes('<script src="../js/spawner-resupply.js"></script>'), 'Must link to js/spawner-resupply.js');
+
+  assert.ok(spawnerCards.includes('RESUPPLY_OFFICIAL_OVERRIDES'), 'Must define RESUPPLY_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerCards.includes('Deploy Minefield'), 'Must include Deploy Minefield');
+  assert.ok(spawnerCards.includes('Deploy Razor Wire'), 'Must include Deploy Razor Wire');
+  assert.ok(spawnerCards.includes('Air Strike'), 'Must include Air Strike');
+  assert.ok(spawnerCards.includes('Patched Up'), 'Must include Patched Up variable cost');
+  assert.ok(spawnerCards.includes('Deploy Fortification'), 'Must include Deploy Fortification variable cost');
+  assert.ok(spawnerCards.includes('Field Promotion'), 'Must include Field Promotion variable cost');
+
+  assert.ok(spawnerResupply.includes('getMiseryLockoutReason'), 'Must implement getMiseryLockoutReason');
+  assert.ok(spawnerResupply.includes('executeEnhancedResupplyPurchase'), 'Must implement executeEnhancedResupplyPurchase');
+  assert.ok(spawnerResupply.includes('renderResupplyTable'), 'Must implement renderResupplyTable');
 });
 
 test('UI Boundary: pages/spawner.html aligns Secondary Mission and Misery Cards side-by-side and aligns Quick SP Income action controls', async () => {

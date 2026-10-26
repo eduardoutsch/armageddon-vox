@@ -80,6 +80,9 @@ const JS_FILES = [
   'js/data.js',
   'js/rng.js',
   'js/spawner.js',
+  'js/spawner-cards.js',
+  'js/spawner-cockpit.js',
+  'js/spawner-resupply.js',
   'js/app.js',
   'js/vox-audio.js'
 ];
@@ -96,6 +99,9 @@ const TEST_FILES = [
   'tests/js/data.test.js',
   'tests/js/rng.test.js',
   'tests/js/spawner.test.js',
+  'tests/js/spawner-cards.test.js',
+  'tests/js/spawner-cockpit.test.js',
+  'tests/js/spawner-resupply.test.js',
   'tests/js/app.test.js',
   'tests/js/vox-audio.test.js',
   'tests/vox_bridge.test.js',
