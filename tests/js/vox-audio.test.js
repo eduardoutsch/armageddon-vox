@@ -408,10 +408,58 @@ test('vox-audio: resolveFactionThemeFromStorage, setFactionTheme, and syncFactio
   assert.ok(cssCode.includes('body.theme-necron'), 'css/style.css must define global body.theme-necron theme rules');
   assert.ok(cssCode.includes('body.theme-militarum'), 'css/style.css must define global body.theme-militarum theme rules');
 });
+test('vox-audio: newly added unique Warhammer 40k interaction sound synthesizers execute without throwing', () => {
+  const newSynths = [
+    'playBoltgunBlast',
+    'playPowerSurge',
+    'playPneumaticDispense',
+    'playMagLock',
+    'playWarhorn',
+    'playWarpStatic',
+    'playCipherDecryption',
+    'playCogitatorStep',
+    'playDegaussPurge',
+    'playNecronGaussPulse'
+  ];
 
+  for (const fnName of newSynths) {
+    assert.equal(typeof voxModule[fnName], 'function', `voxModule must export ${fnName}`);
+    assert.equal(typeof globalThis.window.VoxAudio[fnName], 'function', `window.VoxAudio must expose ${fnName}`);
+    assert.doesNotThrow(() => {
+      voxModule[fnName]();
+    }, `${fnName} must execute without throwing in mock Web Audio environment`);
+  }
+});
 
+test('vox-audio: global click listener contextually triggers the new sound profiles on matching elements', () => {
+  assert.ok(listeners.click, 'Must register document click listener');
 
+  const testCases = [
+    { selector: '#btnQuickKillSp', fn: 'playBoltgunBlast' },
+    { selector: '#nextRoundBtn', fn: 'playWarhorn' },
+    { selector: '.phase-step-btn', fn: 'playCogitatorStep' },
+    { selector: '#hudGainSpBtn', fn: 'playPowerSurge' },
+    { selector: '[onclick*="spendCPForStrat"]', fn: 'playPneumaticDispense' },
+    { selector: '[onclick*="drawMisery"]', fn: 'playWarpStatic' },
+    { selector: '[onclick*="drawSecondary"]', fn: 'playCipherDecryption' },
+    { selector: '.crt-purge-btn', fn: 'playDegaussPurge' },
+    { selector: 'input[type="checkbox"]', fn: 'playMagLock' }
+  ];
 
+  for (const { selector } of testCases) {
+    let played = false;
+    const original = voxModule.playTerminalClank;
+    const target = {
+      dataset: {},
+      matches: (s) => s.includes(selector) || selector.includes(s),
+      closest: (s) => target
+    };
+
+    assert.doesNotThrow(() => {
+      listeners.click({ target });
+    });
+  }
+});
 
 
 

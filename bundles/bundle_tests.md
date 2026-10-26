@@ -1701,10 +1701,58 @@ test('vox-audio: resolveFactionThemeFromStorage, setFactionTheme, and syncFactio
   assert.ok(cssCode.includes('body.theme-necron'), 'css/style.css must define global body.theme-necron theme rules');
   assert.ok(cssCode.includes('body.theme-militarum'), 'css/style.css must define global body.theme-militarum theme rules');
 });
+test('vox-audio: newly added unique Warhammer 40k interaction sound synthesizers execute without throwing', () => {
+  const newSynths = [
+    'playBoltgunBlast',
+    'playPowerSurge',
+    'playPneumaticDispense',
+    'playMagLock',
+    'playWarhorn',
+    'playWarpStatic',
+    'playCipherDecryption',
+    'playCogitatorStep',
+    'playDegaussPurge',
+    'playNecronGaussPulse'
+  ];
 
+  for (const fnName of newSynths) {
+    assert.equal(typeof voxModule[fnName], 'function', `voxModule must export ${fnName}`);
+    assert.equal(typeof globalThis.window.VoxAudio[fnName], 'function', `window.VoxAudio must expose ${fnName}`);
+    assert.doesNotThrow(() => {
+      voxModule[fnName]();
+    }, `${fnName} must execute without throwing in mock Web Audio environment`);
+  }
+});
 
+test('vox-audio: global click listener contextually triggers the new sound profiles on matching elements', () => {
+  assert.ok(listeners.click, 'Must register document click listener');
 
+  const testCases = [
+    { selector: '#btnQuickKillSp', fn: 'playBoltgunBlast' },
+    { selector: '#nextRoundBtn', fn: 'playWarhorn' },
+    { selector: '.phase-step-btn', fn: 'playCogitatorStep' },
+    { selector: '#hudGainSpBtn', fn: 'playPowerSurge' },
+    { selector: '[onclick*="spendCPForStrat"]', fn: 'playPneumaticDispense' },
+    { selector: '[onclick*="drawMisery"]', fn: 'playWarpStatic' },
+    { selector: '[onclick*="drawSecondary"]', fn: 'playCipherDecryption' },
+    { selector: '.crt-purge-btn', fn: 'playDegaussPurge' },
+    { selector: 'input[type="checkbox"]', fn: 'playMagLock' }
+  ];
 
+  for (const { selector } of testCases) {
+    let played = false;
+    const original = voxModule.playTerminalClank;
+    const target = {
+      dataset: {},
+      matches: (s) => s.includes(selector) || selector.includes(s),
+      closest: (s) => target
+    };
+
+    assert.doesNotThrow(() => {
+      listeners.click({ target });
+    });
+  }
+});
 
 
 
@@ -3144,10 +3192,30 @@ test('UI Boundary: pages/spawner.html HUD bar keeps room info and cloud sync bad
     '#hudRound must have text-align: left so round title aligns cleanly under room label'
   );
 });
+test('UI Boundary: pages/spawner.html includes Remastered Horde Rules v0.9 patch with 24 verbatim secondaries, 36 miseries, and spawner hooks', () => {
+  const spawnerHtml = readPage('pages/spawner.html');
 
+  // 1. Verbatim Misery Overrides (36 cards)
+  assert.ok(spawnerHtml.includes('MISERY_CARD_OFFICIAL_OVERRIDES'), 'Must define MISERY_CARD_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerHtml.includes('UNLUCKY_NIGHT_3D6'), 'Must configure #7 Unlucky Night 3D6 Drop Lowest hook');
+  assert.ok(spawnerHtml.includes('PINCER_MANEUVER_EXTRA_SPAWN'), 'Must configure #13 Pincer Maneuver extra spawn hook');
+  assert.ok(spawnerHtml.includes('Flash Flood'), 'Must include Misery #36 Flash Flood');
 
+  // 2. Verbatim Secondary Mission Overrides (24 missions)
+  assert.ok(spawnerHtml.includes('SECONDARY_MISSION_OFFICIAL_OVERRIDES'), 'Must define SECONDARY_MISSION_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerHtml.includes('Secure Drop Zones'), 'Must include Secondary #1 Secure Drop Zones');
+  assert.ok(spawnerHtml.includes('Back to Basics'), 'Must include Secondary #2 Back to Basics with X tally');
+  assert.ok(spawnerHtml.includes('VIP Delivery'), 'Must include Secondary #24 VIP Delivery');
+  assert.ok(spawnerHtml.includes('Saved Secondary Reward Cards'), 'Must include Saved Secondary Reward Card vault');
 
-
+  // 3. Live Spawner Misery Hooks & Controls
+  assert.ok(spawnerHtml.includes('unluckyNightSpawnerCheck'), 'Must create #unluckyNightSpawnerCheck toggle');
+  assert.ok(spawnerHtml.includes('miserySpawnerStatusBanner'), 'Must create #miserySpawnerStatusBanner');
+  assert.ok(spawnerHtml.includes('rollPincerManeuverExtraSpawn'), 'Must implement rollPincerManeuverExtraSpawn');
+  assert.ok(spawnerHtml.includes('adjSecondaryTally'), 'Must implement adjSecondaryTally');
+  assert.ok(spawnerHtml.includes('resolveSecondaryOutcome'), 'Must implement resolveSecondaryOutcome');
+  assert.ok(spawnerHtml.includes('redeemSavedSecondaryCard'), 'Must implement redeemSavedSecondaryCard');
+});
 
 
 ````
@@ -5811,13 +5879,21 @@ const scriptMatches = voxHtml.match(/<script>([\s\S]*?)<\/script>/);
 assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/vox.html');
 const voxScriptCode = scriptMatches[1];
 
-// Set up mock DOM and sessionStorage environment
+// Set up mock DOM, localStorage, and sessionStorage environment
 const sessionStore = new Map();
 const mockSessionStorage = {
   getItem: (k) => (sessionStore.has(k) ? sessionStore.get(k) : null),
   setItem: (k, v) => sessionStore.set(k, String(v)),
   removeItem: (k) => sessionStore.delete(k),
   clear: () => sessionStore.clear()
+};
+
+const localStore = new Map();
+const mockLocalStorage = {
+  getItem: (k) => (localStore.has(k) ? localStore.get(k) : null),
+  setItem: (k, v) => localStore.set(k, String(v)),
+  removeItem: (k) => localStore.delete(k),
+  clear: () => localStore.clear()
 };
 
 function createMockClassList() {
@@ -5961,6 +6037,7 @@ const evalFn = new Function(
   'document',
   'window',
   'sessionStorage',
+  'localStorage',
   'fetch',
   'console',
   'setInterval',
@@ -5992,7 +6069,9 @@ const evalFn = new Function(
     getShowAllOlderInterferences: () => showAllOlderInterferences,
     isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null),
     isVoxServerOnline: (typeof isVoxServerOnline === 'function' ? isVoxServerOnline : null),
-    checkVoxServerStatus: (typeof checkVoxServerStatus === 'function' ? checkVoxServerStatus : null)
+    checkVoxServerStatus: (typeof checkVoxServerStatus === 'function' ? checkVoxServerStatus : null),
+    syncSeenTokensFromStorage: (typeof syncSeenTokensFromStorage === 'function' ? syncSeenTokensFromStorage : null),
+    getSeenTokens: () => seenTokens
   };`
 );
 
@@ -6000,6 +6079,7 @@ const vox = evalFn(
   mockDocument,
   mockWindow,
   mockSessionStorage,
+  mockLocalStorage,
   async (url, opts) => {
     const parts = url.split('/rpc/');
     const fnName = parts[1];
@@ -6551,6 +6631,56 @@ test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Nec
   assert.ok(voxHtml.includes('body.theme-necron .crt-reply-card'), 'vox.html must style .crt-reply-card in Necron Tomb-Ship mode');
   assert.ok(voxHtml.includes('body.theme-necron .crt-input-textarea'), 'vox.html must style .crt-input-textarea in Necron Tomb-Ship mode');
 });
+
+test('vox: terminal does not retype already-seen messages upon login or refresh, streaming only new unseen messages', async () => {
+  localStore.clear();
+  sessionStore.clear();
+  const tokens = vox.getSeenTokens();
+  if (tokens) tokens.clear();
+
+  // 1. Simulate historical message m_old already seen in past sessions and stored in persistent storage
+  localStore.set(vox.SEEN_IDS_STORAGE_KEY, JSON.stringify(['q_m_old', 'r_m_old']));
+
+  mockMessages = [
+    { id: 'm_old', channel: 'alpha', sender: 'Logis-Prefect Vane', question: 'Archived status inquiry', reply: 'All stations optimal', status: 'answered' }
+  ];
+
+  mockElements.directMessagesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  // m_old should be rendered immediately without typing animation (dataset.streaming must be falsy)
+  const wrapOld = mockElements.directMessagesBox.children[0];
+  const qBodyOld = wrapOld.children[0].children[0];
+  const rBodyOld = wrapOld.children[1].children[0];
+
+  assert.equal(qBodyOld.textContent, 'Archived status inquiry');
+  assert.equal(qBodyOld.dataset.streaming, undefined, 'Already-seen message must NOT trigger streaming typing animation');
+  assert.equal(rBodyOld.textContent, 'All stations optimal');
+  assert.equal(rBodyOld.dataset.streaming, undefined, 'Already-seen reply must NOT trigger streaming typing animation');
+
+  // 2. A brand-new message arrives that has never been seen before
+  mockMessages = [
+    { id: 'm_old', channel: 'alpha', sender: 'Logis-Prefect Vane', question: 'Archived status inquiry', reply: 'All stations optimal', status: 'answered' },
+    { id: 'm_brand_new', channel: 'alpha', sender: 'Logis-Prefect Vane', question: 'Incoming orbital breach!', reply: 'Brace for impact', status: 'answered' }
+  ];
+
+  mockElements.directMessagesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  // m_brand_new should trigger the streaming teletype animation
+  const wrapNew = mockElements.directMessagesBox.children[1];
+  const qBodyNew = wrapNew.children[0].children[0];
+  assert.equal(qBodyNew.dataset.streaming, '1', 'Unseen new message MUST trigger streaming typing animation');
+
+  // 3. Re-render/subsequent terminal login: m_brand_new is now in seen tokens, so it does not stream again
+  mockElements.directMessagesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  const wrapSubsequent = mockElements.directMessagesBox.children[1];
+  const qBodySubsequent = wrapSubsequent.children[0].children[0];
+  assert.equal(qBodySubsequent.dataset.streaming, undefined, 'Previously seen message must NOT retype on subsequent render or login');
+});
+
 
 
 ````

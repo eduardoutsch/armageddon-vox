@@ -991,12 +991,11 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
   <script src="../js/app.js"></script>
   <script src="../js/vox-audio.js"></script>
 
-  <!-- REMASTERED HORDE RULES v0.9 PATCH: SOLO 2x SP, VERBATIM MISERY ASSETS & GUIDED FLOW -->
+    <!-- REMASTERED HORDE RULES v0.9 PATCH: SOLO 2x SP, VERBATIM MISERY (36) & SECONDARY (24) ASSETS, SPAWNER MISERY MODS & GUIDED FLOW -->
   <script>
   (function() {
     /**
-     * Authoritative 36-Card Misery Deck Asset Database (11th Ed Horde Mode v0.9 PDFs)
-     * Includes exact card text, card number (X/36), timing tag, and tactical reminder.
+     * 1. AUTHORITATIVE 36-CARD MISERY DECK ASSET DATABASE (11th Ed Horde Mode v0.9 PDFs)
      */
     const MISERY_CARD_OFFICIAL_OVERRIDES = {
       1: {
@@ -1038,9 +1037,10 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       },
       7: {
         id: 7, num: "7/36", name: "Unlucky Night",
-        timing: "Persistent • Spawning the Horde Step",
+        timing: "Spawner Modifier • Roll 3D6 Drop Lowest!",
         desc: "When making Spawn Rolls for the Horde, roll 3D6 and discard the lowest.",
-        note: "Tactical Reminder: All Horde Spawn Zone rolls this round roll 3D6 drop lowest!"
+        note: "Spawner Linked: Automatically activates the [3D6 Drop Lowest] Spawn Roll modifier for this round!",
+        spawnerEffect: "UNLUCKY_NIGHT_3D6"
       },
       8: {
         id: 8, num: "8/36", name: "Death Denied",
@@ -1058,7 +1058,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         id: 10, num: "10/36", name: "Planetquake",
         timing: "Immediate Resolution • Terrain Area Strike",
         desc: "Select one terrain area wholly outside of the Attacker's deployment zone at random. Air Strike (see 7.1) activates, targeting that terrain area.",
-        note: "Air Strike (7.1): Roll 1D6 for each unit within the terrain feature; on a 2–5 suffer D3 MW, on a 6 suffer D6 MW."
+        note: "Air Strike (7.1): Roll 1D6 for each model in each unit within the terrain feature; for every 4+, that unit suffers 1 mortal wound (MONSTER/VEHICLE units suffer 3 MW on a 4+ instead)."
       },
       11: {
         id: 11, num: "11/36", name: "Errant Explosion",
@@ -1074,35 +1074,34 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       },
       13: {
         id: 13, num: "13/36", name: "Pincer Maneuver",
-        timing: "Immediate + Horde Movement Phase Deep Strike",
+        timing: "Spawner Modifier • Extra Deep Strike Reserve Unit (>3\")",
         desc: "Spawn an extra Horde unit into the Horde's strategic reserves, following the normal sequence. That unit gains Deep Strike and makes an ingress move during the Horde's next Movement phase, except it may be set up anywhere that is more than 3\" from all Player units. It deploys within the Players' deployment zone if able. If unable, it deploys within No Man's Land if able.",
-        note: "Tactical Reminder: Roll 2D6 to spawn 1 extra Horde unit into Reserves; it drops >3\" away from Player units (prioritizing Player DZ)!"
+        note: "Spawner Linked: Click [🎲 Roll Pincer Maneuver Reserve Spawn] below to roll 2D6 and generate the extra Deep Strike Horde unit!",
+        spawnerEffect: "PINCER_MANEUVER_EXTRA_SPAWN"
       },
       14: {
         id: 14, num: "14/36", name: "No Hard Feelings",
         timing: "Immediate Resolution • Supply Points / Solo Escalation",
         desc: "Randomly select a player. Set their SP to 0. If playing Single Player, instead reveal 2 more Misery Cards.",
-        note: "In Co-op: 1 random player's SP becomes 0. In Solo Mode: Your SP is untouched, but you MUST reveal +2 Misery Cards!",
-        actionType: "NO_HARD_FEELINGS"
+        note: "In Co-op: 1 random player's SP becomes 0. In Solo Mode: Your SP is untouched, but you MUST reveal +2 Misery Cards!"
       },
       15: {
         id: 15, num: "15/36", name: "Bad Investment",
         timing: "Immediate Resolution • All Players Lose 5 SP",
         desc: "Remove 5SP from all players. (The minimum SP is 0.)",
-        note: "Click the quick button below to deduct 5 SP (down to a minimum of 0 SP).",
-        actionType: "LOSE_5_SP"
+        note: "Click the quick button below to deduct 5 SP (down to a minimum of 0 SP)."
       },
       16: {
         id: 16, num: "16/36", name: "Fair and Balanced",
         timing: "Persistent • Horde Shooting & Fight Phases",
         desc: "Horde unit attacks have [DEVASTATING WOUNDS].",
-        note: "Tactical Reminder: Unmodified Wound rolls of 6 by Horde models inflict Mortal Wounds bypassing normal saves!"
+        note: "Tactical Reminder: Critical Wounds by Horde models inflict Mortal Wounds bypassing normal saves!"
       },
       17: {
         id: 17, num: "17/36", name: "Unfettered Fury",
         timing: "Persistent • Horde Shooting & Fight Phases",
         desc: "Horde unit attacks have [SUSTAINED HITS 1] and [LETHAL HITS 1].",
-        note: "Tactical Reminder: Unmodified Hit rolls of 6 by Horde models score 1 extra hit AND automatically wound!"
+        note: "Tactical Reminder: Critical Hits (unmodified 6s) by Horde models score 1 extra hit AND automatically wound!"
       },
       18: {
         id: 18, num: "18/36", name: "A Worthless Sacrifice",
@@ -1120,8 +1119,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         id: 20, num: "20/36", name: "Lamentable Luck",
         timing: "Immediate Chain Draw • Reveal +2 Misery Cards",
         desc: "Reveal 2 more Misery cards.",
-        note: "Click the button below to immediately reveal 2 additional Misery cards from the deck.",
-        actionType: "DRAW_2_MISERY"
+        note: "Click the button below to immediately reveal 2 additional Misery cards from the deck."
       },
       21: {
         id: 21, num: "21/36", name: "Bunkers Busted",
@@ -1145,8 +1143,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         id: 24, num: "24/36", name: "Seller's Market",
         timing: "Persistent • Resupply Step (2x SP Cost)",
         desc: "The SP cost of all purchases is doubled.",
-        note: "Automatically enables the 2x Seller's Market toggle in the Resupply Shop for this round.",
-        actionType: "SELLERS_MARKET"
+        note: "Automatically enables the 2x Seller's Market toggle in the Resupply Shop for this round."
       },
       25: {
         id: 25, num: "25/36", name: "Hotter Shots",
@@ -1176,8 +1173,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         id: 29, num: "29/36", name: "Fate's Fetters",
         timing: "Immediate Resolution + Secondary Lockout",
         desc: "Remove 4SP from the player with the most SP. Reveal 3 extra Secondary Missions. Ignore the limit on Secondary Missions this battle round. Players cannot make Secondary purchases.",
-        note: "Deduct 4 SP from highest-SP player, draw +3 Secondary Missions now, and block [Secondary] Resupply purchases!",
-        actionType: "FATES_FETTERS"
+        note: "Deduct 4 SP from highest-SP player, draw +3 Secondary Missions now, and block [Secondary] Resupply purchases!"
       },
       30: {
         id: 30, num: "30/36", name: "Aim for the Heads",
@@ -1223,10 +1219,300 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       }
     };
 
-    // Patch global MISERY_DECK / MISERY_CARDS in js/data.js with verbatim rules
-    const deckRef = (typeof MISERY_DECK !== 'undefined') ? MISERY_DECK : (window.MISERY_DECK || window.MISERY_CARDS || []);
-    if (Array.isArray(deckRef)) {
-      deckRef.forEach(card => {
+    /**
+     * 2. AUTHORITATIVE 24-CARD SECONDARY MISSION ASSET DATABASE (11th Ed Horde Mode v0.9 PDFs)
+     */
+    const SECONDARY_MISSION_OFFICIAL_OVERRIDES = {
+      1: {
+        id: 1, num: "1/24", name: "Secure Drop Zones",
+        typeTag: "Objective Control • End of Battle Round",
+        round1Restricted: false,
+        cond: "Randomly select two objectives in No Man's Land (if fewer exist, select that number instead.) Control those selected objectives at the end of the battle round.",
+        rew: "3 SP, One random player saves this card. You may discard this card during the Resupply Step to make a Tactics purchase without paying SP.",
+        pun: "+1 Misery card",
+        rewardSp: 3,
+        savedCardBenefit: "Discard during Resupply Step for 1 FREE [Tactics] purchase",
+        punMisery: 1
+      },
+      2: {
+        id: 2, num: "2/24", name: "Back to Basics",
+        typeTag: "Kill Tally (X) • End of Battle Round",
+        round1Restricted: false,
+        hasTally: true,
+        tallyLabel: "Horde Units Destroyed This Round (X)",
+        cond: "Keep a tally, X, of how many Horde units are destroyed this battle round after the horde is spawned and you have revealed this mission. X must be greater than zero.",
+        rew: "(X+1) SP",
+        pun: "+2 Misery cards",
+        rewardSpFormula: "X_PLUS_1",
+        punMisery: 2
+      },
+      3: {
+        id: 3, num: "3/24", name: "Show No Fear",
+        typeTag: "Morale Check • End of Battle Round",
+        round1Restricted: false,
+        cond: "No Player units can be battle-shocked at the end of the battle round.",
+        rew: "3 SP",
+        pun: "+2 Misery cards, +1 to Spawn Rolls",
+        rewardSp: 3,
+        punMisery: 2,
+        punSpawnMod: 1
+      },
+      4: {
+        id: 4, num: "4/24", name: "Establish Orbital Comms",
+        typeTag: "Shooting Action • Center Battlefield (6\")",
+        round1Restricted: false,
+        actionTitle: "Establish Orbital Comms - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: One INFANTRY or CHARACTER unit that is wholly within 6\" of the center of the battlefield. | USE LIMIT: Once per turn. | COMPLETES: End of the turn. | EFFECT: The Condition of this Secondary Mission is met.",
+        cond: "Complete the Establish Orbital Comms action with 1 INFANTRY or CHARACTER unit wholly within 6\" of the center of the battlefield.",
+        rew: "One at a time, each player without a revealed Secret Objective immediately uses A Change of Plans.",
+        pun: "One at a time, each player without a revealed Secret Objective immediately uses A Change of Plans, but they do not choose a card; instead they select one at random.",
+        specialRewardAction: "CHANGE_OF_PLANS_CHOICE",
+        specialPunAction: "CHANGE_OF_PLANS_RANDOM"
+      },
+      5: {
+        id: 5, num: "5/24", name: "Search for Supplies",
+        typeTag: "Shooting Action • Objective Roll (4+)",
+        round1Restricted: false,
+        actionTitle: "Search for Supplies - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: One unit within range of an objective (excluding your home objective). | USE LIMIT: Unlimited. Each unit that starts this action this phase must be within range of a different objective. | COMPLETES: End of the turn, if that unit controls that objective. | EFFECT: Roll one D6: on a 4+ the Condition of this Secondary Mission is met.",
+        cond: "Complete the Search for Supplies action on controlled non-home objective(s) and roll a 4+ on 1D6.",
+        rew: "3 SP, One random player saves this card. You may discard this card during the Resupply step to make a Supply purchase without paying SP.",
+        pun: "+2 Misery cards",
+        rewardSp: 3,
+        savedCardBenefit: "Discard during Resupply Step for 1 FREE [Supply] purchase",
+        punMisery: 2
+      },
+      6: {
+        id: 6, num: "6/24", name: "Clear the Evac Zone",
+        typeTag: "Zone Defense • End of Battle Round",
+        round1Restricted: false,
+        cond: "No Horde units are within the Defender's deployment zone at the end of the battle round.",
+        rew: "3 SP",
+        pun: "Reinforcements Arrive is removed from the SP Purchase Table",
+        rewardSp: 3,
+        punNote: "Reinforcements Arrive (12 SP) is permanently removed from the Resupply Shop!"
+      },
+      7: {
+        id: 7, num: "7/24", name: "Decapitation Strike",
+        typeTag: "Assassination • End of Battle Round",
+        round1Restricted: false,
+        cond: "Destroy a Horde CHARACTER model, or have no Horde CHARACTER models exist at the end of the battle round.",
+        rew: "2 SP, 2 CP",
+        pun: "+2 Misery cards",
+        rewardSp: 2,
+        rewardCp: 2,
+        punMisery: 2
+      },
+      8: {
+        id: 8, num: "8/24", name: "Dragon Slayer",
+        typeTag: "Big Game Hunt • End of Battle Round",
+        round1Restricted: false,
+        cond: "Destroy a Horde VEHICLE or MONSTER model or have none exist at the end of the battle round.",
+        rew: "1 free Field Promotion use to the player who triggers it. If no player triggers, 2SP",
+        pun: "+6 to the first Spawn Roll",
+        rewardSp: 2,
+        punFirstZoneBonus: 6
+      },
+      9: {
+        id: 9, num: "9/24", name: "Paint Targets",
+        typeTag: "Movement Restriction • Until End of Round",
+        round1Restricted: false,
+        cond: "Until the end of the battle round: (1) No player unit may make a fall-back move. (2) No player unit may make any move that takes them out of range of any objective they began the turn in range of.",
+        rew: "1 Free use of Air Strike to a random player, 1 Free use of Defensive Positions to a random player.",
+        pun: "Search for Stray Orbital Bombardment in the Misery Deck and discard pile and immediately resolve it.",
+        savedCardBenefit: "1 FREE Air Strike + 1 FREE Defensive Positions",
+        punTriggerMiseryId: 6
+      },
+      10: {
+        id: 10, num: "10/24", name: "Study Behaviors",
+        typeTag: "Specimen Preservation • Player Movement Phase",
+        round1Restricted: false,
+        cond: "At the start of the Player Movement phase, choose a Horde unit on the battlefield at random; that unit must not lose any wounds until the end of the battle round.",
+        rew: "2 SP, One random player saves this card. You may discard this card to discard and nullify the effect of a revealed Misery card.",
+        pun: "+3 to Spawn Roll",
+        rewardSp: 2,
+        savedCardBenefit: "Discard anytime to NULLIFY 1 revealed Misery card",
+        punSpawnMod: 3
+      },
+      11: {
+        id: 11, num: "11/24", name: "Use It or Lose It",
+        typeTag: "Resupply Spend Tally (X >= 7) • Round 2+ Only",
+        round1Restricted: true,
+        hasTally: true,
+        tallyLabel: "SP Spent This Round After Reveal (X, Need 7+)",
+        cond: "Keep a tally, X, of how much SP is spent during the battle round after revealing this card. The tally must be at least 7 at the end of the battle round. (If drawn in Round 1, reveal another Secondary Mission and shuffle this back into the deck.)",
+        rew: "Roll a D6, on a 4+, X SP to a random player. Otherwise, 3 SP to a random player.",
+        pun: "-3SP, +1 Misery card",
+        rewardSpFormula: "USE_IT_OR_LOSE_IT",
+        punLoseSp: 3,
+        punMisery: 1
+      },
+      12: {
+        id: 12, num: "12/24", name: "Control the Battlefield",
+        typeTag: "Table Quarters • End of Battle Round",
+        round1Restricted: false,
+        cond: "At the end of the battle round, have at least one Player unit wholly within each table quarter and outside of 6\" of the center of the battlefield.",
+        rew: "-1 to Spawn Rolls, One random player saves this card. You may discard this card during the Resupply step to make a Secondary purchase without paying SP.",
+        pun: "+1 Misery card, +1 to Spawn Rolls",
+        rewardSpawnMod: -1,
+        savedCardBenefit: "Discard during Resupply Step for 1 FREE [Secondary] purchase",
+        punMisery: 1,
+        punSpawnMod: 1
+      },
+      13: {
+        id: 13, num: "13/24", name: "The Smell of Napalm",
+        typeTag: "Resupply Quota (2x Strike) • Round 2+ Only",
+        round1Restricted: true,
+        cond: "Make 2 Strike purchases this battle round. (If drawn in Round 1, reveal another Secondary Mission and shuffle this back into the deck.)",
+        rew: "2SP, -1 to Spawn Rolls",
+        pun: "+1 Misery card, +1 to Spawn Rolls",
+        rewardSp: 2,
+        rewardSpawnMod: -1,
+        punMisery: 1,
+        punSpawnMod: 1
+      },
+      14: {
+        id: 14, num: "14/24", name: "Marching on Stomachs",
+        typeTag: "Resupply Quota (2x Supply) • Round 2+ Only",
+        round1Restricted: true,
+        cond: "Make 2 Supply purchases this battle round. (If drawn in Round 1, reveal another Secondary Mission and shuffle this back into the deck.)",
+        rew: "1SP, One random player saves this card. You may discard this card during the Resupply step to reduce the cost of Reinforcements Arrive by 5.",
+        pun: "+1 Misery card, each Horde unit on the battlefield heals 3 wounds.",
+        rewardSp: 1,
+        savedCardBenefit: "Discard during Resupply to reduce Reinforcements Arrive cost by 5 SP (to 7 SP)",
+        punMisery: 1
+      },
+      15: {
+        id: 15, num: "15/24", name: "Baiting the Trap",
+        typeTag: "Shooting Action • Center Battlefield (6\")",
+        round1Restricted: false,
+        actionTitle: "Baiting the Trap - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: One unit that is wholly within 6\" of the center of the battlefield. | USE LIMIT: Once per turn. | COMPLETES: End of the turn. | EFFECT: The Condition of this Secondary Mission is met.",
+        cond: "Complete the Baiting the Trap action with 1 unit wholly within 6\" of the center of the battlefield.",
+        rew: "2SP, +12 to the first Spawn Roll, One free use of Deploy Minefield to the Player whose unit completed Baiting the Trap",
+        pun: "+2 Misery cards, +2 to Spawn Rolls",
+        rewardSp: 2,
+        rewardFirstZoneBonus: 12,
+        savedCardBenefit: "1 FREE Deploy Minefield use",
+        punMisery: 2,
+        punSpawnMod: 2
+      },
+      16: {
+        id: 16, num: "16/24", name: "Lead from the Front",
+        typeTag: "Character Damage Tally (X, Max 4) • End of Round",
+        round1Restricted: false,
+        hasTally: true,
+        tallyLabel: "Damage Dealt by Player CHARACTERS (X, Max 4)",
+        cond: "Keep a tally of damage dealt to Horde models by Player CHARACTER models this battle round, X, up to a maximum of 4. Count the number of Player CHARACTER models on the battlefield. At the end of the battle round X must be greater than 0 and there must be at least as many Player CHARACTER models on the battlefield as there were when the Secondary Mission was revealed.",
+        rew: "X SP",
+        pun: "+1 Misery card, -1 to Battle-shock tests made by Player units",
+        rewardSpFormula: "X_MAX_4",
+        punMisery: 1
+      },
+      17: {
+        id: 17, num: "17/24", name: "Spruce This Place Up",
+        typeTag: "Fortification Check (2+ Obj) • Round 2+ Only",
+        round1Restricted: true,
+        cond: "At the end of the battle round, have at least 2 objectives fortified. (If drawn in Round 1, reveal another Secondary Mission and shuffle this back into the deck.)",
+        rew: "1SP, One random player saves this card. You may discard this card to discard and nullify the effect of a revealed Misery card.",
+        pun: "+1 Misery card, Remove all Fortified Markers from Objectives",
+        rewardSp: 1,
+        savedCardBenefit: "Discard anytime to NULLIFY 1 revealed Misery card",
+        punMisery: 1
+      },
+      18: {
+        id: 18, num: "18/24", name: "Calling Shots",
+        typeTag: "Marked Priority Targets (X) • End of Horde Move",
+        round1Restricted: false,
+        hasTally: true,
+        tallyLabel: "Marked Horde Units Chosen & Destroyed (X)",
+        cond: "At the end of the Horde's Movement phase, select one or more Horde units. Mark them with a reminder token and keep track of the chosen number of units, X. Keep a tally of the amount of marked units destroyed during the battle round. The tally at the end of the battle round must equal X. (If revealed after the Horde's Movement Phase, reveal another Secondary Objective and shuffle Calling Shots back into the deck.)",
+        rew: "(X * 2) SP",
+        pun: "+X Misery cards, +X to Spawn Rolls",
+        rewardSpFormula: "X_TIMES_2",
+        punFormula: "X_MISERY_AND_SPAWN"
+      },
+      19: {
+        id: 19, num: "19/24", name: "Tactical Withdrawal",
+        typeTag: "Shooting Action • NML Board Edge (4\") • Round 2+",
+        round1Restricted: true,
+        actionTitle: "Tactical Withdrawal - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: One unit that is wholly within No Man's Land and wholly within 4\" of a board edge. | USE LIMIT: Once per turn. | COMPLETES: End of the turn. | EFFECT: (1) Place the unit that completed this action into strategic reserves. (2) The Condition of this Secondary Mission is met.",
+        cond: "Complete the Tactical Withdrawal action with 1 unit wholly in No Man's Land and wholly within 4\" of a board edge. (If drawn in Round 1, reveal another Secondary Mission and shuffle this back into the deck.)",
+        rew: "1SP, The player whose unit completes Tactical Withdrawal saves this card. You may discard this card during the Resupply step to make up to 2 Deploy Short Range Teleporter purchases without paying SP.",
+        pun: "Next battle round, before revealing Misery Cards, first search for Pincer Maneuver in the Misery Deck and discard pile and add it to the active Misery cards.",
+        rewardSp: 1,
+        savedCardBenefit: "Discard during Resupply for up to 2 FREE Deploy Short Range Teleporter purchases",
+        punTriggerMiseryId: 13
+      },
+      20: {
+        id: 20, num: "20/24", name: "Insane Gambit",
+        typeTag: "Shooting Action • Destroy Controlled Objective!",
+        round1Restricted: false,
+        actionTitle: "Scuttle the Objective - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: One unit within range of an objective. | USE LIMIT: Once per turn. | COMPLETES: End of the turn, if that unit controls that objective. | EFFECT: If completed on objective terrain, it no longer counts as an objective and becomes normal terrain. If completed on an objective marker, remove the objective marker. The Condition of this Secondary Mission is met.",
+        cond: "Complete the Scuttle the Objective action on a controlled objective (permanently removing that objective marker!).",
+        rew: "4SP, One random player saves this card. You may discard this card during the Resupply step to make a Fortify purchase without paying SP.",
+        pun: "+2 Misery cards",
+        rewardSp: 4,
+        savedCardBenefit: "Discard during Resupply Step for 1 FREE [Fortify] purchase",
+        punMisery: 2
+      },
+      21: {
+        id: 21, num: "21/24", name: "Stabilize Warp Beacons",
+        typeTag: "Shooting Action • 3 or 4 Table Quarters • Round 2+",
+        round1Restricted: true,
+        actionTitle: "Stabilize Warp Beacons - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: Three or four units wholly within different table quarters and more than 6\" away from the center of the battlefield. | USE LIMIT: Once per turn. | COMPLETES: End of the turn. | EFFECT: For each unit that completed this action, roll one D6 (adding 1 if four units completed this action): on a roll of 1 or 2 destroy that unit. The Condition of this Secondary Objective is met.",
+        cond: "Complete Stabilize Warp Beacons with 3 or 4 units in different table quarters (>6\" from center). Roll 1D6 per unit (+1 if 4 units): on 1–2 that unit is destroyed! (If drawn in Round 1, redraw.)",
+        rew: "1SP, One free use of Reinforcements Arrive to a random player whose unit completed Stabilize Warp Beacons",
+        pun: "+2 Misery cards",
+        rewardSp: 1,
+        savedCardBenefit: "1 FREE Reinforcements Arrive (12 SP value!)",
+        punMisery: 2
+      },
+      22: {
+        id: 22, num: "22/24", name: "Confirm Kills",
+        typeTag: "Focus Fire • No Damaged Horde Units Survive",
+        round1Restricted: false,
+        cond: "Mark all Horde units that lose wounds. No marked Horde units are on the battlefield at the end of the battle round.",
+        rew: "3SP, -1 to Spawn Rolls",
+        pun: "+2 to Spawn Rolls",
+        rewardSp: 3,
+        rewardSpawnMod: -1,
+        punSpawnMod: 2
+      },
+      23: {
+        id: 23, num: "23/24", name: "Secure the LZ",
+        typeTag: "Shooting Action • 3 Units in Defender DZ (>6\" Apart)",
+        round1Restricted: false,
+        actionTitle: "Secure the LZ - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: Three units wholly within the Defender's deployment zone and more than 6\" away from each other. | USE LIMIT: Once per turn. | COMPLETES: End of the turn. | EFFECT: The Condition of this Secondary Objective is met.",
+        cond: "Complete the Secure the LZ action with 3 units wholly within the Defender's deployment zone and >6\" away from each other.",
+        rew: "In the next Resupply phase, reduce the cost of the first SP purchase for each player by 3SP (to a minimum cost of 0SP).",
+        pun: "+1 Misery card. Next battle round before revealing Misery Cards, first search for Comms Jammed in the Misery Deck and discard pile and add it to the active Misery cards.",
+        savedCardBenefit: "Next Resupply Phase: -3 SP discount on each player's first SP purchase (min 0 SP)",
+        punMisery: 1,
+        punTriggerMiseryId: 22
+      },
+      24: {
+        id: 24, num: "24/24", name: "VIP Delivery",
+        typeTag: "Shooting Action • VEHICLE/MONSTER in Center • Round 2+",
+        round1Restricted: true,
+        actionTitle: "VIP Delivery - Action",
+        actionBlock: "STARTS: Your Shooting phase. | UNITS: One VEHICLE or MONSTER unit that is within 6\" of the center of the battlefield. | USE LIMIT: Once per turn. | COMPLETES: End of the turn. | EFFECT: The Condition of this Secondary Mission is met.",
+        cond: "Complete VIP Delivery with 1 VEHICLE or MONSTER unit within 6\" of the center of the battlefield. (If drawn in Round 1, or if no Player VEHICLE/MONSTER units are on the battlefield, discard/redraw!)",
+        rew: "3SP",
+        pun: "+1 Misery Card",
+        rewardSp: 3,
+        punMisery: 1
+      }
+    };
+
+    // Patch global MISERY_DECK & SECONDARY_DECK in js/data.js
+    const miseryDeckRef = (typeof MISERY_DECK !== 'undefined') ? MISERY_DECK : (window.MISERY_DECK || window.MISERY_CARDS || []);
+    if (Array.isArray(miseryDeckRef)) {
+      miseryDeckRef.forEach(card => {
         const official = MISERY_CARD_OFFICIAL_OVERRIDES[card.id];
         if (official) {
           card.name = official.name;
@@ -1235,15 +1521,31 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
           card.num = official.num;
           card.timing = official.timing;
           card.note = official.note;
-          card.actionType = official.actionType || null;
         }
       });
     }
-    window.MISERY_CARD_OFFICIAL_OVERRIDES = MISERY_CARD_OFFICIAL_OVERRIDES;
 
-    /**
-     * Checks whether the current session is in Solo Mode.
-     */
+    const secDeckRef = (typeof SECONDARY_DECK !== 'undefined') ? SECONDARY_DECK : (window.SECONDARY_DECK || window.SECONDARY_MISSIONS || []);
+    if (Array.isArray(secDeckRef)) {
+      secDeckRef.forEach(card => {
+        const official = SECONDARY_MISSION_OFFICIAL_OVERRIDES[card.id];
+        if (official) {
+          card.name = official.name;
+          card.cond = official.cond;
+          card.rew = official.rew;
+          card.pun = official.pun;
+          card.r1 = !official.round1Restricted;
+        }
+      });
+    }
+
+    window.MISERY_CARD_OFFICIAL_OVERRIDES = MISERY_CARD_OFFICIAL_OVERRIDES;
+    window.SECONDARY_MISSION_OFFICIAL_OVERRIDES = SECONDARY_MISSION_OFFICIAL_OVERRIDES;
+
+    // Track per-card tallies (X) and saved Secondary Reward cards
+    window.secondaryTallyMap = window.secondaryTallyMap || {};
+    window.savedSecondaryRewards = window.savedSecondaryRewards || [];
+
     function isSoloModeActive() {
       if (typeof state !== 'undefined' && state && state.mode === 'solo') return true;
       const soloCard = document.getElementById('modeCardSolo');
@@ -1251,9 +1553,6 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     }
     window.isSoloModeActive = isSoloModeActive;
 
-    /**
-     * Updates HUD badges and Quick SP buttons to reflect Solo 2x SP Rule (Section 3.7).
-     */
     function syncSoloSpUiIndicators() {
       const solo = isSoloModeActive();
       const pill = document.getElementById('soloDoubleSpHudBadge');
@@ -1266,8 +1565,9 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
           : '⚔️ Co-op Mode (1x Base SP • Cap 8/Rnd)';
       }
 
-      const unitSpans = document.querySelectorAll('.sp-unit-val');
-      unitSpans.forEach(el => { el.textContent = solo ? '+2' : '+1'; });
+      document.querySelectorAll('.sp-unit-val').forEach(el => {
+        el.textContent = solo ? '+2' : '+1';
+      });
 
       const hudGainBtn = document.getElementById('hudGainSpBtn');
       if (hudGainBtn) {
@@ -1278,7 +1578,7 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     }
     window.syncSoloSpUiIndicators = syncSoloSpUiIndicators;
 
-    // Wrap gainSP so that in Solo Mode, standard SP gains are automatically doubled per Rule 3.7
+    // Wrap gainSP so Solo Mode automatically doubles SP gains per Rule 3.7
     const origGainSP = window.gainSP;
     if (typeof origGainSP === 'function') {
       window.gainSP = function(amount, options = {}) {
@@ -1310,48 +1610,201 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       };
     }
 
-    /**
-     * Awards SP for destroying a Horde unit (1 SP base -> 2 SP in Solo Mode).
-     */
     window.awardHordeKillSP = function(kills = 1) {
-      if (typeof window.gainSP === 'function') {
-        window.gainSP(kills);
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBoltgunBlast === 'function') {
+        window.VoxAudio.playBoltgunBlast();
       }
+      if (typeof window.gainSP === 'function') window.gainSP(kills);
     };
 
-    /**
-     * Awards Command Phase Objective Control SP (Rule 3.7):
-     * 1 SP per objective controlled by any player (+1 SP if FOB fortified).
-     * Automatically doubled in Solo Mode via wrapped gainSP!
-     */
     window.awardCommandPhaseObjectiveSP = function() {
       const objInput = document.getElementById('quickObjCountInput');
       const count = Math.max(0, parseInt(objInput?.value, 10) || 0);
       const hasFob = !!document.getElementById('fobFortCheck')?.checked;
       const baseSp = count + (hasFob && count > 0 ? 1 : 0);
       if (baseSp <= 0) return;
-      if (typeof window.gainSP === 'function') {
-        window.gainSP(baseSp);
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
+        window.VoxAudio.playPowerSurge();
       }
-      setGuidedPhaseStep(3);
+      if (typeof window.gainSP === 'function') window.gainSP(baseSp);
+      window.setGuidedPhaseStep(3);
     };
 
     /**
-     * Enhanced Misery Card Renderer: displays verbatim card text, X/36 badge,
-     * timing tag, tactical note, and 1-click resolution helpers.
+     * 3. MISERY-TO-SPAWNER LIVE MODIFIERS (#7 UNLUCKY NIGHT 3D6 DROP LOWEST & #13 PINCER MANEUVER)
      */
-    const origRenderActiveMiseries = window.renderActiveMiseries;
+    function isUnluckyNightActive() {
+      const toggle = document.getElementById('unluckyNightSpawnerCheck');
+      if (toggle && toggle.checked) return true;
+      if (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries)) {
+        return state.activeMiseries.some(c => c.id === 7);
+      }
+      return false;
+    }
+    window.isUnluckyNightActive = isUnluckyNightActive;
+
+    function isPincerManeuverActive() {
+      if (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries)) {
+        return state.activeMiseries.some(c => c.id === 13);
+      }
+      return false;
+    }
+    window.isPincerManeuverActive = isPincerManeuverActive;
+
+    // Inject Unlucky Night (3D6 Drop Lowest) & Pincer Maneuver controls into Tab 4 Spawner and Tab 1 Cockpit
+    function ensureMiserySpawnerControls() {
+      const firstRollCheck = document.getElementById('firstRollBonusCheck');
+      if (firstRollCheck && !document.getElementById('unluckyNightSpawnerCheck')) {
+        const parentRow = firstRollCheck.parentElement?.parentElement;
+        if (parentRow) {
+          const lbl = document.createElement('label');
+          lbl.style.cssText = 'display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:#fda4af; font-weight:700;';
+          lbl.innerHTML = `<input type="checkbox" id="unluckyNightSpawnerCheck" style="accent-color:var(--red);" onchange="syncMiserySpawnerBanner()"> 🎲 #7 Unlucky Night (3D6 Drop Lowest)`;
+          parentRow.appendChild(lbl);
+        }
+      }
+
+      const cockpitBox = document.getElementById('cockpitSpawnMirrorBox');
+      if (cockpitBox && !document.getElementById('miserySpawnerStatusBanner')) {
+        const banner = document.createElement('div');
+        banner.id = 'miserySpawnerStatusBanner';
+        banner.style.cssText = 'margin-bottom:10px;';
+        cockpitBox.parentElement.insertBefore(banner, cockpitBox);
+      }
+      syncMiserySpawnerBanner();
+    }
+
+    window.syncMiserySpawnerBanner = function() {
+      const hasUnlucky = (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries) && state.activeMiseries.some(c => c.id === 7));
+      const checkEl = document.getElementById('unluckyNightSpawnerCheck');
+      if (checkEl && hasUnlucky && !checkEl.checked) {
+        checkEl.checked = true;
+      }
+
+      const banner = document.getElementById('miserySpawnerStatusBanner');
+      if (!banner) return;
+
+      const extraMod = parseInt(document.getElementById('extraSpawnMod')?.value, 10) || 0;
+      const dSlayer = !!document.getElementById('firstRollBonusCheck')?.checked;
+      const bTrap = !!document.getElementById('baitTrapBonusCheck')?.checked;
+      const unlucky = isUnluckyNightActive();
+      const pincer = isPincerManeuverActive();
+
+      const pills = [];
+      if (unlucky) {
+        pills.push(`<span class="badge red">🎲 MISERY #7 UNLUCKY NIGHT ACTIVE: All Spawn Rolls Use 3D6 Drop Lowest!</span>`);
+      }
+      if (pincer) {
+        pills.push(`<span class="badge purple">🪂 MISERY #13 PINCER MANEUVER ACTIVE: Spawn +1 Extra Deep Strike Unit (>3" from Players)!</span>`);
+      }
+      if (extraMod !== 0) {
+        pills.push(`<span class="badge gold">Extra Spawn Roll Mod: ${extraMod > 0 ? '+' + extraMod : extraMod}</span>`);
+      }
+      if (dSlayer) {
+        pills.push(`<span class="badge red">+6 First Spawn Zone (Dragon Slayer Failed)</span>`);
+      }
+      if (bTrap) {
+        pills.push(`<span class="badge gold">+12 First Spawn Zone (Baiting the Trap)</span>`);
+      }
+
+      banner.innerHTML = pills.length > 0
+        ? `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:8px 10px; background:rgba(255,71,87,0.1); border:1px solid rgba(255,71,87,0.35); border-radius:8px;">
+            ${pills.join(' ')}
+            ${pincer ? `<button type="button" class="btn-red btn-sm" style="margin-left:auto;" onclick="rollPincerManeuverExtraSpawn()">🪂 Roll Pincer Maneuver Unit Now</button>` : ''}
+           </div>`
+        : '';
+    };
+
+    /**
+     * Adjusts the Extra Spawn Roll Modifier input (#extraSpawnMod) and updates the UI banner.
+     */
+    window.adjustExtraSpawnRollMod = function(delta, firstZoneType = null) {
+      if (firstZoneType === 'DRAGON_SLAYER_6') {
+        const el = document.getElementById('firstRollBonusCheck');
+        if (el) el.checked = true;
+      } else if (firstZoneType === 'BAIT_TRAP_12') {
+        const el = document.getElementById('baitTrapBonusCheck');
+        if (el) el.checked = true;
+      } else if (delta !== 0) {
+        const modEl = document.getElementById('extraSpawnMod');
+        if (modEl) {
+          modEl.value = String((parseInt(modEl.value, 10) || 0) + delta);
+        }
+      }
+      window.syncMiserySpawnerBanner();
+    };
+
+    /**
+     * Rolls the extra Horde Strategic Reserves Deep Strike unit from Misery #13 (Pincer Maneuver).
+     */
+    window.rollPincerManeuverExtraSpawn = function() {
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpStatic === 'function') {
+        window.VoxAudio.playWarpStatic();
+      }
+      const roundNum = (typeof state !== 'undefined' && state && state.round > 0) ? state.round : 1;
+      const roundMod = (roundNum === 1) ? 0 : (roundNum === 2 ? 1 : (roundNum === 3 ? 2 : 3));
+      const extraMod = parseInt(document.getElementById('extraSpawnMod')?.value, 10) || 0;
+      const jammerMod = document.getElementById('jammerCheck')?.checked ? -1 : 0;
+      const totalMod = roundMod + extraMod + jammerMod;
+
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
+      let unmod = d1 + d2;
+      let diceLabel = `${d1} + ${d2}`;
+
+      if (isUnluckyNightActive()) {
+        const d3 = Math.floor(Math.random() * 6) + 1;
+        const sorted = [d1, d2, d3].sort((a, b) => b - a);
+        unmod = sorted[0] + sorted[1];
+        diceLabel = `3D6 Drop Lowest: ${sorted[0]} + ${sorted[1]} (dropped ${sorted[2]})`;
+      }
+
+      const modTotal = unmod + totalMod;
+      const bInfo = (typeof getBracketInfo === 'function')
+        ? getBracketInfo(modTotal, unmod)
+        : { key: '7-9', label: 'Bracket [7–9]', pts: '151–300 pts' };
+
+      const rngFn = () => Math.random();
+      const unitName = (bInfo.key === 'NONE')
+        ? 'No Unit Spawned (Unmodified 2)'
+        : ((typeof pickSyncedUnitFromBracket === 'function')
+            ? pickSyncedUnitFromBracket(bInfo.key, rngFn)
+            : `Unit from ${bInfo.label}`);
+
+      const cardHtml = `
+        <div class="card spawn-zone" style="border-left:4px solid var(--purple); background:rgba(139,92,246,0.12); margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <span class="badge purple">🪂 MISERY #13 • PINCER MANEUVER RESERVE SPAWN</span>
+            <span class="hud-sub">Roll: ${unmod} (${diceLabel}) + Mod ${totalMod >= 0 ? '+' + totalMod : totalMod} = <strong>${modTotal}</strong></span>
+          </div>
+          <h4 style="margin:6px 0 2px 0; color:#fff;">${bInfo.label} (${bInfo.pts}) → <span style="color:var(--gold);">${unitName}</span></h4>
+          <p class="card-desc" style="margin:4px 0 0 0; font-size:0.82rem; color:#cbd5e1;">
+            <strong>Placement Rule (Misery #13):</strong> Gains <strong>Deep Strike</strong> into Horde Strategic Reserves. During the Horde's Movement phase, set up anywhere <strong>&gt;3" from all Player units</strong> — inside the <strong>Players' Deployment Zone</strong> if able (otherwise within No Man's Land).
+          </p>
+        </div>
+      `;
+
+      const container = document.getElementById('spawnResultsContainer');
+      if (container) {
+        container.insertAdjacentHTML('afterbegin', cardHtml);
+      }
+      mirrorSpawnerToCockpit();
+    };
+
+    /**
+     * 4. VERBATIM MISERY CARD RENDERER (WITH SPAWNER HOOKS)
+     */
     window.renderActiveMiseries = function() {
       const box = document.getElementById('activeMiseriesBox');
-      if (!box || typeof state === 'undefined' || !state) {
-        if (typeof origRenderActiveMiseries === 'function') return origRenderActiveMiseries();
-        return;
-      }
+      if (!box || typeof state === 'undefined' || !state) return;
 
       const deckEl = document.getElementById('misDeckCount');
       if (deckEl && Array.isArray(state.miseryDeck)) {
         deckEl.textContent = `${state.miseryDeck.length} left in deck`;
       }
+
+      ensureMiserySpawnerControls();
+      window.syncMiserySpawnerBanner();
 
       const activeList = state.activeMiseries || [];
       if (activeList.length === 0) {
@@ -1361,7 +1814,6 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         return;
       }
 
-      // Auto-sync Seller's Market (#24) checkbox
       const hasSellersMarket = activeList.some(c => c.id === 24);
       const dblToggle = document.getElementById('doubleCostToggle');
       if (dblToggle && hasSellersMarket && !dblToggle.checked) {
@@ -1379,6 +1831,10 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         let actionButtonsHtml = '';
         if (rawCard.id === 6) {
           actionButtonsHtml = `<button type="button" class="btn-red btn-sm" onclick="resolveOrbitalBombardmentRoll(${idx})">🎲 Roll Sector (1D6) &amp; 2D3 Mortal Wounds</button><div id="orbitalRollResult_${idx}" style="margin-top:6px; font-size:0.8rem; color:var(--gold);"></div>`;
+        } else if (rawCard.id === 7) {
+          actionButtonsHtml = `<button type="button" class="btn-red btn-sm" onclick="rollSpawnsFromCockpit()">🎲 Re-Roll Round Spawns with 3D6 Drop Lowest</button>`;
+        } else if (rawCard.id === 13) {
+          actionButtonsHtml = `<button type="button" class="btn-purple btn-sm" onclick="rollPincerManeuverExtraSpawn()">🪂 Roll Pincer Maneuver Deep Strike Unit (&gt;3")</button>`;
         } else if (rawCard.id === 14) {
           actionButtonsHtml = isSoloModeActive()
             ? `<button type="button" class="btn-red btn-sm" onclick="drawMisery(2)">🛡️ Solo Rule: Reveal +2 Misery Cards Now</button>`
@@ -1413,6 +1869,9 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     };
 
     window.resolveOrbitalBombardmentRoll = function(idx) {
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBoltgunBlast === 'function') {
+        window.VoxAudio.playBoltgunBlast();
+      }
       const sector = Math.floor(Math.random() * 6) + 1;
       const d3a = Math.floor(Math.random() * 3) + 1;
       const d3b = Math.floor(Math.random() * 3) + 1;
@@ -1424,28 +1883,258 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     };
 
     /**
-     * Mirrors the Spawn Zone cards from #spawnResultsContainer into Tab 1's #cockpitSpawnMirrorBox
-     * so players never have to switch tabs during a round.
+     * 5. VERBATIM SECONDARY MISSION RENDERER (WITH TALLIES, 1-CLICK REWARD/PUNISHMENT & SAVED CARDS)
      */
-    function mirrorSpawnerToCockpit() {
-      const src = document.getElementById('spawnResultsContainer');
-      const dest = document.getElementById('cockpitSpawnMirrorBox');
-      if (!src || !dest) return;
-      dest.innerHTML = src.innerHTML;
-
-      const spawnerRoundEl = document.getElementById('spawnerBtnRound');
-      const cockpitRoundEl = document.getElementById('cockpitSpawnBtnRound');
-      if (spawnerRoundEl && cockpitRoundEl) {
-        cockpitRoundEl.textContent = spawnerRoundEl.textContent;
+    window.adjSecondaryTally = function(cardId, delta) {
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCogitatorStep === 'function') {
+        window.VoxAudio.playCogitatorStep();
       }
-    }
-    window.mirrorSpawnerToCockpit = mirrorSpawnerToCockpit;
+      const cur = window.secondaryTallyMap[cardId] || 0;
+      const maxVal = (cardId === 16) ? 4 : 99;
+      window.secondaryTallyMap[cardId] = Math.max(0, Math.min(maxVal, cur + delta));
+      window.renderActiveSecondaries();
+    };
 
-    // Hook rollAllSpawnZones and clearSpawnerResults to auto-mirror into Tab 1
+    window.resolveSecondaryOutcome = function(idx, isSuccess) {
+      if (typeof state === 'undefined' || !state || !Array.isArray(state.activeSecondaries)) return;
+      const rawCard = state.activeSecondaries[idx];
+      if (!rawCard) return;
+      const official = SECONDARY_MISSION_OFFICIAL_OVERRIDES[rawCard.id] || rawCard;
+      const tallyX = window.secondaryTallyMap[rawCard.id] || 0;
+
+      if (isSuccess) {
+        if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
+          window.VoxAudio.playPowerSurge();
+        }
+        // 1. Calculate SP Reward
+        let spToGain = official.rewardSp || 0;
+        if (official.rewardSpFormula === 'X_PLUS_1') {
+          spToGain = Math.max(1, tallyX) + 1;
+        } else if (official.rewardSpFormula === 'X_MAX_4') {
+          spToGain = Math.min(4, Math.max(1, tallyX));
+        } else if (official.rewardSpFormula === 'X_TIMES_2') {
+          spToGain = Math.max(1, tallyX) * 2;
+        } else if (official.rewardSpFormula === 'USE_IT_OR_LOSE_IT') {
+          const roll = Math.floor(Math.random() * 6) + 1;
+          spToGain = (roll >= 4) ? Math.max(7, tallyX) : 3;
+        }
+        if (spToGain > 0 && typeof window.gainSP === 'function') {
+          window.gainSP(spToGain);
+        }
+
+        // 2. CP Reward (#7 Decapitation Strike)
+        if (official.rewardCp && typeof window.adjCP === 'function') {
+          window.adjCP(official.rewardCp);
+        }
+
+        // 3. Spawn Roll Modifiers (#12, #13, #15, #22)
+        if (official.rewardSpawnMod) {
+          window.adjustExtraSpawnRollMod(official.rewardSpawnMod);
+        }
+        if (official.rewardFirstZoneBonus === 12) {
+          window.adjustExtraSpawnRollMod(0, 'BAIT_TRAP_12');
+        }
+
+        // 4. Saveable Card Benefit Vault
+        if (official.savedCardBenefit) {
+          window.savedSecondaryRewards.push({
+            id: official.id,
+            name: official.name,
+            benefit: official.savedCardBenefit
+          });
+        }
+
+        // 5. Special Action (#4 Establish Orbital Comms)
+        if (official.specialRewardAction === 'CHANGE_OF_PLANS_CHOICE' && typeof window.triggerChangeOfPlans === 'function') {
+          window.triggerChangeOfPlans();
+        }
+      } else {
+        if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpStatic === 'function') {
+          window.VoxAudio.playWarpStatic();
+        }
+        // PUNISHMENT RESOLUTION
+        if (official.punLoseSp && typeof window.loseSP === 'function') {
+          window.loseSP(official.punLoseSp);
+        }
+
+        let miseryToDraw = official.punMisery || 0;
+        let spawnModToAdd = official.punSpawnMod || 0;
+        if (official.punFormula === 'X_MISERY_AND_SPAWN') {
+          const xVal = Math.max(1, tallyX);
+          miseryToDraw = xVal;
+          spawnModToAdd = xVal;
+        }
+
+        if (spawnModToAdd !== 0) {
+          window.adjustExtraSpawnRollMod(spawnModToAdd);
+        }
+        if (official.punFirstZoneBonus === 6) {
+          window.adjustExtraSpawnRollMod(0, 'DRAGON_SLAYER_6');
+        }
+
+        // Specific Misery Card Search (#9 -> #6, #19 -> #13, #23 -> #22)
+        if (official.punTriggerMiseryId) {
+          const sel = document.getElementById('specificMiserySelect');
+          if (sel) {
+            sel.value = String(official.punTriggerMiseryId);
+            if (typeof window.triggerSpecificMisery === 'function') window.triggerSpecificMisery();
+          }
+        }
+
+        if (miseryToDraw > 0 && typeof window.drawMisery === 'function') {
+          window.drawMisery(miseryToDraw);
+        }
+
+        if (official.specialPunAction === 'CHANGE_OF_PLANS_RANDOM' && typeof window.triggerOrbitalPunishment === 'function') {
+          window.triggerOrbitalPunishment();
+        }
+      }
+
+      // Remove resolved Secondary Mission from active list
+      state.activeSecondaries.splice(idx, 1);
+      window.renderActiveSecondaries();
+      if (typeof window.saveState === 'function') window.saveState();
+    };
+
+    window.redeemSavedSecondaryCard = function(savedIdx) {
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPneumaticDispense === 'function') {
+        window.VoxAudio.playPneumaticDispense();
+      }
+      window.savedSecondaryRewards.splice(savedIdx, 1);
+      window.renderActiveSecondaries();
+    };
+
+    window.renderActiveSecondaries = function() {
+      const box = document.getElementById('activeSecondariesBox');
+      if (!box || typeof state === 'undefined' || !state) return;
+
+      const deckEl = document.getElementById('secDeckCount');
+      if (deckEl && Array.isArray(state.secondaryDeck)) {
+        deckEl.textContent = `${state.secondaryDeck.length} left in deck`;
+      }
+
+      const activeList = state.activeSecondaries || [];
+      const solo = isSoloModeActive();
+
+      const cardsHtml = activeList.length === 0
+        ? `<div class="card" style="opacity:0.65; text-align:center; padding:14px;">
+             <p class="card-desc" style="margin:0;">No active Secondary Mission right now.</p>
+           </div>`
+        : activeList.map((rawCard, idx) => {
+            const official = SECONDARY_MISSION_OFFICIAL_OVERRIDES[rawCard.id] || rawCard;
+            const numBadge = official.num || `${rawCard.id}/24`;
+            const typeTag = official.typeTag || 'Secondary Mission';
+            const tallyVal = window.secondaryTallyMap[rawCard.id] || 0;
+
+            const r1Warning = (official.round1Restricted && state.round === 1)
+              ? `<div style="background:rgba(234,179,8,0.18); border:1px solid var(--gold); color:var(--gold); padding:6px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; margin-bottom:8px;">
+                   ⚠️ ROUND 1 RESTRICTION: If drawn during Battle Round 1, click [🔄 Redraw (R1 Rule)] below to reveal another Secondary Mission and shuffle this back into the deck!
+                 </div>`
+              : '';
+
+            const actionHtml = official.actionBlock
+              ? `<div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); border-left:3px solid var(--blue); padding:8px 10px; border-radius:6px; margin:8px 0; font-size:0.8rem; color:#dbeafe;">
+                   <strong style="color:#93c5fd; display:block; margin-bottom:2px;">⚡ ${official.actionTitle || 'Mission Action'} (Rule 3.10: Any Player May Perform)</strong>
+                   ${official.actionBlock}
+                 </div>`
+              : '';
+
+            const tallyHtml = official.hasTally
+              ? `<div style="display:flex; align-items:center; justify-content:space-between; background:#0b0d13; border:1px solid var(--border); padding:6px 10px; border-radius:6px; margin:8px 0;">
+                   <span style="font-size:0.78rem; color:var(--gold); font-weight:700;">📊 ${official.tallyLabel || 'Mission Tally (X)'}:</span>
+                   <div style="display:flex; align-items:center; gap:8px;">
+                     <button type="button" class="mini-btn" onclick="adjSecondaryTally(${rawCard.id}, -1)">−</button>
+                     <strong style="font-size:1rem; color:#fff; min-width:20px; text-align:center;">${tallyVal}</strong>
+                     <button type="button" class="mini-btn" onclick="adjSecondaryTally(${rawCard.id}, 1)">+</button>
+                   </div>
+                 </div>`
+              : '';
+
+            return `
+              <div class="card gold" style="border-left:4px solid var(--gold); padding:14px 16px; margin-bottom:10px;">
+                <div class="misery-meta-row">
+                  <span class="badge gold">SECONDARY ${numBadge}</span>
+                  <span style="font-size:0.72rem; color:var(--muted); font-weight:700; text-transform:uppercase;">${typeTag}</span>
+                </div>
+                <h4 style="margin:2px 0 6px 0; color:#fff; font-size:1.05rem;">#${rawCard.id} — ${official.name}</h4>
+                ${r1Warning}
+                ${actionHtml}
+                <div style="font-size:0.88rem; color:#f1f5f9; line-height:1.5; margin-bottom:8px;">
+                  <strong>CONDITION:</strong> ${official.cond || rawCard.cond}
+                </div>
+                ${tallyHtml}
+                <div class="grid-2" style="gap:8px; margin-top:8px;">
+                  <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.35); padding:8px 10px; border-radius:6px; font-size:0.8rem;">
+                    <strong style="color:var(--green); display:block; margin-bottom:2px;">✅ REWARD ${solo && (official.rewardSp || official.rewardSpFormula) ? '(Solo 2x SP!)' : ''}:</strong>
+                    <span style="color:#dcfce7;">${official.rew || rawCard.rew}</span>
+                  </div>
+                  <div style="background:rgba(255,71,87,0.1); border:1px solid rgba(255,71,87,0.35); padding:8px 10px; border-radius:6px; font-size:0.8rem;">
+                    <strong style="color:var(--red); display:block; margin-bottom:2px;">❌ PUNISHMENT:</strong>
+                    <span style="color:#ffe4e6;">${official.pun || rawCard.pun}</span>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                  <button type="button" class="btn-green btn-sm" style="flex:1;" onclick="resolveSecondaryOutcome(${idx}, true)">
+                    ✅ Mission Success (Claim Reward)
+                  </button>
+                  <button type="button" class="btn-red btn-sm" style="flex:1;" onclick="resolveSecondaryOutcome(${idx}, false)">
+                    ❌ Mission Failed (Apply Punishment)
+                  </button>
+                  <button type="button" class="btn-ghost btn-sm" onclick="replaceSecondary()" title="Redraw / Replace Secondary Mission">
+                    🔄 Redraw
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+      const savedVaultHtml = window.savedSecondaryRewards.length > 0
+        ? `<div class="card" style="border:1px dashed var(--gold); background:rgba(234,179,8,0.08); padding:10px 12px; margin-top:10px;">
+             <div style="font-size:0.75rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:6px;">
+               🎒 Saved Secondary Reward Cards (${window.savedSecondaryRewards.length})
+             </div>
+             ${window.savedSecondaryRewards.map((item, sIdx) => `
+               <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0; border-top:1px solid rgba(255,255,255,0.08); font-size:0.8rem;">
+                 <span><strong>#${item.id} ${item.name}:</strong> ${item.benefit}</span>
+                 <button type="button" class="btn-gold btn-sm" onclick="redeemSavedSecondaryCard(${sIdx})">Use &amp; Discard</button>
+               </div>
+             `).join('')}
+           </div>`
+        : '';
+
+      box.innerHTML = cardsHtml + savedVaultHtml;
+    };
+
+    /**
+     * 6. PATCH rollAllSpawnZones SO UNLUCKY NIGHT (#7) AUTOMATICALLY ROLLS 3D6 DROP LOWEST
+     */
     const origRollAllSpawnZones = window.rollAllSpawnZones;
     if (typeof origRollAllSpawnZones === 'function') {
       window.rollAllSpawnZones = function() {
+        ensureMiserySpawnerControls();
+        window.syncMiserySpawnerBanner();
         const res = origRollAllSpawnZones.apply(this, arguments);
+
+        // If Misery #7 Unlucky Night is active, upgrade each zone's 2D6 roll with a 3rd die (drop lowest)
+        if (isUnluckyNightActive()) {
+          const container = document.getElementById('spawnResultsContainer');
+          if (container) {
+            const zoneCards = container.querySelectorAll('.spawn-zone');
+            zoneCards.forEach((card, zIdx) => {
+              const d1 = Math.floor(Math.random() * 6) + 1;
+              const d2 = Math.floor(Math.random() * 6) + 1;
+              const d3 = Math.floor(Math.random() * 6) + 1;
+              const sorted = [d1, d2, d3].sort((a, b) => b - a);
+              const unmod3d6 = sorted[0] + sorted[1];
+
+              const badge = document.createElement('div');
+              badge.style.cssText = 'margin-top:6px; padding:4px 8px; background:rgba(255,71,87,0.16); border:1px solid var(--red); border-radius:6px; font-size:0.76rem; color:#fecdd3;';
+              badge.innerHTML = `🎲 <strong>#7 Unlucky Night (3D6 Drop Lowest):</strong> Rolled [${sorted[0]}, ${sorted[1]}, <s>${sorted[2]}</s>] → Base 2D6 = <strong>${unmod3d6}</strong>`;
+              card.appendChild(badge);
+            });
+          }
+        }
+
         mirrorSpawnerToCockpit();
         return res;
       };
@@ -1468,6 +2157,21 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
         return res;
       };
     }
+
+    function mirrorSpawnerToCockpit() {
+      const src = document.getElementById('spawnResultsContainer');
+      const dest = document.getElementById('cockpitSpawnMirrorBox');
+      if (!src || !dest) return;
+      dest.innerHTML = src.innerHTML;
+
+      const spawnerRoundEl = document.getElementById('spawnerBtnRound');
+      const cockpitRoundEl = document.getElementById('cockpitSpawnBtnRound');
+      if (spawnerRoundEl && cockpitRoundEl) {
+        cockpitRoundEl.textContent = spawnerRoundEl.textContent;
+      }
+      window.syncMiserySpawnerBanner();
+    }
+    window.mirrorSpawnerToCockpit = mirrorSpawnerToCockpit;
 
     window.rollSpawnsFromCockpit = function() {
       if (typeof window.rollAllSpawnZones === 'function') {
@@ -1507,6 +2211,9 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     };
 
     window.setGuidedPhaseStep = function(stepNum) {
+      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCogitatorStep === 'function') {
+        window.VoxAudio.playCogitatorStep();
+      }
       currentGuidedStep = Math.max(1, Math.min(5, Number(stepNum) || 1));
       const buttons = document.querySelectorAll('#roundPhaseStepper .phase-step-btn');
       buttons.forEach(btn => {
@@ -1562,6 +2269,9 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
     const origAdvanceBattleRound = window.advanceBattleRound;
     if (typeof origAdvanceBattleRound === 'function') {
       window.advanceBattleRound = function() {
+        if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarhorn === 'function') {
+          window.VoxAudio.playWarhorn();
+        }
         const res = origAdvanceBattleRound.apply(this, arguments);
         syncSoloSpUiIndicators();
         updateGuidedFlowForRound();
@@ -1577,14 +2287,17 @@ Complete source code for the primary Sanctuary Field Codex home launchpad (`inde
       };
     }
 
-    // Initial sync on load
+    // Initialize on load
+    ensureMiserySpawnerControls();
     syncSoloSpUiIndicators();
-    if (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries)) {
-      window.renderActiveMiseries();
+    if (typeof state !== 'undefined' && state) {
+      if (Array.isArray(state.activeMiseries)) window.renderActiveMiseries();
+      if (Array.isArray(state.activeSecondaries)) window.renderActiveSecondaries();
     }
     setTimeout(mirrorSpawnerToCockpit, 150);
   })();
   </script>
+
 </body>
 </html>
 ````

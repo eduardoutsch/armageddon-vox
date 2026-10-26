@@ -569,9 +569,29 @@ test('UI Boundary: pages/spawner.html HUD bar keeps room info and cloud sync bad
     '#hudRound must have text-align: left so round title aligns cleanly under room label'
   );
 });
+test('UI Boundary: pages/spawner.html includes Remastered Horde Rules v0.9 patch with 24 verbatim secondaries, 36 miseries, and spawner hooks', () => {
+  const spawnerHtml = readPage('pages/spawner.html');
 
+  // 1. Verbatim Misery Overrides (36 cards)
+  assert.ok(spawnerHtml.includes('MISERY_CARD_OFFICIAL_OVERRIDES'), 'Must define MISERY_CARD_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerHtml.includes('UNLUCKY_NIGHT_3D6'), 'Must configure #7 Unlucky Night 3D6 Drop Lowest hook');
+  assert.ok(spawnerHtml.includes('PINCER_MANEUVER_EXTRA_SPAWN'), 'Must configure #13 Pincer Maneuver extra spawn hook');
+  assert.ok(spawnerHtml.includes('Flash Flood'), 'Must include Misery #36 Flash Flood');
 
+  // 2. Verbatim Secondary Mission Overrides (24 missions)
+  assert.ok(spawnerHtml.includes('SECONDARY_MISSION_OFFICIAL_OVERRIDES'), 'Must define SECONDARY_MISSION_OFFICIAL_OVERRIDES');
+  assert.ok(spawnerHtml.includes('Secure Drop Zones'), 'Must include Secondary #1 Secure Drop Zones');
+  assert.ok(spawnerHtml.includes('Back to Basics'), 'Must include Secondary #2 Back to Basics with X tally');
+  assert.ok(spawnerHtml.includes('VIP Delivery'), 'Must include Secondary #24 VIP Delivery');
+  assert.ok(spawnerHtml.includes('Saved Secondary Reward Cards'), 'Must include Saved Secondary Reward Card vault');
 
-
+  // 3. Live Spawner Misery Hooks & Controls
+  assert.ok(spawnerHtml.includes('unluckyNightSpawnerCheck'), 'Must create #unluckyNightSpawnerCheck toggle');
+  assert.ok(spawnerHtml.includes('miserySpawnerStatusBanner'), 'Must create #miserySpawnerStatusBanner');
+  assert.ok(spawnerHtml.includes('rollPincerManeuverExtraSpawn'), 'Must implement rollPincerManeuverExtraSpawn');
+  assert.ok(spawnerHtml.includes('adjSecondaryTally'), 'Must implement adjSecondaryTally');
+  assert.ok(spawnerHtml.includes('resolveSecondaryOutcome'), 'Must implement resolveSecondaryOutcome');
+  assert.ok(spawnerHtml.includes('redeemSavedSecondaryCard'), 'Must implement redeemSavedSecondaryCard');
+});
 
 

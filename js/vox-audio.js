@@ -499,6 +499,332 @@
   }
 
 
+  /**
+   * 10. Heavy Bolter / Kinetic Kill Discharge
+   * Synthesizes a punchy explosive round impact + mechanical shell casing ring.
+   */
+  function playBoltgunBlast() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const detune = 1 + (Math.random() * 0.12 - 0.06);
+
+    const punch = ctx.createOscillator();
+    const punchGain = ctx.createGain();
+    punch.type = 'sawtooth';
+    punch.frequency.setValueAtTime(140 * detune, now);
+    punch.frequency.exponentialRampToValueAtTime(28, now + 0.11);
+    punchGain.gain.setValueAtTime(0.26, now);
+    punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    punch.connect(punchGain);
+    punchGain.connect(ctx.destination);
+    punch.start(now);
+    punch.stop(now + 0.13);
+
+    const crack = ctx.createOscillator();
+    const crackGain = ctx.createGain();
+    crack.type = 'square';
+    crack.frequency.setValueAtTime(420 * detune, now);
+    crack.frequency.exponentialRampToValueAtTime(70, now + 0.05);
+    crackGain.gain.setValueAtTime(0.18, now);
+    crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+    crack.connect(crackGain);
+    crackGain.connect(ctx.destination);
+    crack.start(now);
+    crack.stop(now + 0.06);
+
+    const ring = ctx.createOscillator();
+    const ringGain = ctx.createGain();
+    ring.type = 'sine';
+    ring.frequency.setValueAtTime(1860 * detune, now + 0.04);
+    ring.frequency.exponentialRampToValueAtTime(940, now + 0.16);
+    ringGain.gain.setValueAtTime(0.001, now);
+    ringGain.gain.setValueAtTime(0.06, now + 0.04);
+    ringGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    ring.connect(ringGain);
+    ringGain.connect(ctx.destination);
+    ring.start(now + 0.04);
+    ring.stop(now + 0.19);
+  }
+
+  /**
+   * 11. Plasma Power Surge / Resource Gain Chime
+   * Synthesizes an ascending tri-tone crystal harmonic for acquiring SP, CP, or Objectives.
+   */
+  function playPowerSurge() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const freqs = [523.25, 659.25, 783.99, 1046.5];
+
+    freqs.forEach((freq, idx) => {
+      const t = now + idx * 0.038;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      osc.frequency.linearRampToValueAtTime(freq * 1.015, t + 0.12);
+
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(0.11 / (idx * 0.3 + 1), t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    });
+  }
+
+  /**
+   * 12. Munitorum Pneumatic Vault Dispenser / Purchase Clank
+   * Synthesizes a heavy pneumatic pressure drop + industrial solenoid clamp for spending resources.
+   */
+  function playPneumaticDispense() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const hiss = ctx.createOscillator();
+    const hissGain = ctx.createGain();
+    hiss.type = 'sawtooth';
+    hiss.frequency.setValueAtTime(1450, now);
+    hiss.frequency.exponentialRampToValueAtTime(220, now + 0.045);
+    hissGain.gain.setValueAtTime(0.09, now);
+    hissGain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+    hiss.connect(hissGain);
+    hissGain.connect(ctx.destination);
+    hiss.start(now);
+    hiss.stop(now + 0.05);
+
+    const clank = ctx.createOscillator();
+    const clankGain = ctx.createGain();
+    clank.type = 'square';
+    clank.frequency.setValueAtTime(260, now + 0.02);
+    clank.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+    clankGain.gain.setValueAtTime(0.001, now);
+    clankGain.gain.setValueAtTime(0.14, now + 0.02);
+    clankGain.gain.exponentialRampToValueAtTime(0.001, now + 0.085);
+    clank.connect(clankGain);
+    clankGain.connect(ctx.destination);
+    clank.start(now + 0.02);
+    clank.stop(now + 0.09);
+  }
+
+  /**
+   * 13. Magnetic Lock / Field Fortification Deploy Snap
+   * Tactile double-click for checkboxes and marker toggles.
+   */
+  function playMagLock() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const latch = ctx.createOscillator();
+    const latchGain = ctx.createGain();
+    latch.type = 'square';
+    latch.frequency.setValueAtTime(1180, now);
+    latch.frequency.exponentialRampToValueAtTime(240, now + 0.014);
+    latchGain.gain.setValueAtTime(0.07, now);
+    latchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.016);
+    latch.connect(latchGain);
+    latchGain.connect(ctx.destination);
+    latch.start(now);
+    latch.stop(now + 0.018);
+
+    const mag = ctx.createOscillator();
+    const magGain = ctx.createGain();
+    mag.type = 'triangle';
+    mag.frequency.setValueAtTime(210, now + 0.025);
+    mag.frequency.exponentialRampToValueAtTime(42, now + 0.065);
+    magGain.gain.setValueAtTime(0.001, now);
+    magGain.gain.setValueAtTime(0.13, now + 0.025);
+    magGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+    mag.connect(magGain);
+    magGain.connect(ctx.destination);
+    mag.start(now + 0.025);
+    mag.stop(now + 0.075);
+  }
+
+  /**
+   * 14. Voidship Battle Warhorn / Round Advance Vox-Chime
+   * Low Imperial brass drone announcing battle round transitions.
+   */
+  function playWarhorn() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const hornA = ctx.createOscillator();
+    const gainA = ctx.createGain();
+    hornA.type = 'sawtooth';
+    hornA.frequency.setValueAtTime(110, now);
+    hornA.frequency.linearRampToValueAtTime(108, now + 0.7);
+    gainA.gain.setValueAtTime(0.001, now);
+    gainA.gain.linearRampToValueAtTime(0.18, now + 0.08);
+    gainA.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+    hornA.connect(gainA);
+    gainA.connect(ctx.destination);
+    hornA.start(now);
+    hornA.stop(now + 0.8);
+
+    const hornB = ctx.createOscillator();
+    const gainB = ctx.createGain();
+    hornB.type = 'triangle';
+    hornB.frequency.setValueAtTime(164.8, now);
+    hornB.frequency.linearRampToValueAtTime(162, now + 0.7);
+    gainB.gain.setValueAtTime(0.001, now);
+    gainB.gain.linearRampToValueAtTime(0.12, now + 0.1);
+    gainB.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+    hornB.connect(gainB);
+    gainB.connect(ctx.destination);
+    hornB.start(now);
+    hornB.stop(now + 0.8);
+  }
+
+  /**
+   * 15. Warp Static & Empyric Dissonance
+   * Eerie binaural psychic ripple when Misery cards are revealed.
+   */
+  function playWarpStatic() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    [320, 326].forEach((f) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now);
+      osc.frequency.linearRampToValueAtTime(f * 0.94, now + 0.4);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.09, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.45);
+    });
+
+    const rasp = ctx.createOscillator();
+    const raspGain = ctx.createGain();
+    rasp.type = 'sawtooth';
+    rasp.frequency.setValueAtTime(85, now);
+    rasp.frequency.linearRampToValueAtTime(45, now + 0.35);
+    raspGain.gain.setValueAtTime(0.001, now);
+    raspGain.gain.linearRampToValueAtTime(0.08, now + 0.04);
+    raspGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+    rasp.connect(raspGain);
+    raspGain.connect(ctx.destination);
+    rasp.start(now);
+    rasp.stop(now + 0.4);
+  }
+
+  /**
+   * 16. Dataslate Cipher Decryption Chatter
+   * High-speed encrypted burst for Secondary Missions and Secret Objectives.
+   */
+  function playCipherDecryption() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const notes = [1760, 2200, 1980, 2640];
+
+    notes.forEach((pitch, i) => {
+      const t = now + i * 0.024;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(pitch, t);
+      osc.frequency.exponentialRampToValueAtTime(pitch * 0.65, t + 0.018);
+      gain.gain.setValueAtTime(0.07, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.02);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.022);
+    });
+  }
+
+  /**
+   * 17. Cogitator Phase Stepper Detent
+   * Tactile rotary click for match flow stepper and navigation tabs.
+   */
+  function playCogitatorStep() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(740, now);
+    osc.frequency.exponentialRampToValueAtTime(140, now + 0.024);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.026);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.028);
+  }
+
+  /**
+   * 18. Magnetic Degauss & Incinerator Data Purge
+   * Downward magnetic degaussing hum for clearing logs and purging records.
+   */
+  function playDegaussPurge() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
+    gain.gain.setValueAtTime(0.16, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.32);
+  }
+
+  /**
+   * 19. Necron Gauss Disintegration Pulse
+   * Eerie tachyon/chronomantic green energy hum for Tomb-Ship interactions.
+   */
+  function playNecronGaussPulse() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const beam = ctx.createOscillator();
+    const beamGain = ctx.createGain();
+    beam.type = 'sine';
+    beam.frequency.setValueAtTime(220, now);
+    beam.frequency.linearRampToValueAtTime(75, now + 0.24);
+    beamGain.gain.setValueAtTime(0.001, now);
+    beamGain.gain.linearRampToValueAtTime(0.15, now + 0.03);
+    beamGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+    beam.connect(beamGain);
+    beamGain.connect(ctx.destination);
+    beam.start(now);
+    beam.stop(now + 0.28);
+
+    const flutter = ctx.createOscillator();
+    const flutterGain = ctx.createGain();
+    flutter.type = 'triangle';
+    flutter.frequency.setValueAtTime(880, now);
+    flutter.frequency.exponentialRampToValueAtTime(280, now + 0.14);
+    flutterGain.gain.setValueAtTime(0.06, now);
+    flutterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    flutter.connect(flutterGain);
+    flutterGain.connect(ctx.destination);
+    flutter.start(now);
+    flutter.stop(now + 0.16);
+  }
+
   let hasUserInteracted = false;
 
   function handleUserGestureForMusic(e) {
@@ -517,20 +843,40 @@
   // Global listener: contextually triggers sound profiles on clicks
   document.addEventListener('click', (e) => {
     const target = e.target.closest(
-      'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn, .fs-pill-btn, .mini-btn'
+      'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn, .fs-pill-btn, .mini-btn, .phase-step-btn, input[type="checkbox"], input[type="radio"], .chip, .nav-pills button'
     );
     if (target) {
       if (target.dataset && target.dataset.sfx === 'custom') {
         // Handled explicitly by upgrade roller / stamp / siren functions
+      } else if (target.matches('#btnQuickKillSp, [onclick*="awardHordeKillSP"]')) {
+        playBoltgunBlast();
+      } else if (target.matches('#nextRoundBtn, [onclick*="advanceBattleRound"]')) {
+        playWarhorn();
+      } else if (target.matches('.phase-step-btn, [onclick*="setGuidedPhaseStep"], [onclick*="stepGuidedPhase"]')) {
+        playCogitatorStep();
+      } else if (target.matches('#hudGainSpBtn, [onclick*="gainSP"], [onclick*="adjCP(1)"], [onclick*="awardCommandPhaseObjectiveSP"]')) {
+        playPowerSurge();
+      } else if (target.matches('[onclick*="loseSP"], [onclick*="spendCPForStrat"], [onclick*="buyResupply"], [onclick*="adjCP(-1)"]')) {
+        playPneumaticDispense();
+      } else if (target.matches('[onclick*="drawMisery"], [onclick*="triggerSpecificMisery"], .btn-red[onclick*="Misery"]')) {
+        playWarpStatic();
+      } else if (target.matches('[onclick*="drawSecondary"], [onclick*="replaceSecondary"], [onclick*="triggerChangeOfPlans"]')) {
+        playCipherDecryption();
+      } else if (target.matches('.crt-purge-btn, [onclick*="purgeVoxEntry"], [onclick*="clearSpawnerResults"]')) {
+        playDegaussPurge();
+      } else if (target.matches('input[type="checkbox"], input[type="radio"], .fort-item input')) {
+        playMagLock();
+      } else if (target.closest('.theme-necron, .vox-preview-beta, #cardBeta') && (target.matches('.tomb-btn, .necron-btn') || target.closest('#cruTabTomb, #tabTomb'))) {
+        playNecronGaussPulse();
       } else if (target.matches('.launch-btn, .gate-btn, .btn-red, .unlock-btn, .terminal-link-btn')) {
         playTerminalClank('heavy');
       } else if (
         target.matches('.auspex-btn, .auspex-toolbar-btn, .fs-pill-btn, .map-node-group, #zoomBtn1, #zoomBtn15, #zoomBtn22, #fullscreenMapBtn, #fsToggleDetailsBtn')
       ) {
         playTerminalClank('auspex');
-      } else if (target.matches('.mini-btn, .slider-node, .dice-btn')) {
+      } else if (target.matches('.mini-btn, .slider-node, .dice-btn, [onclick*="roll"]')) {
         playTerminalClank('pneumatic');
-      } else if (target.matches('.choice-card, summary, .score-card, .stat-box, .impact-box')) {
+      } else if (target.matches('.choice-card, summary, .score-card, .stat-box, .impact-box, .chip, .nav-pills button')) {
         playTerminalClank('card');
       } else {
         playTerminalClank('relay');
@@ -1209,6 +1555,16 @@
     playWarpSiren: playWarpSiren,
     playAuspexLock: playAuspexLock,
     playCloudSyncChime: playCloudSyncChime,
+    playBoltgunBlast: playBoltgunBlast,
+    playPowerSurge: playPowerSurge,
+    playPneumaticDispense: playPneumaticDispense,
+    playMagLock: playMagLock,
+    playWarhorn: playWarhorn,
+    playWarpStatic: playWarpStatic,
+    playCipherDecryption: playCipherDecryption,
+    playCogitatorStep: playCogitatorStep,
+    playDegaussPurge: playDegaussPurge,
+    playNecronGaussPulse: playNecronGaussPulse,
     navigateSeamlessly: navigateSeamlessly,
     transmitToVox: transmitToVox,
     resolveFactionThemeFromStorage: resolveFactionThemeFromStorage,
@@ -1286,6 +1642,16 @@
       playWarpSiren,
       playAuspexLock,
       playCloudSyncChime,
+      playBoltgunBlast,
+      playPowerSurge,
+      playPneumaticDispense,
+      playMagLock,
+      playWarhorn,
+      playWarpStatic,
+      playCipherDecryption,
+      playCogitatorStep,
+      playDegaussPurge,
+      playNecronGaussPulse,
       saveCurrentPosition,
       navigateSeamlessly,
       injectNavToggle,
