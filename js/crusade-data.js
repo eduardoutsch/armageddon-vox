@@ -408,6 +408,66 @@ var NECRON_DYNASTIC_VAULT = [
   { id: "master_translocation_surge", type: "Master System Protocol (Dimensional Manifold Surge)", name: "Master Translocation Manifold Unleashed (D3 Reset)", desc: "Triggered the Translocation System Master Ability (dimensional infantry swap >1\" from enemies or 3-unit pre-battle redeployment; triggers D3 Awakening Point reset)." }
 ];
 
+var VOTANN_TRAIT_TABLES = {
+  Character: [
+    { d6: "1–2", name: "Grim Demeanour", desc: "Improve the Objective Control (OC) and Leadership (Ld) characteristics of models in this unit by 1." },
+    { d6: "3–4", name: "Dour Survivalist", desc: "CHARACTER models in this unit have Feel No Pain 5+ and you can re-roll Out of Action tests taken for this unit." },
+    { d6: "5–6", name: "Personal Grudge", desc: "At the start of the battle, select 1 enemy unit. Attacks made by models in this unit targeting that unit gain [LETHAL HITS] and [PRECISION]." }
+  ],
+  Infantry: [
+    { d6: "1", name: "Ruthless Efficiency", desc: "This unit always has Hostile Acquisition, even while units from your army have Fortify Takeover." },
+    { d6: "2", name: "Vengeful", desc: "Add +1 to Hit rolls while below Starting Strength, and add +1 to Wound rolls while Below Half-strength." },
+    { d6: "3", name: "Ancestral Fury", desc: "Melee weapons equipped by models in this unit have the [SUSTAINED HITS 1] ability." },
+    { d6: "4", name: "Guardians of Need", desc: "Start of battle: select 1 objective marker. While within range of it, this unit has Fortify Takeover even while your army has Hostile Acquisition." },
+    { d6: "5", name: "War-Wrought", desc: "While your army has Fortify Takeover, each time a Damage 1 attack is allocated to a model in this unit, add +1 to the Armour Saving throw." },
+    { d6: "6", name: "Warrior Pride", desc: "Each time this unit is selected to shoot or fight, you can re-roll one Hit roll and re-roll one Wound roll." }
+  ],
+  Mounted: [
+    { d6: "1–2", name: "Refined Power Cores", desc: "Add +2\" to the Move characteristic of models in this unit." },
+    { d6: "3–4", name: "KV-Ceramide Undersuits", desc: "Models in this unit have a 5+ Invulnerable Save." },
+    { d6: "5–6", name: "Frontier Weaponsmiths", desc: "Add +6\" to the Range characteristic of ranged weapons equipped by models in this unit." }
+  ]
+};
+
+var VOTANN_RELIC_VAULT = {
+  Artificer: [
+    { name: "Grey Crest", desc: "Models in the bearer's unit have the Stealth ability." },
+    { name: "Flâyre", desc: "While your army has Hostile Acquisition, add +2 to the Attacks of the bearer's melee weapons (or +1 while in Fortify Takeover)." },
+    { name: "Murmuring Stave (Grimnyr only)", desc: "When selecting Agendas for a battle, you can select 1 additional Leagues of Votann Agenda." }
+  ],
+  Antiquity: [
+    { name: "Thyrikite Plate", desc: "While in Hostile Acquisition, subtract 1 from incoming Damage allocated to the bearer. While in Fortify Takeover, change incoming Damage allocated to the bearer to 1!" },
+    { name: "Wayfarer's Grace", desc: "First time bearer is destroyed, roll 1D6 at end of phase: on a 2+, set bearer back up with 3 Wounds remaining." }
+  ],
+  Legendary: [
+    { name: "First Knife", desc: "Bearer re-rolls Hit and Wound rolls in melee. End of Fight phase: spend up to 4 YP; roll 1D6 per YP spent, dealing 1 Mortal Wound on each 2+ to an engaged enemy unit." }
+  ]
+};
+
+var VOTANN_KINDRED_ASSETS = [
+  { key: "outpost1", title: "🪨 Mining Outpost #1", cost: "Minerals x30, Energy x30, Intel x50", upgCost: "Energy x50", baseDesc: "+20 Raw Minerals whenever Raw Minerals are gained.", upgDesc: "+30 Raw Minerals whenever Raw Minerals are gained." },
+  { key: "outpost2", title: "🪨 Mining Outpost #2", cost: "Minerals x30, Energy x30, Intel x50", upgCost: "Energy x50", baseDesc: "+20 Raw Minerals whenever Raw Minerals are gained.", upgDesc: "+30 Raw Minerals whenever Raw Minerals are gained." },
+  { key: "outpost3", title: "🪨 Mining Outpost #3", cost: "Minerals x30, Energy x30, Intel x50", upgCost: "Energy x50", baseDesc: "+20 Raw Minerals whenever Raw Minerals are gained.", upgDesc: "+30 Raw Minerals whenever Raw Minerals are gained." },
+  { key: "tradingHub", title: "⚖️ Trading Hub", cost: "Minerals x30, Biomatter x30, Energy x50", upgCost: "Energy x100, Rare Minerals x1", baseDesc: "After battle, use Guild Patronage Requisition once.", upgDesc: "After battle, use Guild Patronage Requisition twice." },
+  { key: "faneAug", title: "🧠 Fane Augmentation", cost: "Minerals x50, Biomatter x50, Energy x50, Intel x50", upgCost: "Intel x100, Rare Energy x1", baseDesc: "Marked for Greatness grants +1 extra XP (+4 XP total).", upgDesc: "Select +1 additional Votann unit to be Marked for Greatness." },
+  { key: "scoutVessel", title: "🛰️ Scout Vessel", cost: "Minerals x100, Biomatter x50, Energy x50", upgCost: "Minerals x100, Rare Biomatter x1", baseDesc: "Re-roll the dice when randomly determining resource type gained.", upgDesc: "Spend 1 Rare Resource after battle to extend Expedition max length by +1 battle." },
+  { key: "implantRefinery", title: "🧬 Implant Refinery", cost: "Biomatter x100, Energy x100", upgCost: "Biomatter x50, Rare Energy x1", baseDesc: "Re-roll failed Out of Action tests for non-Vehicle Votann units.", upgDesc: "Re-roll the 1D6 post-victory check (6+) to gain a Rare Resource." },
+  { key: "pioneerFleet", title: "⚡ Pioneer Fleet", cost: "Minerals x50, Biomatter x50, Intel x50", upgCost: "Minerals x50, Intel x50, Rare Biomatter x1", baseDesc: "After battle, roll 1 random resource: gain +10 of it per leftover YP.", upgDesc: "Start of Battle Round 1: spend 20 of any resource to immediately gain +2 YP." },
+  { key: "evalVault", title: "🔧 Evaluation Vault", cost: "Minerals x50, Biomatter x50, Intel x100", upgCost: "Minerals x100, Rare Intel x1", baseDesc: "Before battle, use Field Testing Requisition once for 1 RP (instead of 2 RP).", upgDesc: "Before battle, use Field Testing Requisition twice for 1 RP each." },
+  { key: "biorecyc", title: "♻️ Biorecyc Fabricator", cost: "Minerals x50, Biomatter x100, Energy x50", upgCost: "Biomatter x100, Rare Minerals x1", baseDesc: "After battle, if fundamental resource rolled is not Biomatter, also gain +20 Biomatter.", upgDesc: "End of battle: every surviving non-Vehicle Votann unit on the battlefield gains +1 XP!" }
+];
+
+var VOTANN_VAULT_PROTOCOLS = [
+  { id: "req_harvest", name: "Red-Handed Harvest (1 RP — After Battle on Expedition)", type: "Votann Requisition (1 RP)", desc: "Roll 1D6 per enemy unit destroyed: each 5+ grants +10 Fundamental Resources (Aeldari/T'au=Minerals, Chaos/Imperium=Intel, Necrons=Energy, GSC/Orks/Tyranids=Biomatter)." },
+  { id: "req_patronage", name: "Guild Patronage (1 RP — Requires Trading Hub)", type: "Votann Requisition (1 RP)", desc: "Spend 60 of 1 Fundamental Resource -> gain 50 of another; OR spend 1 Rare Resource -> gain 50 matching Fundamental or 1 random Rare Resource." },
+  { id: "req_fieldtest", name: "Field Testing (2 RP, or 1 RP w/ Evaluation Vault)", type: "Votann Requisition (1-2 RP)", desc: "Before battle, give 1 Infantry/Mounted unit (+1 CrP) a temporary Weapon Modification (1/battle for 1 phase)." },
+  { id: "req_ancestors", name: "Returned to the Ancestors (1 RP — Blooded+ Character Scar)", type: "Votann Requisition (1 RP)", desc: "Upload Character to the Votann: gain D6x5 Biomatter + D6x5 Raw Minerals, plus D6x5 Galactic Intel and +1 XP to all other units per Battle Honour!" },
+  { id: "ag_prospecting", name: "Agenda: Prospecting (+2 XP per Board Edge / +20 Raw Minerals)", type: "Votann Agenda", desc: "End of battle: up to 3 units wholly within 9\" of different non-own board edges gain +2 XP each (4+ XP total = +20 Raw Minerals)." },
+  { id: "ag_prophecy", name: "Agenda: Yield Prophecy (+1 to +3 XP Warlord / +20 Galactic Intel)", type: "Votann Agenda", desc: "Predict final YP tally at start of Round 1. Exact = +3 XP Warlord, ±1 = +2 XP, ±2 = +1 XP (2+ XP = +20 Galactic Intel)." },
+  { id: "ag_pursuit", name: "Agenda: Exhaustive Pursuit (+2 XP per Objective / +20 Energy)", type: "Votann Agenda", desc: "Search newly controlled objectives for +2 XP (max 4 XP/unit). All searched = choose post-battle resource type; 6+ XP total = +20 Energy Sources." },
+  { id: "ag_debt", name: "Agenda: Debt to Be Paid (+2/+3 XP per Kill by Scarred Unit / +20 Biomatter)", type: "Votann Agenda", desc: "Units with 1+ Battle Scars gain +2 XP (+3 XP vs. repeat opponent) per enemy destroyed (4+ XP total = +20 Biomatter)." }
+];
+
 // Attach to window for browser global scope
 if (typeof window !== 'undefined') {
   window.CRUSADE_STATE_KEY = CRUSADE_STATE_KEY;
@@ -415,16 +475,20 @@ if (typeof window !== 'undefined') {
   window.BATTLE_TRAIT_TABLES = BATTLE_TRAIT_TABLES;
   window.NECRONS_TRAIT_TABLES = NECRONS_TRAIT_TABLES;
   window.ASTRA_MILITARUM_TRAIT_TABLES = ASTRA_MILITARUM_TRAIT_TABLES;
+  window.VOTANN_TRAIT_TABLES = VOTANN_TRAIT_TABLES;
   window.WEAPON_MOD_TABLE = WEAPON_MOD_TABLE;
   window.CRUSADE_RELIC_VAULT = CRUSADE_RELIC_VAULT;
   window.NECRONS_RELIC_VAULT = NECRONS_RELIC_VAULT;
   window.ASTRA_MILITARUM_RELIC_VAULT = ASTRA_MILITARUM_RELIC_VAULT;
+  window.VOTANN_RELIC_VAULT = VOTANN_RELIC_VAULT;
   window.BATTLE_SCAR_TABLE = BATTLE_SCAR_TABLE;
   window.NECRON_BATTLE_SCAR_TABLE = NECRON_BATTLE_SCAR_TABLE;
   window.LOGISTICS_CATEGORIES = LOGISTICS_CATEGORIES;
   window.ASTRA_COMMENDATIONS_VAULT = ASTRA_COMMENDATIONS_VAULT;
   window.TOMB_WORLD_SYSTEMS = TOMB_WORLD_SYSTEMS;
   window.NECRON_DYNASTIC_VAULT = NECRON_DYNASTIC_VAULT;
+  window.VOTANN_KINDRED_ASSETS = VOTANN_KINDRED_ASSETS;
+  window.VOTANN_VAULT_PROTOCOLS = VOTANN_VAULT_PROTOCOLS;
   window.parseCodexTraitOrScarLine = parseCodexTraitOrScarLine;
   window.parseCodexRelicLine = parseCodexRelicLine;
 }
@@ -437,17 +501,22 @@ if (typeof module !== 'undefined' && module.exports) {
     BATTLE_TRAIT_TABLES,
     NECRONS_TRAIT_TABLES,
     ASTRA_MILITARUM_TRAIT_TABLES,
+    VOTANN_TRAIT_TABLES,
     WEAPON_MOD_TABLE,
     CRUSADE_RELIC_VAULT,
     NECRONS_RELIC_VAULT,
     ASTRA_MILITARUM_RELIC_VAULT,
+    VOTANN_RELIC_VAULT,
     BATTLE_SCAR_TABLE,
     NECRON_BATTLE_SCAR_TABLE,
     LOGISTICS_CATEGORIES,
     ASTRA_COMMENDATIONS_VAULT,
     TOMB_WORLD_SYSTEMS,
     NECRON_DYNASTIC_VAULT,
+    VOTANN_KINDRED_ASSETS,
+    VOTANN_VAULT_PROTOCOLS,
     parseCodexTraitOrScarLine,
     parseCodexRelicLine
   };
 }
+

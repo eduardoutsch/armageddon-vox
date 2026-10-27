@@ -53,16 +53,23 @@ function createMockElement() {
 const mockElements = {
   dossierAlpha: createMockElement(),
   dossierBeta: createMockElement(),
+  dossierGamma: createMockElement(),
   dossierAtlas: createMockElement(),
   dossierRules: createMockElement(),
   btnAlpha: createMockElement(),
   btnBeta: createMockElement(),
+  btnGamma: createMockElement(),
   btnAtlas: createMockElement(),
   btnRules: createMockElement(),
   gateAlpha: createMockElement(),
   contentAlpha: createMockElement(),
   gateBeta: createMockElement(),
   contentBeta: createMockElement(),
+  gateGamma: createMockElement(),
+  contentGamma: createMockElement(),
+  cardBriefAlpha: createMockElement(),
+  cardBriefBeta: createMockElement(),
+  cardBriefGamma: createMockElement(),
   shipSliderLabel: createMockElement(),
   sliderDetailBox: createMockElement(),
   auspexViewport: createMockElement(),
@@ -396,6 +403,18 @@ test('briefing: #dossierBeta, #btnBeta, and body.necron-briefing-active include 
   assert.ok(briefingHtml.includes('#dossierBeta table.reckoning-table th') || briefingCss.includes('#dossierBeta table.reckoning-table th'), 'Must style #dossierBeta reckoning table headers with Tomb-Ship aesthetic');
   assert.ok(briefingHtml.includes('#dossierBeta tr.highlight-row') || briefingCss.includes('#dossierBeta tr.highlight-row'), 'Must style #dossierBeta highlight-row with Gauss Emerald highlight');
   assert.ok(briefingHtml.includes('#dossierBeta code') || briefingCss.includes('#dossierBeta code'), 'Must style #dossierBeta code as Engrammatic Hex-Glyph chips');
+});
+
+test('briefing: #dossierGamma and #cardBriefGamma render Votann Glôk-Vâr lore, Fane-Node Vôl-09, 900-Year Debt, and Needgaârd roster', () => {
+  assert.ok(briefingHtml.includes('id="dossierGamma"'), 'Must contain #dossierGamma section');
+  assert.ok(briefingHtml.includes('id="cardBriefGamma"'), 'Must contain #cardBriefGamma conduit card');
+  assert.ok(briefingHtml.includes('The Ledger of Embers'), 'Must include The Ledger of Embers vessel');
+  assert.ok(briefingHtml.includes('Glôk-Vâr'), 'Must include Glôk-Vâr vessel designation');
+  assert.ok(briefingHtml.includes('Fane-Node Vôl-09') || briefingHtml.includes('Fane-Node'), 'Must include Fane-Node Vôl-09');
+  assert.ok(briefingHtml.includes('900-Year Debt') || briefingHtml.includes('Hive Infernus'), 'Must include 900-Year Debt of Hive Infernus');
+  assert.ok(briefingHtml.includes('Kâhl Hârkyn Grîmledger'), 'Must include Kâhl Hârkyn Grîmledger');
+  assert.ok(briefingHtml.includes('Oathbound Speculator'), 'Must include Oathbound Speculator');
+  assert.ok(briefingHtml.includes('Hernkyn Yaegirs'), 'Must include Hernkyn Yaegirs');
 });
 
 

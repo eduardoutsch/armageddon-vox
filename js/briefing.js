@@ -117,6 +117,7 @@ var briefingState = {
   activeDossier: 'beta',
   unlockedAlpha: false,
   unlockedBeta: false,
+  unlockedGamma: false,
   shipSlider: -1,
   selectedNode: 0
 };
@@ -148,12 +149,20 @@ function restoreBriefingState() {
     console.warn('Could not restore briefing state:', e);
   }
 
-  // URL hash navigation takes precedence if a valid hash is specified
+  // URL hash & search parameter navigation takes precedence
   if (typeof window !== 'undefined' && window.location) {
-    var validTabs = ['alpha', 'beta', 'atlas', 'rules'];
+    var validTabs = ['alpha', 'beta', 'gamma', 'atlas', 'rules'];
     var hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
     if (validTabs.indexOf(hashTab) !== -1) {
       briefingState.activeDossier = hashTab;
+    } else if (window.location.search) {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var tabP = (params.get('tab') || params.get('channel') || params.get('dossier') || '').toLowerCase();
+        if (validTabs.indexOf(tabP) !== -1) {
+          briefingState.activeDossier = tabP;
+        }
+      } catch (e) {}
     }
   }
 
@@ -167,6 +176,7 @@ function applyBriefingState() {
   showDossier(briefingState.activeDossier, false);
   if (briefingState.unlockedAlpha) unlockTab('Alpha', false);
   if (briefingState.unlockedBeta) unlockTab('Beta', false);
+  if (briefingState.unlockedGamma) unlockTab('Gamma', false);
   selectSlider(briefingState.shipSlider, false);
   selectAtlasNode(briefingState.selectedNode, false);
 }
@@ -212,6 +222,7 @@ function showDossier(which, persist) {
   var map = {
     alpha: ['dossierAlpha', 'btnAlpha'],
     beta: ['dossierBeta', 'btnBeta'],
+    gamma: ['dossierGamma', 'btnGamma'],
     atlas: ['dossierAtlas', 'btnAtlas'],
     rules: ['dossierRules', 'btnRules']
   };
@@ -224,6 +235,14 @@ function showDossier(which, persist) {
       if (divEl && divEl.classList) divEl.classList.toggle('hidden', k !== which);
       if (btnEl && btnEl.classList) btnEl.classList.toggle('active', k === which);
     });
+
+    ['Alpha', 'Beta', 'Gamma'].forEach(function(c) {
+      var cardEl = document.getElementById('cardBrief' + c);
+      if (cardEl && cardEl.classList) {
+        cardEl.classList.toggle('active', c.toLowerCase() === which);
+        cardEl.classList.toggle('selected', c.toLowerCase() === which);
+      }
+    });
   }
 
   if (which === 'atlas') {
@@ -234,8 +253,17 @@ function showDossier(which, persist) {
 }
 
 /**
+ * Selects a briefing conduit tab and synchronizes UI cards.
+ * @param {string} who - 'alpha' | 'beta' | 'gamma'
+ * @param {boolean} [persist=true]
+ */
+function selectBriefingConduit(who, persist) {
+  showDossier(who, persist);
+}
+
+/**
  * Unlocks a restricted faction tab.
- * @param {string} who - 'Alpha' or 'Beta'
+ * @param {string} who - 'Alpha' | 'Beta' | 'Gamma'
  * @param {boolean} [persist=true]
  */
 function unlockTab(who, persist) {
@@ -260,12 +288,18 @@ function unlockTab(who, persist) {
       window.VoxAudio.playBriefingDecode('beta');
     }
   }
+  if (who === 'Gamma') {
+    briefingState.unlockedGamma = true;
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBriefingDecode === 'function') {
+      window.VoxAudio.playBriefingDecode('alpha');
+    }
+  }
   if (persist) saveBriefingState();
 }
 
 /**
  * Re-locks a faction tab.
- * @param {string} who - 'Alpha' or 'Beta'
+ * @param {string} who - 'Alpha' | 'Beta' | 'Gamma'
  * @param {boolean} [persist=true]
  */
 function lockTab(who, persist) {
@@ -289,6 +323,12 @@ function lockTab(who, persist) {
       window.VoxAudio.playTerminalPowerOff('beta');
     }
     if (briefingState.unlockedAlpha) applyGlobalFactionThemeFromBriefing('militarum', persist);
+  }
+  if (who === 'Gamma') {
+    briefingState.unlockedGamma = false;
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOff === 'function') {
+      window.VoxAudio.playTerminalPowerOff('alpha');
+    }
   }
   if (persist) saveBriefingState();
 }
@@ -531,6 +571,7 @@ if (typeof window !== 'undefined') {
   window.applyBriefingState = applyBriefingState;
   window.applyGlobalFactionThemeFromBriefing = applyGlobalFactionThemeFromBriefing;
   window.showDossier = showDossier;
+  window.selectBriefingConduit = selectBriefingConduit;
   window.unlockTab = unlockTab;
   window.lockTab = lockTab;
   window.selectSlider = selectSlider;
@@ -564,6 +605,7 @@ if (typeof module !== 'undefined' && module.exports) {
     applyBriefingState: applyBriefingState,
     applyGlobalFactionThemeFromBriefing: applyGlobalFactionThemeFromBriefing,
     showDossier: showDossier,
+    selectBriefingConduit: selectBriefingConduit,
     unlockTab: unlockTab,
     lockTab: lockTab,
     selectSlider: selectSlider,

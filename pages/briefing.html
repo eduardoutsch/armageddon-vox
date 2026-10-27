@@ -28,9 +28,30 @@
   <div class="app-shell briefing-shell">
 
     <!-- 4-TAB DOSSIER SWITCHER (DEFAULTS TO BETA PER UI BOUNDARY TESTS) -->
+    <!-- COMMANDER CONDUIT SELECTOR GRID -->
+    <div class="choice-grid conduit-selector" style="margin-top:8px; margin-bottom:14px; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));">
+      <div class="conduit-card choice-card" id="cardBriefAlpha" onclick="selectBriefingConduit('alpha')">
+        <span class="conduit-tag" style="color:var(--gold); font-size:0.7rem; font-weight:800; text-transform:uppercase;">TERMINAL ALPHA // IMPERIUM COMMAND</span>
+        <div class="conduit-title" style="font-weight:800; font-size:1.05rem; color:#fff; margin:4px 0 2px 0;">🦅 The Exile</div>
+        <div class="conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Sanctuary of Ash (044th Krieg — 1,200 Pts)</div>
+      </div>
+      <div class="conduit-card choice-card active" id="cardBriefBeta" onclick="selectBriefingConduit('beta')">
+        <span class="conduit-tag" style="color:var(--green); font-size:0.7rem; font-weight:800; text-transform:uppercase;">TERMINAL BETA // TOMB-SHIP INTERLINK</span>
+        <div class="conduit-title" style="font-weight:800; font-size:1.05rem; color:#fff; margin:4px 0 2px 0;">💀 Lord Commander Junebug</div>
+        <div class="conduit-sub" style="font-size:0.78rem; color:var(--muted);">Tomb-Ship Oblivion's Edge (Necrons — 1,200 Pts)</div>
+      </div>
+      <div class="conduit-card choice-card" id="cardBriefGamma" onclick="selectBriefingConduit('gamma')">
+        <span class="conduit-tag" style="color:var(--gold); font-size:0.7rem; font-weight:800; text-transform:uppercase;">SOLO BLACK-LEDGER CONDUIT // SITE #44-KHA</span>
+        <div class="conduit-title" style="font-weight:800; font-size:1.05rem; color:#fff; margin:4px 0 2px 0;">⛏️ Kâhl Hârkyn Grîmledger</div>
+        <div class="conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Ledger of Embers (Leagues of Votann — 1,200 Pts)</div>
+      </div>
+    </div>
+
+    <!-- 5-TAB DOSSIER SWITCHER (DEFAULTS TO BETA PER UI BOUNDARY TESTS) -->
     <div class="nav-pills" style="margin-top:8px; margin-bottom:20px;">
       <button id="btnAlpha" onclick="showDossier('alpha')">🦅 The Exile // Sanctuary of Ash &amp; Ship</button>
       <button id="btnBeta" class="active" onclick="showDossier('beta')">💀 Lord Commander Junebug Briefing</button>
+      <button id="btnGamma" onclick="showDossier('gamma')">⛏️ Kâhl Hârkyn Grîmledger Briefing</button>
       <button id="btnAtlas" onclick="showDossier('atlas')">🗺️ Sector Atlas</button>
       <button id="btnRules" onclick="showDossier('rules')">⚡ Horde → Crusade Rules</button>
     </div>
@@ -492,6 +513,170 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TAB 3: LEAGUES OF VOTANN // THE LEDGER OF EMBERS (DOSSIER GAMMA)    -->
+    <!-- ================================================================= -->
+    <div id="dossierGamma" class="hidden">
+
+      <!-- CLEARANCE GATE GAMMA -->
+      <div id="gateGamma" class="hero-card" style="text-align:center; padding:36px 24px; border-color:rgba(245, 176, 65, 0.45);">
+        <div class="status-pill" style="margin-bottom:8px;">Sub-Thermospheric Void-Cracker • The Ledger of Embers • Site #44-KHA</div>
+        <h2 class="hero-title" style="font-size:1.6rem; color:var(--gold);">⛏️ The Ledger of Embers // Fane-Node Vôl-09</h2>
+        <p class="hero-subtitle" style="max-width:540px; margin:8px auto 22px auto;">
+          Black-Ledger operational console for <strong>Kâhl Hârkyn Grîmledger</strong> &amp; the <strong>Thrymkâl Salvage Consortium</strong>. Operating under total radio-silence beneath the Armageddon smog clouds. Unauthorized Imperial interception blocked.
+        </p>
+        <button class="launch-btn unlock-btn" style="max-width:340px; margin:0 auto;" onclick="unlockTab('Gamma')">🔓 Authenticate Fane-Node Vôl-09 Key</button>
+      </div>
+
+      <!-- UNLOCKED GAMMA CONTENT -->
+      <div id="contentGamma" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <span style="font-family:monospace; font-size:0.76rem; color:var(--gold);">
+            +++ FANE-NODE VÔL-09 ("THE DEAF EAR") // BLACK-LEDGER ANCESTOR CORE // WARLORD: KÂHL HÂRKYN GRÎMLEDGER +++
+          </span>
+          <button class="btn-ghost btn-sm lock-toggle-btn" onclick="lockTab('Gamma')">🔒 Lock Black-Ledger Dataslate</button>
+        </div>
+
+        <!-- PART 1: SHIP ORIGIN & THE 900-YEAR DEBT OF HIVE INFERNUS -->
+        <div class="hero-card" style="margin-bottom:20px; border-color:rgba(245, 176, 65, 0.4);">
+          <div class="status-pill">Deep-Core Void-Cracker &amp; Heavy Macro-Hauler • Registry: Glôk-Vâr • Alliance: Independent / Marauders Plunder-Pact</div>
+          <h1 class="hero-title" style="font-size:1.85rem; margin-top:4px;">The Ledger of Embers (Glôk-Vâr)</h1>
+
+          <div class="lore-quote" style="text-align:left; line-height:1.65;">
+            <p style="margin:0 0 10px 0; font-family:monospace; font-size:0.82rem; color:var(--gold);"><strong>+++ FANE-NODE VÔL-09 // SUB-THERMOSPHERIC SEISMIC &amp; CLAIM-RECKONING TELEMETRY +++</strong></p>
+            <p style="margin-bottom:10px;">
+              <em>"Seismic anchoring confirmed. Welcome to the Hearth, Kâhl Grîmledger. While the Imperial primitives aboard <strong>The Sanctuary of Ash</strong> flagellate themselves and Phaeron Junebug's living metal awakens in the equatorial dirt, our deep-core Void-Cracker <strong>The Ledger of Embers</strong> (registered in ancient core charters as <strong>'Glôk-Vâr'</strong>) drifts masked beneath the sulfur cloudbanks of Armageddon.</em>
+            </p>
+            <p style="margin-bottom:10px;">
+              <em>Nine centuries ago during the Second War for Armageddon, the Thrymkâl Consortium advanced three million metric tons of promethium-drilling equipment and seismic macro-charges to the ruling merchant baronies of <strong>Hive Infernus</strong>. When the world fell to ash, the Administratum marked the balance as martyred deficit. But the Ancestors do not write off debts. <strong>The 900-Year Debt of Hive Infernus</strong> has compounded across three Terran generations—and with interest, humanity owes the League exactly four billion tons of raw minerals, rare heavy isotopes, and uncatalogued xenos salvage.</em>
+            </p>
+            <p style="margin:0;">
+              <em>Our local Ironkin cogitator bank, <strong>Fane-Node Vôl-09 ('The Deaf Ear')</strong>, actively filters out all Imperial tithe demands and astropathic distress wails, tuning our sensors solely to raw resource concentrations. We fight not for the Emperor or the Chaos gods, but to balance the ledger down to the last scrap of ferric ore."</em>
+            </p>
+          </div>
+
+          <!-- TELEMETRY GRID -->
+          <div class="telemetry-grid">
+            <div class="telemetry-box" style="border-top-color:var(--gold);">
+              <strong style="color:var(--gold); display:block; margin-bottom:4px;">🪨 Deep-Seismic Core Drills &amp; Site #44-KHA</strong>
+              Stationed above Sector Node 0, our seismic ground-penetrators detect massive tectonic fractures and unharvested veins beneath the petrified iron-wood roots.
+            </div>
+            <div class="telemetry-box" style="border-top-color:var(--blue);">
+              <strong style="color:var(--blue); display:block; margin-bottom:4px;">🧠 Fane-Node Vôl-09 ("The Deaf Ear")</strong>
+              An isolated Brôkhyr ancestral archive operating without empyric broadcast. All harvested resources and guild contracts are encrypted locally into the Black-Ledger.
+            </div>
+            <div class="telemetry-box" style="border-top-color:var(--green);">
+              <strong style="color:var(--green); display:block; margin-bottom:4px;">📡 Radio-Silent Solo Black-Ledger Channel</strong>
+              Terminal Gamma in <a href="vox.html" style="color:var(--green);">Mode 7: Astropath Vox</a> communicates directly with Fane-Node Vôl-09 with zero telepathic resonance bleed into Imperial or Necron frequencies.
+            </div>
+          </div>
+        </div>
+
+        <!-- PART 2: 10-UNIT NEEDGAÂRD OATHBAND ROSTER (1,200 / 1,200 PTS) -->
+        <div class="card" style="margin-bottom:20px; border-left:4px solid var(--gold);">
+          <div class="section-header" style="margin-top:0;">
+            <h3>📜 10-Unit Needgaârd Oathband Crusade Roster (1,200 / 1,200 Pts • 3 RP • 1 CrP)</h3>
+            <span class="hud-sub">Warlord: Kâhl Hârkyn Grîmledger • Thrymkâl Salvage Consortium</span>
+          </div>
+          <p class="card-desc" style="margin-bottom:14px;">
+            The veteran core of the <strong>Needgaârd Oathband</strong>, deployed with heavy prospecting gear, teleport crests, and forward infiltration squads to secure mining claims across Armageddon:
+          </p>
+          <div style="overflow-x:auto;">
+            <table class="reckoning-table" style="width:100%; border-collapse:collapse; font-size:0.83rem;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border); text-align:left; color:var(--gold);">
+                  <th style="padding:6px 8px;">#</th>
+                  <th style="padding:6px 8px;">Unit Designation</th>
+                  <th style="padding:6px 8px;">Role</th>
+                  <th style="padding:6px 8px;">Wargear &amp; Modifications</th>
+                  <th style="padding:6px 8px; text-align:right;">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">1</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Kâhl Hârkyn Grîmledger</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Character (Warlord)</td>
+                  <td style="padding:6px 8px;">Mass Gauntlet, Volkanite Disintegrator, Rampart Crest • <em>Oathbound Speculator (+1 CrP)</em></td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">100 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">2</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Einhyr Champion</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Character</td>
+                  <td style="padding:6px 8px;">Darkstar Axe, Weavefield Crest, Autoch-pattern Combisquig</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">60 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">3</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Grimnyr &amp; 2 CORVs</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Character</td>
+                  <td style="padding:6px 8px;">Ancestral Wrath, 2x CORV Autoch-bolters, Fortify Totems</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">65 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">4</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Hearthkyn Warriors (10 Kin)</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Battleline</td>
+                  <td style="padding:6px 8px;">Theyn w/ Concussion Gauntlet, Medipack, Comms, Magna-rail Rifle, L7 Missile Launcher</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">100 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">5</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Hernkyn Yaegirs Alpha (10 Kin)</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Infantry (Infiltrators)</td>
+                  <td style="padding:6px 8px;">Theyn, Magna-coil Rifle, Plasma Knives, Bolt Shotguns (Scouts 9")</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">90 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">6</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Hernkyn Yaegirs Beta (10 Kin)</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Infantry (Infiltrators)</td>
+                  <td style="padding:6px 8px;">Theyn, AP-3 Magna-coil Sniper, Bolt Shotguns, Land-mines (Scouts 9")</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">90 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">7</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Einhyr Hearthguard (5 Kin)</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Elite Infantry</td>
+                  <td style="padding:6px 8px;">Hesyr, Teleport Crest, Concussion Gauntlets, Volkanite Disintegrators (Deep Strike)</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">160 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">8</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Hernkyn Pioneers (3 Kin)</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Mounted Outriders</td>
+                  <td style="padding:6px 8px;">Pan Spectral Scanner, Magna-coil Autocannon, HYLas Rotary Cannon (Scouts 9")</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">90 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">9</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Sagitaur</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Transport / Vehicle</td>
+                  <td style="padding:6px 8px;">HYLas Beam Cannon, Twin Bolt Cannon, Armoured Bulkheads</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">115 pts</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <td style="padding:6px 8px; color:var(--gold); font-weight:700;">10</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#fff;">Hekaton Land Fortress</td>
+                  <td style="padding:6px 8px; color:var(--muted);">Heavy Vehicle / Battle Tank</td>
+                  <td style="padding:6px 8px;">Heavy Magna-rail Cannon, 2x Twin Bolt Cannons, MATR Autocannon, Void Plating</td>
+                  <td style="padding:6px 8px; text-align:right; font-weight:700;">225 pts</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr style="font-weight:800; color:var(--gold);">
+                  <td colspan="4" style="padding:8px; text-align:right;">TOTAL FORCE VALUE:</td>
+                  <td style="padding:8px; text-align:right; color:var(--green); font-size:0.95rem;">1,200 / 1,200 pts</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
       </div>
     </div>
 

@@ -1,13 +1,13 @@
-# 📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Quartermaster Matrix
+# 📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Quartermaster Matrix (Part 1)
 
 Crusade tab orchestration, 3-way score tracking, tour quotas, and state persistence (`js/crusade.js`).
 
 ## 📑 Table of Contents
-- [js/crusade.js](#file-jscrusadejs)
+- [js/crusade.js (Part 1: State & Tabs)](#file-jscrusadejspart1statetabs)
 
 ---
 
-## File: `js/crusade.js` <a id="file-jscrusadejs"></a>
+## File: `js/crusade.js (Part 1: State & Tabs)` <a id="file-jscrusadejspart1statetabs"></a>
 
 ````javascript
 /**
@@ -22,10 +22,8 @@ let _loadHordeBattleStats = typeof loadHordeBattleStats === 'function' ? loadHor
 if (typeof require === 'function') {
   try {
     const hStats = require('./horde-battle-stats.js');
-    if (hStats) {
-      if (typeof hStats.compileHordeBattleStatsDossierSection === 'function') _compileHordeBattleStatsDossierSection = hStats.compileHordeBattleStatsDossierSection;
-      if (typeof hStats.loadHordeBattleStats === 'function') _loadHordeBattleStats = hStats.loadHordeBattleStats;
-    }
+    if (hStats?.compileHordeBattleStatsDossierSection) _compileHordeBattleStatsDossierSection = hStats.compileHordeBattleStatsDossierSection;
+    if (hStats?.loadHordeBattleStats) _loadHordeBattleStats = hStats.loadHordeBattleStats;
   } catch (e) {}
 }
 
@@ -181,22 +179,12 @@ function renderTombAwakeningMatrix() {
 
     return `
       <div class="logistics-card ${stateClass}">
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;">
-          <strong style="color:#fff; font-size:0.9rem;">${sys.title}</strong>
-          ${badgeHtml}
-        </div>
-        <div class="hud-val-row" style="margin-bottom:8px;">
-          <button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', -1)">−</button>
-          <span class="hud-num" style="color:var(--green); font-size:1.2rem;">${pts} / 3 PTS</span>
-          <button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', 1)">+</button>
-        </div>
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;"><strong style="color:#fff; font-size:0.9rem;">${sys.title}</strong>${badgeHtml}</div>
+        <div class="hud-val-row" style="margin-bottom:8px;"><button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', -1)">−</button><span class="hud-num" style="color:var(--green); font-size:1.2rem;">${pts} / 3 PTS</span><button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', 1)">+</button></div>
         <div style="font-size:0.77rem; color:var(--gold); margin-bottom:6px;">${sys.agenda}</div>
         <div style="font-size:0.79rem; line-height:1.42; margin-bottom:6px;">${tiersHtml}</div>
-        <div style="font-size:0.78rem; line-height:1.4; color:${masterColor}; border-top:1px solid var(--border); padding-top:6px;">
-          <strong>${masterPrefix}</strong>${sys.master}
-        </div>
-      </div>
-    `;
+        <div style="font-size:0.78rem; line-height:1.4; color:${masterColor}; border-top:1px solid var(--border); padding-top:6px;"><strong>${masterPrefix}</strong>${sys.master}</div>
+      </div>`;
   }).join('');
 }
 
@@ -350,541 +338,226 @@ function resetTombAwakeningTab() {
   crusadeState.tombAgendasCompleted = 0;
   crusadeState.tombAwakeningCycles = 0;
   crusadeState.powerReservesAllocated = false;
-  crusadeState.tombSystems = {
-    command: 0,
-    reanimation: 0,
-    translocation: 0
-  };
-
-  const agendasEl = document.getElementById('tombAgendasCompleted');
-  const cyclesEl = document.getElementById('tombAwakeningCycles');
+  crusadeState.tombSystems = { command: 0, reanimation: 0, translocation: 0 };
+  const txtIds = { tombAgendasCompleted: '0', tombAwakeningCycles: '0', necronRecipientUnit: '', tombAwakeningNotes: '' };
+  Object.entries(txtIds).forEach(([id, val]) => { const el = document.getElementById(id); if (el) { if ('value' in el) el.value = val; else el.textContent = val; } });
   const reservesEl = document.getElementById('powerReservesToggle');
-  const unitEl = document.getElementById('necronRecipientUnit');
-  const notesEl = document.getElementById('tombAwakeningNotes');
-  const noticeEl = document.getElementById('tombResetNotice');
-
-  if (agendasEl) agendasEl.textContent = '0';
-  if (cyclesEl) cyclesEl.textContent = '0';
   if (reservesEl) reservesEl.checked = false;
-  if (unitEl) unitEl.value = '';
-  if (notesEl) notesEl.value = '';
+  const noticeEl = document.getElementById('tombResetNotice');
   if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
-
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
-    window.VoxAudio.playClank('card');
-  }
-
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') window.VoxAudio.playClank('card');
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
   updateTombAwakeningPreview();
   saveCrusadeState();
 }
 
-/**
- * Resets all Crusade Master Battle Dossier form fields, checkboxes, and attached
- * unit progression rolls back to their clean default state.
- */
-function resetMasterDossierForm() {
-  const chanEl = document.getElementById('dossierChannel');
-  const modeEl = document.getElementById('dossierModeNode');
-  const outEl = document.getElementById('dossierOutcome');
-  const secCodeEl = document.getElementById('dossierSecretCode');
-  const secTagEl = document.getElementById('dossierSecretTag');
-  const hospEl = document.getElementById('fortHosp');
-  const ammoEl = document.getElementById('fortAmmo');
-  const trenchEl = document.getElementById('fortTrench');
-  const fobEl = document.getElementById('fortFob');
-  const leftEl = document.getElementById('dossierLeftoverSp');
-  const notesEl = document.getElementById('dossierBattleNotes');
-  const distantForceEl = document.getElementById('dossierDistantForce');
-
-  if (chanEl) chanEl.value = 'alpha';
-  if (modeEl) modeEl.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
-  if (outEl) outEl.value = 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)';
-  if (secCodeEl) secCodeEl.value = '';
-  if (secTagEl) secTagEl.value = 'Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)';
-  if (hospEl) hospEl.checked = false;
-  if (ammoEl) ammoEl.checked = false;
-  if (trenchEl) trenchEl.checked = false;
-  if (fobEl) fobEl.checked = false;
-  if (leftEl) leftEl.value = '0 Leftover SP';
-  if (notesEl) notesEl.value = '';
-  if (distantForceEl) distantForceEl.value = '';
-
-  crusadeState.queuedRolls = [];
-  crusadeState.dossierDistantForce = '';
-  crusadeState.dossierChannel = 'alpha';
-  crusadeState.attachedHordeStats = null;
-  if (typeof renderHordeStatsAttachmentCard === 'function') {
-    renderHordeStatsAttachmentCard();
+// --- TAB 5: LEAGUES OF VOTANN EXPEDITIONS & GUILD CONTRACTS ---
+function ensureVotannState() {
+  if (!crusadeState.votann) {
+    crusadeState.votann = {
+      rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0,
+      rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
+      expBacking: 'Lean Operation (Free // Max 5 Battles)',
+      expGoal: 'Farstryd Exploration (Prospecting 2+ XP in 3+ Battles → +3 XP Character & 1 Free Mining Outpost)',
+      expContract: 'Mining — Extraction: Minerals (60+ Raw Minerals → +1 Rare Raw Mineral)',
+      expBattles: 0, expWins: 0, expeditionsCompleted: 0, assets: {}
+    };
   }
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
-    window.VoxAudio.playClank('card');
-  }
-  if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
-  updateMasterDossierPreview();
-  saveCrusadeState();
+  return crusadeState.votann;
 }
 
-/**
- * Toggles the visibility of the Distant Engaged Force field based on whether
- * an Orbital Augur conduit or a Distant Solo Horde mode is currently selected.
- */
-function updateDistantForceVisibility() {
-  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
-  const mode = document.getElementById('dossierModeNode')?.value || '';
-  const isDistant = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(mode);
-  const row = document.getElementById('dossierDistantForceRow');
-  if (row) {
-    row.style.display = isDistant ? 'block' : 'none';
-  }
+function adjVotannRes(key, delta) {
+  const v = ensureVotannState();
+  v[key] = Math.max(0, (v[key] || 0) + delta);
+  renderVotannTab();
+  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
-/**
- * Pure functional core: compiles the Master Post-Battle Dossier string from a plain data
- * object. Supports standard Player 1 / Player 2 engagements as well as Distant Solo Horde
- * Orbital Augur Telemetry where neither main player was fielded.
- *
- * @param {object} [input={}] - Plain Master Battle Dossier inputs.
- * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
- */
-function compileMasterDossier(input = {}) {
-  const chan = input.channel || 'alpha';
-  const modeNode = input.modeNode || '';
-  const outcome = input.outcome || '';
-  const secCode = (input.secretCode || 'N/A').trim().toUpperCase();
-  const secTag = input.secretTag || 'None';
-  const leftover = input.leftoverSp || '0 Leftover SP';
-  const notes = (input.battleNotes || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
-  const forts = Array.isArray(input.fortifications) ? input.fortifications : [];
-  const fortStr = forts.length > 0 ? forts.join(', ') : 'None';
-  const queuedRolls = Array.isArray(input.queuedRolls) ? input.queuedRolls : [];
-  const distantForce = (input.distantForce || '').trim();
+function adjVotannRare(key, delta) {
+  const v = ensureVotannState();
+  if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
+  v.rare[key] = Math.max(0, (v.rare[key] || 0) + delta);
+  renderVotannTab();
+  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+}
 
-  const isDistantAugur = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(modeNode);
-
-  const unitLines = queuedRolls.length > 0
-    ? queuedRolls.map((q, i) =>
-        `  ${i + 1}. [${q.unit}] → ${q.category}: ${q.name} (${q.roll})\n     • Battlefield Context: "${q.context}"`
-      ).join('\n')
-    : '  • None attached this battle.';
-
-  if (isDistantAugur) {
-    const scanningVessel = (chan === 'augur_beta' || chan === 'beta')
-      ? 'LORD COMMANDER JUNEBUG'
-      : 'THE EXILE // SANCTUARY OF ASH';
-    const forceName = distantForce || 'Unspecified Distant Auxiliary Detachment';
-
-    const lines = [
-      `+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++`,
-      `• SCANNING SENSOR ARRAY: ORBITAL AUGUR ARRAY (Relayed via ${scanningVessel})`,
-      `• ENGAGED FORCES (IN THE DISTANCE): ${forceName} (Neither Main Player Fielded)`,
-      `• ENGAGEMENT CLASSIFICATION: ${modeNode}`,
-      `• OUTCOME & SURVIVAL: ${outcome}`,
-      `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
-      `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
-      `• LEFTOVER SP SALVAGE: ${leftover}`,
-      `• STRATEGIC POINTS & ALLIANCE IMPACT: Zero Alliance SPt Shift (Off-Roster Narrative Telemetry)`,
-      `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`
-    ];
-
-    if (input.hordeBattleStats) {
-      const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
-        ? compileHordeBattleStatsDossierSection
-        : _compileHordeBattleStatsDossierSection;
-      const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
-      if (statsSection) {
-        lines.push(statsSection);
-      }
-    }
-
-    lines.push(
-      `------------------------------------------------`,
-      `• OBSERVED REMOTE UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES IN THE ASH-STORM"):`,
-      unitLines,
-      `------------------------------------------------`,
-      `• ORBITAL AUGUR AFTER-ACTION LOG: "${notes}"`,
-      `------------------------------------------------`,
-      `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this distant solo horde breach caught in the distance by our orbital augurs. As neither main player participated, no Alliance SPts are shifted—please chronicle the narrative fate of this remote detachment and christen custom in-universe Lore Names & Backstories for their attached unit Upgrades, Relics, and Battle Scars!`
-    );
-    return lines.join('\n');
+function rollVotannPostBattleHarvest() {
+  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const v = ensureVotannState();
+  const mult = parseFloat(document.getElementById('votHarvestSizeSelect')?.value || '1');
+  const typeRoll = Math.floor(Math.random() * 6) + 1;
+  const d6Amt = Math.floor(Math.random() * 6) + 1 + (mult === 2 ? Math.floor(Math.random() * 6) + 1 : 0);
+  let amt = mult === 0.5 ? d6Amt * 5 : d6Amt * 10;
+  const map = { 1: ['rawMinerals', 'Raw Minerals'], 2: ['biomatter', 'Biomatter'], 3: ['energySources', 'Energy Sources'], 4: ['galacticIntel', 'Galactic Intel'] };
+  const picked = map[typeRoll] || ['rawMinerals', 'Choice Resource (Defaulted to Raw Minerals)'];
+  if (picked[0] === 'rawMinerals') {
+    ['outpost1', 'outpost2', 'outpost3'].forEach(k => {
+      if (v.assets[k] === 'Active') amt += 20;
+      if (v.assets[k] === 'Upgraded') amt += 30;
+    });
   }
+  v[picked[0]] = (v[picked[0]] || 0) + amt;
+  let bioBonus = '';
+  if (picked[0] !== 'biomatter' && (v.assets.biorecyc === 'Active' || v.assets.biorecyc === 'Upgraded')) {
+    v.biomatter = (v.biomatter || 0) + 20;
+    bioBonus = ' (+20 Biomatter from Biorecyc Fabricator)';
+  }
+  const notice = document.getElementById('votHarvestNotice');
+  if (notice) notice.innerHTML = `<strong style="color:var(--gold);">Rolled D6=${typeRoll}: +${amt} ${picked[1]}${bioBonus}!</strong>`;
+  renderVotannTab();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+}
 
-  const isBeta = chan === 'beta';
-  const headerLine = isBeta
-    ? `+++ DYNASTIC ENGRAM-CHRONICLE // MASTER POST-BATTLE DOSSIER & AWAKENING LOG +++`
-    : `+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++`;
-
-  const cmdrLabel = isBeta
-    ? `PHAERON JUNEBUG // TOMB-SHIP COMMAND INTERLINK (NECRONS)`
-    : `THE EXILE // THE SANCTUARY OF ASH (ASTRA MILITARUM — 044TH KRIEG)`;
-
-  const upgradeSectionTitle = isBeta
-    ? `[2. CRYPTEK CONCLAVE // DYNASTIC EPITHETS, RELICS & ENGRAMMATIC FLAWS]:`
-    : `[2. QUARTERMASTER ROLLS // BATTLE HONOURS, RELICS & SCARS]:`;
-
-  const closingRequest = isBeta
-    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE: Please inscribe this engagement into the Blackstone Engram-Chronicles (Pattern 2), allocate any earned Tomb World Awakening Points or Marauder/Alliance Hegemony spoils, and bestow permanent Dynastic Epithets upon the upgraded phalanxes above!`
-    : `REQUEST FOR CAMPAIGN MASTER (LOGIS-PREFECT VANE): Please audit this after-action dossier (Pattern 2), credit our Alliance & Sector Hegemony spoils in the orbital ledger, and christen the upgraded units and scars above with permanent Munitorum lore titles!`;
-
-  const lines = [
-    headerLine,
-    `• REPORTING COMMANDER: ${cmdrLabel}`,
-    `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
-    `• OUTCOME & SURVIVAL: ${outcome}`,
-    `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
-    `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
-    `• LEFTOVER SP SALVAGE: ${leftover}`
-  ];
-
-  if (!isBeta) {
-    const logSummary = input.logisticsSummary || (typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : '');
-    if (logSummary) {
-      lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
-    }
+function rollVotannRareResourceCheck() {
+  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  const v = ensureVotannState();
+  if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
+  const d6 = Math.floor(Math.random() * 6) + 1;
+  const notice = document.getElementById('votHarvestNotice');
+  if (d6 === 6) {
+    v.rare.rawMinerals = (v.rare.rawMinerals || 0) + 1;
+    if (notice) notice.innerHTML = `<strong style="color:var(--green);">D6 = 6! Unearthed +1 Rare Resource!</strong>`;
   } else {
-    const tombSummary = input.tombSummary || (typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : '');
-    if (tombSummary) {
-      lines.push(`• TOMB WORLD AWAKENING MATRIX TELEMETRY: ${tombSummary}`);
-    }
+    if (notice) notice.innerHTML = `<span style="color:var(--muted);">Victory Rare Roll: D6 = ${d6} (Requires 6+).</span>`;
   }
-
-  if (input.hordeBattleStats) {
-    const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
-      ? compileHordeBattleStatsDossierSection
-      : _compileHordeBattleStatsDossierSection;
-    const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
-    if (statsSection) {
-      lines.push(statsSection);
-    }
-  }
-
-  lines.push(
-    `------------------------------------------------`,
-    upgradeSectionTitle,
-    unitLines,
-    `------------------------------------------------`,
-    `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
-    `------------------------------------------------`,
-    closingRequest
-  );
-
-  return lines.join('\n');
+  renderVotannTab();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
-/**
- * Humble View (Dumb UI) input reader: extracts current Master Dossier form fields
- * from the DOM into a plain data object.
- *
- * @returns {object} Plain input snapshot for compileMasterDossier.
- */
-function readMasterDossierFormInputs() {
-  const forts = [];
-  if (document.getElementById('fortHosp')?.checked) forts.push('Field Hospital (Auto-Pass OOA)');
-  if (document.getElementById('fortAmmo')?.checked) forts.push('Ammo Dump (Free Weapon Mod)');
-  if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
-  if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
-
-  return {
-    channel: document.getElementById('dossierChannel')?.value || 'alpha',
-    modeNode: document.getElementById('dossierModeNode')?.value || '',
-    outcome: document.getElementById('dossierOutcome')?.value || '',
-    secretCode: document.getElementById('dossierSecretCode')?.value || '',
-    secretTag: document.getElementById('dossierSecretTag')?.value || '',
-    leftoverSp: document.getElementById('dossierLeftoverSp')?.value || '0 Leftover SP',
-    battleNotes: document.getElementById('dossierBattleNotes')?.value || '',
-    distantForce: document.getElementById('dossierDistantForce')?.value || '',
-    fortifications: forts,
-    queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
-    hordeBattleStats: crusadeState.attachedHordeStats || null,
-    logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null,
-    tombSummary: typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : null
-  };
+function syncVotannExpeditionSelectors() {
+  const v = ensureVotannState();
+  v.expBacking = document.getElementById('votExpBacking')?.value || v.expBacking;
+  v.expGoal = document.getElementById('votExpGoal')?.value || v.expGoal;
+  v.expContract = document.getElementById('votExpContract')?.value || v.expContract;
+  renderVotannTab();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
-/**
- * Compiles the Master Post-Battle & Unit Progression Dossier string for Mode 1 (Horde)
- * and Mode 2 (1v1 PvP) Crusade engagements, delegating to the pure compileMasterDossier core.
- *
- * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
- */
-function buildMasterDossierString() {
-  return compileMasterDossier(readMasterDossierFormInputs());
+function adjVotannExpField(field, delta) {
+  const v = ensureVotannState();
+  if (field === 'expeditionsCompleted') {
+    v.expeditionsCompleted = Math.max(0, (v.expeditionsCompleted || 0) + delta);
+    v.expBattles = 0;
+    v.expWins = 0;
+  } else {
+    v[field] = Math.max(0, (v[field] || 0) + delta);
+  }
+  renderVotannTab();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
-function updateMasterDossierPreview() {
-  updateDistantForceVisibility();
-  const box = document.getElementById('masterDossierPreviewBox');
-  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
-  if (box) {
-    box.textContent = buildMasterDossierString();
-    if (box.classList && typeof box.classList.toggle === 'function') {
-      box.classList.toggle('vox-preview-beta', chan === 'beta' || chan === 'augur_beta');
-      box.classList.toggle('vox-preview-alpha', chan !== 'beta' && chan !== 'augur_beta');
-    }
-  }
-  saveCrusadeState();
+function cycleVotannAssetState(key) {
+  const v = ensureVotannState();
+  const states = ['Locked', 'Active', 'Upgraded', 'Inactive'];
+  const curr = v.assets[key] || 'Locked';
+  v.assets[key] = states[(states.indexOf(curr) + 1) % states.length];
+  renderVotannTab();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
-function transmitMasterBattleDossier() {
-  const chanVal = document.getElementById('dossierChannel')?.value || 'alpha';
-  const targetChan = chanVal.startsWith('augur_') ? chanVal.replace('augur_', '') : chanVal;
-  const payload = buildMasterDossierString();
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-    window.VoxAudio.transmitToVox(targetChan, payload);
-  }
+function populateVotannVault() {
+  const sel = document.getElementById('votannVaultSelect');
+  if (!sel) return;
+  const vault = (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined') ? VOTANN_VAULT_PROTOCOLS : (typeof window !== 'undefined' ? window.VOTANN_VAULT_PROTOCOLS : []);
+  sel.innerHTML = vault.map(i => `<option value="${i.id}">${i.name} — [${i.type}]</option>`).join('');
+  renderSelectedVotannVaultPreview();
 }
 
-function saveCrusadeState() {
-  const distantForceEl = document.getElementById('dossierDistantForce');
-  if (distantForceEl) {
-    crusadeState.dossierDistantForce = distantForceEl.value;
-  }
-  const channelEl = document.getElementById('dossierChannel');
-  if (channelEl) {
-    crusadeState.dossierChannel = channelEl.value;
-  }
-  const modeNodeEl = document.getElementById('dossierModeNode');
-  if (modeNodeEl) {
-    crusadeState.dossierModeNode = modeNodeEl.value;
-  }
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const stateKey = (typeof CRUSADE_STATE_KEY !== 'undefined') ? CRUSADE_STATE_KEY : (typeof window !== 'undefined' ? window.CRUSADE_STATE_KEY : 'foa_crusade_quartermaster_v1');
-      localStorage.setItem(stateKey, JSON.stringify(crusadeState));
-    }
-  } catch (e) {}
-}
-
-function initCrusadePage() {
-  try {
-    const stateKey = (typeof CRUSADE_STATE_KEY !== 'undefined') ? CRUSADE_STATE_KEY : (typeof window !== 'undefined' ? window.CRUSADE_STATE_KEY : 'foa_crusade_quartermaster_v1');
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(stateKey) : null;
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      crusadeState = Object.assign(crusadeState, parsed);
-    }
-  } catch (e) {}
-
-  if (crusadeState.dossierChannel) {
-    const chanEl = document.getElementById('dossierChannel');
-    if (chanEl) chanEl.value = crusadeState.dossierChannel;
-  }
-  if (crusadeState.dossierModeNode) {
-    const modeEl = document.getElementById('dossierModeNode');
-    if (modeEl) modeEl.value = crusadeState.dossierModeNode;
-  }
-  if (crusadeState.dossierDistantForce) {
-    const distEl = document.getElementById('dossierDistantForce');
-    if (distEl) distEl.value = crusadeState.dossierDistantForce;
-  }
-
-  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts', 'toursCompletedCount', 'tombAgendasCompleted', 'tombAwakeningCycles'].forEach(k => {
-    const el = document.getElementById(k);
-    if (el && typeof crusadeState[k] === 'number') el.textContent = String(crusadeState[k]);
-  });
-
-  if (typeof switchCrusadeTab === 'function') switchCrusadeTab(crusadeState.activeTab || 'board', false);
-  if (typeof selectAllianceTree === 'function') selectAllianceTree(crusadeState.selectedTree || 'Gatebreakers', false);
-  if (typeof renderLogisticsAllocator === 'function') renderLogisticsAllocator();
-  if (typeof populateCommendationVault === 'function') populateCommendationVault();
-  renderTombAwakeningMatrix();
-  populateNecronDynasticVault();
-  if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
-  renderHordeStatsAttachmentCard();
-  updateMasterDossierPreview();
-  if (typeof updateStartOfTourPreview === 'function') updateStartOfTourPreview();
-  updateTombAwakeningPreview();
-}
-
-/**
- * Imports the latest saved Horde Battle Stats from localStorage into Crusade state
- * and automatically pre-fills matching form fields (secret objective, fortifications,
- * leftover SP, and mode).
- */
-function importHordeBattleStatsToCrusade() {
-  const loader = (typeof loadHordeBattleStats === 'function') ? loadHordeBattleStats : _loadHordeBattleStats;
-  const stats = loader ? loader() : null;
-  if (!stats) {
-    if (typeof alert === 'function') {
-      alert("No saved Horde Mode Battle Telemetry found in local memory.\nPlay a match in Spawner / Mode 1 and click 'Export to Crusade' first!");
-    }
-    return;
-  }
-  crusadeState.attachedHordeStats = stats;
-
-  if (stats.secretObjective && stats.secretObjective.code) {
-    const secCodeInput = document.getElementById('dossierSecretCode');
-    if (secCodeInput) secCodeInput.value = stats.secretObjective.code;
-  }
-  if (stats.gameMode === 'SOLO') {
-    const modeEl = document.getElementById('dossierModeNode');
-    if (modeEl && !modeEl.value.includes('Solo')) {
-      modeEl.value = 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)';
-    }
-  }
-
-  if (Array.isArray(stats.fortifications)) {
-    const fortList = stats.fortifications.map(f => String(f).toLowerCase());
-    const fortHosp = document.getElementById('fortHosp');
-    if (fortHosp) fortHosp.checked = fortList.some(f => f.includes('hospital'));
-    const fortAmmo = document.getElementById('fortAmmo');
-    if (fortAmmo) fortAmmo.checked = fortList.some(f => f.includes('ammo'));
-    const fortTrench = document.getElementById('fortTrench');
-    if (fortTrench) fortTrench.checked = fortList.some(f => f.includes('trench'));
-    const fortFob = document.getElementById('fortFob');
-    if (fortFob) fortFob.checked = fortList.some(f => f.includes('fob') || f.includes('forward operating'));
-  }
-
-  const leftoverVal = Number(stats.leftoverSp) || 0;
-  const leftoverEl = document.getElementById('dossierLeftoverSp');
-  if (leftoverEl) {
-    if (leftoverVal >= 8) leftoverEl.value = '8 Leftover SP → +1 RP or +100 pts Supply Limit';
-    else if (leftoverVal >= 5) leftoverEl.value = '5 Leftover SP → +2 XP to Surviving Unit';
-    else if (leftoverVal >= 3) leftoverEl.value = '3 Leftover SP → Bank 1v1 Supply Cache Token';
-    else if (leftoverVal >= 2) leftoverEl.value = '2 Leftover SP → Orbital Auspex Recon Probe (Reveal Adjacent Node)';
-    else leftoverEl.value = '0 Leftover SP';
-  }
-
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
-    window.VoxAudio.playPowerSurge();
-  }
-
-  saveCrusadeState();
-  renderHordeStatsAttachmentCard();
-  updateMasterDossierPreview();
-}
-
-/**
- * Detaches the currently attached Horde Battle Stats from Crusade state.
- */
-function detachHordeBattleStatsFromCrusade() {
-  crusadeState.attachedHordeStats = null;
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
-    window.VoxAudio.playClank('card');
-  }
-  saveCrusadeState();
-  renderHordeStatsAttachmentCard();
-  updateMasterDossierPreview();
-}
-
-/**
- * Dumb UI renderer for the Attached Horde Battle Stats card.
- */
-function renderHordeStatsAttachmentCard() {
-  const card = document.getElementById('hordeStatsAttachCard');
-  if (!card) return;
-
-  const stats = crusadeState.attachedHordeStats;
-  if (!stats) {
-    const hasSaved = (typeof loadHordeBattleStats === 'function') && loadHordeBattleStats() !== null;
-    card.style.borderColor = 'rgba(255,255,255,0.15)';
-    card.style.background = '#0b0d13';
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div>
-          <span class="hud-label" style="display:block; color:var(--muted);">ATTACHED HORDE BATTLE TELEMETRY</span>
-          <span style="font-size:0.84rem; color:#94a3b8;">No Horde Battle Telemetry attached to this dossier.</span>
-        </div>
-        <button type="button" class="btn-gold btn-sm" onclick="importHordeBattleStatsToCrusade()">
-          📥 Import Latest Horde Battle Stats
-        </button>
-      </div>
-      ${hasSaved ? '<div style="margin-top:6px; font-size:0.75rem; color:var(--green);">⚡ Saved battle telemetry detected in local cogitator memory.</div>' : ''}
-    `;
-    return;
-  }
-
-  const kills = stats.hordeKills || 0;
-  const misCount = Array.isArray(stats.miseriesDrawn) ? stats.miseriesDrawn.length : 0;
-  const secComp = Array.isArray(stats.secondariesCompleted) ? stats.secondariesCompleted.length : 0;
-  const secFail = Array.isArray(stats.secondariesFailed) ? stats.secondariesFailed.length : 0;
-  const faction = stats.hordeFaction || 'Horde Enemy';
-  const mode = stats.gameMode || 'CO-OP';
-
-  card.style.borderColor = 'var(--gold)';
-  card.style.background = 'rgba(217,119,6,0.08)';
-  card.innerHTML = `
+function renderSelectedVotannVaultPreview() {
+  const sel = document.getElementById('votannVaultSelect');
+  const box = document.getElementById('votannVaultPreviewBox');
+  if (!sel || !box) return;
+  const vault = (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined') ? VOTANN_VAULT_PROTOCOLS : (typeof window !== 'undefined' ? window.VOTANN_VAULT_PROTOCOLS : []);
+  const pick = vault.find(i => i.id === sel.value) || vault[0];
+  if (!pick) return;
+  box.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="badge gold">📎 TELEMETRY ATTACHED</span>
-        <strong style="color:#fff; font-size:0.9rem;">${faction} (${mode})</strong>
-      </div>
-      <div style="display:flex; gap:6px;">
-        <button type="button" class="btn-ghost btn-sm" onclick="importHordeBattleStatsToCrusade()" title="Re-sync latest stats">🔄 Re-sync</button>
-        <button type="button" class="btn-red btn-sm" onclick="detachHordeBattleStatsFromCrusade()" title="Remove attached stats">✕ Detach</button>
-      </div>
+      <strong style="color:#fff; font-size:0.94rem;">${pick.name}</strong>
+      <span class="dice-pip-badge" style="background:var(--gold); color:#000; margin-right:0; font-size:0.76rem;">${pick.type}</span>
     </div>
-    <div style="font-size:0.82rem; color:#e2e8f0; line-height:1.4;">
-      💀 <strong>${kills}</strong> Units Slain • 📜 <strong>${misCount}</strong> Miseries • 🎯 <strong>${secComp}</strong> Secondaries Won / <strong>${secFail}</strong> Failed • ⚡ <strong>${stats.spEarned || 0}</strong> SP Earned / <strong>${stats.spSpent || 0}</strong> Spent
-    </div>
+    <div style="font-size:0.84rem; color:var(--text);">${pick.desc}</div>
   `;
 }
 
-// Attach to window for browser global scope
-if (typeof window !== 'undefined') {
-  window.adjTombField = adjTombField;
-  window.togglePowerReserves = togglePowerReserves;
-  window.adjTombSystemPt = adjTombSystemPt;
-  window.rollMasterSystemReset = rollMasterSystemReset;
-  window.renderTombAwakeningMatrix = renderTombAwakeningMatrix;
-  window.populateNecronDynasticVault = populateNecronDynasticVault;
-  window.renderSelectedNecronVaultPreview = renderSelectedNecronVaultPreview;
-  window.attachNecronVaultToDossier = attachNecronVaultToDossier;
-  window.buildTombMatrixSummaryLine = buildTombMatrixSummaryLine;
-  window.compileTombAwakeningDossier = compileTombAwakeningDossier;
-  window.buildTombAwakeningDossierString = buildTombAwakeningDossierString;
-  window.updateTombAwakeningPreview = updateTombAwakeningPreview;
-  window.transmitTombAwakeningDossier = transmitTombAwakeningDossier;
-  window.resetTombAwakeningTab = resetTombAwakeningTab;
-  window.resetMasterDossierForm = resetMasterDossierForm;
-  window.updateDistantForceVisibility = updateDistantForceVisibility;
-  window.compileMasterDossier = compileMasterDossier;
-  window.readMasterDossierFormInputs = readMasterDossierFormInputs;
-  window.buildMasterDossierString = buildMasterDossierString;
-  window.updateMasterDossierPreview = updateMasterDossierPreview;
-  window.transmitMasterBattleDossier = transmitMasterBattleDossier;
-  window.saveCrusadeState = saveCrusadeState;
-  window.initCrusadePage = initCrusadePage;
-  window.importHordeBattleStatsToCrusade = importHordeBattleStatsToCrusade;
-  window.detachHordeBattleStatsFromCrusade = detachHordeBattleStatsFromCrusade;
-  window.renderHordeStatsAttachmentCard = renderHordeStatsAttachmentCard;
-
-  window.addEventListener('DOMContentLoaded', initCrusadePage);
-  window.addEventListener('vox:page-swapped', () => {
-    if (document.getElementById('cruTabBoard')) initCrusadePage();
+function attachVotannVaultToDossier() {
+  const sel = document.getElementById('votannVaultSelect');
+  if (!sel) return;
+  const vault = (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined') ? VOTANN_VAULT_PROTOCOLS : (typeof window !== 'undefined' ? window.VOTANN_VAULT_PROTOCOLS : []);
+  const pick = vault.find(i => i.id === sel.value) || vault[0];
+  const unitName = (document.getElementById('votannRecipientUnit')?.value || 'Needgaârd Oathband').trim();
+  crusadeState.queuedRolls.push({
+    unit: unitName,
+    context: `Activated via Kindred Acquisitions Vault (${pick.type})`,
+    category: pick.type,
+    roll: 'Kindred Protocol',
+    name: pick.name,
+    desc: pick.desc
   });
+  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playRelicChoir();
+  if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
+  updateMasterDossierPreview();
+  saveCrusadeState();
+  if (typeof switchCrusadeTab === 'function') switchCrusadeTab('forge');
 }
 
-// CommonJS export for Node test runners
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    adjTombField,
-    togglePowerReserves,
-    adjTombSystemPt,
-    rollMasterSystemReset,
-    renderTombAwakeningMatrix,
-    populateNecronDynasticVault,
-    renderSelectedNecronVaultPreview,
-    attachNecronVaultToDossier,
-    buildTombMatrixSummaryLine,
-    compileTombAwakeningDossier,
-    buildTombAwakeningDossierString,
-    updateTombAwakeningPreview,
-    transmitTombAwakeningDossier,
-    resetTombAwakeningTab,
-    resetMasterDossierForm,
-    updateDistantForceVisibility,
-    compileMasterDossier,
-    readMasterDossierFormInputs,
-    buildMasterDossierString,
-    updateMasterDossierPreview,
-    transmitMasterBattleDossier,
-    saveCrusadeState,
-    initCrusadePage,
-    importHordeBattleStatsToCrusade,
-    detachHordeBattleStatsFromCrusade,
-    renderHordeStatsAttachmentCard
-  };
+function renderVotannTab() {
+  const v = ensureVotannState();
+  ['rawMinerals', 'biomatter', 'energySources', 'galacticIntel'].forEach(k => {
+    const rEl = document.getElementById('votRes_' + k);
+    const rareEl = document.getElementById('votRare_' + k);
+    if (rEl) rEl.textContent = String(v[k] || 0);
+    if (rareEl) rareEl.textContent = String(v.rare?.[k] || 0);
+  });
+  const maxB = v.expBacking.includes('6') ? 6 : (v.expBacking.includes('7') ? 7 : 5);
+  const bLbl = document.getElementById('votExpBattlesLabel');
+  const wLbl = document.getElementById('votExpWinsLabel');
+  if (bLbl) bLbl.textContent = `${v.expBattles || 0} / ${maxB}`;
+  if (wLbl) wLbl.textContent = String(v.expWins || 0);
+
+  const grid = document.getElementById('votannAssetsGrid');
+  const assetsCatalog = (typeof VOTANN_KINDRED_ASSETS !== 'undefined') ? VOTANN_KINDRED_ASSETS : (typeof window !== 'undefined' ? window.VOTANN_KINDRED_ASSETS : []);
+  let activeCount = 0;
+  if (grid) {
+    grid.innerHTML = (assetsCatalog || []).map(a => {
+      const st = v.assets[a.key] || 'Locked';
+      if (st === 'Active' || st === 'Upgraded') activeCount++;
+      const badgeColor = st === 'Upgraded' ? 'var(--green)' : (st === 'Active' ? 'var(--gold)' : (st === 'Inactive' ? 'var(--red)' : 'var(--muted)'));
+      return `
+        <div class="logistics-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><strong style="color:#fff; font-size:0.88rem;">${a.title}</strong><button type="button" class="mini-btn" style="width:auto; padding:2px 8px; border-color:${badgeColor}; color:${badgeColor};" onclick="cycleVotannAssetState('${a.key}')">${st.toUpperCase()}</button></div>
+          <div style="font-size:0.74rem; color:var(--muted); margin-bottom:4px;">Cost: ${a.cost} | Upg: ${a.upgCost}</div>
+          <div style="font-size:0.79rem; color:var(--text);">${st === 'Upgraded' ? a.upgDesc : a.baseDesc}</div>
+        </div>`;
+    }).join('');
+  }
+  const cEl = document.getElementById('votActiveAssetsCount');
+  if (cEl) cEl.textContent = String(activeCount);
+  updateVotannDispatchPreview();
 }
+
+function buildVotannSummaryLine() {
+  const v = ensureVotannState();
+  const r = v.rare || {};
+  return `Charter: ${v.expBacking || 'Lean'} (${v.expBattles || 0} Battles, ${v.expWins || 0} Wins) | Goal: ${v.expGoal || 'Farstryd'} | Vault: Minerals:${v.rawMinerals || 0} Biomatter:${v.biomatter || 0} Energy:${v.energySources || 0} Intel:${v.galacticIntel || 0} (Rare: M:${r.rawMinerals || 0}, B:${r.biomatter || 0}, E:${r.energySources || 0}, I:${r.galacticIntel || 0})`;
+}
+
+function compileVotannDispatch(input = {}) {
+  const v = input.votann || ensureVotannState();
+  const activeAssets = Object.entries(v.assets || {})
+    .filter(([, st]) => st === 'Active' || st === 'Upgraded')
+    .map(([k, st]) => `${k} (${st})`).join(', ') || 'None yet';
+  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('votannDispatchNotes')?.value) || '').trim();
+  const lines = [
+    `+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++`,
+    `• REPORTING WARLORD: KÂHL HÂRKYN GRÎMLEDGER // THE LEDGER OF EMBERS (1,200 PTS)`,
+    `• EXPEDITION CHARTER: ${v.expBacking} | Progress: ${v.expBattles} Battles (${v.expWins} Wins)`,
+    `• EXPEDITION GOAL: ${v.expGoal}`,
+    `• GUILD CONTRACT: ${v.expContract}`,
+    `• FUNDAMENTAL VAULT: Raw Minerals: ${v.rawMinerals} | Biomatter: ${v.biomatter} | Energy Sources: ${v.energySources} | Galactic Intel: ${v.galacticIntel}`,
+    `• RARE RESOURCE VAULT: Minerals: ${v.rare?.rawMinerals || 0} | Biomatter: ${v.rare?.biomatter || 0} | Energy: ${v.rare?.energySources || 0} | Intel: ${v.rare?.galacticIntel || 0}`,
+    `• ACTIVE KINDRED ASSETS: ${activeAssets}`
+  ];
 ````

@@ -36,6 +36,21 @@ var crusadeState = {
     command: 1,
     reanimation: 1,
     translocation: 0
+  },
+  // Leagues of Votann Kindred Expeditions & Resource Vault State
+  votann: {
+    rawMinerals: 0,
+    biomatter: 0,
+    energySources: 0,
+    galacticIntel: 0,
+    rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
+    expBacking: 'Lean Operation (Free // Max 5 Battles)',
+    expGoal: 'Farstryd Exploration (Prospecting 2+ XP in 3+ Battles → +3 XP Character & 1 Free Mining Outpost)',
+    expContract: 'Mining — Extraction: Minerals (60+ Raw Minerals → +1 Rare Raw Mineral)',
+    expBattles: 0,
+    expWins: 0,
+    expeditionsCompleted: 0,
+    assets: {}
   }
 };
 
@@ -52,19 +67,23 @@ function switchCrusadeTab(which, persist = true) {
   const tabForge = document.getElementById('cruTabForge');
   const tabTour = document.getElementById('cruTabTour');
   const tabTomb = document.getElementById('cruTabTomb');
+  const tabVotann = document.getElementById('cruTabVotann');
   if (tabBoard) tabBoard.classList.toggle('hidden', which !== 'board');
   if (tabForge) tabForge.classList.toggle('hidden', which !== 'forge');
   if (tabTour) tabTour.classList.toggle('hidden', which !== 'tour');
   if (tabTomb) tabTomb.classList.toggle('hidden', which !== 'tomb');
+  if (tabVotann) tabVotann.classList.toggle('hidden', which !== 'votann');
 
   const btn1 = document.getElementById('cruTabBtn1');
   const btn2 = document.getElementById('cruTabBtn2');
   const btn3 = document.getElementById('cruTabBtn3');
   const btn4 = document.getElementById('cruTabBtn4');
+  const btn5 = document.getElementById('cruTabBtn5');
   if (btn1) btn1.classList.toggle('active', which === 'board');
   if (btn2) btn2.classList.toggle('active', which === 'forge');
   if (btn3) btn3.classList.toggle('active', which === 'tour');
   if (btn4) btn4.classList.toggle('active', which === 'tomb');
+  if (btn5) btn5.classList.toggle('active', which === 'votann');
 
   // Keep Tab 3 (Tour of Duty) always in Militarum color and Tab 4 (Tomb World) in Necron color
   if (document.body && document.body.classList) {
@@ -123,10 +142,11 @@ function rollRandomBattleTrait() {
   const traits = (typeof BATTLE_TRAIT_TABLES !== 'undefined') ? BATTLE_TRAIT_TABLES : (typeof window !== 'undefined' ? window.BATTLE_TRAIT_TABLES : {});
   const amTraits = (typeof ASTRA_MILITARUM_TRAIT_TABLES !== 'undefined') ? ASTRA_MILITARUM_TRAIT_TABLES : (typeof window !== 'undefined' ? window.ASTRA_MILITARUM_TRAIT_TABLES : {});
   const necTraits = (typeof NECRONS_TRAIT_TABLES !== 'undefined') ? NECRONS_TRAIT_TABLES : (typeof window !== 'undefined' ? window.NECRONS_TRAIT_TABLES : {});
+  const votTraits = (typeof VOTANN_TRAIT_TABLES !== 'undefined') ? VOTANN_TRAIT_TABLES : (typeof window !== 'undefined' ? window.VOTANN_TRAIT_TABLES : {});
 
   const activePool = poolKey === 'AlphaCodex'
     ? amTraits
-    : (poolKey === 'BetaCodex' ? necTraits : traits);
+    : (poolKey === 'BetaCodex' ? necTraits : (poolKey === 'GammaCodex' ? votTraits : traits));
   const table = activePool[uType] || activePool.Infantry || traits.Infantry || [];
   const pick = table[Math.floor(Math.random() * table.length)] || { d6: 1, name: 'Default Trait', desc: 'No trait found' };
   lastRolledItem.trait = {
@@ -185,10 +205,11 @@ function rollRandomRelic() {
   const relics = (typeof CRUSADE_RELIC_VAULT !== 'undefined') ? CRUSADE_RELIC_VAULT : (typeof window !== 'undefined' ? window.CRUSADE_RELIC_VAULT : {});
   const amRelics = (typeof ASTRA_MILITARUM_RELIC_VAULT !== 'undefined') ? ASTRA_MILITARUM_RELIC_VAULT : (typeof window !== 'undefined' ? window.ASTRA_MILITARUM_RELIC_VAULT : {});
   const necRelics = (typeof NECRONS_RELIC_VAULT !== 'undefined') ? NECRONS_RELIC_VAULT : (typeof window !== 'undefined' ? window.NECRONS_RELIC_VAULT : {});
+  const votRelics = (typeof VOTANN_RELIC_VAULT !== 'undefined') ? VOTANN_RELIC_VAULT : (typeof window !== 'undefined' ? window.VOTANN_RELIC_VAULT : {});
 
   const activeVault = poolKey === 'AlphaCodex'
     ? amRelics
-    : (poolKey === 'BetaCodex' ? necRelics : relics);
+    : (poolKey === 'BetaCodex' ? necRelics : (poolKey === 'GammaCodex' ? votRelics : relics));
   const pool = activeVault[tier] || relics.Artificer || [];
   const pick = pool[Math.floor(Math.random() * pool.length)] || { name: 'Standard Relic', desc: 'No relic found' };
 

@@ -22,7 +22,6 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/vox.css">
 </head>
-</head>
 <body>
 
   <!-- CAMPAIGN SUITE TOP NAVIGATION -->
@@ -63,17 +62,28 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
     </div>
 
     <label class="setup-label">1. Select Your Private Command Conduit</label>
-    <div class="choice-grid" style="margin-bottom:16px;">
-      <div id="cardAlpha" class="choice-card selected" onclick="selectConduit('alpha')">
+    <div class="choice-grid conduit-selector" style="margin-bottom:16px; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));">
+      <div class="choice-card conduit-card selected active" id="cardAlpha" onclick="selectConduit('alpha')">
+        <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:2px;">CONDUIT ALPHA // SANCTUARY OF ASH</span>
         <span class="choice-icon">🦅</span>
-        <div class="choice-title">Terminal Alpha</div>
-        <div class="choice-sub">The Exile // Sanctuary of Ash</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">The Exile</div>
+        <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Sanctuary of Ash // 044th Krieg</div>
       </div>
-      <div id="cardBeta" class="choice-card" onclick="selectConduit('beta')">
+
+      <div class="choice-card conduit-card" id="cardBeta" onclick="selectConduit('beta')">
+        <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--green); text-transform:uppercase; margin-bottom:2px;">CONDUIT BETA // ORBITAL TOMB-SHIP MATRIX</span>
         <span class="choice-icon">💀</span>
-        <div class="choice-title">Terminal Beta</div>
-        <div class="choice-sub">Lord Commander Junebug</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">💀 Lord Commander Junebug</div>
+        <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">Necron Awakening Phalanx • Sector Node 0</div>
       </div>
+
+      <div class="choice-card conduit-card" id="cardGamma" onclick="selectConduit('gamma')">
+        <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:2px;">CONDUIT GAMMA // SUB-CLOUD BLACK-LEDGER</span>
+        <span class="choice-icon">⛏️</span>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">⛏️ Kâhl Hârkyn Grîmledger</div>
+        <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Ledger of Embers • Fane-Node Vôl-09 (Radio-Silent Solo)</div>
+      </div>
+    </div>
     </div>
 
     <label class="setup-label" id="passLabel">2. Enter Secret Vermilion Pass-Seal</label>
@@ -97,6 +107,9 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
 
   <!-- STEP 2: UNLOCKED CRT TERMINAL -->
   <div id="terminalScreen" class="hidden">
+    <div id="voxTerminalTitle" class="round-banner" style="padding:10px 14px; margin-bottom:12px; font-family:monospace; font-size:0.85rem; font-weight:800; letter-spacing:1px; color:#00ff88; border-color:rgba(0,255,136,0.3); text-align:center;">
+      +++ ASTROPATHIC CONDUIT: SEGMENTUM SOLAR HIGH COMMAND [DECK 44] +++
+    </div>
     <div class="hud-bar" style="margin-bottom:14px;">
       <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
         <div class="hud-stat">
@@ -158,7 +171,6 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
 
 <script src="../js/vox-audio.js"></script>
 <script src="../js/vox.js"></script>
-</body>
 </body>
 </html>
 ````
@@ -694,5 +706,51 @@ body.theme-necron #subWinDirect button.btn-red {
 body.theme-militarum #cardAlpha.selected {
   border-color: var(--gold);
   box-shadow: 0 0 18px rgba(212, 163, 73, 0.25);
+}
+
+/* ===================================================================== */
+/* VOTANN BLACK-LEDGER CRT TERMINAL STYLING (AMBER/GOLD PHOSPHOR)        */
+/* ===================================================================== */
+body.theme-votann #cardGamma.selected,
+body.theme-votann #cardGamma.active {
+  border-color: #f5b041;
+  background: rgba(245, 176, 65, 0.12);
+  box-shadow: 0 0 16px rgba(245, 176, 65, 0.25);
+}
+
+body.theme-votann #cardGamma .choice-title,
+body.theme-votann #cardGamma .conduit-title {
+  color: #f5b041;
+  text-shadow: 0 0 8px rgba(245, 176, 65, 0.4);
+}
+
+body.theme-votann .crt-monitor-frame {
+  background: #080602;
+  border-color: #8c6b23;
+  box-shadow:
+    inset 0 0 48px rgba(0, 0, 0, 0.95),
+    inset 0 0 20px rgba(245, 176, 65, 0.1),
+    0 8px 28px rgba(0, 0, 0, 0.8);
+}
+
+body.theme-votann .crt-msg-card {
+  border-color: rgba(245, 176, 65, 0.45);
+  background: rgba(30, 20, 6, 0.75);
+}
+
+body.theme-votann .crt-reply-card {
+  border-color: rgba(245, 176, 65, 0.35);
+  background: rgba(22, 15, 4, 0.85);
+}
+
+body.theme-votann .crt-input-textarea {
+  background: #080602;
+  border-color: #8c6b23;
+  color: #f5b041;
+}
+
+body.theme-votann .crt-input-textarea:focus {
+  border-color: #f5b041;
+  box-shadow: 0 0 10px rgba(245, 176, 65, 0.35);
 }
 ````

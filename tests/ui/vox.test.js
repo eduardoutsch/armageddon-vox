@@ -79,6 +79,7 @@ const mockElements = {
   sealActionBtn: { textContent: '' },
   cardAlpha: { classList: createMockClassList() },
   cardBeta: { classList: createMockClassList() },
+  cardGamma: { classList: createMockClassList() },
   passInput: { value: '' },
   authErrorMsg: { textContent: '', classList: createMockClassList() },
   activeConduitLabel: { textContent: '' },
@@ -92,7 +93,8 @@ const mockElements = {
   interferenceCountBadge: { textContent: '' },
   questionInput: { value: '' },
   serverStatusBadge: { innerHTML: '', textContent: '', classList: createMockClassList() },
-  terminalServerStatusLabel: { textContent: '', style: {} }
+  terminalServerStatusLabel: { textContent: '', style: {} },
+  voxTerminalTitle: { textContent: '', style: {} }
 };
 
 const mockDocument = {
@@ -182,6 +184,7 @@ const evalFn = new Function(
   'clearInterval',
   'setTimeout',
   `${voxScriptCode}; return {
+    validChannels,
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
     SEEN_IDS_STORAGE_KEY,
@@ -196,6 +199,7 @@ const evalFn = new Function(
     extractDynamicReplyCardMeta,
     formatTime,
     purgeVoxEntry,
+    transmitQuestion,
     refreshTerminal,
     toggleOlderMessages,
     toggleOlderInterferences,
@@ -275,10 +279,83 @@ test('vox: selectConduit toggles selected channel and updates UI elements', asyn
   assert.equal(mockElements.cardBeta.classList.contains('selected'), true);
   assert.equal(mockElements.cardAlpha.classList.contains('selected'), false);
 
+  await vox.selectConduit('gamma');
+  assert.equal(vox.getSelectedChannel(), 'gamma');
+  assert.equal(mockElements.cardGamma.classList.contains('selected'), true);
+  assert.equal(mockElements.cardGamma.classList.contains('active'), true);
+  assert.equal(mockElements.cardAlpha.classList.contains('selected'), false);
+  assert.equal(mockElements.cardBeta.classList.contains('selected'), false);
+  assert.ok(mockElements.sealSubtitle.textContent.includes('Kâhl Hârkyn Grîmledger // The Ledger of Embers'));
+  assert.equal(mockElements.voxTerminalTitle.textContent, '+++ FANE-NODE VÔL-09 ("THE DEAF EAR") // SUB-THERMOSPHERIC BLACK-LEDGER TERMINAL +++');
+
   await vox.selectConduit('alpha');
   assert.equal(vox.getSelectedChannel(), 'alpha');
   assert.equal(mockElements.cardAlpha.classList.contains('selected'), true);
   assert.equal(mockElements.cardBeta.classList.contains('selected'), false);
+  assert.equal(mockElements.cardGamma.classList.contains('selected'), false);
+});
+
+test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl Hârkyn Grîmledger', async () => {
+  await vox.selectConduit('gamma');
+  assert.equal(vox.getSelectedChannel(), 'gamma');
+  mockElements.passInput.value = 'votanngold777';
+  await vox.handleSealAction();
+  assert.ok(
+    mockElements.activeConduitLabel.textContent.includes('CONDUIT GAMMA') ||
+    mockElements.activeConduitLabel.textContent.includes('FANE-NODE VÔL-09')
+  );
+  assert.ok(
+    mockElements.questionInput.placeholder.includes('Fane-Node Vôl-09') ||
+    mockElements.questionInput.placeholder.includes('Brôkhyr')
+  );
+});
+
+test('vox: checkPendingDossierBuffer formats target description for gamma Votann payload', () => {
+  sessionStore.clear();
+  const payload = {
+    channel: 'gamma',
+    text: '+++ THE LEDGER OF EMBERS // KINDRED DISPATCH +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(payload));
+  const detected = vox.checkPendingDossierBuffer();
+  assert.ok(detected);
+  assert.equal(detected.channel, 'gamma');
+  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Kâhl Hârkyn Grîmledger // The Ledger of Embers (Terminal Gamma)'));
+});
+
+test('vox: flushPendingDossierIfAny routes gamma channel transmission with Kâhl Hârkyn Grîmledger sender', async () => {
+  sessionStore.clear();
+  rpcCalls.length = 0;
+  await vox.selectConduit('gamma');
+  mockElements.passInput.value = 'votanngold777';
+  await vox.handleSealAction();
+
+  const payload = {
+    channel: 'gamma',
+    text: '+++ OATHBAND ROSTER // 1200 PTS DEPLOYED +++',
+    queuedAt: Date.now()
+  };
+  sessionStore.set('foa_pending_vox_payload', JSON.stringify(payload));
+
+  await vox.flushPendingDossierIfAny();
+
+  const sendCall = rpcCalls.find(c => c.fnName === 'send_vox_message' && c.params.p_channel === 'gamma');
+  assert.ok(sendCall, 'Must call send_vox_message on gamma channel');
+  assert.equal(sendCall.params.p_sender, 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
+  assert.equal(sendCall.params.p_question, payload.text);
+
+  // Reset to alpha channel so downstream tests start in expected baseline state
+  await vox.selectConduit('alpha');
+  mockElements.passInput.value = 'krieg44';
+  await vox.handleSealAction();
+});
+
+test('vox.html defines #cardGamma for Kâhl Hârkyn Grîmledger in conduit selector', () => {
+  assert.ok(voxHtml.includes('id="cardGamma"'), 'pages/vox.html must include #cardGamma');
+  assert.ok(voxHtml.includes("selectConduit('gamma')"), 'pages/vox.html #cardGamma must invoke selectConduit(\'gamma\')');
+  assert.ok(voxHtml.includes('Kâhl Hârkyn Grîmledger'), 'pages/vox.html must reference Kâhl Hârkyn Grîmledger');
+  assert.ok(voxHtml.includes('The Ledger of Embers'), 'pages/vox.html must reference The Ledger of Embers');
 });
 
 test('vox: switchSubWindow toggles Direct vs Interferences monitors', () => {
@@ -821,3 +898,9 @@ test('vox: terminal does not retype already-seen messages upon login or refresh,
 
 
 
+
+test('vox: validChannels array includes gamma and pages/vox.html has .conduit-selector', () => {
+  assert.deepEqual(vox.validChannels, ['alpha', 'beta', 'gamma']);
+  assert.ok(voxHtml.includes('class="choice-grid conduit-selector"'), 'pages/vox.html must include .conduit-selector class');
+  assert.ok(voxHtml.includes('id="voxTerminalTitle"'), 'pages/vox.html must define #voxTerminalTitle banner');
+});

@@ -17,6 +17,7 @@ var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_K
 var SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
 var SESSION_AUTH_KEY = 'foa_vox_active_session_v1';
 
+const validChannels = ['alpha', 'beta', 'gamma'];
 var selectedChannel = 'alpha';
 var activePassphrase = null;
 var isChannelSealed = true;
@@ -125,6 +126,8 @@ function checkPendingDossierBuffer() {
       let targetName = 'The Exile // Sanctuary of Ash (Terminal Alpha)';
       if (parsed.channel === 'beta') {
         targetName = 'Lord Commander Junebug (Terminal Beta)';
+      } else if (parsed.channel === 'gamma') {
+        targetName = 'Kâhl Hârkyn Grîmledger // The Ledger of Embers (Terminal Gamma)';
       } else if (parsed.channel === 'distant' || /DISTANT|ORBITAL AUGUR/i.test(parsed.text || '')) {
         targetName = '🛰️ Distant Intercept // Orbital Augur Array (Neither Main Player Fielded)';
       }
@@ -148,7 +151,7 @@ function checkPendingDossierBuffer() {
 }
 
 function applyVoxFactionTheme(chan, persist = false) {
-  const theme = chan === 'beta' ? 'necron' : 'militarum';
+  const theme = chan === 'beta' ? 'necron' : (chan === 'alpha' ? 'militarum' : null);
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.setFactionTheme === 'function') {
     window.VoxAudio.setFactionTheme(theme, persist);
   }
@@ -156,18 +159,18 @@ function applyVoxFactionTheme(chan, persist = false) {
     document.body.classList.toggle('theme-necron', theme === 'necron');
     document.body.classList.toggle('theme-militarum', theme === 'militarum');
     if (document.body.dataset) {
-      document.body.dataset.factionTheme = theme;
+      document.body.dataset.factionTheme = theme || 'default';
     }
   }
   const dBox = document.getElementById('directMessagesBox');
   const iBox = document.getElementById('interferencesBox');
   if (dBox && dBox.classList && typeof dBox.classList.toggle === 'function') {
     dBox.classList.toggle('vox-preview-beta', chan === 'beta');
-    dBox.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    dBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
   }
   if (iBox && iBox.classList && typeof iBox.classList.toggle === 'function') {
     iBox.classList.toggle('vox-preview-beta', chan === 'beta');
-    iBox.classList.toggle('vox-preview-alpha', chan !== 'beta');
+    iBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
   }
 }
 
@@ -176,10 +179,39 @@ async function selectConduit(chan, clearPendingCheck = false) {
   applyVoxFactionTheme(chan, false);
   const cardA = document.getElementById('cardAlpha');
   const cardB = document.getElementById('cardBeta');
+  const cardG = document.getElementById('cardGamma');
   const errEl = document.getElementById('authErrorMsg');
-  if (cardA) cardA.classList.toggle('selected', chan === 'alpha');
-  if (cardB) cardB.classList.toggle('selected', chan === 'beta');
+  if (cardA) {
+    cardA.classList.toggle('selected', chan === 'alpha');
+    cardA.classList.toggle('active', chan === 'alpha');
+  }
+  if (cardB) {
+    cardB.classList.toggle('selected', chan === 'beta');
+    cardB.classList.toggle('active', chan === 'beta');
+  }
+  if (cardG) {
+    cardG.classList.toggle('selected', chan === 'gamma');
+    cardG.classList.toggle('active', chan === 'gamma');
+  }
   if (errEl) errEl.classList.add('hidden');
+
+  // Update CRT Terminal Banner / Subtitle:
+  const termTitle = document.getElementById('voxTerminalTitle');
+  if (termTitle) {
+    if (chan === 'gamma') {
+      termTitle.textContent = '+++ FANE-NODE VÔL-09 ("THE DEAF EAR") // SUB-THERMOSPHERIC BLACK-LEDGER TERMINAL +++';
+      termTitle.style.color = '#f5b041';
+      termTitle.style.borderColor = 'rgba(245,176,65,0.4)';
+    } else if (chan === 'beta') {
+      termTitle.textContent = '+++ TOMB-SHIP AUTONOMOUS MASTER MATRIX // ROYAL COMMAND INTERLINK +++';
+      termTitle.style.color = '#00ff88';
+      termTitle.style.borderColor = 'rgba(0,255,136,0.3)';
+    } else {
+      termTitle.textContent = '+++ ASTROPATHIC CONDUIT: SEGMENTUM SOLAR HIGH COMMAND [DECK 44] +++';
+      termTitle.style.color = '#00ff88';
+      termTitle.style.borderColor = 'rgba(0,255,136,0.3)';
+    }
+  }
 
   try {
     isChannelSealed = await rpcCall('check_channel_seal', { p_channel: chan });
@@ -197,7 +229,10 @@ async function selectConduit(chan, clearPendingCheck = false) {
       btn.textContent = `🛡️ Inscribe Permanent Seal & Unlock`;
     } else {
       badge.innerHTML = `<span class="pulse-dot"></span> VERMILION SEAL ACTIVE • ENCRYPTED`;
-      sub.textContent = `Conduit sealed to ${chan === 'alpha' ? 'The Exile // Sanctuary of Ash' : 'Lord Commander Junebug'}. Enter your secret passphrase to decrypt.`;
+      const conduitOwner = chan === 'alpha'
+        ? 'The Exile // Sanctuary of Ash'
+        : (chan === 'beta' ? 'Lord Commander Junebug' : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
+      sub.textContent = `Conduit sealed to ${conduitOwner}. Enter your secret passphrase to decrypt.`;
       label.textContent = `2. Enter Secret Vermilion Pass-Seal`;
       btn.textContent = `🔓 Authenticate & Decrypt Conduit`;
     }
@@ -259,13 +294,33 @@ async function handleSealAction() {
       conduitLabel.textContent =
         selectedChannel === 'alpha'
           ? '🦅 CONDUIT ALPHA // THE SANCTUARY OF ASH (044TH KRIEG)'
-          : '💀 CONDUIT BETA // TOMB-SHIP AUTONOMOUS MASTER MATRIX (NECRONS)';
+          : (selectedChannel === 'beta'
+              ? '💀 CONDUIT BETA // TOMB-SHIP AUTONOMOUS MASTER MATRIX (NECRONS)'
+              : '⛏️ CONDUIT GAMMA // FANE-NODE VÔL-09 ("THE DEAF EAR")');
+    }
+    const unlockedTermTitle = document.getElementById('voxTerminalTitle');
+    if (unlockedTermTitle) {
+      if (selectedChannel === 'gamma') {
+        unlockedTermTitle.textContent = '+++ FANE-NODE VÔL-09 ("THE DEAF EAR") // SUB-THERMOSPHERIC BLACK-LEDGER TERMINAL +++';
+        unlockedTermTitle.style.color = '#f5b041';
+        unlockedTermTitle.style.borderColor = 'rgba(245,176,65,0.4)';
+      } else if (selectedChannel === 'beta') {
+        unlockedTermTitle.textContent = '+++ TOMB-SHIP AUTONOMOUS MASTER MATRIX // ROYAL COMMAND INTERLINK +++';
+        unlockedTermTitle.style.color = '#00ff88';
+        unlockedTermTitle.style.borderColor = 'rgba(0,255,136,0.3)';
+      } else {
+        unlockedTermTitle.textContent = '+++ ASTROPATHIC CONDUIT: SEGMENTUM SOLAR HIGH COMMAND [DECK 44] +++';
+        unlockedTermTitle.style.color = '#00ff88';
+        unlockedTermTitle.style.borderColor = 'rgba(0,255,136,0.3)';
+      }
     }
     if (questionInput) {
       questionInput.placeholder =
         selectedChannel === 'alpha'
           ? "Transmit orders to Logis-Prefect Vane (Zenith-09), or type 'Ship - ...' to query The Ashen Spirit (Deck 44)..."
-          : "Issue royal decrees to your Tomb-Ship Master Matrix & Cryptek Conclave, or include 'Vane' / 'Zenith-09' to hail the human orbital station...";
+          : (selectedChannel === 'beta'
+              ? "Issue royal decrees to your Tomb-Ship Master Matrix & Cryptek Conclave, or include 'Vane' / 'Zenith-09' to hail the human orbital station..."
+              : "Transmit Black-Ledger prospecting queries to Fane-Node Vôl-09 & the Brôkhyr Guild-Council (total radio silence)...");
     }
 
     // Check if a compiled Master Battle Dossier or Nemesis Dossier is waiting in sessionStorage!
@@ -297,7 +352,9 @@ async function flushPendingDossierIfAny() {
         ? '🛰️ Orbital Augur Array // Distant Intercept'
         : (selectedChannel === 'alpha'
             ? 'The Exile // Sanctuary of Ash'
-            : 'Lord Commander Junebug');
+            : (selectedChannel === 'beta'
+                ? 'Lord Commander Junebug'
+                : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers'));
 
       await rpcCall('send_vox_message', {
         p_channel: selectedChannel,
@@ -762,7 +819,9 @@ async function transmitQuestion() {
   input.value = '';
   const senderName = selectedChannel === 'alpha'
     ? 'The Exile // Sanctuary of Ash'
-    : 'Lord Commander Junebug';
+    : (selectedChannel === 'beta'
+        ? 'Lord Commander Junebug'
+        : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
 
   await rpcCall('send_vox_message', {
     p_channel: selectedChannel,
@@ -807,6 +866,15 @@ var serverStatusTimer = null;
 
 async function initVoxTerminalPage() {
   checkVoxServerStatus().catch(() => {});
+  if (typeof window !== 'undefined' && window.location && window.location.search) {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const chanParam = (urlParams.get('channel') || urlParams.get('conduit') || '').toLowerCase();
+      if (chanParam && validChannels.includes(chanParam)) {
+        selectedChannel = chanParam;
+      }
+    } catch (e) {}
+  }
   if (serverStatusTimer) clearInterval(serverStatusTimer);
   serverStatusTimer = setInterval(() => {
     checkVoxServerStatus().catch(() => {});
@@ -849,6 +917,7 @@ async function initVoxTerminalPage() {
 
 // Attach to window for browser global scope
 if (typeof window !== 'undefined') {
+  window.validChannels = validChannels;
   window.SUPABASE_URL = SUPABASE_URL;
   window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
   window.SEEN_IDS_STORAGE_KEY = SEEN_IDS_STORAGE_KEY;
@@ -902,6 +971,7 @@ if (typeof window !== 'undefined') {
 // CommonJS export for Node test runners
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    validChannels,
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
     SEEN_IDS_STORAGE_KEY,

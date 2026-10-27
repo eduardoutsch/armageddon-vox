@@ -76,6 +76,24 @@ test('briefing pure: getDominanceText returns correct narrative for various HP c
 test('briefing pure: CURRENT_SHIP_SLIDER is locked to -1', () => {
   assert.equal(briefingModule.CURRENT_SHIP_SLIDER, -1);
 });
+
+test('briefing pure: showDossier supports gamma and selectBriefingConduit routes correctly', () => {
+  assert.equal(typeof briefingModule.showDossier, 'function');
+  assert.equal(typeof briefingModule.selectBriefingConduit, 'function');
+  briefingModule.showDossier('gamma', false);
+  assert.equal(briefingModule.briefingState.activeDossier, 'gamma');
+  briefingModule.selectBriefingConduit('beta');
+  assert.equal(briefingModule.briefingState.activeDossier, 'beta');
+  briefingModule.selectBriefingConduit('gamma');
+  assert.equal(briefingModule.briefingState.activeDossier, 'gamma');
+});
+
+test('briefing pure: unlockTab and lockTab handle Gamma', () => {
+  briefingModule.unlockTab('Gamma', false);
+  assert.equal(briefingModule.briefingState.unlockedGamma, true);
+  briefingModule.lockTab('Gamma', false);
+  assert.equal(briefingModule.briefingState.unlockedGamma, false);
+});
 ````
 
 ---

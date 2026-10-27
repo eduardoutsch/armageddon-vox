@@ -16,6 +16,7 @@ const assert = require('node:assert/strict');
 const {
   resolveServiceKey,
   resolveThreadUrls,
+  routeSpeakerPersona,
   scrubArtifacts,
   extractCleanLastModelResponse,
   processSingleMessage,
@@ -861,4 +862,79 @@ test('publishServerHeartbeat: publishes online/offline vox_server_heartbeat to S
   assert.equal(saveOfflineCall.body.p_nemesis_status.vox_server_heartbeat.status, 'offline');
 });
 
+test('processSingleMessage: routes channel gamma to Fane-Node Vôl-09 and suppresses Pattern 5 interference bleed into other channels', async () => {
+  const dispatchedPrompts = [];
+  const mockPage = createMockPage({
+    onInsertText: (txt) => { dispatchedPrompts.push(txt); }
+  });
+
+  const fetchCalls = [];
+  const mockFetch = async (url, opts) => {
+    fetchCalls.push({ url, body: opts && opts.body ? JSON.parse(opts.body) : null });
+    return { ok: true, status: 200, json: async () => ({}) };
+  };
+
+  const gammaMsg = {
+    id: '11223344-gamma-report',
+    channel: 'gamma',
+    sender: 'Kâhl Hârkyn Grîmledger',
+    question: '+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++'
+  };
+
+  const responseWithIntercept = `REF-ID: 11223344
++++ FANE-NODE VÔL-09 // BLACK-LEDGER ANCESTOR CORE +++
+• CLAIM CONFIRMED: Ore reserves logged.
+<INTERCEPT_BLEED target="alpha">
+[PASSIVE INTERCEPT]: Votann chatter detected.
+</INTERCEPT_BLEED>`;
+
+  const success = await processSingleMessage(gammaMsg, mockPage, {
+    fetchFn: mockFetch,
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    waitForReplyFn: async () => responseWithIntercept,
+    logFn: () => {}
+  });
+
+  assert.equal(success, true);
+  const fullPrompt = dispatchedPrompts.join('\n');
+  assert.ok(fullPrompt.includes('Fane-Node Vôl-09'), 'Must prompt as Fane-Node Vôl-09');
+  assert.ok(fullPrompt.includes('The Ledger of Embers'), 'Must reference The Ledger of Embers');
+
+  // Verify that NO call was made to /rest/v1/vox_interferences (zero interference bleed!)
+  const interceptCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.equal(interceptCall, undefined, 'Gamma messages must NEVER post to vox_interferences (Zero Interference Bleed)');
+});
+
+
+test('routeSpeakerPersona: routes gamma to Fane-Node Vôl-09 with allowIntercept=false and Black-Ledger prompt prefix', () => {
+  const p1 = routeSpeakerPersona('gamma', 'Check ore reserves', '12345678');
+  assert.equal(p1.speaker, 'FANE_NODE_VOL_09');
+  assert.equal(p1.allowIntercept, false);
+  assert.equal(p1.pattern, 'Pattern 4C (Fane-Node Vôl-09 Readout)');
+  assert.ok(p1.promptPrefix.includes('Fane-Node Vôl-09 ("The Deaf Ear")'));
+  assert.ok(p1.promptPrefix.includes('Pattern 4C / Pattern 2 / Pattern 3, REF-ID: 12345678'));
+  assert.ok(p1.promptPrefix.includes('DO NOT include any Pattern 5 intercept block'));
+
+  const p2 = routeSpeakerPersona('gamma', 'MASTER POST-BATTLE REPORT: Extraction complete', '12345678');
+  assert.equal(p2.speaker, 'FANE_NODE_VOL_09');
+  assert.equal(p2.allowIntercept, false);
+  assert.equal(p2.pattern, 'Pattern 2 (Thrymkâl Black-Ledger Audit)');
+
+  const p3 = routeSpeakerPersona('gamma', 'NEMESIS THREAT DETECTED ON SECTOR RIDGE', '12345678');
+  assert.equal(p3.speaker, 'FANE_NODE_VOL_09');
+  assert.equal(p3.allowIntercept, false);
+  assert.equal(p3.pattern, 'Pattern 3 (Seismic Grudge-Warrant)');
+});
+
+test('resolveThreadUrls: resolves gammaUrl when GAMMA_THREAD_URL is configured', () => {
+  const urls = resolveThreadUrls({
+    ALPHA_THREAD_URL: 'https://gemini.google.com/app/alpha',
+    BETA_THREAD_URL: 'https://gemini.google.com/app/beta',
+    GAMMA_THREAD_URL: 'https://gemini.google.com/app/gamma'
+  });
+  assert.equal(urls.alphaUrl, 'https://gemini.google.com/app/alpha');
+  assert.equal(urls.betaUrl, 'https://gemini.google.com/app/beta');
+  assert.equal(urls.gammaUrl, 'https://gemini.google.com/app/gamma');
+});
 ````

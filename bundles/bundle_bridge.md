@@ -49,9 +49,16 @@ function resolveServiceKey(env = process.env) {
 }
 
 function resolveThreadUrls(env = process.env) {
+  const alpha = (env && typeof env.ALPHA_THREAD_URL === 'string' ? env.ALPHA_THREAD_URL : '').trim();
+  const beta = (env && typeof env.BETA_THREAD_URL === 'string' ? env.BETA_THREAD_URL : '').trim();
+  const gamma = (env && typeof env.GAMMA_THREAD_URL === 'string' ? env.GAMMA_THREAD_URL : '').trim();
   return {
-    alphaThreadUrl: (env && typeof env.ALPHA_THREAD_URL === 'string' ? env.ALPHA_THREAD_URL : '').trim(),
-    betaThreadUrl: (env && typeof env.BETA_THREAD_URL === 'string' ? env.BETA_THREAD_URL : '').trim()
+    alphaThreadUrl: alpha,
+    betaThreadUrl: beta,
+    gammaThreadUrl: gamma,
+    alphaUrl: alpha,
+    betaUrl: beta,
+    gammaUrl: gamma
   };
 }
 
@@ -371,6 +378,73 @@ async function typeAndSendPrompt(targetPage, inputLocator, promptText, channelTa
   }).catch(err => logGreen(`[ERROR // ${channelTag}] Typing error:${err.message}`)));
 }
 
+/**
+ * Routes speaker persona, pattern formatting, and prompt prefix based on channel.
+ *
+ * @param {'alpha'|'beta'|'gamma'} channel - Broadcast conduit
+ * @param {string} content - Raw player message/dossier
+ * @param {string} refId - 8-character message identifier
+ * @returns {object} { speaker, pattern, allowIntercept, promptPrefix }
+ */
+function routeSpeakerPersona(channel, content, refId = '00000000') {
+  const isBattleDossier = /MASTER POST-BATTLE|BATTLE DOSSIER|TOUR OF DUTY|HARVEST/i.test(content || '');
+  const isThreatPing = /NEMESIS|THREAT|UNBOUND|WARRANT/i.test(content || '');
+
+  if (channel === 'gamma') {
+    return {
+      speaker: 'FANE_NODE_VOL_09',
+      pattern: isBattleDossier ? 'Pattern 2 (Thrymkâl Black-Ledger Audit)'
+               : (isThreatPing ? 'Pattern 3 (Seismic Grudge-Warrant)' : 'Pattern 4C (Fane-Node Vôl-09 Readout)'),
+      allowIntercept: false, // 100% Black-Ledger Silence — NEVER emit Pattern 5!
+      promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, LEAGUES_OF_VOTANN_CRUSADE.md, NEMESIS.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character on channel=gamma as Fane-Node Vôl-09 ("The Deaf Ear") and the Thrymkâl Brôkhyr Appraisal Guild aboard The Ledger of Embers (Pattern 4C / Pattern 2 / Pattern 3, REF-ID: ${refId}, Black-Ledger Protocol — DO NOT include any Pattern 5 intercept block) to this message from Kâhl Hârkyn Grîmledger: `
+    };
+  }
+
+  const isAlpha = channel === 'alpha';
+  const isAlphaShipQuery = isAlpha && (
+    /\b(ship|hull|ashen\s*spirit|machine[\s-]*spirit|deck\s*44|cell\s*09|brig|mu-th-ur)\b/i.test(content || '') ||
+    /\[TO:\s*SHIP\]/i.test(content || '')
+  );
+
+  const isBetaVaneHail = channel === 'beta' && (
+    /\b(vane|zenith|high\s*command|munitorum|auditor|human|imperials?)\b/i.test(content || '') ||
+    /\[TO:\s*(VANE|HIGH\s*COMMAND|ZENITH)\]/i.test(content || '')
+  );
+
+  if (isAlpha) {
+    if (isAlphaShipQuery) {
+      return {
+        speaker: 'ASHEN_SPIRIT',
+        pattern: 'Pattern 4A',
+        allowIntercept: true,
+        promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character (Pattern 4A Ashen Spirit cogitator readout, REF-ID: ${refId}) to this message from The Exile:`
+      };
+    }
+    return {
+      speaker: 'LOGIS_VANE',
+      pattern: 'Pattern 1/2/3',
+      allowIntercept: true,
+      promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md and WORLD.md in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane in orbit (Pattern 1/2/3, REF-ID: ${refId}, orbital knowledge only) to this message from The Exile:`
+    };
+  }
+
+  // Beta
+  if (!isBetaVaneHail) {
+    return {
+      speaker: 'NECRON_MASTER_MATRIX',
+      pattern: 'Pattern 2/3/4B',
+      allowIntercept: true,
+      promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md Part 2, NECRONS_CRUSADE.md, WORLD.md, and NEMESIS.md in this notebook—do NOT edit or update any files), reply in-character as Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave (using Pattern 2 for Battle/Rogue Reports, Pattern 3 for Nemesis/Unbound/Intrusion Warrants, or Pattern 4B for general bridge/tomb-ship queries, REF-ID: ${refId}, knowing ONLY Beta's Tomb-Ship Equilibrium Index -1, Awakening Systems, and surface telemetry—NEVER reference The Sanctuary of Ash, Deck 44, or Ashen Spirit, and NEVER use Imperial Astra Militarum, Departmento Munitorum, or Ordo Malleus titles) to this transmission from Phaeron Junebug:`
+    };
+  }
+  return {
+    speaker: 'LOGIS_VANE',
+    pattern: 'Pattern 1',
+    allowIntercept: true,
+    promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md and WORLD.md in this notebook—do NOT edit or update any files), reply in-character as Logis-Prefect Vane at Geostationary Zenith-09 (Pattern 1, REF-ID: ${refId}, orbital knowledge only—reacting with cold bureaucratic caution to JUNEBUG's hail across the open vox, and NEVER leaking Commander Alpha's Gatebreakers banner or internal ship state) to this transmission from Commander Beta (Junebug):`
+  };
+}
+
 async function processSingleMessage(msg, targetPage, options = {}) {
   const fetchFn = options.fetchFn || fetch;
   const supabaseUrl = options.supabaseUrl || SUPABASE_URL;
@@ -447,9 +521,14 @@ async function processSingleMessage(msg, targetPage, options = {}) {
 
     const needsInterceptBleed = /MASTER POST-BATTLE|START OF TOUR OF DUTY|TOMB WORLD AWAKENING|3RD ALLIANCE VULTURE|1V1 ASH WASTES|ROGUE SECTOR|NEW NEMESIS INDUCTION|NEMESIS THREAT INDUCTION|NEMESIS INDUCTION|DYNASTIC NEMESIS|EMERGENCY AUSPEX PING|WARP-BREACH INTRUSION|UNBOUND ADVERSARY|SECRET OBJECTIVE|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|faction|warlord|flagship|alliance|gatebreakers|desecrators|marauders|auspex probe|tour of duty|order of battle/i.test(rawQ);
 
-    // ULTRA-LIGHT PROMPT: No rigid header/footer strings in the prompt—AGENT.md handles all Pattern 1-5 formatting!
+    // Speaker and prompt routing via routeSpeakerPersona:
+    const persona = routeSpeakerPersona(channel, cleanMsg, refId);
     let promptLines = [];
-    if (channel === 'alpha') {
+    if (channel === 'gamma') {
+      promptLines = [
+        `${persona.promptPrefix}"${cleanMsg}"`
+      ];
+    } else if (channel === 'alpha') {
       if (isAlphaShipQuery) {
         promptLines = [
           `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, SHIP.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character (${shipSpeakerDesc}) to this message from The Exile:`,
@@ -473,10 +552,12 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       }
     }
 
-    if (needsInterceptBleed) {
-      promptLines.push(`(Also include a Pattern 5 intercept block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
-    } else if (/simulate|test.*interference/i.test(rawQ)) {
-      promptLines.push(`(Also include a Pattern 5 intercept block at the bottom with [REDACTED] for testing).`);
+    if (channel !== 'gamma') {
+      if (needsInterceptBleed) {
+        promptLines.push(`(Also include a Pattern 5 intercept block at the bottom with [REDACTED] for ${otherChannel.toUpperCase()}).`);
+      } else if (/simulate|test.*interference/i.test(rawQ)) {
+        promptLines.push(`(Also include a Pattern 5 intercept block at the bottom with [REDACTED] for testing).`);
+      }
     }
 
     const prompt = promptLines.join('\n');
@@ -560,37 +641,42 @@ async function processSingleMessage(msg, targetPage, options = {}) {
   }
 
   if (interceptPart && interceptPart.trim()) {
-    const cleanIntercept = scrubArtifacts(interceptPart);
-    const isDualBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|DISTANT WARP-BREACH|DISTANT ADVERSARY|DISTANT INTERCEPT/i.test(rawQ);
+    if (msg.channel === 'gamma') {
+      // Black-Ledger Protocol: Solo Votann terminal NEVER emits Pattern 5 interferences to alpha or beta!
+      logFn(`[INTERCEPT BLEED SUPPRESSED // ${channelTag}] Solo Black-Ledger radio-silence maintained!`);
+    } else {
+      const cleanIntercept = scrubArtifacts(interceptPart);
+      const isDualBroadcast = /ROGUE SECTOR AUXILIARY BATTLE REPORT|ORBITAL AUGUR ARRAY|DISTANT SOLO HORDE|DISTANT WARP-BREACH|DISTANT ADVERSARY|DISTANT INTERCEPT/i.test(rawQ);
 
-    const isSelfTest =
-      /simulate|test.*interference/i.test(rawQ) ||
-      /target=["']?(self|same)/i.test(interceptAttrs);
+      const isSelfTest =
+        /simulate|test.*interference/i.test(rawQ) ||
+        /target=["']?(self|same)/i.test(interceptAttrs);
 
-    let destChannel = isSelfTest ? msg.channel : otherChannel;
-    if (/target=["']?alpha/i.test(interceptAttrs)) destChannel = 'alpha';
-    if (/target=["']?beta/i.test(interceptAttrs)) destChannel = 'beta';
+      let destChannel = isSelfTest ? msg.channel : otherChannel;
+      if (/target=["']?alpha/i.test(interceptAttrs)) destChannel = 'alpha';
+      if (/target=["']?beta/i.test(interceptAttrs)) destChannel = 'beta';
 
-    const targetChannels = isDualBroadcast ? ['alpha', 'beta'] : [destChannel];
+      const targetChannels = isDualBroadcast ? ['alpha', 'beta'] : [destChannel];
 
-    const destOriginLabel = isDualBroadcast
-      ? 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT'
-      : (isSelfTest
-        ? 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK'
-        : originLabel);
+      const destOriginLabel = isDualBroadcast
+        ? 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT'
+        : (isSelfTest
+          ? 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK'
+          : originLabel);
 
-    for (const targetCh of targetChannels) {
-      await fetchFn(`${supabaseUrl}/rest/v1/vox_interferences`, {
-        method: 'POST',
-        headers: reqHeaders,
-        body: JSON.stringify({
-          target_channel: targetCh,
-          origin_hint: destOriginLabel,
-          redacted_text: cleanIntercept
-        })
-      });
+      for (const targetCh of targetChannels) {
+        await fetchFn(`${supabaseUrl}/rest/v1/vox_interferences`, {
+          method: 'POST',
+          headers: reqHeaders,
+          body: JSON.stringify({
+            target_channel: targetCh,
+            origin_hint: destOriginLabel,
+            redacted_text: cleanIntercept
+          })
+        });
+      }
+      logFn(`[INTERCEPT BLEED ROUTED // ${channelTag}] -> ${targetChannels.join(' & ').toUpperCase()}!`);
     }
-    logFn(`[INTERCEPT BLEED ROUTED // ${channelTag}] -> ${targetChannels.join(' & ').toUpperCase()}!`);
   }
 
   logFn(`[DELIVERED // ${channelTag}] Verified reply for MSG_ID ${msgShortId} streamed to CRT terminal!`);
@@ -813,6 +899,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
 module.exports = {
   resolveServiceKey,
   resolveThreadUrls,
+  routeSpeakerPersona,
   sanitizePlayerQueryForGemini,
   scrubArtifacts,
   isGeminiErrorBanner,

@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/vox.css">
 </head>
-</head>
 <body>
 
   <!-- CAMPAIGN SUITE TOP NAVIGATION -->
@@ -50,17 +49,28 @@
     </div>
 
     <label class="setup-label">1. Select Your Private Command Conduit</label>
-    <div class="choice-grid" style="margin-bottom:16px;">
-      <div id="cardAlpha" class="choice-card selected" onclick="selectConduit('alpha')">
+    <div class="choice-grid conduit-selector" style="margin-bottom:16px; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));">
+      <div class="choice-card conduit-card selected active" id="cardAlpha" onclick="selectConduit('alpha')">
+        <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:2px;">CONDUIT ALPHA // SANCTUARY OF ASH</span>
         <span class="choice-icon">🦅</span>
-        <div class="choice-title">Terminal Alpha</div>
-        <div class="choice-sub">The Exile // Sanctuary of Ash</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">The Exile</div>
+        <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Sanctuary of Ash // 044th Krieg</div>
       </div>
-      <div id="cardBeta" class="choice-card" onclick="selectConduit('beta')">
+
+      <div class="choice-card conduit-card" id="cardBeta" onclick="selectConduit('beta')">
+        <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--green); text-transform:uppercase; margin-bottom:2px;">CONDUIT BETA // ORBITAL TOMB-SHIP MATRIX</span>
         <span class="choice-icon">💀</span>
-        <div class="choice-title">Terminal Beta</div>
-        <div class="choice-sub">Lord Commander Junebug</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">💀 Lord Commander Junebug</div>
+        <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">Necron Awakening Phalanx • Sector Node 0</div>
       </div>
+
+      <div class="choice-card conduit-card" id="cardGamma" onclick="selectConduit('gamma')">
+        <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:2px;">CONDUIT GAMMA // SUB-CLOUD BLACK-LEDGER</span>
+        <span class="choice-icon">⛏️</span>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">⛏️ Kâhl Hârkyn Grîmledger</div>
+        <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Ledger of Embers • Fane-Node Vôl-09 (Radio-Silent Solo)</div>
+      </div>
+    </div>
     </div>
 
     <label class="setup-label" id="passLabel">2. Enter Secret Vermilion Pass-Seal</label>
@@ -84,6 +94,9 @@
 
   <!-- STEP 2: UNLOCKED CRT TERMINAL -->
   <div id="terminalScreen" class="hidden">
+    <div id="voxTerminalTitle" class="round-banner" style="padding:10px 14px; margin-bottom:12px; font-family:monospace; font-size:0.85rem; font-weight:800; letter-spacing:1px; color:#00ff88; border-color:rgba(0,255,136,0.3); text-align:center;">
+      +++ ASTROPATHIC CONDUIT: SEGMENTUM SOLAR HIGH COMMAND [DECK 44] +++
+    </div>
     <div class="hud-bar" style="margin-bottom:14px;">
       <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
         <div class="hud-stat">
@@ -145,6 +158,5 @@
 
 <script src="../js/vox-audio.js"></script>
 <script src="../js/vox.js"></script>
-</body>
 </body>
 </html>
