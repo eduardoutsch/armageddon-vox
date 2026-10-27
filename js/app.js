@@ -23,6 +23,7 @@ let isSoloMode = false;
 let currentShopFilter = 'All';
 
 let sp = 0;
+let spSpentThisRound = 0;
 let spGainedThisRound = 0;
 let spRoundCap = 8;
 let bankedSpLost = 0;
@@ -81,6 +82,7 @@ function saveSessionState() {
       activeTab,
       battleRound,
       sp,
+      spSpentThisRound,
       spGainedThisRound,
       spRoundCap,
       bankedSpLost,
@@ -147,6 +149,7 @@ function restoreSessionState() {
     spRoundCap = data.spRoundCap || (isSoloMode ? 16 : 8);
     battleRound = (typeof data.battleRound === 'number') ? data.battleRound : 0;
     sp = (typeof data.sp === 'number') ? data.sp : 0;
+    spSpentThisRound = (typeof data.spSpentThisRound === 'number') ? data.spSpentThisRound : 0;
     spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
     bankedSpLost = (typeof data.bankedSpLost === 'number') ? data.bankedSpLost : 0;
     cp = (typeof data.cp === 'number') ? data.cp : 2;
@@ -564,7 +567,7 @@ function updateHUD() {
   document.getElementById('hudSessionInfo').innerText = isSoloMode ? `${code} • SOLO` : `${code} • P${selectedRoleVal}`;
   document.getElementById('hudRound').innerText = battleRound === 0 ? "Pre-Game" : `Round ${battleRound}/6`;
   document.getElementById('hudSp').innerText = sp;
-  document.getElementById('hudSpCap').innerText = `(${spGainedThisRound}/${spRoundCap})`;
+  document.getElementById('hudSpCap').innerText = `(${spSpentThisRound}/${spRoundCap})`;
   document.getElementById('hudCp').innerText = cp;
   document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
   document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
@@ -656,6 +659,7 @@ function advanceBattleRound() {
     if (!confirm("Round 6 complete! Continue into Infinite Mode Round " + (battleRound + 1) + "?")) return;
   }
   battleRound++;
+  spSpentThisRound = 0;
   spGainedThisRound = 0;
   bankedSpLost = 0;
   lastWarpSirenSeedKey = '';
@@ -986,14 +990,38 @@ function gainSP(amount) {
 }
 
 /**
+ * Spends Supply Points (SP), typically on Resupply Shop purchases.
+ * Deducts from banked SP balance, increments spSpentThisRound,
+ * and updates the HUD.
+ * @param {number} amount
+ * @returns {number} actual amount deducted
+ */
+function spendSP(amount) {
+  const toSpend = Number(amount) || 0;
+  if (toSpend <= 0) return 0;
+  const prevSp = sp;
+  sp = Math.max(0, sp - toSpend);
+  const actualSpent = prevSp - sp;
+  spSpentThisRound += toSpend;
+  updateHUD();
+  return actualSpent;
+}
+
+/**
  * Decreases Supply Points (SP).
+ * If options.isPurchase is true, treats as a Resupply Shop spend (spendSP).
+ * Otherwise decrements banked SP balance.
  * Symmetrically decrements the current round's earned tally (spGainedThisRound)
  * so that reducing and increasing SP does not consume finite round cap allocations.
  * Any reduction beyond round-earned SP is tracked in bankedSpLost so restoring it
  * later does not falsely consume from the finite round cap.
  * @param {number} amount
+ * @param {object} [options]
  */
-function loseSP(amount) {
+function loseSP(amount, options = {}) {
+  if (options && (options.isPurchase || options.isSpend)) {
+    return spendSP(amount);
+  }
   const prevSp = sp;
   sp = Math.max(0, sp - amount);
   const actualLost = prevSp - sp;
@@ -1014,16 +1042,15 @@ function loseSP(amount) {
 }
 
 /**
- * Manually adjusts or resets the SP gained this round tally via prompt.
+ * Manually adjusts or resets the SP spent this round tally via prompt.
  */
 function adjustSpRoundTally() {
   if (typeof prompt !== 'function') return;
-  const input = prompt(`Set SP gained this round (0 to ${spRoundCap}):`, String(spGainedThisRound));
+  const input = prompt(`Set SP spent this round (0 to ${spRoundCap}):`, String(spSpentThisRound));
   if (input !== null) {
     const val = parseInt(input, 10);
     if (!isNaN(val) && val >= 0) {
-      spGainedThisRound = Math.min(val, spRoundCap);
-      bankedSpLost = 0;
+      spSpentThisRound = val;
       updateHUD();
     }
   }
@@ -1130,7 +1157,12 @@ function buyResupply(idx) {
   if (sp < finalCost) {
     return alert(`Insufficient SP! Need ${finalCost} SP (You have ${sp} SP).`);
   }
-  sp -= finalCost;
+  if (spSpentThisRound + finalCost > spRoundCap) {
+    if (typeof confirm === 'function' && !confirm(`Round resupply spending limit of ${spRoundCap} SP reached! (Already spent ${spSpentThisRound} SP this round). Purchase anyway?`)) {
+      return;
+    }
+  }
+  spendSP(finalCost);
   if (item.autoCP) cp += item.autoCP;
   if (item.name === "A Change of Plans") {
     switchTab(2);
@@ -1211,6 +1243,7 @@ function resetMatchToSetup() {
   sharedSecondaryDeck = [];
   currentChoices = [];
   sp = 0;
+  spSpentThisRound = 0;
   spGainedThisRound = 0;
   bankedSpLost = 0;
   cp = 2;
@@ -1688,6 +1721,7 @@ if (typeof module !== 'undefined' && module.exports) {
     get selectedRoleVal() { return selectedRoleVal; },
     get cp() { return cp; },
     get sp() { return sp; },
+    get spSpentThisRound() { return spSpentThisRound; },
     get spGainedThisRound() { return spGainedThisRound; },
     get spRoundCap() { return spRoundCap; },
     get bankedSpLost() { return bankedSpLost; },
@@ -1704,6 +1738,7 @@ if (typeof module !== 'undefined' && module.exports) {
     startSession,
     updateHUD,
     gainSP,
+    spendSP,
     loseSP,
     adjustSpRoundTally,
     adjustStratTally,

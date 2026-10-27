@@ -104,3 +104,83 @@ test('UI Boundary: pages/spawner.html synchronizes Pre-Game (Round 0) vs Battle 
     await browser.close();
   }
 });
+
+test('UI Boundary: pages/spawner.html guided phase stepper preserves active phase on button clicks and SP shop purchase updates tracker', async () => {
+  const browser = await launchTestBrowser();
+  const page = await browser.newPage();
+
+  try {
+    await page.addInitScript(() => {
+      window.confirm = () => true;
+      try {
+        localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+          seed: 'TEST-STEPPER-40',
+          selectedModeVal: 'solo',
+          isSoloMode: true,
+          battleRound: 1,
+          sp: 16,
+          spSpentThisRound: 0,
+          spRoundCap: 16,
+          hasActiveSession: true
+        }));
+      } catch (e) {}
+    });
+
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+      if (typeof window.switchTab === 'function') window.switchTab(1);
+      if (typeof window.setGuidedPhaseStep === 'function') window.setGuidedPhaseStep(3, { silent: true });
+      if (typeof window.updateHUD === 'function') window.updateHUD();
+    });
+
+    // 1. Verify Phase 3 is active
+    let activeStepBtn = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(activeStepBtn, '3', 'Phase 3 must be active initially');
+
+    // 2. Click HUD "+ SP" button and verify phase does NOT reset to 1
+    await page.click('#hudGainSpBtn');
+    activeStepBtn = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(activeStepBtn, '3', 'Phase 3 must remain active after clicking + SP');
+
+    // 3. Click HUD "- SP" button and verify phase does NOT reset to 1
+    await page.click('.hud-stat button[onclick*="loseSP"]');
+    activeStepBtn = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(activeStepBtn, '3', 'Phase 3 must remain active after clicking - SP');
+
+    // 4. Click "+ CP" button and verify phase does NOT reset to 1
+    await page.click('.hud-stat button[onclick*="adjCP(1)"]');
+    activeStepBtn = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(activeStepBtn, '3', 'Phase 3 must remain active after clicking + CP');
+
+    // 5. Test Resupply Shop purchase: spend 4 SP
+    await page.evaluate(() => {
+      window.confirm = () => true;
+      if (typeof window.executeEnhancedResupplyPurchase === 'function') {
+        window.executeEnhancedResupplyPurchase('Field Promotion', 4);
+      } else if (typeof window.spendSP === 'function') {
+        window.spendSP(4);
+      }
+    });
+
+    const spCapText = await page.$eval('#hudSpCap', el => el.innerText.trim());
+    assert.equal(spCapText, '(4/16)', 'HUD SP tracker must accompany the 4 SP spent on the resupply shop');
+
+    // Phase 3 must still be active after spending SP
+    activeStepBtn = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(activeStepBtn, '3', 'Phase 3 must remain active after resupply purchase');
+
+    // 6. Advance to next battle round: now phase step MUST reset to 1, and tracker resets to (0/16)
+    await page.click('#nextRoundBtn');
+    await page.waitForTimeout(200);
+
+    const r2ActiveStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    const r2SpCapText = await page.$eval('#hudSpCap', el => el.innerText.trim());
+    assert.equal(r2ActiveStep, '1', 'Advancing battle round must reset guided phase stepper to Step 1');
+    assert.equal(r2SpCapText, '(0/16)', 'Advancing battle round must reset SP spent tracker to (0/16)');
+  } finally {
+    await browser.close();
+  }
+});

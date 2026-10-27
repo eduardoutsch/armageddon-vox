@@ -43,11 +43,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     return null;
   }
 
-  /**
-   * =========================================================================
-   * 1. SOLO MODE 2x SP DETECTION & COMMAND PHASE OBJECTIVE CLAIMS
-   * =========================================================================
-   */
+  // --- 1. SOLO MODE 2x SP DETECTION & COMMAND PHASE OBJECTIVE CLAIMS ---
   function isSoloModeActive() {
     if (typeof isSoloMode !== 'undefined' && isSoloMode) return true;
     if (typeof selectedModeVal !== 'undefined' && selectedModeVal === 'solo') return true;
@@ -192,11 +188,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     }
   }
 
-  /**
-   * =========================================================================
-   * 2. MISERY-TO-SPAWNER LIVE MODIFIERS (#7 UNLUCKY NIGHT & #13 PINCER)
-   * =========================================================================
-   */
+  // --- 2. MISERY-TO-SPAWNER LIVE MODIFIERS (#7 UNLUCKY NIGHT & #13 PINCER) ---
   function isUnluckyNightActive() {
     if (typeof document !== 'undefined') {
       const toggle = document.getElementById('unluckyNightSpawnerCheck');
@@ -359,11 +351,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     mirrorSpawnerToCockpit();
   }
 
-  /**
-   * =========================================================================
-   * 3. VERBATIM MISERY & SECONDARY MISSION OUTCOMES & RENDERERS
-   * =========================================================================
-   */
+  // --- 3. VERBATIM MISERY & SECONDARY MISSION OUTCOMES & RENDERERS ---
   function renderActiveMiseries() {
     if (typeof document === 'undefined') return;
     const box = document.getElementById('activeMiseriesBox');
@@ -690,11 +678,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     box.innerHTML = cardsHtml + savedVaultHtml;
   }
 
-  /**
-   * =========================================================================
-   * 4. SPAWNER MIRROR, UNLUCKY NIGHT 3D6 HOOK & COCKPIT CONTROLS
-   * =========================================================================
-   */
+  // --- 4. SPAWNER MIRROR, UNLUCKY NIGHT 3D6 HOOK & COCKPIT CONTROLS ---
   function mirrorSpawnerToCockpit() {
     if (typeof document === 'undefined') return;
     const src = document.getElementById('spawnResultsContainer');
@@ -717,11 +701,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     mirrorSpawnerToCockpit();
   }
 
-  /**
-   * =========================================================================
-   * 5. GUIDED 5-STEP PHASE TRACKER COCKPIT
-   * =========================================================================
-   */
+  // --- 5. GUIDED 5-STEP PHASE TRACKER COCKPIT ---
   let currentGuidedStep = 1;
   const PHASE_STEP_GUIDES = {
     1: {
@@ -751,11 +731,14 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     }
   };
 
-  function setGuidedPhaseStep(stepNum) {
-    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCogitatorStep === 'function') {
+  function setGuidedPhaseStep(stepNum, options = {}) {
+    if (!options.silent && typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCogitatorStep === 'function') {
       window.VoxAudio.playCogitatorStep();
     }
     currentGuidedStep = Math.max(1, Math.min(5, Number(stepNum) || 1));
+    if (typeof sessionStorage !== 'undefined') {
+      try { sessionStorage.setItem('currentGuidedStep', String(currentGuidedStep)); } catch (e) {}
+    }
     if (typeof document !== 'undefined') {
       const buttons = document.querySelectorAll('#roundPhaseStepper .phase-step-btn');
       buttons.forEach(btn => {
@@ -782,7 +765,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     setGuidedPhaseStep(next);
   }
 
-  function updateGuidedFlowForRound() {
+  function updateGuidedFlowForRound(options = {}) {
     const r = getCurrentBattleRound();
     if (typeof document !== 'undefined') {
       const summaryBadge = document.getElementById('roundRuleSummaryBadge');
@@ -807,15 +790,13 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
         }
       }
     }
-    setGuidedPhaseStep(1);
+    if (options && options.resetStep) {
+      setGuidedPhaseStep(1, { silent: true });
+    }
   }
 
 
-  /**
-   * =========================================================================
-   * 7. WRAPPERS & BINDINGS FOR LIVE SPAWNER INTERACTION
-   * =========================================================================
-   */
+  // --- 6. WRAPPERS & BINDINGS FOR LIVE SPAWNER INTERACTION ---
   function bindSpawnerCockpitWrappers() {
     if (typeof window === 'undefined') return;
 
@@ -850,7 +831,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
       const wrappedStartSession = function () {
         const res = origStartSession.apply(this, arguments);
         syncSoloSpUiIndicators();
-        updateGuidedFlowForRound();
+        updateGuidedFlowForRound({ resetStep: true });
         resetCommandObjectiveClaimState();
         mirrorSpawnerToCockpit();
         return res;
@@ -924,7 +905,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
         }
         const res = origAdvanceBattleRound.apply(this, arguments);
         syncSoloSpUiIndicators();
-        updateGuidedFlowForRound();
+        updateGuidedFlowForRound({ resetStep: true });
         resetCommandObjectiveClaimState();
 
         const r = getCurrentBattleRound();
@@ -950,6 +931,8 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     if (typeof renderResupplyTable === 'function') {
       renderResupplyTable();
     }
+    const savedStep = typeof sessionStorage !== 'undefined' ? parseInt(sessionStorage.getItem('currentGuidedStep'), 10) : 1;
+    setGuidedPhaseStep((!isNaN(savedStep) && savedStep >= 1 && savedStep <= 5) ? savedStep : 1, { silent: true });
     if (typeof setTimeout === 'function') {
       setTimeout(mirrorSpawnerToCockpit, 150);
     }
@@ -986,6 +969,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     renderActiveSecondaries,
     mirrorSpawnerToCockpit,
     rollSpawnsFromCockpit,
+    get currentGuidedStep() { return currentGuidedStep; },
     setGuidedPhaseStep,
     stepGuidedPhase,
     updateGuidedFlowForRound,

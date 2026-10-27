@@ -89,3 +89,18 @@ test('Spawner Resupply: executeEnhancedResupplyPurchase checks SP and triggers c
   assert.equal(globalThis.state.sp, 8);
   assert.equal(globalThis.testCp, 1, 'Basic Tactics auto-effect gains 1 CP');
 });
+
+test('Spawner Resupply: executeEnhancedResupplyPurchase calls spendSP and tracks SP spent', () => {
+  let spentAmount = 0;
+  globalThis.state = { sp: 16, activeMiseries: [] };
+  globalThis.spendSP = (amount) => {
+    spentAmount += amount;
+    globalThis.state.sp -= amount;
+  };
+
+  executeEnhancedResupplyPurchase('Field Promotion', 4);
+  assert.equal(spentAmount, 4, 'Must call spendSP with 4 SP');
+  assert.equal(globalThis.state.sp, 12, 'Must deduct 4 SP from state');
+
+  delete globalThis.spendSP;
+});

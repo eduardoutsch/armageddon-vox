@@ -10,6 +10,10 @@ Wave generation cycle, threat level brackets, and battlefield event resolvers (`
 ## File: `js/app.js (Part 2: Wave Engine & Threat Escalation, Lines 701-1400)` <a id="file-jsappjspart2waveenginethreatescalationlines7011400"></a>
 
 ````javascript
+    if (card.id === 20) drawMisery(2);
+    if (card.id === 14 && isSoloMode) drawMisery(2);
+  }
+  renderSharedDecks();
   saveSessionState();
 }
 
@@ -298,14 +302,38 @@ function gainSP(amount) {
 }
 
 /**
+ * Spends Supply Points (SP), typically on Resupply Shop purchases.
+ * Deducts from banked SP balance, increments spSpentThisRound,
+ * and updates the HUD.
+ * @param {number} amount
+ * @returns {number} actual amount deducted
+ */
+function spendSP(amount) {
+  const toSpend = Number(amount) || 0;
+  if (toSpend <= 0) return 0;
+  const prevSp = sp;
+  sp = Math.max(0, sp - toSpend);
+  const actualSpent = prevSp - sp;
+  spSpentThisRound += toSpend;
+  updateHUD();
+  return actualSpent;
+}
+
+/**
  * Decreases Supply Points (SP).
+ * If options.isPurchase is true, treats as a Resupply Shop spend (spendSP).
+ * Otherwise decrements banked SP balance.
  * Symmetrically decrements the current round's earned tally (spGainedThisRound)
  * so that reducing and increasing SP does not consume finite round cap allocations.
  * Any reduction beyond round-earned SP is tracked in bankedSpLost so restoring it
  * later does not falsely consume from the finite round cap.
  * @param {number} amount
+ * @param {object} [options]
  */
-function loseSP(amount) {
+function loseSP(amount, options = {}) {
+  if (options && (options.isPurchase || options.isSpend)) {
+    return spendSP(amount);
+  }
   const prevSp = sp;
   sp = Math.max(0, sp - amount);
   const actualLost = prevSp - sp;
@@ -326,16 +354,15 @@ function loseSP(amount) {
 }
 
 /**
- * Manually adjusts or resets the SP gained this round tally via prompt.
+ * Manually adjusts or resets the SP spent this round tally via prompt.
  */
 function adjustSpRoundTally() {
   if (typeof prompt !== 'function') return;
-  const input = prompt(`Set SP gained this round (0 to ${spRoundCap}):`, String(spGainedThisRound));
+  const input = prompt(`Set SP spent this round (0 to ${spRoundCap}):`, String(spSpentThisRound));
   if (input !== null) {
     const val = parseInt(input, 10);
     if (!isNaN(val) && val >= 0) {
-      spGainedThisRound = Math.min(val, spRoundCap);
-      bankedSpLost = 0;
+      spSpentThisRound = val;
       updateHUD();
     }
   }
@@ -442,7 +469,12 @@ function buyResupply(idx) {
   if (sp < finalCost) {
     return alert(`Insufficient SP! Need ${finalCost} SP (You have ${sp} SP).`);
   }
-  sp -= finalCost;
+  if (spSpentThisRound + finalCost > spRoundCap) {
+    if (typeof confirm === 'function' && !confirm(`Round resupply spending limit of ${spRoundCap} SP reached! (Already spent ${spSpentThisRound} SP this round). Purchase anyway?`)) {
+      return;
+    }
+  }
+  spendSP(finalCost);
   if (item.autoCP) cp += item.autoCP;
   if (item.name === "A Change of Plans") {
     switchTab(2);
@@ -523,6 +555,7 @@ function resetMatchToSetup() {
   sharedSecondaryDeck = [];
   currentChoices = [];
   sp = 0;
+  spSpentThisRound = 0;
   spGainedThisRound = 0;
   bankedSpLost = 0;
   cp = 2;
@@ -677,37 +710,4 @@ async function pushLiveSpawnerStateToCloud() {
   const teleCount = parseInt((typeof document !== 'undefined' && document.getElementById('teleCount')?.innerText) || '0', 10);
   const wireCount = parseInt((typeof document !== 'undefined' && document.getElementById('wireCount')?.innerText) || '0', 10);
   const mineCount = parseInt((typeof document !== 'undefined' && document.getElementById('mineCount')?.innerText) || '0', 10);
-
-  const now = Date.now();
-  lastSyncedUpdatedAt = now;
-
-  const sharedRoomState = {
-    roomCode,
-    hasActiveSession: isSessionActive,
-    battleRound,
-    activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
-    setupFactionMode: setupFactionModeVal,
-    spawnZoneCount,
-
-    extraSpawnMod,
-    firstRollBonus,
-    baitTrapBonus,
-    doubleCost,
-    currentZoneSpawns,
-    activeMiseries,
-    sharedMiseryDeck,
-    activeSecondaries,
-    sharedSecondaryDeck,
-    fortChecks,
-    teleCount,
-    wireCount,
-    mineCount,
-    updatedAt: now,
-    lastSenderId: getClientDeviceId()
-  };
-
-  isPushingToCloud = true;
-  try {
-    const supabaseUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
-    const supabaseKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
 ````

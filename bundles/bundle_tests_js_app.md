@@ -346,81 +346,56 @@ test('app: resource economy (SP & CP) functions update counters and tally', () =
   assert.equal(String(document.getElementById('hudCp').innerText), '5');
 });
 
-test('app: reducing SP and increasing it again does not falsely increment finite round cap tally (x/8)', () => {
+test('app: spending SP in Resupply shop updates round spend tracker (hudSpCap) and deducts banked SP', () => {
   // Start from clean reset
-  app.loseSP(100);
+  app.resetMatchToSetup();
   assert.equal(app.sp, 0);
-  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(app.spSpentThisRound, 0);
   assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
 
-  // Gain 1 SP
-  app.gainSP(1);
-  assert.equal(app.sp, 1);
-  assert.equal(app.spGainedThisRound, 1);
-  assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
-
-  // Reduce 1 SP (should decrement round tally back to 0/8)
-  app.loseSP(1);
-  assert.equal(app.sp, 0);
-  assert.equal(app.spGainedThisRound, 0);
+  // Gain 10 SP
+  app.gainSP(10);
+  assert.equal(app.sp, 10);
+  assert.equal(app.spSpentThisRound, 0);
   assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
 
-  // Increase 1 SP again (should be 1/8, NOT 2/8!)
-  app.gainSP(1);
-  assert.equal(app.sp, 1);
-  assert.equal(app.spGainedThisRound, 1);
-  assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
+  // Spend 4 SP in Resupply shop
+  app.spendSP(4);
+  assert.equal(app.sp, 6);
+  assert.equal(app.spSpentThisRound, 4);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(4/8)');
 
-  // Toggle reduce/increase 5 times to ensure no phantom cap accumulation
-  for (let i = 0; i < 5; i++) {
-    app.loseSP(1);
-    assert.equal(app.sp, 0);
-    assert.equal(app.spGainedThisRound, 0);
-    assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
-
-    app.gainSP(1);
-    assert.equal(app.sp, 1);
-    assert.equal(app.spGainedThisRound, 1);
-    assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
-  }
-});
-
-test('app: reducing banked SP from previous rounds and increasing it does not consume finite round cap', () => {
-  // Reset
-  app.loseSP(100);
-  // Gain 4 SP in round 1
-  app.gainSP(4);
+  // Spend another 2 SP
+  app.spendSP(2);
   assert.equal(app.sp, 4);
+  assert.equal(app.spSpentThisRound, 6);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(6/8)');
 
-  // Advance round -> spGainedThisRound resets to 0, SP stays at 4 banked
+  // Advance round -> spSpentThisRound resets to 0, banked SP stays at 4
   app.advanceBattleRound();
   assert.equal(app.sp, 4);
-  assert.equal(app.spGainedThisRound, 0);
+  assert.equal(app.spSpentThisRound, 0);
   assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+});
 
-  // Player reduces banked SP from 4 to 3
+test('app: reducing and gaining banked SP does not alter spSpentThisRound', () => {
+  app.resetMatchToSetup();
+  app.gainSP(5);
+  app.spendSP(3);
+  assert.equal(app.sp, 2);
+  assert.equal(app.spSpentThisRound, 3);
+  assert.equal(document.getElementById('hudSpCap').innerText, '(3/8)');
+
+  // Adjust banked SP using - and + buttons (loseSP / gainSP)
   app.loseSP(1);
+  assert.equal(app.sp, 1);
+  assert.equal(app.spSpentThisRound, 3, 'Manual SP decrement must not change SP spent tally');
+  assert.equal(document.getElementById('hudSpCap').innerText, '(3/8)');
+
+  app.gainSP(2);
   assert.equal(app.sp, 3);
-  assert.equal(app.spGainedThisRound, 0);
-  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
-
-  // Player increases SP back from 3 to 4 (restoring banked SP, NOT gaining round SP!)
-  app.gainSP(1);
-  assert.equal(app.sp, 4);
-  assert.equal(app.spGainedThisRound, 0);
-  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
-
-  // Now player legitimately gains SP beyond banked baseline (4 -> 5)
-  app.gainSP(1);
-  assert.equal(app.sp, 5);
-  assert.equal(app.spGainedThisRound, 1);
-  assert.equal(document.getElementById('hudSpCap').innerText, '(1/8)');
-
-  // Player reduces back to 4 -> round tally drops back to 0/8
-  app.loseSP(1);
-  assert.equal(app.sp, 4);
-  assert.equal(app.spGainedThisRound, 0);
-  assert.equal(document.getElementById('hudSpCap').innerText, '(0/8)');
+  assert.equal(app.spSpentThisRound, 3, 'Gaining SP must not alter SP spent tally');
+  assert.equal(document.getElementById('hudSpCap').innerText, '(3/8)');
 });
 
 test('app: adjustSpRoundTally and adjustStratTally allow manual correction of tallies', () => {
@@ -428,7 +403,7 @@ test('app: adjustSpRoundTally and adjustStratTally allow manual correction of ta
   try {
     globalThis.prompt = () => '3';
     app.adjustSpRoundTally();
-    assert.equal(app.spGainedThisRound, 3);
+    assert.equal(app.spSpentThisRound, 3);
     assert.equal(document.getElementById('hudSpCap').innerText, '(3/8)');
 
     globalThis.prompt = () => '5';

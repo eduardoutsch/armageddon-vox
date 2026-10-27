@@ -35,6 +35,7 @@ let isSoloMode = false;
 let currentShopFilter = 'All';
 
 let sp = 0;
+let spSpentThisRound = 0;
 let spGainedThisRound = 0;
 let spRoundCap = 8;
 let bankedSpLost = 0;
@@ -93,6 +94,7 @@ function saveSessionState() {
       activeTab,
       battleRound,
       sp,
+      spSpentThisRound,
       spGainedThisRound,
       spRoundCap,
       bankedSpLost,
@@ -159,6 +161,7 @@ function restoreSessionState() {
     spRoundCap = data.spRoundCap || (isSoloMode ? 16 : 8);
     battleRound = (typeof data.battleRound === 'number') ? data.battleRound : 0;
     sp = (typeof data.sp === 'number') ? data.sp : 0;
+    spSpentThisRound = (typeof data.spSpentThisRound === 'number') ? data.spSpentThisRound : 0;
     spGainedThisRound = (typeof data.spGainedThisRound === 'number') ? data.spGainedThisRound : 0;
     bankedSpLost = (typeof data.bankedSpLost === 'number') ? data.bankedSpLost : 0;
     cp = (typeof data.cp === 'number') ? data.cp : 2;
@@ -576,7 +579,7 @@ function updateHUD() {
   document.getElementById('hudSessionInfo').innerText = isSoloMode ? `${code} • SOLO` : `${code} • P${selectedRoleVal}`;
   document.getElementById('hudRound').innerText = battleRound === 0 ? "Pre-Game" : `Round ${battleRound}/6`;
   document.getElementById('hudSp').innerText = sp;
-  document.getElementById('hudSpCap').innerText = `(${spGainedThisRound}/${spRoundCap})`;
+  document.getElementById('hudSpCap').innerText = `(${spSpentThisRound}/${spRoundCap})`;
   document.getElementById('hudCp').innerText = cp;
   document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
   document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
@@ -668,6 +671,7 @@ function advanceBattleRound() {
     if (!confirm("Round 6 complete! Continue into Infinite Mode Round " + (battleRound + 1) + "?")) return;
   }
   battleRound++;
+  spSpentThisRound = 0;
   spGainedThisRound = 0;
   bankedSpLost = 0;
   lastWarpSirenSeedKey = '';
@@ -706,8 +710,4 @@ function drawMisery(count) {
     }
     const card = sharedMiseryDeck.shift();
     activeMiseries.push(card);
-    if (card.id === 20) drawMisery(2);
-    if (card.id === 14 && isSoloMode) drawMisery(2);
-  }
-  renderSharedDecks();
 ````

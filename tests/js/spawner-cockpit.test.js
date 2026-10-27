@@ -114,3 +114,18 @@ test('Spawner Cockpit: renderActiveMiseries and renderActiveSecondaries handle w
   delete globalThis.document;
   delete globalThis.window;
 });
+
+test('Spawner Cockpit: updateGuidedFlowForRound does NOT reset active phase step, but resetStep: true does', () => {
+  const cockpit = require('../../js/spawner-cockpit.js');
+
+  cockpit.setGuidedPhaseStep(3, { silent: true });
+  assert.equal(cockpit.currentGuidedStep, 3);
+
+  // Calling updateGuidedFlowForRound without resetStep (as invoked by updateHUD on any button click)
+  cockpit.updateGuidedFlowForRound();
+  assert.equal(cockpit.currentGuidedStep, 3, 'Must preserve active step on regular round flow updates');
+
+  // Explicit reset on round advance
+  cockpit.updateGuidedFlowForRound({ resetStep: true });
+  assert.equal(cockpit.currentGuidedStep, 1, 'Must reset to step 1 when resetStep is true');
+});

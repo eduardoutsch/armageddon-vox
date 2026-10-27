@@ -171,10 +171,27 @@
       return;
     }
 
-    if (typeof gRoot.loseSP === 'function') {
-      gRoot.loseSP(finalCost);
+    const spentSoFar = (typeof gRoot.spSpentThisRound === 'number')
+      ? gRoot.spSpentThisRound
+      : ((typeof spSpentThisRound === 'number') ? spSpentThisRound : 0);
+    const roundCap = (typeof gRoot.spRoundCap === 'number')
+      ? gRoot.spRoundCap
+      : ((typeof spRoundCap === 'number') ? spRoundCap : 8);
+
+    if (spentSoFar + finalCost > roundCap) {
+      if (typeof confirm === 'function' && !confirm(`Round resupply spending limit of ${roundCap} SP reached! (Already spent ${spentSoFar} SP this round). Purchase anyway?`)) {
+        return;
+      }
+    }
+
+    if (typeof gRoot.spendSP === 'function') {
+      gRoot.spendSP(finalCost);
+    } else if (typeof spendSP === 'function') {
+      spendSP(finalCost);
+    } else if (typeof gRoot.loseSP === 'function') {
+      gRoot.loseSP(finalCost, { isPurchase: true });
     } else if (typeof loseSP === 'function') {
-      loseSP(finalCost);
+      loseSP(finalCost, { isPurchase: true });
     }
 
     const overrides = gRoot.RESUPPLY_OFFICIAL_OVERRIDES || {};

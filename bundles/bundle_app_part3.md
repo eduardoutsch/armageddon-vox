@@ -11,6 +11,39 @@ DOM event handlers, Auspex telemetry HUD synchronization, and session state pers
 
 ````javascript
 
+  const now = Date.now();
+  lastSyncedUpdatedAt = now;
+
+  const sharedRoomState = {
+    roomCode,
+    hasActiveSession: isSessionActive,
+    battleRound,
+    activeHordeFactionName: activeHordeFaction ? activeHordeFaction.name : null,
+    setupFactionMode: setupFactionModeVal,
+    spawnZoneCount,
+
+    extraSpawnMod,
+    firstRollBonus,
+    baitTrapBonus,
+    doubleCost,
+    currentZoneSpawns,
+    activeMiseries,
+    sharedMiseryDeck,
+    activeSecondaries,
+    sharedSecondaryDeck,
+    fortChecks,
+    teleCount,
+    wireCount,
+    mineCount,
+    updatedAt: now,
+    lastSenderId: getClientDeviceId()
+  };
+
+  isPushingToCloud = true;
+  try {
+    const supabaseUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
+    const supabaseKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
+
     let currentHordePool = {};
     let currentNemesisStatus = {};
     try {
@@ -300,6 +333,7 @@ if (typeof module !== 'undefined' && module.exports) {
     get selectedRoleVal() { return selectedRoleVal; },
     get cp() { return cp; },
     get sp() { return sp; },
+    get spSpentThisRound() { return spSpentThisRound; },
     get spGainedThisRound() { return spGainedThisRound; },
     get spRoundCap() { return spRoundCap; },
     get bankedSpLost() { return bankedSpLost; },
@@ -316,6 +350,7 @@ if (typeof module !== 'undefined' && module.exports) {
     startSession,
     updateHUD,
     gainSP,
+    spendSP,
     loseSP,
     adjustSpRoundTally,
     adjustStratTally,
