@@ -709,47 +709,131 @@ body.theme-militarum #cardAlpha.selected {
 }
 
 /* ===================================================================== */
-/* VOTANN BLACK-LEDGER CRT TERMINAL STYLING (AMBER/GOLD PHOSPHOR)        */
+/* VOTANN BLACK-LEDGER CRT TERMINAL STYLING (HEARTH AMBER / BASALT)      */
 /* ===================================================================== */
 body.theme-votann #cardGamma.selected,
 body.theme-votann #cardGamma.active {
+  background: linear-gradient(135deg, rgba(66, 32, 6, 0.76) 0%, rgba(26, 14, 3, 0.96) 100%);
   border-color: #f5b041;
-  background: rgba(245, 176, 65, 0.12);
-  box-shadow: 0 0 16px rgba(245, 176, 65, 0.25);
+  box-shadow: 0 0 22px rgba(245, 176, 65, 0.35), inset 0 0 14px rgba(245, 176, 65, 0.16);
 }
 
+body.theme-votann #cardGamma.selected .choice-title,
+body.theme-votann #cardGamma.active .choice-title,
 body.theme-votann #cardGamma .choice-title,
 body.theme-votann #cardGamma .conduit-title {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(245, 176, 65, 0.45);
+}
+
+body.theme-votann #voxTerminalTitle {
   color: #f5b041;
-  text-shadow: 0 0 8px rgba(245, 176, 65, 0.4);
+  border-color: rgba(245, 176, 65, 0.35);
+  background: rgba(30, 18, 5, 0.65);
+  text-shadow: 0 0 10px rgba(245, 176, 65, 0.45);
+}
+
+body.theme-votann #activeConduitLabel {
+  color: #fbbf24 !important;
+  text-shadow: 0 0 8px rgba(245, 176, 65, 0.4) !important;
+}
+
+body.theme-votann #terminalServerStatusLabel {
+  color: #f5b041 !important;
+  text-shadow: 0 0 8px rgba(245, 176, 65, 0.35) !important;
+}
+
+body.theme-votann .nav-pills button.active {
+  background: linear-gradient(135deg, rgba(245, 176, 65, 0.28) 0%, rgba(28, 16, 4, 0.95) 100%);
+  color: #fde68a;
+  border-color: #f5b041;
+  box-shadow: inset 0 0 12px rgba(245, 176, 65, 0.25), 0 0 10px rgba(245, 176, 65, 0.2);
 }
 
 body.theme-votann .crt-monitor-frame {
-  background: #080602;
-  border-color: #8c6b23;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(245, 176, 65, 0.15) 0%, rgba(12, 8, 3, 0.98) 72%),
+    linear-gradient(rgba(245, 176, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 176, 65, 0.03) 1px, transparent 1px),
+    #090602;
+  background-size: 100% 100%, 28px 28px, 28px 28px, 100% 100%;
+  border: 2px solid #f5b041;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
   box-shadow:
-    inset 0 0 48px rgba(0, 0, 0, 0.95),
-    inset 0 0 20px rgba(245, 176, 65, 0.1),
-    0 8px 28px rgba(0, 0, 0, 0.8);
+    inset 0 0 48px rgba(0, 0, 0, 0.96),
+    inset 0 0 24px rgba(245, 176, 65, 0.15),
+    0 0 28px rgba(245, 176, 65, 0.22);
+}
+
+body.theme-votann .crt-monitor-frame::after {
+  background: linear-gradient(
+    rgba(245, 176, 65, 0) 50%,
+    rgba(26, 14, 3, 0.42) 50%
+  );
+  background-size: 100% 4px;
 }
 
 body.theme-votann .crt-msg-card {
-  border-color: rgba(245, 176, 65, 0.45);
-  background: rgba(30, 20, 6, 0.75);
+  background: linear-gradient(135deg, rgba(38, 22, 6, 0.92) 0%, rgba(18, 10, 2, 0.96) 100%);
+  border: 1px solid rgba(245, 176, 65, 0.45);
+  border-left: 3px solid #f5b041;
+  color: #fef3c7;
+  text-shadow: 0 0 6px rgba(245, 176, 65, 0.38);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+
+body.theme-votann .crt-msg-header {
+  color: #fbbf24;
+  border-bottom: 1px dashed rgba(245, 176, 65, 0.35);
 }
 
 body.theme-votann .crt-reply-card {
-  border-color: rgba(245, 176, 65, 0.35);
-  background: rgba(22, 15, 4, 0.85);
+  background: linear-gradient(135deg, rgba(48, 26, 6, 0.95) 0%, rgba(20, 10, 2, 0.98) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  border-left: 3px solid #fbbf24;
+  color: #fef9c3;
+  text-shadow: 0 0 8px rgba(245, 176, 65, 0.45);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+body.theme-votann .crt-reply-header {
+  color: #fde68a;
+  border-bottom: 1px dashed rgba(251, 191, 36, 0.38);
+}
+
+body.theme-votann .crt-pending-line {
+  background: rgba(36, 20, 5, 0.82);
+  border: 1px dashed rgba(245, 176, 65, 0.48);
+  color: #fde68a;
 }
 
 body.theme-votann .crt-input-textarea {
-  background: #080602;
-  border-color: #8c6b23;
-  color: #f5b041;
+  background: #090602;
+  color: #fef3c7;
+  text-shadow: 0 0 6px rgba(245, 176, 65, 0.35);
+  border: 1.5px solid rgba(245, 176, 65, 0.48);
 }
 
 body.theme-votann .crt-input-textarea:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 176, 65, 0.32);
+}
+
+body.theme-votann #subWinDirect button.btn-red {
+  background: linear-gradient(180deg, rgba(194, 65, 12, 0.95) 0%, rgba(124, 45, 18, 0.98) 100%);
+  border-color: #f5b041;
+  color: #fffbeb;
+  box-shadow: 0 0 18px rgba(245, 176, 65, 0.32);
+}
+
+body.theme-votann .crt-older-btn {
+  color: #fbbf24;
+  border-color: rgba(245, 176, 65, 0.4);
+  background: rgba(34, 18, 4, 0.75);
+}
+
+body.theme-votann .crt-older-btn:hover {
+  background: rgba(245, 176, 65, 0.22);
   border-color: #f5b041;
   box-shadow: 0 0 10px rgba(245, 176, 65, 0.35);
 }

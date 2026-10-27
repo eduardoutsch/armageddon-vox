@@ -1737,7 +1737,7 @@
     try {
       if (localStore && typeof localStore.getItem === 'function') {
         const explicit = localStore.getItem(STORAGE_KEY_FACTION_THEME);
-        if (explicit === 'necron' || explicit === 'militarum') {
+        if (explicit === 'necron' || explicit === 'militarum' || explicit === 'votann') {
           return explicit;
         }
       }
@@ -1750,6 +1750,7 @@
           const parsedVox = JSON.parse(rawVoxSession);
           if (parsedVox && parsedVox.channel === 'beta') return 'necron';
           if (parsedVox && parsedVox.channel === 'alpha') return 'militarum';
+          if (parsedVox && parsedVox.channel === 'gamma') return 'votann';
         }
       }
     } catch (e) {}
@@ -1760,11 +1761,12 @@
         if (rawBriefing) {
           const parsedBriefing = JSON.parse(rawBriefing);
           if (parsedBriefing) {
-            if (parsedBriefing.unlockedBeta && !parsedBriefing.unlockedAlpha) return 'necron';
-            if (parsedBriefing.unlockedAlpha && !parsedBriefing.unlockedBeta) return 'militarum';
-            if (parsedBriefing.unlockedBeta && parsedBriefing.unlockedAlpha) {
-              return parsedBriefing.activeDossier === 'alpha' ? 'militarum' : 'necron';
-            }
+            if (parsedBriefing.unlockedGamma && !parsedBriefing.unlockedAlpha && !parsedBriefing.unlockedBeta) return 'votann';
+            if (parsedBriefing.unlockedBeta && !parsedBriefing.unlockedAlpha && !parsedBriefing.unlockedGamma) return 'necron';
+            if (parsedBriefing.unlockedAlpha && !parsedBriefing.unlockedBeta && !parsedBriefing.unlockedGamma) return 'militarum';
+            if (parsedBriefing.activeDossier === 'gamma' && parsedBriefing.unlockedGamma) return 'votann';
+            if (parsedBriefing.activeDossier === 'beta' && parsedBriefing.unlockedBeta) return 'necron';
+            if (parsedBriefing.activeDossier === 'alpha' && parsedBriefing.unlockedAlpha) return 'militarum';
           }
         }
       }
@@ -1774,15 +1776,15 @@
   }
 
   /**
-   * Applies the given faction theme ('necron' or 'militarum') to document.body
+   * Applies the given faction theme ('necron', 'militarum', or 'votann') to document.body
    * and optionally persists it to localStorage across all pages.
    *
-   * @param {'necron' | 'militarum' | null} theme - Target faction theme
+   * @param {'necron' | 'militarum' | 'votann' | null} theme - Target faction theme
    * @param {boolean} [persist=true] - Whether to persist in localStorage
-   * @returns {'necron' | 'militarum' | null} Applied theme
+   * @returns {'necron' | 'militarum' | 'votann' | null} Applied theme
    */
   function setFactionTheme(theme, persist = true) {
-    const normalized = theme === 'necron' ? 'necron' : (theme === 'militarum' ? 'militarum' : null);
+    const normalized = theme === 'necron' ? 'necron' : (theme === 'militarum' ? 'militarum' : (theme === 'votann' ? 'votann' : null));
     if (persist) {
       try {
         if (normalized) {
@@ -1796,6 +1798,7 @@
     if (document && document.body && document.body.classList) {
       document.body.classList.toggle('theme-necron', normalized === 'necron');
       document.body.classList.toggle('theme-militarum', normalized === 'militarum');
+      document.body.classList.toggle('theme-votann', normalized === 'votann');
       if (document.body.dataset) {
         document.body.dataset.factionTheme = normalized || 'default';
       }

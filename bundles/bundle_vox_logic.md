@@ -163,13 +163,14 @@ function checkPendingDossierBuffer() {
 }
 
 function applyVoxFactionTheme(chan, persist = false) {
-  const theme = chan === 'beta' ? 'necron' : (chan === 'alpha' ? 'militarum' : null);
+  const theme = chan === 'beta' ? 'necron' : (chan === 'alpha' ? 'militarum' : (chan === 'gamma' ? 'votann' : null));
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.setFactionTheme === 'function') {
     window.VoxAudio.setFactionTheme(theme, persist);
   }
   if (document.body && document.body.classList) {
     document.body.classList.toggle('theme-necron', theme === 'necron');
     document.body.classList.toggle('theme-militarum', theme === 'militarum');
+    document.body.classList.toggle('theme-votann', theme === 'votann');
     if (document.body.dataset) {
       document.body.dataset.factionTheme = theme || 'default';
     }
@@ -179,10 +180,12 @@ function applyVoxFactionTheme(chan, persist = false) {
   if (dBox && dBox.classList && typeof dBox.classList.toggle === 'function') {
     dBox.classList.toggle('vox-preview-beta', chan === 'beta');
     dBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
+    dBox.classList.toggle('vox-preview-gamma', chan === 'gamma');
   }
   if (iBox && iBox.classList && typeof iBox.classList.toggle === 'function') {
     iBox.classList.toggle('vox-preview-beta', chan === 'beta');
     iBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
+    iBox.classList.toggle('vox-preview-gamma', chan === 'gamma');
   }
 }
 
@@ -507,7 +510,4 @@ function extractDynamicReplyCardMeta(rawReply) {
   // 2. Check if the first line is a canonical +++ HEADER BANNER +++
   const bannerMatch = trimmed.match(/^\+{2,}\s*([^\n+]+?)\s*\+{2,}[ \t]*\n+/);
   if (bannerMatch) {
-    return {
-      cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
-      cleanBody: trimmed.slice(bannerMatch[0].length).trim()
 ````

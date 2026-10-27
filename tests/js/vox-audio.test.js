@@ -407,6 +407,10 @@ test('vox-audio: resolveFactionThemeFromStorage, setFactionTheme, and syncFactio
   storageStore.set('foa_briefing_state_v3', JSON.stringify({ unlockedBeta: false, unlockedAlpha: true, activeDossier: 'alpha' }));
   assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'militarum');
 
+  // 3b. Unlocking Gamma broadcast in foa_briefing_state_v3 resolves to 'votann'
+  storageStore.set('foa_briefing_state_v3', JSON.stringify({ unlockedGamma: true, unlockedBeta: false, unlockedAlpha: false, activeDossier: 'gamma' }));
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'votann');
+
   // 4. Active Vox session in foa_vox_active_session_v1 overrides when explicit theme key is absent
   storageStore.clear();
   sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'beta', pass: 'TombKey' }));
@@ -415,10 +419,14 @@ test('vox-audio: resolveFactionThemeFromStorage, setFactionTheme, and syncFactio
   sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'alpha', pass: 'AshKey' }));
   assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'militarum');
 
+  sessionStore.set('foa_vox_active_session_v1', JSON.stringify({ channel: 'gamma', pass: 'VotannKey' }));
+  assert.equal(voxModule.resolveFactionThemeFromStorage(globalThis.localStorage, globalThis.sessionStorage), 'votann');
+
   // 5. setFactionTheme('necron') applies theme-necron to document.body and persists to foa_faction_theme_v1
   voxModule.setFactionTheme('necron', true);
   assert.equal(globalThis.document.body.classList.contains('theme-necron'), true);
   assert.equal(globalThis.document.body.classList.contains('theme-militarum'), false);
+  assert.equal(globalThis.document.body.classList.contains('theme-votann'), false);
   assert.equal(globalThis.document.body.dataset.factionTheme, 'necron');
   assert.equal(globalThis.localStorage.getItem('foa_faction_theme_v1'), 'necron');
   assert.equal(voxModule.getFactionTheme(), 'necron');
@@ -427,15 +435,34 @@ test('vox-audio: resolveFactionThemeFromStorage, setFactionTheme, and syncFactio
   voxModule.setFactionTheme('militarum', true);
   assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true);
   assert.equal(globalThis.document.body.classList.contains('theme-necron'), false);
+  assert.equal(globalThis.document.body.classList.contains('theme-votann'), false);
   assert.equal(globalThis.document.body.dataset.factionTheme, 'militarum');
   assert.equal(globalThis.localStorage.getItem('foa_faction_theme_v1'), 'militarum');
   assert.equal(voxModule.getFactionTheme(), 'militarum');
 
-  // 7. Verify css/style.css defines global body.theme-necron and body.theme-militarum rules
+  // 6b. setFactionTheme('votann') switches to theme-votann and removes others
+  voxModule.setFactionTheme('votann', true);
+  assert.equal(globalThis.document.body.classList.contains('theme-votann'), true);
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), false);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), false);
+  assert.equal(globalThis.document.body.dataset.factionTheme, 'votann');
+  assert.equal(globalThis.localStorage.getItem('foa_faction_theme_v1'), 'votann');
+  assert.equal(voxModule.getFactionTheme(), 'votann');
+
+  // 7. Verify css/style.css defines global body.theme-necron, body.theme-militarum, and body.theme-votann rules
   const cssPath = path.join(ROOT_DIR, 'css/style.css');
   const cssCode = fs.readFileSync(cssPath, 'utf8');
   assert.ok(cssCode.includes('body.theme-necron'), 'css/style.css must define global body.theme-necron theme rules');
   assert.ok(cssCode.includes('body.theme-militarum'), 'css/style.css must define global body.theme-militarum theme rules');
+  assert.ok(cssCode.includes('body.theme-votann'), 'css/style.css must define global body.theme-votann theme rules');
+
+  const briefingCssPath = path.join(ROOT_DIR, 'css/briefing.css');
+  const briefingCssCode = fs.readFileSync(briefingCssPath, 'utf8');
+  assert.ok(briefingCssCode.includes('#dossierGamma'), 'css/briefing.css must define custom colors for #dossierGamma');
+
+  const voxCssPath = path.join(ROOT_DIR, 'css/vox.css');
+  const voxCssCode = fs.readFileSync(voxCssPath, 'utf8');
+  assert.ok(voxCssCode.includes('body.theme-votann .crt-monitor-frame'), 'css/vox.css must define custom monitor frame for Votann');
 });
 test('vox-audio: newly added unique Warhammer 40k interaction sound synthesizers execute without throwing', () => {
   const newSynths = [

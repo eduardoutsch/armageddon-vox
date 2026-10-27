@@ -2804,3 +2804,130 @@ body.theme-militarum .suite-nav {
   text-shadow: 0 0 8px rgba(16, 185, 129, 0.45) !important;
   box-shadow: inset 0 0 18px rgba(16, 185, 129, 0.08);
 }
+
+.vox-preview-gamma {
+  background: #0f0a04 !important;
+  border: 1.5px dashed rgba(245, 176, 65, 0.65) !important;
+  color: #fbbf24 !important;
+  text-shadow: 0 0 8px rgba(245, 176, 65, 0.45) !important;
+  box-shadow: inset 0 0 18px rgba(245, 176, 65, 0.1) !important;
+}
+
+/* ==========================================================================
+   LEAGUES OF VOTANN // THE LEDGER OF EMBERS GLOBAL FACTION COLOR MODE
+   - body.theme-votann : Kâhl Hârkyn Grîmledger & Fane-Node Vôl-09
+   ========================================================================== */
+body.theme-votann {
+  --bg: #090603;
+  --surface: #140d06;
+  --surface-alt: #0d0803;
+  --surface-hover: #24160a;
+  --border: #523410;
+  --border-bright: #f5b041;
+  --text: #fef3c7;
+  --muted: #d4a373;
+  --gold: #f5b041;
+  --gold-bright: #fbbf24;
+  --gold-dim: rgba(245, 176, 65, 0.14);
+  --red: #c2410c;
+  --red-bright: #ea580c;
+  --red-dim: rgba(234, 88, 12, 0.18);
+  --green: #84cc16;
+  --blue: #38bdf8;
+  --side-glow-line: rgba(245, 176, 65, 0.45);
+  --side-glow-bloom: rgba(245, 176, 65, 0.15);
+  --side-glow-deep: rgba(234, 88, 12, 0.08);
+  --corner-glow-core: rgba(251, 191, 36, 0.18);
+  --corner-glow-bloom: rgba(245, 176, 65, 0.10);
+  --corner-glow-deep: rgba(120, 53, 15, 0.06);
+  --clip-card: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  background-color: #090603;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(245, 158, 11, 0.18) 0%, transparent 65%),
+    radial-gradient(circle at 85% 20%, rgba(234, 88, 12, 0.10) 0%, transparent 45%),
+    radial-gradient(circle at 15% 80%, rgba(245, 176, 65, 0.08) 0%, transparent 50%),
+    linear-gradient(rgba(245, 176, 65, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 176, 65, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+body.theme-votann .suite-nav {
+  background: rgba(14, 10, 4, 0.96);
+  border-bottom: 1px solid rgba(245, 176, 65, 0.45);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.9), 0 1px 12px rgba(245, 176, 65, 0.2);
+}
+
+body.theme-votann .suite-brand {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(245, 176, 65, 0.45);
+}
+
+body.theme-votann .suite-link.active {
+  color: #fffbeb;
+  background: rgba(245, 176, 65, 0.18);
+  border-color: #f5b041;
+  box-shadow: 0 0 12px rgba(245, 176, 65, 0.28), inset 0 0 8px rgba(245, 176, 65, 0.15);
+}
+
+body.theme-votann .hero-card,
+body.theme-votann .card,
+body.theme-votann .hud-bar,
+body.theme-votann .round-banner {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(245, 176, 65, 0.12) 0%, transparent 70%),
+    linear-gradient(165deg, rgba(24, 16, 7, 0.96) 0%, rgba(12, 8, 3, 0.98) 55%, rgba(18, 12, 5, 0.96) 100%);
+  border-color: rgba(245, 176, 65, 0.42);
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.88),
+    0 0 22px rgba(245, 176, 65, 0.14),
+    inset 0 0 24px rgba(245, 176, 65, 0.06);
+}
+
+body.theme-votann .hero-title {
+  background: linear-gradient(90deg, #fffbeb 0%, #fbbf24 45%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 22px rgba(245, 176, 65, 0.35);
+}
+
+body.theme-votann .status-pill {
+  background: rgba(45, 30, 10, 0.85);
+  border-color: rgba(245, 176, 65, 0.55);
+  color: #fbbf24;
+  box-shadow: 0 0 12px rgba(245, 176, 65, 0.22);
+}
+
+body.theme-votann .status-pill .pulse-dot {
+  background: #f5b041;
+  box-shadow: 0 0 8px #f5b041;
+}
+
+body.theme-votann .nav-pills button.active,
+body.theme-votann .commander-switcher button.active {
+  background: linear-gradient(135deg, rgba(245, 176, 65, 0.28) 0%, rgba(38, 24, 8, 0.96) 100%);
+  color: #fbbf24;
+  border-color: #f5b041;
+  box-shadow: 0 0 16px rgba(245, 176, 65, 0.28), inset 0 0 12px rgba(245, 176, 65, 0.16);
+}
+
+body.theme-votann .launch-btn,
+body.theme-votann .btn-red {
+  background: linear-gradient(180deg, rgba(180, 83, 9, 0.95) 0%, rgba(120, 53, 15, 0.98) 100%);
+  border-color: #f5b041;
+  color: #fffbeb;
+  box-shadow: 0 0 18px rgba(245, 176, 65, 0.32), inset 0 1px 0 rgba(254, 240, 138, 0.35);
+}
+
+body.theme-votann .launch-btn:hover,
+body.theme-votann .btn-red:hover {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.95) 0%, rgba(180, 83, 9, 0.98) 100%);
+  border-color: #fbbf24;
+  color: #1c0d02;
+  box-shadow: 0 0 26px rgba(245, 158, 11, 0.6);
+}
+
+body.theme-votann code {
+  background: rgba(65, 42, 12, 0.65);
+  border: 1px solid rgba(245, 176, 65, 0.45);
+  color: #fbbf24;
+}

@@ -206,8 +206,9 @@ function applyGlobalFactionThemeFromBriefing(theme, persist) {
   if (typeof document !== 'undefined' && document.body && document.body.classList) {
     document.body.classList.toggle('theme-necron', theme === 'necron');
     document.body.classList.toggle('theme-militarum', theme === 'militarum');
+    document.body.classList.toggle('theme-votann', theme === 'votann');
   }
-  if (persist && (theme === 'necron' || theme === 'militarum')) {
+  if (persist && (theme === 'necron' || theme === 'militarum' || theme === 'votann')) {
     try {
       if (typeof localStorage !== 'undefined') localStorage.setItem('foa_faction_theme_v1', theme);
     } catch (e) {}
@@ -224,11 +225,14 @@ function showDossier(which, persist) {
   briefingState.activeDossier = which;
   if (typeof document !== 'undefined' && document.body && document.body.classList) {
     document.body.classList.toggle('necron-briefing-active', which === 'beta');
+    document.body.classList.toggle('votann-briefing-active', which === 'gamma');
   }
   if (which === 'beta' && briefingState.unlockedBeta) {
     applyGlobalFactionThemeFromBriefing('necron', persist);
   } else if (which === 'alpha' && briefingState.unlockedAlpha) {
     applyGlobalFactionThemeFromBriefing('militarum', persist);
+  } else if (which === 'gamma' && briefingState.unlockedGamma) {
+    applyGlobalFactionThemeFromBriefing('votann', persist);
   }
 
   var map = {
@@ -302,6 +306,7 @@ function unlockTab(who, persist) {
   }
   if (who === 'Gamma') {
     briefingState.unlockedGamma = true;
+    applyGlobalFactionThemeFromBriefing('votann', persist);
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBriefingDecode === 'function') {
       window.VoxAudio.playBriefingDecode('alpha');
     }
@@ -340,6 +345,11 @@ function lockTab(who, persist) {
     briefingState.unlockedGamma = false;
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOff === 'function') {
       window.VoxAudio.playTerminalPowerOff('alpha');
+    }
+    if (briefingState.unlockedBeta) {
+      applyGlobalFactionThemeFromBriefing('necron', persist);
+    } else if (briefingState.unlockedAlpha) {
+      applyGlobalFactionThemeFromBriefing('militarum', persist);
     }
   }
   if (persist) saveBriefingState();

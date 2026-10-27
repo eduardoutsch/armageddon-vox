@@ -55,6 +55,7 @@ function createMockClassList() {
 
 function createMockBox() {
   const box = {
+    classList: createMockClassList(),
     _innerHTML: '',
     children: [],
     dataset: {},
@@ -295,11 +296,18 @@ test('vox: selectConduit toggles selected channel and updates UI elements', asyn
   assert.equal(mockElements.cardGamma.classList.contains('selected'), false);
 });
 
-test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl Hârkyn Grîmledger', async () => {
+test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl Hârkyn Grîmledger and activate Votann theme', async () => {
   await vox.selectConduit('gamma');
   assert.equal(vox.getSelectedChannel(), 'gamma');
+  assert.equal(mockDocument.body.classList.contains('theme-votann'), true, 'Selecting Terminal Gamma must activate theme-votann');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), false);
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), false);
+  assert.equal(mockElements.directMessagesBox.classList.contains('vox-preview-gamma'), true);
+  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-gamma'), true);
+
   mockElements.passInput.value = 'votanngold777';
   await vox.handleSealAction();
+  assert.equal(mockDocument.body.classList.contains('theme-votann'), true, 'Unlocking Terminal Gamma must keep theme-votann');
   assert.ok(
     mockElements.activeConduitLabel.textContent.includes('CONDUIT GAMMA') ||
     mockElements.activeConduitLabel.textContent.includes('FANE-NODE VÔL-09')
@@ -308,6 +316,12 @@ test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl H�
     mockElements.questionInput.placeholder.includes('Fane-Node Vôl-09') ||
     mockElements.questionInput.placeholder.includes('Brôkhyr')
   );
+
+  // CSS assertions for Votann theme
+  assert.ok(voxHtml.includes('body.theme-votann .crt-monitor-frame') || voxCss.includes('body.theme-votann .crt-monitor-frame'), 'vox.html or vox.css must style .crt-monitor-frame in Votann Black-Ledger mode');
+  assert.ok(voxHtml.includes('body.theme-votann .crt-msg-card') || voxCss.includes('body.theme-votann .crt-msg-card'), 'vox.html or vox.css must style .crt-msg-card in Votann Black-Ledger mode');
+  assert.ok(voxHtml.includes('body.theme-votann .crt-reply-card') || voxCss.includes('body.theme-votann .crt-reply-card'), 'vox.html or vox.css must style .crt-reply-card in Votann Black-Ledger mode');
+  assert.ok(voxHtml.includes('body.theme-votann .crt-input-textarea') || voxCss.includes('body.theme-votann .crt-input-textarea'), 'vox.html or vox.css must style .crt-input-textarea in Votann Black-Ledger mode');
 });
 
 test('vox: checkPendingDossierBuffer formats target description for gamma Votann payload', () => {

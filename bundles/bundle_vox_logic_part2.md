@@ -10,6 +10,9 @@ Real-time Teletype typewriter audio streaming, CRT message rendering, and interf
 ## File: `js/vox.js (Part 2: CRT Monitors & Streams)` <a id="file-jsvoxjspart2crtmonitorsstreams"></a>
 
 ````javascript
+    return {
+      cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
+      cleanBody: trimmed.slice(bannerMatch[0].length).trim()
     };
   }
 

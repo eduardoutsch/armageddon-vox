@@ -189,6 +189,25 @@ test('briefing: unlockTab and lockTab manage clearance gates, persist states, an
   briefing.showDossier('alpha', true);
   assert.equal(globalThis.document.body.classList.contains('theme-militarum'), true, 'Viewing unlocked Alpha dossier activates theme-militarum');
 
+  briefing.unlockTab('Gamma', true);
+  assert.equal(mockElements.gateGamma.classList.contains('hidden'), true);
+  assert.equal(mockElements.contentGamma.classList.contains('hidden'), false);
+  assert.equal(briefing.getBriefingState().unlockedGamma, true);
+  assert.equal(globalThis.document.body.classList.contains('theme-votann'), true, 'Unlocking Gamma broadcast must activate global theme-votann');
+  assert.equal(globalThis.document.body.classList.contains('theme-necron'), false);
+  assert.equal(globalThis.document.body.classList.contains('theme-militarum'), false);
+  assert.equal(localStorage.getItem('foa_faction_theme_v1'), 'votann', 'Unlocking Gamma broadcast must persist votann theme mode');
+
+  briefing.showDossier('gamma', true);
+  assert.equal(globalThis.document.body.classList.contains('votann-briefing-active'), true, 'Viewing Gamma dossier activates votann-briefing-active');
+  assert.equal(globalThis.document.body.classList.contains('necron-briefing-active'), false);
+  assert.equal(globalThis.document.body.classList.contains('theme-votann'), true, 'Viewing unlocked Gamma dossier activates theme-votann');
+
+  briefing.lockTab('Gamma', true);
+  assert.equal(mockElements.gateGamma.classList.contains('hidden'), false);
+  assert.equal(mockElements.contentGamma.classList.contains('hidden'), true);
+  assert.equal(briefing.getBriefingState().unlockedGamma, false);
+
   briefing.lockTab('Beta', true);
   assert.equal(mockElements.gateBeta.classList.contains('hidden'), false);
   assert.equal(mockElements.contentBeta.classList.contains('hidden'), true);
@@ -415,6 +434,18 @@ test('briefing: #dossierGamma and #cardBriefGamma render Votann Glôk-Vâr lore,
   assert.ok(briefingHtml.includes('Kâhl Hârkyn Grîmledger'), 'Must include Kâhl Hârkyn Grîmledger');
   assert.ok(briefingHtml.includes('Oathbound Speculator'), 'Must include Oathbound Speculator');
   assert.ok(briefingHtml.includes('Hernkyn Yaegirs'), 'Must include Hernkyn Yaegirs');
+});
+
+test('briefing: #dossierGamma, #btnGamma, and body.votann-briefing-active include Votann Deep Tectonic Basalt & Warm Hearth Amber styling', () => {
+  assert.ok(briefingHtml.includes('body.votann-briefing-active') || briefingCss.includes('body.votann-briefing-active'), 'Must style body.votann-briefing-active for full-page Hearth atmosphere');
+  assert.ok(briefingHtml.includes('@keyframes votannHearthPulse') || briefingCss.includes('@keyframes votannHearthPulse'), 'Must define @keyframes votannHearthPulse animation');
+  assert.ok(briefingHtml.includes('#btnGamma.active') || briefingCss.includes('#btnGamma.active'), 'Must style #btnGamma.active with Votann Hearth Amber theme');
+  assert.ok(briefingHtml.includes('#dossierGamma .hero-card') || briefingCss.includes('#dossierGamma .hero-card'), 'Must style #dossierGamma .hero-card with Tectonic Basalt & Hearth Amber');
+  assert.ok(briefingHtml.includes('#dossierGamma .hero-title') || briefingCss.includes('#dossierGamma .hero-title'), 'Must style #dossierGamma .hero-title with Magna-Gold & Hearth Amber gradient');
+  assert.ok(briefingHtml.includes('#gateGamma .unlock-btn') || briefingCss.includes('#gateGamma .unlock-btn'), 'Must style #gateGamma .unlock-btn with Votann Hearth button');
+  assert.ok(briefingHtml.includes('#dossierGamma table.reckoning-table th') || briefingCss.includes('#dossierGamma table.reckoning-table th'), 'Must style #dossierGamma reckoning table headers with Black-Ledger aesthetic');
+  assert.ok(briefingHtml.includes('#dossierGamma tr.highlight-row') || briefingCss.includes('#dossierGamma tr.highlight-row'), 'Must style #dossierGamma highlight-row with Hearth Amber highlight');
+  assert.ok(briefingHtml.includes('#dossierGamma code') || briefingCss.includes('#dossierGamma code'), 'Must style #dossierGamma code as Black-Ledger chips');
 });
 
 
