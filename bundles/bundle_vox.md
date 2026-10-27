@@ -1,9 +1,10 @@
-# 📦 Fires of Armageddon // Bundle: Mode 7 - Astropathic CRT Vox-Terminal
+# 📦 Fires of Armageddon // Bundle: Mode 7 - Astropathic CRT Vox-Terminal (Page)
 
-Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Security, Real-Time Teletype Audio Streaming, and Interferences Array (`pages/vox.html`).
+Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Conduit Pass-Seal Security (`pages/vox.html`, `css/vox.css`).
 
 ## 📑 Table of Contents
 - [pages/vox.html](#file-pagesvoxhtml)
+- [css/vox.css](#file-cssvoxcss)
 
 ---
 
@@ -19,528 +20,8 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
-  <style>
-    /* ===================================================================== */
-    /* RECESSED CATHODE-RAY (CRT) GREEN & AMBER PHOSPHOR MONITOR STYLING     */
-    /* ===================================================================== */
-    .vox-shell {
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 16px 20px 48px 20px;
-      box-sizing: border-box;
-    }
-
-    .crt-monitor-frame {
-      position: relative;
-      background: #030704;
-      border: 2px solid #1e3a29;
-      border-radius: 14px;
-      padding: 18px;
-      min-height: 480px;
-      height: clamp(500px, 64vh, 720px);
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-bottom: 14px;
-      box-shadow:
-        inset 0 0 48px rgba(0, 0, 0, 0.95),
-        inset 0 0 18px rgba(0, 255, 136, 0.08),
-        0 8px 28px rgba(0, 0, 0, 0.75);
-      font-family: 'Courier New', Consolas, monospace;
-    }
-
-    .crt-monitor-frame::-webkit-scrollbar {
-      width: 8px;
-    }
-    .crt-monitor-frame::-webkit-scrollbar-track {
-      background: rgba(3, 7, 4, 0.95);
-      border-radius: 4px;
-    }
-    .crt-monitor-frame::-webkit-scrollbar-thumb {
-      background: #1e3a29;
-      border-radius: 4px;
-      border: 1px solid rgba(0, 255, 136, 0.25);
-    }
-    .crt-monitor-frame::-webkit-scrollbar-thumb:hover {
-      background: #00ff88;
-    }
-
-    /* Subtle Horizontal CRT Scanlines & Phosphor Vignette */
-    .crt-monitor-frame::before {
-      content: "";
-      position: sticky;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      pointer-events: none;
-      background: repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.26) 0px,
-        rgba(0, 0, 0, 0.26) 1px,
-        transparent 1px,
-        transparent 3px
-      );
-      z-index: 4;
-    }
-
-    /* Individual Exchange Container */
-    .crt-exchange-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .crt-older-bar {
-      text-align: center;
-      margin-bottom: 14px;
-      padding: 4px 0;
-    }
-
-    .crt-older-btn {
-      font-family: monospace;
-      font-size: 0.76rem;
-      letter-spacing: 1px;
-      color: #ffb000;
-      border: 1px solid rgba(255, 176, 0, 0.4);
-      background: rgba(26, 16, 4, 0.75);
-      border-radius: 6px;
-      padding: 6px 16px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .crt-older-btn:hover {
-      background: rgba(255, 176, 0, 0.2);
-      border-color: #ffb000;
-      box-shadow: 0 0 10px rgba(255, 176, 0, 0.35);
-    }
-
-    /* Outgoing Player Transmission (Glowing CRT Amber Phosphor) */
-    .crt-msg-card {
-      background: rgba(26, 16, 4, 0.85);
-      border: 1px solid rgba(255, 176, 0, 0.38);
-      border-left: 4px solid #ffb000;
-      border-radius: 8px;
-      padding: 11px 15px;
-      color: #ffcc4d;
-      text-shadow: 0 0 6px rgba(255, 176, 0, 0.42);
-      font-size: 0.88rem;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .crt-msg-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.72rem;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: #ff9900;
-      border-bottom: 1px dashed rgba(255, 176, 0, 0.28);
-      padding-bottom: 5px;
-      margin-bottom: 8px;
-    }
-
-    /* Incoming Campaign Master Dispatch (Glowing CRT Emerald Phosphor) */
-    .crt-reply-card {
-      background: rgba(3, 22, 12, 0.86);
-      border: 1px solid rgba(0, 255, 136, 0.4);
-      border-left: 4px solid #00ff88;
-      border-radius: 8px;
-      padding: 13px 15px;
-      margin-top: 10px;
-      color: #66ffb8;
-      text-shadow: 0 0 8px rgba(0, 255, 136, 0.48);
-      font-size: 0.9rem;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .crt-reply-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.72rem;
-      letter-spacing: 1.1px;
-      text-transform: uppercase;
-      color: #00ff88;
-      border-bottom: 1px dashed rgba(0, 255, 136, 0.3);
-      padding-bottom: 5px;
-      margin-bottom: 8px;
-      font-weight: 800;
-    }
-
-    .crt-purge-btn {
-      background: rgba(255, 71, 87, 0.1);
-      border: 1px solid rgba(255, 71, 87, 0.4);
-      color: #ff6b81;
-      font-family: 'Courier New', monospace;
-      font-size: 0.68rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-left: 10px;
-      letter-spacing: 0.5px;
-      transition: all 0.15s ease;
-    }
-    .crt-purge-btn:hover {
-      background: rgba(255, 71, 87, 0.28);
-      border-color: #ff4757;
-      color: #fff;
-      box-shadow: 0 0 8px rgba(255, 71, 87, 0.45);
-    }
-
-    .crt-pending-line {
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px dashed rgba(255, 176, 0, 0.22);
-      color: #ffb000;
-      font-size: 0.78rem;
-      font-style: italic;
-      opacity: 0.9;
-    }
-
-    /* Blinking Phosphor Block Cursor */
-    .crt-cursor {
-      display: inline-block;
-      width: 8px;
-      height: 1em;
-      background: currentColor;
-      vertical-align: text-bottom;
-      margin-left: 2px;
-      box-shadow: 0 0 8px currentColor;
-      animation: crtBlink 0.75s step-end infinite;
-    }
-
-    @keyframes crtBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
-    /* Psychic Interferences (Crimson & Amber Glitch Phosphor) */
-    .crt-intercept-card {
-      background: rgba(24, 6, 10, 0.85);
-      border: 1px dashed rgba(255, 71, 87, 0.55);
-      border-left: 4px solid #ff4757;
-      border-radius: 8px;
-      padding: 13px 15px;
-      color: #fda4af;
-      text-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
-      font-size: 0.88rem;
-      line-height: 1.58;
-      white-space: pre-wrap;
-    }
-
-    .censor-bar {
-      background: #ff4757;
-      color: #160407;
-      padding: 1px 6px;
-      border-radius: 3px;
-      font-weight: 900;
-      letter-spacing: 0.6px;
-      text-shadow: none;
-      box-shadow: 0 0 8px rgba(255, 71, 87, 0.65);
-    }
-
-    /* Rogue Sector Dual-Broadcast Interferences (Warp Amethyst / Purple CRT Phosphor) */
-    .crt-intercept-card.rogue-intercept {
-      background: rgba(18, 7, 30, 0.88);
-      border: 1px dashed rgba(168, 85, 247, 0.6);
-      border-left: 4px solid #a855f7;
-      color: #e9d5ff;
-      text-shadow: 0 0 7px rgba(168, 85, 247, 0.5);
-    }
-
-    .crt-intercept-card.rogue-intercept .censor-bar {
-      background: #a855f7;
-      color: #0f041d;
-      box-shadow: 0 0 8px rgba(168, 85, 247, 0.7);
-    }
-
-    .crt-intercept-card.rogue-intercept .crt-purge-btn {
-      background: rgba(168, 85, 247, 0.12);
-      border-color: rgba(168, 85, 247, 0.45);
-      color: #d8b4fe;
-    }
-
-    .crt-intercept-card.rogue-intercept .crt-purge-btn:hover {
-      background: rgba(168, 85, 247, 0.3);
-      border-color: #a855f7;
-      color: #fff;
-      box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
-    }
-
-    /* CRT Input Box */
-    .crt-input-textarea {
-      width: 100%;
-      background: #030805;
-      color: #ffcc4d;
-      text-shadow: 0 0 5px rgba(255, 176, 0, 0.4);
-      border: 1.5px solid #2b4c39;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-family: 'Courier New', Consolas, monospace;
-      font-size: 0.9rem;
-      resize: vertical;
-      min-height: 68px;
-    }
-    .crt-input-textarea:focus {
-      outline: none;
-      border-color: #ffb000;
-      box-shadow: 0 0 12px rgba(255, 176, 0, 0.25);
-    }
-
-    .queued-dossier-banner {
-      background: rgba(255, 176, 0, 0.14);
-      border: 1.5px dashed #ffb000;
-      color: #ffcc4d;
-      text-shadow: 0 0 6px rgba(255, 176, 0, 0.4);
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      font-family: 'Courier New', Consolas, monospace;
-      font-size: 0.85rem;
-      text-align: center;
-    }
-
-    /* ========================================================================= */
-    /* RESPONSIVE IMPOSING DESKTOP COGITATOR & FLUID MOBILE VIEWPORTS            */
-    /* ========================================================================= */
-    @media (min-width: 1024px) {
-      .vox-shell {
-        max-width: 1200px;
-        padding: 22px 28px 56px 28px;
-      }
-      .crt-monitor-frame {
-        min-height: 560px;
-        height: clamp(560px, 66vh, 780px);
-        padding: 24px 28px;
-        gap: 18px;
-        border-width: 2.5px;
-        border-radius: 16px;
-        box-shadow:
-          inset 0 0 56px rgba(0, 0, 0, 0.96),
-          inset 0 0 24px rgba(0, 255, 136, 0.1),
-          0 14px 44px rgba(0, 0, 0, 0.85);
-      }
-      .crt-msg-card {
-        padding: 14px 20px;
-        font-size: 0.94rem;
-        line-height: 1.62;
-        border-radius: 10px;
-      }
-      .crt-reply-card {
-        padding: 16px 22px;
-        font-size: 0.96rem;
-        line-height: 1.68;
-        border-radius: 10px;
-      }
-      .crt-msg-header,
-      .crt-reply-header {
-        font-size: 0.78rem;
-        letter-spacing: 1.2px;
-        padding-bottom: 7px;
-        margin-bottom: 10px;
-      }
-      .crt-input-textarea {
-        min-height: 82px;
-        font-size: 0.95rem;
-        padding: 14px 18px;
-        border-radius: 12px;
-      }
-      #subWinDirect button.btn-red {
-        min-width: 160px;
-        font-size: 0.95rem;
-        padding: 12px 20px;
-      }
-      .crt-older-btn {
-        font-size: 0.82rem;
-        padding: 8px 22px;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .vox-shell {
-        padding: 10px 8px 32px 8px;
-      }
-      .crt-monitor-frame {
-        min-height: 380px;
-        height: 56vh;
-        padding: 12px 10px;
-        gap: 10px;
-        border-radius: 10px;
-      }
-      .crt-msg-card {
-        padding: 10px 12px;
-        font-size: 0.85rem;
-        line-height: 1.5;
-      }
-      .crt-reply-card {
-        padding: 12px 14px;
-        font-size: 0.86rem;
-        line-height: 1.52;
-      }
-      .crt-msg-header,
-      .crt-reply-header {
-        font-size: 0.7rem;
-      }
-      .hud-bar {
-        padding: 8px 10px;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-      .crt-input-textarea {
-        min-height: 60px;
-        font-size: 0.86rem;
-        padding: 10px;
-      }
-      #subWinDirect button.btn-red {
-        min-width: 100px;
-        font-size: 0.82rem;
-        padding: 8px 12px;
-      }
-      .crt-older-btn {
-        font-size: 0.74rem;
-        padding: 6px 12px;
-      }
-    }
-
-    .server-status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      font-family: monospace;
-      font-weight: 800;
-      letter-spacing: 0.8px;
-      transition: all 0.25s ease;
-    }
-    .server-status-pill.online {
-      background: rgba(0, 255, 136, 0.12);
-      border: 1px solid rgba(0, 255, 136, 0.45);
-      color: #00ff88;
-      box-shadow: 0 0 12px rgba(0, 255, 136, 0.18);
-    }
-    .server-status-pill.offline {
-      background: rgba(255, 71, 87, 0.12);
-      border: 1px solid rgba(255, 71, 87, 0.45);
-      color: #ff4757;
-      box-shadow: 0 0 12px rgba(255, 71, 87, 0.15);
-    }
-    .server-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-      background: currentColor;
-      box-shadow: 0 0 8px currentColor;
-    }
-
-    /* ========================================================================= */
-    /* NECRON TOMB-SHIP MASTER MATRIX PERSONAL TERMINAL (TERMINAL BETA)          */
-    /* ========================================================================= */
-    body.theme-necron #cardBeta.selected {
-      background: linear-gradient(135deg, rgba(6, 48, 36, 0.72) 0%, rgba(3, 18, 14, 0.96) 100%);
-      border-color: #10b981;
-      box-shadow: 0 0 22px rgba(16, 185, 129, 0.35), inset 0 0 14px rgba(16, 185, 129, 0.16);
-    }
-
-    body.theme-necron #cardBeta.selected .choice-title {
-      color: #6ee7b7;
-      text-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
-    }
-
-    body.theme-necron .crt-monitor-frame {
-      background:
-        radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(2, 8, 6, 0.98) 72%),
-        linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px),
-        #020806;
-      background-size: 100% 100%, 28px 28px, 28px 28px, 100% 100%;
-      border: 2px solid #10b981;
-      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
-      box-shadow:
-        inset 0 0 48px rgba(0, 0, 0, 0.96),
-        inset 0 0 24px rgba(16, 185, 129, 0.15),
-        0 0 28px rgba(16, 185, 129, 0.22);
-    }
-
-    body.theme-necron .crt-monitor-frame::after {
-      background: linear-gradient(
-        rgba(16, 185, 129, 0) 50%,
-        rgba(0, 12, 8, 0.38) 50%
-      );
-      background-size: 100% 4px;
-    }
-
-    body.theme-necron .crt-msg-card {
-      background: linear-gradient(135deg, rgba(4, 24, 26, 0.92) 0%, rgba(2, 12, 14, 0.96) 100%);
-      border: 1px solid rgba(45, 212, 191, 0.45);
-      border-left: 3px solid #2dd4bf;
-      color: #ccfbf1;
-      text-shadow: 0 0 6px rgba(45, 212, 191, 0.38);
-      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
-    }
-
-    body.theme-necron .crt-msg-header {
-      color: #5eead4;
-      border-bottom: 1px dashed rgba(45, 212, 191, 0.35);
-    }
-
-    body.theme-necron .crt-reply-card {
-      background: linear-gradient(135deg, rgba(4, 26, 18, 0.95) 0%, rgba(2, 12, 8, 0.98) 100%);
-      border: 1px solid rgba(16, 185, 129, 0.55);
-      border-left: 3px solid #10b981;
-      color: #a7f3d0;
-      text-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
-      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
-    }
-
-    body.theme-necron .crt-reply-header {
-      color: #34d399;
-      border-bottom: 1px dashed rgba(16, 185, 129, 0.38);
-    }
-
-    body.theme-necron .crt-pending-line {
-      background: rgba(4, 24, 18, 0.8);
-      border: 1px dashed rgba(45, 212, 191, 0.48);
-      color: #5eead4;
-    }
-
-    body.theme-necron .crt-input-textarea {
-      background: #020907;
-      color: #6ee7b7;
-      text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
-      border: 1.5px solid rgba(16, 185, 129, 0.48);
-    }
-
-    body.theme-necron .crt-input-textarea:focus {
-      border-color: #34d399;
-      box-shadow: 0 0 16px rgba(16, 185, 129, 0.32);
-    }
-
-    body.theme-necron #subWinDirect button.btn-red {
-      background: linear-gradient(180deg, rgba(6, 95, 70, 0.95) 0%, rgba(4, 47, 46, 0.98) 100%);
-      border-color: #10b981;
-      color: #ecfdf5;
-      box-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
-    }
-
-    /* ========================================================================= */
-    /* ASTRA MILITARUM // SANCTUARY OF ASH PERSONAL TERMINAL (TERMINAL ALPHA)    */
-    /* ========================================================================= */
-    body.theme-militarum #cardAlpha.selected {
-      border-color: var(--gold);
-      box-shadow: 0 0 18px rgba(212, 163, 73, 0.25);
-    }
-  </style>
+  <link rel="stylesheet" href="../css/vox.css">
+</head>
 </head>
 <body>
 
@@ -676,857 +157,542 @@ Complete source code for the Astropathic CRT Vox-Terminal, Conduit Pass-Seal Sec
 </div>
 
 <script src="../js/vox-audio.js"></script>
-<script>
-  // =========================================================================
-  // SUPABASE CONFIGURATION (RLS-Protected RPC Endpoints)
-  // =========================================================================
-  var SUPABASE_URL = (typeof window !== 'undefined' && window.SUPABASE_URL)
-    ? window.SUPABASE_URL
-    : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
-  var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY)
-    ? window.SUPABASE_ANON_KEY
-    : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
-
-  var SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
-  var SESSION_AUTH_KEY = 'foa_vox_active_session_v1';
-
-  var selectedChannel = 'alpha';
-  var activePassphrase = null;
-  var isChannelSealed = true;
-  var pollTimer = null;
-  var activeStreamTimers = [];
-  var showAllOlderMessages = false;
-  var showAllOlderInterferences = false;
-
-  function toggleOlderMessages() {
-    showAllOlderMessages = !showAllOlderMessages;
-    const dBox = document.getElementById('directMessagesBox');
-    if (dBox) dBox.dataset.sig = '';
-    refreshTerminal(false);
-  }
-
-  function toggleOlderInterferences() {
-    showAllOlderInterferences = !showAllOlderInterferences;
-    const iBox = document.getElementById('interferencesBox');
-    if (iBox) iBox.dataset.sig = '';
-    refreshTerminal(false);
-  }
-
-  // Storage helper for persistently seen messages
-  function getSeenStorage() {
-    try {
-      if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.getItem === 'function') {
-        return localStorage;
-      }
-    } catch (e) {}
-    try {
-      if (typeof sessionStorage !== 'undefined' && sessionStorage && typeof sessionStorage.getItem === 'function') {
-        return sessionStorage;
-      }
-    } catch (e) {}
-    return null;
-  }
-
-  // Track which message & reply IDs have already animated so they only stream once
-  var seenTokens = (typeof window !== 'undefined' && window.seenTokens) ? window.seenTokens : new Set();
-  if (typeof window !== 'undefined') window.seenTokens = seenTokens;
-
-  function syncSeenTokensFromStorage() {
-    try {
-      const storage = getSeenStorage();
-      if (storage) {
-        const raw = storage.getItem(SEEN_IDS_STORAGE_KEY);
-        if (raw) {
-          JSON.parse(raw).forEach(k => seenTokens.add(k));
-        }
-      }
-    } catch (e) {}
-    try {
-      if (typeof sessionStorage !== 'undefined' && sessionStorage && typeof sessionStorage.getItem === 'function') {
-        const rawSess = sessionStorage.getItem(SEEN_IDS_STORAGE_KEY);
-        if (rawSess) {
-          JSON.parse(rawSess).forEach(k => seenTokens.add(k));
-        }
-      }
-    } catch (e) {}
-  }
-  syncSeenTokensFromStorage();
-
-  function markTokenSeen(token) {
-    seenTokens.add(token);
-    const arr = Array.from(seenTokens);
-    const bounded = arr.length > 1000 ? arr.slice(-1000) : arr;
-    const json = JSON.stringify(bounded);
-    try {
-      const storage = getSeenStorage();
-      if (storage) {
-        storage.setItem(SEEN_IDS_STORAGE_KEY, json);
-      }
-    } catch (e) {}
-    try {
-      if (typeof sessionStorage !== 'undefined' && sessionStorage && typeof sessionStorage.setItem === 'function') {
-        sessionStorage.setItem(SEEN_IDS_STORAGE_KEY, json);
-      }
-    } catch (e) {}
-  }
-
-  async function rpcCall(fnName, params) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-      },
-      body: JSON.stringify(params)
-    });
-    if (!res.ok) throw new Error(`Astropathic RPC fault (${res.status})`);
-    return res.json();
-  }
-
-  function checkPendingDossierBuffer() {
-    try {
-      const raw = sessionStorage.getItem('foa_pending_vox_payload');
-      const banner = document.getElementById('pendingDossierNotice');
-      if (!raw) {
-        if (banner) banner.classList.add('hidden');
-        return null;
-      }
-      const parsed = JSON.parse(raw);
-      if (banner) {
-        banner.classList.remove('hidden');
-        let targetName = 'The Exile // Sanctuary of Ash (Terminal Alpha)';
-        if (parsed.channel === 'beta') {
-          targetName = 'Lord Commander Junebug (Terminal Beta)';
-        } else if (parsed.channel === 'distant' || /DISTANT|ORBITAL AUGUR/i.test(parsed.text || '')) {
-          targetName = '🛰️ Distant Intercept // Orbital Augur Array (Neither Main Player Fielded)';
-        }
-        banner.innerHTML = `
-          <div style="font-size:0.88rem; font-weight:800; margin-bottom:4px;">
-            📡 [1 ENCRYPTED TRANSMISSION QUEUED IN BUFFER]
-          </div>
-          <div style="font-size:0.8rem; line-height:1.45; opacity:0.95;">
-            Target Conduit: <strong>${targetName}</strong><br>
-            Terminal password required to verify identity and authorize transmission. Enter your Vermilion Pass-Seal below to decrypt and broadcast to the Campaign Master!
-          </div>
-        `;
-      }
-      if (parsed.channel && parsed.channel !== 'distant' && parsed.channel !== selectedChannel) {
-        selectConduit(parsed.channel, false);
-      }
-      return parsed;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function applyVoxFactionTheme(chan, persist = false) {
-    const theme = chan === 'beta' ? 'necron' : 'militarum';
-    if (window.VoxAudio && typeof window.VoxAudio.setFactionTheme === 'function') {
-      window.VoxAudio.setFactionTheme(theme, persist);
-    }
-    if (document.body && document.body.classList) {
-      document.body.classList.toggle('theme-necron', theme === 'necron');
-      document.body.classList.toggle('theme-militarum', theme === 'militarum');
-      if (document.body.dataset) {
-        document.body.dataset.factionTheme = theme;
-      }
-    }
-    const dBox = document.getElementById('directMessagesBox');
-    const iBox = document.getElementById('interferencesBox');
-    if (dBox && dBox.classList && typeof dBox.classList.toggle === 'function') {
-      dBox.classList.toggle('vox-preview-beta', chan === 'beta');
-      dBox.classList.toggle('vox-preview-alpha', chan !== 'beta');
-    }
-    if (iBox && iBox.classList && typeof iBox.classList.toggle === 'function') {
-      iBox.classList.toggle('vox-preview-beta', chan === 'beta');
-      iBox.classList.toggle('vox-preview-alpha', chan !== 'beta');
-    }
-  }
-
-  async function selectConduit(chan, clearPendingCheck = false) {
-    selectedChannel = chan;
-    applyVoxFactionTheme(chan, false);
-    const cardA = document.getElementById('cardAlpha');
-    const cardB = document.getElementById('cardBeta');
-    const errEl = document.getElementById('authErrorMsg');
-    if (cardA) cardA.classList.toggle('selected', chan === 'alpha');
-    if (cardB) cardB.classList.toggle('selected', chan === 'beta');
-    if (errEl) errEl.classList.add('hidden');
-
-    try {
-      isChannelSealed = await rpcCall('check_channel_seal', { p_channel: chan });
-      const badge = document.getElementById('sealStatusBadge');
-      const sub = document.getElementById('sealSubtitle');
-      const label = document.getElementById('passLabel');
-      const btn = document.getElementById('sealActionBtn');
-
-      if (!badge || !sub || !label || !btn) return;
-
-      if (!isChannelSealed) {
-        badge.innerHTML = `<span class="pulse-dot"></span> UNSEALED CONDUIT • FIRST-BOOT SETUP`;
-        sub.textContent = `This conduit has not been sealed yet. Choose a permanent secret passphrase—once inscribed, it will lock this terminal exclusively to you!`;
-        label.textContent = `2. Create Your Permanent Secret Passphrase`;
-        btn.textContent = `🛡️ Inscribe Permanent Seal & Unlock`;
-      } else {
-        badge.innerHTML = `<span class="pulse-dot"></span> VERMILION SEAL ACTIVE • ENCRYPTED`;
-        sub.textContent = `Conduit sealed to ${chan === 'alpha' ? 'The Exile // Sanctuary of Ash' : 'Lord Commander Junebug'}. Enter your secret passphrase to decrypt.`;
-        label.textContent = `2. Enter Secret Vermilion Pass-Seal`;
-        btn.textContent = `🔓 Authenticate & Decrypt Conduit`;
-      }
-    } catch (err) {
-      const errBadge = document.getElementById('sealStatusBadge');
-      if (errBadge) errBadge.textContent = '⚠️ Configure SUPABASE_URL in pages/vox.html';
-    }
-  }
-
-  async function handleSealAction() {
-    const passEl = document.getElementById('passInput');
-    const pass = (passEl ? passEl.value : '').trim();
-    const errEl = document.getElementById('authErrorMsg');
-
-    if (pass.length < 3) {
-      errEl.textContent = 'Passphrase must be at least 3 characters.';
-      errEl.classList.remove('hidden');
-      return;
-    }
-
-    try {
-      const result = await rpcCall('unlock_or_seal_channel', {
-        p_channel: selectedChannel,
-        p_passphrase: pass
-      });
-
-      if (!result || !result.ok) {
-        errEl.textContent = (result && result.error) || 'Access Denied: Invalid Vermilion Pass-Seal.';
-        errEl.classList.remove('hidden');
-        if (window.VoxAudio && typeof window.VoxAudio.playScarHazard === 'function') {
-          window.VoxAudio.playScarHazard();
-        }
-        return;
-      }
-
-      activePassphrase = pass;
-      applyVoxFactionTheme(selectedChannel, true);
-      try {
-        sessionStorage.setItem(SESSION_AUTH_KEY, JSON.stringify({ channel: selectedChannel, pass }));
-      } catch (e) {}
-
-      if (passEl) passEl.value = '';
-      errEl.classList.add('hidden');
-
-      const authScreen = document.getElementById('authScreen');
-      const termScreen = document.getElementById('terminalScreen');
-      const conduitLabel = document.getElementById('activeConduitLabel');
-      const questionInput = document.getElementById('questionInput');
-      if (authScreen) authScreen.classList.add('hidden');
-      if (termScreen) termScreen.classList.remove('hidden');
-      if (conduitLabel) {
-        conduitLabel.textContent =
-          selectedChannel === 'alpha'
-            ? '🦅 CONDUIT ALPHA // THE SANCTUARY OF ASH (044TH KRIEG)'
-            : '💀 CONDUIT BETA // TOMB-SHIP AUTONOMOUS MASTER MATRIX (NECRONS)';
-      }
-      if (questionInput) {
-        questionInput.placeholder =
-          selectedChannel === 'alpha'
-            ? "Transmit orders to Logis-Prefect Vane (Zenith-09), or type 'Ship - ...' to query The Ashen Spirit (Deck 44)..."
-            : "Issue royal decrees to your Tomb-Ship Master Matrix & Cryptek Conclave, or include 'Vane' / 'Zenith-09' to hail the human orbital station...";
-      }
-
-      // Check if a compiled Master Battle Dossier or Nemesis Dossier is waiting in sessionStorage!
-      await flushPendingDossierIfAny();
-
-      await refreshTerminal(false);
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(() => refreshTerminal(false), 7000);
-    } catch (err) {
-      errEl.textContent = 'Connection error: Verify Supabase URL & Anon Key.';
-      errEl.classList.remove('hidden');
-    }
-  }
-
-  async function flushPendingDossierIfAny() {
-    try {
-      const raw = sessionStorage.getItem('foa_pending_vox_payload');
-      if (!raw) return;
-      const queued = JSON.parse(raw);
-      sessionStorage.removeItem('foa_pending_vox_payload');
-      const notice = document.getElementById('pendingDossierNotice');
-      if (notice) notice.classList.add('hidden');
-
-      if (queued && queued.text && activePassphrase) {
-        const isDistant = queued.channel === 'distant' || /DISTANT|ORBITAL AUGUR/i.test(queued.text);
-        const senderName = isDistant
-          ? '🛰️ Orbital Augur Array // Distant Intercept'
-          : (selectedChannel === 'alpha'
-              ? 'The Exile // Sanctuary of Ash'
-              : 'Lord Commander Junebug');
-
-        await rpcCall('send_vox_message', {
-          p_channel: selectedChannel,
-          p_passphrase: activePassphrase,
-          p_sender: senderName,
-          p_question: queued.text
-        });
-      }
-    } catch (e) {
-      console.warn('Queued dossier auto-dispatch warning:', e);
-    }
-  }
-
-  function clearStreamTimers() {
-    activeStreamTimers.forEach(id => clearInterval(id));
-    activeStreamTimers = [];
-  }
-
-  // Freeze-proof elapsed-time teletype streamer (never stalls on background tab throttling or apostrophes)
-  function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
-    if (!targetEl) return;
-    const rawStr = String(fullString || '');
-    if (!rawStr) {
-      targetEl.textContent = '';
-      return;
-    }
-
-    // Store the full target text on the DOM node so refreshTerminal can auto-complete if interrupted
-    targetEl.dataset.fullText = rawStr;
-    targetEl.dataset.isRedacted = isHtmlRedacted ? '1' : '0';
-    targetEl.dataset.streaming = '1';
-
-    const cursor = document.createElement('span');
-    cursor.className = 'crt-cursor';
-    cursor.textContent = '█';
-
-    const textSpan = document.createElement('span');
-    targetEl.innerHTML = '';
-    targetEl.appendChild(textSpan);
-    targetEl.appendChild(cursor);
-
-    const startTime = Date.now();
-    const charsPerSecond = 85; // Crisp, fast Imperial cogitator speed (~11ms per char)
-    let lastIdx = 0;
-
-    function finishStream() {
-      targetEl.dataset.streaming = '0';
-      if (isHtmlRedacted) {
-        targetEl.innerHTML = formatRedactedHtml(rawStr);
-      } else {
-        targetEl.textContent = rawStr;
-      }
-      const scrollParent = targetEl.closest('.crt-messages');
-      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
-    }
-
-    // Allow clicking anywhere on a streaming message card to instantly finish typing it!
-    targetEl.onclick = () => {
-      if (targetEl.dataset.streaming === '1') finishStream();
-    };
-
-    function step() {
-      if (targetEl.dataset.streaming !== '1') return;
-
-      const elapsedMs = Date.now() - startTime;
-      // Calculate how many characters MUST be visible by now (immune to browser tab throttling!)
-      const targetIdx = Math.min(rawStr.length, Math.max(lastIdx + 1, Math.floor((elapsedMs / 1000) * charsPerSecond)));
-
-      if (targetIdx > lastIdx) {
-        const currentSlice = rawStr.slice(0, targetIdx);
-        if (isHtmlRedacted) {
-          textSpan.innerHTML = formatRedactedHtml(currentSlice);
-        } else {
-          textSpan.textContent = currentSlice;
-        }
-
-        if (window.VoxAudio && typeof window.VoxAudio.playTeletypeTick === 'function') {
-          window.VoxAudio.playTeletypeTick('incoming');
-        }
-
-        const scrollParent = targetEl.closest('.crt-messages');
-        if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
-        lastIdx = targetIdx;
-      }
-
-      if (lastIdx < rawStr.length) {
-        setTimeout(step, 16);
-      } else {
-        finishStream();
-      }
-    }
-
-    step();
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  }
-
-  function formatRedactedHtml(raw) {
-    return escapeHtml(raw).replace(
-      /\[REDACTED\]/gi,
-      '<span class="censor-bar">▓▓REDACTED▓▓</span>'
-    );
-  }
-
-  /**
-   * Dynamically extracts the speaker/card title from the first +++ ... +++ banner
-   * (or [CARD_TITLE: ...]) of the Supabase reply, and strips that first line from
-   * the body so the title appears cleanly at the top of the CRT card without repeating!
-   */
-  function extractDynamicReplyCardMeta(rawReply) {
-    const fallbackTitle = '++ CAMPAIGN MASTER // SEGMENTUM SOLAR COMMAND ++';
-    if (!rawReply || typeof rawReply !== 'string') {
-      return { cardTitle: fallbackTitle, cleanBody: rawReply || '' };
-    }
-
-    const trimmed = rawReply.trim();
-
-    // 1. Check for explicit [CARD_TITLE: ...] override if present
-    const explicitMatch = trimmed.match(/^\[CARD_TITLE:\s*([^\]]+)\]\s*\n?/i);
-    if (explicitMatch) {
-      return {
-        cardTitle: `++ ${explicitMatch[1].trim().toUpperCase()} ++`,
-        cleanBody: trimmed.slice(explicitMatch[0].length).trim()
-      };
-    }
-
-    // 2. Check if the first line is a canonical +++ HEADER BANNER +++
-    const bannerMatch = trimmed.match(/^\+{2,}\s*([^\n+]+?)\s*\+{2,}[ \t]*\n+/);
-    if (bannerMatch) {
-      return {
-        cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
-        cleanBody: trimmed.slice(bannerMatch[0].length).trim()
-      };
-    }
-
-    // 3. Fallback inference if +++ banner was mid-text
-    if (/ASHEN SPIRIT|MU-TH-UR|DECK 44/i.test(trimmed)) {
-      return {
-        cardTitle: '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++',
-        cleanBody: trimmed
-      };
-    }
-
-    return { cardTitle: fallbackTitle, cleanBody: trimmed };
-  }
-
-  var callRpc = rpcCall;
-
-  function formatTime(isoStr) {
-    if (!isoStr) return 'VOX-LOG';
-    try {
-      const d = new Date(isoStr);
-      return isNaN(d.getTime()) ? 'VOX-LOG' : d.toLocaleTimeString();
-    } catch (e) {
-      return 'VOX-LOG';
-    }
-  }
-
-  async function purgeVoxEntry(entryId, entryType = 'message') {
-    if (!activePassphrase || !entryId) return;
-
-    const label = entryType === 'interference'
-      ? 'Purge this intercepted psychic bleed from the cogitator log?'
-      : 'Purge this transmission exchange from the cogitator log?';
-
-    if (typeof window.confirm === 'function' && !window.confirm(label)) {
-      return;
-    }
-
-    if (window.VoxAudio) window.VoxAudio.playScarHazard();
-
-    const res = await callRpc('delete_vox_entry', {
-      p_channel: selectedChannel,
-      p_passphrase: activePassphrase,
-      p_entry_id: entryId,
-      p_entry_type: entryType
-    });
-
-    if (res && res.ok) {
-      // Clear render cache signatures so the terminal redraws immediately
-      const directBox = document.getElementById('directMessagesBox');
-      const intBox = document.getElementById('interferencesBox');
-      if (directBox && directBox.dataset) directBox.dataset.sig = '';
-      if (intBox && intBox.dataset) intBox.dataset.sig = '';
-      await refreshTerminal(false);
-    }
-  }
-  window.purgeVoxEntry = purgeVoxEntry;
-
-  /**
-   * Determines whether an interference entry originated from a dual-broadcast
-   * Mode 3 Rogue Sector Auxiliary Battle Report rather than a single rival player's conduit.
-   *
-   * @param {object} ix - Interference record from public.vox_interferences
-   * @returns {boolean} True when the interference is a Rogue Sector dual-channel broadcast
-   */
-  function isRogueSectorInterference(ix) {
-    if (!ix) return false;
-    const combined = `${ix.origin_hint || ''} ${ix.redacted_text || ''}`;
-    return /PARALLEL SECTOR|ORBITAL AUGUR ARRAY|ROGUE SECTOR/i.test(combined);
-  }
-  window.isRogueSectorInterference = isRogueSectorInterference;
-
-  /**
-   * Evaluates whether a Supabase `vox_server_heartbeat` payload indicates that the
-   * Astropathic Courier server (`vox_bridge.js`) is currently online and active.
-   * Strictly enforces a 25-second freshness window on `updatedAt` so that if the
-   * Windows `.bat` console or browser is forcibly closed, the status automatically
-   * flips to OFFLINE within seconds.
-   *
-   * @param {object} hb - Heartbeat object `{ status, updatedAt }`
-   * @param {number} [now=Date.now()] - Current epoch timestamp in ms
-   * @returns {boolean} True if the server is online and heartbeat is fresh (<= 25s)
-   */
-  function isVoxServerOnline(hb, now = Date.now()) {
-    if (!hb || typeof hb !== 'object') return false;
-    if (hb.status !== 'online') return false;
-    if (typeof hb.updatedAt !== 'number') return false;
-    const ageMs = now - hb.updatedAt;
-    return ageMs >= -5000 && ageMs <= 25000;
-  }
-  window.isVoxServerOnline = isVoxServerOnline;
-
-  /**
-   * Queries Supabase for the latest Astropathic Courier heartbeat and updates
-   * both `#serverStatusBadge` (Auth screen) and `#terminalServerStatusLabel` (Terminal HUD).
-   *
-   * @returns {Promise<boolean>} True if the server is currently online
-   */
-  async function checkVoxServerStatus() {
-    let isOnline = false;
-    try {
-      const data = await rpcCall('get_shared_spawn_pools', {});
-      const hb = data && data.nemesis_status ? data.nemesis_status.vox_server_heartbeat : null;
-      isOnline = isVoxServerOnline(hb, Date.now());
-    } catch (e) {
-      isOnline = false;
-    }
-
-    const authBadge = document.getElementById('serverStatusBadge');
-    if (authBadge) {
-      authBadge.classList.toggle('online', isOnline);
-      authBadge.classList.toggle('offline', !isOnline);
-      authBadge.innerHTML = isOnline
-        ? `<span class="server-dot"></span> 🟢 ASTROPATHIC SERVER: ONLINE`
-        : `<span class="server-dot"></span> 🔴 ASTROPATHIC SERVER: OFFLINE (QUEUE MODE)`;
-    }
-
-    const termLabel = document.getElementById('terminalServerStatusLabel');
-    if (termLabel) {
-      termLabel.textContent = isOnline ? '🟢 ONLINE (ACTIVE)' : '🔴 OFFLINE (QUEUED)';
-      if (termLabel.style) {
-        termLabel.style.color = isOnline ? '#00ff88' : '#ff4757';
-        termLabel.style.textShadow = isOnline
-          ? '0 0 6px rgba(0,255,136,0.35)'
-          : '0 0 6px rgba(255,71,87,0.35)';
-      }
-    }
-
-    return isOnline;
-  }
-  window.checkVoxServerStatus = checkVoxServerStatus;
-
-  async function refreshTerminal(forceScroll = false) {
-    checkVoxServerStatus().catch(() => {});
-    if (!activePassphrase) return;
-    try {
-      const data = await rpcCall('get_vox_terminal_data', {
-        p_channel: selectedChannel,
-        p_passphrase: activePassphrase
-      });
-      if (!data || !data.ok) return;
-
-      const msgs = data.messages || [];
-      const dBox = document.getElementById('directMessagesBox');
-
-      syncSeenTokensFromStorage();
-
-      if (msgs.length === 0) {
-        dBox.innerHTML = `<p style="color:#00ff88; text-align:center; margin-top:45px; opacity:0.7;">++ NO TRANSMISSIONS LOGGED ON THIS FREQUENCY YET ++<span class="crt-cursor"></span></p>`;
-      } else {
-
-        const totalCount = msgs.length;
-        const hasOlder = totalCount > 3;
-        const visibleMsgs = (hasOlder && !showAllOlderMessages) ? msgs.slice(-3) : msgs;
-
-        // Only rebuild DOM if a new message, new reply, or toggle state changed
-        const stateSignature = `${showAllOlderMessages ? 'all' : 'recent'}_${visibleMsgs.map(m => `${m.id}:${m.status}`).join('|')}`;
-        if (dBox.dataset.sig !== stateSignature) {
-          clearStreamTimers();
-          dBox.dataset.sig = stateSignature;
-          dBox.innerHTML = '';
-
-          // Render "See Older Messages" button if more than 3 messages exist
-          if (hasOlder) {
-            const olderBar = document.createElement('div');
-            olderBar.className = 'crt-older-bar';
-
-            const olderBtn = document.createElement('button');
-            olderBtn.type = 'button';
-            olderBtn.id = 'toggleOlderMsgsBtn';
-            olderBtn.className = 'btn-ghost btn-sm crt-older-btn';
-            olderBtn.textContent = showAllOlderMessages
-              ? '🔼 Collapse to Recent 3 Messages'
-              : `📜 See Older Messages (${totalCount - 3} older)`;
-            olderBtn.onclick = toggleOlderMessages;
-
-            olderBar.appendChild(olderBtn);
-            dBox.appendChild(olderBar);
-          }
-
-          visibleMsgs.forEach(m => {
-            const wrap = document.createElement('div');
-            wrap.className = 'crt-exchange-wrap';
-
-            // 1. Player Outgoing Message Card (Amber CRT Phosphor)
-            const msgCard = document.createElement('div');
-            msgCard.className = 'crt-msg-card';
-            msgCard.innerHTML = `
-              <div class="crt-msg-header crt-msg-meta">
-                <span>📡 ${escapeHtml(m.sender || 'COMMANDER')}</span>
-                <span>
-                  ${formatTime(m.created_at)}
-                  <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(m.id)}', 'message')" title="Purge Transmission from Log">✕ PURGE</button>
-                </span>
-              </div>
-              <div class="crt-q-body crt-msg-body"></div>
-            `;
-            const qBody = msgCard.querySelector('.crt-q-body');
-            const qToken = `q_${m.id}`;
-
-            if (!seenTokens.has(qToken)) {
-              markTokenSeen(qToken);
-              streamTextIntoElement(qBody, m.question || '', false);
-            } else {
-              qBody.textContent = m.question || '';
-            }
-            wrap.appendChild(msgCard);
-
-            // 2. Campaign Master Reply Card (Emerald CRT Phosphor) or Pending Line
-            if (m.status === 'answered' && m.reply) {
-              const { cardTitle, cleanBody } = extractDynamicReplyCardMeta(m.reply);
-
-              const repCard = document.createElement('div');
-              repCard.className = 'crt-reply-card crt-msg-card reply';
-              repCard.innerHTML = `
-                <div class="crt-reply-header crt-msg-meta">
-                  <span>${escapeHtml(cardTitle)}</span>
-                  <span>
-                    ${formatTime(m.answered_at)}
-                    <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(m.id)}', 'message')" title="Purge Transmission from Log">✕ PURGE</button>
-                  </span>
-                </div>
-                <div class="crt-r-body crt-msg-body"></div>
-              `;
-              const rBody = repCard.querySelector('.crt-r-body');
-              const rToken = `r_${m.id}`;
-
-              if (!seenTokens.has(rToken)) {
-                markTokenSeen(rToken);
-                streamTextIntoElement(rBody, cleanBody, false, 2500);
-              } else {
-                rBody.textContent = cleanBody;
-              }
-              wrap.appendChild(repCard);
-            } else {
-              const pend = document.createElement('div');
-              pend.className = 'crt-pending-line';
-              pend.innerHTML = `⏳ VERMILION CIPHER TRANSMITTED // AWAITING COGITATOR DECRYPTION & RETURN FEED... <span class="crt-cursor"></span>`;
-              wrap.appendChild(pend);
-            }
-
-            dBox.appendChild(wrap);
-          });
-
-          if (!showAllOlderMessages || forceScroll) {
-            dBox.scrollTop = dBox.scrollHeight;
-          }
-        }
-      }
-
-      // Render Redacted Astropathic Interferences
-      const ints = data.interferences || [];
-      const iBox = document.getElementById('interferencesBox');
-      const badge = document.getElementById('interferenceCountBadge');
-      if (badge) badge.textContent = ints.length > 0 ? `(${ints.length})` : '';
-
-      if (ints.length === 0) {
-        iBox.innerHTML = `<p style="color:#fda4af; text-align:center; margin-top:45px; opacity:0.65;">++ NO PSYCHIC BLEED DETECTED IN THE IMMATERIUM ++</p>`;
-      } else {
-        const totalInts = ints.length;
-        const hasOlderInts = totalInts > 3;
-        const visibleInts = (hasOlderInts && !showAllOlderInterferences) ? ints.slice(-3) : ints;
-
-        const intSig = `${showAllOlderInterferences ? 'all' : 'recent'}_${visibleInts.map(x => x.id).join('|')}`;
-        if (iBox.dataset.sig !== intSig) {
-          iBox.dataset.sig = intSig;
-          iBox.innerHTML = '';
-
-          // Render toggle button if more than 3 interferences exist
-          if (hasOlderInts) {
-            const olderBar = document.createElement('div');
-            olderBar.className = 'crt-older-bar';
-
-            const olderBtn = document.createElement('button');
-            olderBtn.type = 'button';
-            olderBtn.id = 'toggleOlderIntsBtn';
-            olderBtn.className = 'btn-ghost btn-sm crt-older-btn';
-            olderBtn.style.color = '#ff4757';
-            olderBtn.style.borderColor = 'rgba(255, 71, 87, 0.45)';
-            olderBtn.style.background = 'rgba(28, 8, 12, 0.8)';
-            olderBtn.textContent = showAllOlderInterferences
-              ? '🔼 Collapse to Recent 3 Psychic Bleeds'
-              : `⚡ See Older Interferences (${totalInts - 3} older)`;
-            olderBtn.onclick = toggleOlderInterferences;
-
-            olderBar.appendChild(olderBtn);
-            iBox.appendChild(olderBar);
-          }
-
-          visibleInts.forEach(ix => {
-            const isRogue = isRogueSectorInterference(ix);
-            const card = document.createElement('div');
-            card.className = isRogue ? 'crt-intercept-card rogue-intercept' : 'crt-intercept-card';
-            const headerColor = isRogue ? '#c084fc' : '#ff4757';
-            const headerBorder = isRogue ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
-            const headerIcon = isRogue ? 'SECTOR BROADCAST' : 'INTERCEPT';
-            card.innerHTML = `
-              <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:${headerColor}; border-bottom:1px dashed ${headerBorder}; padding-bottom:5px; margin-bottom:8px;">
-                <span>${headerIcon} // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>
-                <span>
-                  ${formatTime(ix.created_at)}
-                  <button type="button" class="crt-purge-btn" onclick="purgeVoxEntry('${escapeHtml(ix.id)}', 'interference')" title="Purge Intercept from Log">✕ PURGE</button>
-                </span>
-              </div>
-              <div class="crt-int-body crt-msg-body"></div>
-            `;
-            const bodyEl = card.querySelector('.crt-int-body');
-            const iToken = `int_${ix.id}`;
-            if (!seenTokens.has(iToken)) {
-              markTokenSeen(iToken);
-              streamTextIntoElement(bodyEl, ix.redacted_text || '', true, 2000);
-            } else {
-              bodyEl.innerHTML = formatRedactedHtml(ix.redacted_text || '');
-            }
-            iBox.appendChild(card);
-          });
-        }
-      }
-    } catch (e) {}
-  }
-
-  async function transmitQuestion() {
-    const input = document.getElementById('questionInput');
-    const text = (input ? input.value : '').trim();
-    if (!text || !activePassphrase) return;
-
-    if (window.VoxAudio && typeof window.VoxAudio.playDossierStamp === 'function') {
-      window.VoxAudio.playDossierStamp();
-    }
-
-    input.value = '';
-    const senderName = selectedChannel === 'alpha'
-      ? 'The Exile // Sanctuary of Ash'
-      : 'Lord Commander Junebug';
-
-    await rpcCall('send_vox_message', {
-      p_channel: selectedChannel,
-      p_passphrase: activePassphrase,
-      p_sender: senderName,
-      p_question: text
-    });
-
-    await refreshTerminal(true);
-  }
-
-  function switchSubWindow(which) {
-    const isDirect = which === 'direct';
-    document.getElementById('subWinDirect').classList.toggle('hidden', !isDirect);
-    document.getElementById('subWinInterferences').classList.toggle('hidden', isDirect);
-    document.getElementById('winBtn1').classList.toggle('active', isDirect);
-    document.getElementById('winBtn2').classList.toggle('active', !isDirect);
-  }
-
-  function lockTerminal() {
-    activePassphrase = null;
-    showAllOlderMessages = false;
-    showAllOlderInterferences = false;
-    clearStreamTimers();
-    if (pollTimer) clearInterval(pollTimer);
-    try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (e) {}
-    document.getElementById('terminalScreen').classList.add('hidden');
-    document.getElementById('authScreen').classList.remove('hidden');
-    selectConduit(selectedChannel);
-  }
-
-  var serverStatusTimer = null;
-
-  async function initVoxTerminalPage() {
-    checkVoxServerStatus().catch(() => {});
-    if (serverStatusTimer) clearInterval(serverStatusTimer);
-    serverStatusTimer = setInterval(() => {
-      checkVoxServerStatus().catch(() => {});
-    }, 8000);
-
-    const pending = checkPendingDossierBuffer();
-
-    // If an encrypted dossier or ping is awaiting transmission, NEVER bypass the terminal password!
-    // Stale session keys must be purged, requiring the commander to authenticate before dispatch.
-    if (pending) {
-      try {
-        sessionStorage.removeItem(SESSION_AUTH_KEY);
-      } catch (e) {}
-      await selectConduit(pending.channel || 'alpha');
-      const passEl = document.getElementById('passInput');
-      if (passEl) {
-        passEl.value = '';
-        setTimeout(() => passEl.focus(), 100);
-      }
-      return;
-    }
-
-    // Auto-restore unlocked session within same browser tab ONLY when no pending transmission awaits authorization
-    try {
-      const savedSession = sessionStorage.getItem(SESSION_AUTH_KEY);
-      if (savedSession) {
-        const parsed = JSON.parse(savedSession);
-        if (parsed.pass && parsed.channel) {
-          selectedChannel = parsed.channel;
-          const passEl = document.getElementById('passInput');
-          if (passEl) passEl.value = parsed.pass;
-          await handleSealAction();
-          return;
-        }
-      }
-    } catch (e) {}
-
-    const activeTheme = (window.VoxAudio && typeof window.VoxAudio.getFactionTheme === 'function')
-      ? window.VoxAudio.getFactionTheme()
-      : null;
-    await selectConduit(activeTheme === 'necron' ? 'beta' : 'alpha');
-  }
-
-  window.addEventListener('DOMContentLoaded', initVoxTerminalPage);
-  window.addEventListener('vox:page-swapped', () => {
-    if (document.getElementById('authScreen') && document.getElementById('directMessagesBox')) {
-      initVoxTerminalPage();
-    } else {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-      if (serverStatusTimer) {
-        clearInterval(serverStatusTimer);
-        serverStatusTimer = null;
-      }
-      activeStreamTimers.forEach(t => clearTimeout(t));
-      activeStreamTimers = [];
-    }
-  });
-</script>
+<script src="../js/vox.js"></script>
+</body>
 </body>
 </html>
+````
+
+---
+
+## File: `css/vox.css` <a id="file-cssvoxcss"></a>
+
+````css
+/**
+ * Fires of Armageddon // Astropathic CRT Vox-Terminal Stylesheet
+ * Custom styles for recessed Cathode-Ray (CRT) green/amber phosphor monitors,
+ * scanlines, blinking block cursors, psychic interferences, and faction-locked
+ * Necron Tomb-Ship / Astra Militarum Sanctuary CRT aesthetics.
+ */
+
+/* ===================================================================== */
+/* RECESSED CATHODE-RAY (CRT) GREEN & AMBER PHOSPHOR MONITOR STYLING     */
+/* ===================================================================== */
+.vox-shell {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 20px 48px 20px;
+  box-sizing: border-box;
+}
+
+.crt-monitor-frame {
+  position: relative;
+  background: #030704;
+  border: 2px solid #1e3a29;
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 480px;
+  height: clamp(500px, 64vh, 720px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 14px;
+  box-shadow:
+    inset 0 0 48px rgba(0, 0, 0, 0.95),
+    inset 0 0 18px rgba(0, 255, 136, 0.08),
+    0 8px 28px rgba(0, 0, 0, 0.75);
+  font-family: 'Courier New', Consolas, monospace;
+}
+
+.crt-monitor-frame::-webkit-scrollbar {
+  width: 8px;
+}
+.crt-monitor-frame::-webkit-scrollbar-track {
+  background: rgba(3, 7, 4, 0.95);
+  border-radius: 4px;
+}
+.crt-monitor-frame::-webkit-scrollbar-thumb {
+  background: #1e3a29;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 255, 136, 0.25);
+}
+.crt-monitor-frame::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
+}
+
+/* Subtle Horizontal CRT Scanlines & Phosphor Vignette */
+.crt-monitor-frame::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.26) 0px,
+    rgba(0, 0, 0, 0.26) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 4;
+}
+
+/* Individual Exchange Container */
+.crt-exchange-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.crt-older-bar {
+  text-align: center;
+  margin-bottom: 14px;
+  padding: 4px 0;
+}
+
+.crt-older-btn {
+  font-family: monospace;
+  font-size: 0.76rem;
+  letter-spacing: 1px;
+  color: #ffb000;
+  border: 1px solid rgba(255, 176, 0, 0.4);
+  background: rgba(26, 16, 4, 0.75);
+  border-radius: 6px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.crt-older-btn:hover {
+  background: rgba(255, 176, 0, 0.2);
+  border-color: #ffb000;
+  box-shadow: 0 0 10px rgba(255, 176, 0, 0.35);
+}
+
+/* Outgoing Player Transmission (Glowing CRT Amber Phosphor) */
+.crt-msg-card {
+  background: rgba(26, 16, 4, 0.85);
+  border: 1px solid rgba(255, 176, 0, 0.38);
+  border-left: 4px solid #ffb000;
+  border-radius: 8px;
+  padding: 11px 15px;
+  color: #ffcc4d;
+  text-shadow: 0 0 6px rgba(255, 176, 0, 0.42);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.crt-msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ff9900;
+  border-bottom: 1px dashed rgba(255, 176, 0, 0.28);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+}
+
+/* Incoming Campaign Master Dispatch (Glowing CRT Emerald Phosphor) */
+.crt-reply-card {
+  background: rgba(3, 22, 12, 0.86);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  border-left: 4px solid #00ff88;
+  border-radius: 8px;
+  padding: 13px 15px;
+  margin-top: 10px;
+  color: #66ffb8;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.48);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.crt-reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #00ff88;
+  border-bottom: 1px dashed rgba(0, 255, 136, 0.3);
+  padding-bottom: 5px;
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+
+.crt-purge-btn {
+  background: rgba(255, 71, 87, 0.1);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+  color: #ff6b81;
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 10px;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+}
+.crt-purge-btn:hover {
+  background: rgba(255, 71, 87, 0.28);
+  border-color: #ff4757;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.45);
+}
+
+.crt-pending-line {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 176, 0, 0.22);
+  color: #ffb000;
+  font-size: 0.78rem;
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* Blinking Phosphor Block Cursor */
+.crt-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background: currentColor;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  box-shadow: 0 0 8px currentColor;
+  animation: crtBlink 0.75s step-end infinite;
+}
+
+@keyframes crtBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Psychic Interferences (Crimson & Amber Glitch Phosphor) */
+.crt-intercept-card {
+  background: rgba(24, 6, 10, 0.85);
+  border: 1px dashed rgba(255, 71, 87, 0.55);
+  border-left: 4px solid #ff4757;
+  border-radius: 8px;
+  padding: 13px 15px;
+  color: #fda4af;
+  text-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
+  font-size: 0.88rem;
+  line-height: 1.58;
+  white-space: pre-wrap;
+}
+
+.censor-bar {
+  background: #ff4757;
+  color: #160407;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-shadow: none;
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.65);
+}
+
+/* Rogue Sector Dual-Broadcast Interferences (Warp Amethyst / Purple CRT Phosphor) */
+.crt-intercept-card.rogue-intercept {
+  background: rgba(18, 7, 30, 0.88);
+  border: 1px dashed rgba(168, 85, 247, 0.6);
+  border-left: 4px solid #a855f7;
+  color: #e9d5ff;
+  text-shadow: 0 0 7px rgba(168, 85, 247, 0.5);
+}
+
+.crt-intercept-card.rogue-intercept .censor-bar {
+  background: #a855f7;
+  color: #0f041d;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.7);
+}
+
+.crt-intercept-card.rogue-intercept .crt-purge-btn {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: rgba(168, 85, 247, 0.45);
+  color: #d8b4fe;
+}
+
+.crt-intercept-card.rogue-intercept .crt-purge-btn:hover {
+  background: rgba(168, 85, 247, 0.3);
+  border-color: #a855f7;
+  color: #fff;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+
+/* CRT Input Box */
+.crt-input-textarea {
+  width: 100%;
+  background: #030805;
+  color: #ffcc4d;
+  text-shadow: 0 0 5px rgba(255, 176, 0, 0.4);
+  border: 1.5px solid #2b4c39;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 68px;
+}
+.crt-input-textarea:focus {
+  outline: none;
+  border-color: #ffb000;
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.25);
+}
+
+.queued-dossier-banner {
+  background: rgba(255, 176, 0, 0.14);
+  border: 1.5px dashed #ffb000;
+  color: #ffcc4d;
+  text-shadow: 0 0 6px rgba(255, 176, 0, 0.4);
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* ========================================================================= */
+/* RESPONSIVE IMPOSING DESKTOP COGITATOR & FLUID MOBILE VIEWPORTS            */
+/* ========================================================================= */
+@media (min-width: 1024px) {
+  .vox-shell {
+    max-width: 1200px;
+    padding: 22px 28px 56px 28px;
+  }
+  .crt-monitor-frame {
+    min-height: 560px;
+    height: clamp(560px, 66vh, 780px);
+    padding: 24px 28px;
+    gap: 18px;
+    border-width: 2.5px;
+    border-radius: 16px;
+    box-shadow:
+      inset 0 0 56px rgba(0, 0, 0, 0.96),
+      inset 0 0 24px rgba(0, 255, 136, 0.1),
+      0 14px 44px rgba(0, 0, 0, 0.85);
+  }
+  .crt-msg-card {
+    padding: 14px 20px;
+    font-size: 0.94rem;
+    line-height: 1.62;
+    border-radius: 10px;
+  }
+  .crt-reply-card {
+    padding: 16px 22px;
+    font-size: 0.96rem;
+    line-height: 1.68;
+    border-radius: 10px;
+  }
+  .crt-msg-header,
+  .crt-reply-header {
+    font-size: 0.78rem;
+    letter-spacing: 1.2px;
+    padding-bottom: 7px;
+    margin-bottom: 10px;
+  }
+  .crt-input-textarea {
+    min-height: 82px;
+    font-size: 0.95rem;
+    padding: 14px 18px;
+    border-radius: 12px;
+  }
+  #subWinDirect button.btn-red {
+    min-width: 160px;
+    font-size: 0.95rem;
+    padding: 12px 20px;
+  }
+  .crt-older-btn {
+    font-size: 0.82rem;
+    padding: 8px 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .vox-shell {
+    padding: 10px 8px 32px 8px;
+  }
+  .crt-monitor-frame {
+    min-height: 380px;
+    height: 56vh;
+    padding: 12px 10px;
+    gap: 10px;
+    border-radius: 10px;
+  }
+  .crt-msg-card {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  .crt-reply-card {
+    padding: 12px 14px;
+    font-size: 0.86rem;
+    line-height: 1.52;
+  }
+  .crt-msg-header,
+  .crt-reply-header {
+    font-size: 0.7rem;
+  }
+  .hud-bar {
+    padding: 8px 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .crt-input-textarea {
+    min-height: 60px;
+    font-size: 0.86rem;
+    padding: 10px;
+  }
+  #subWinDirect button.btn-red {
+    min-width: 100px;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+  }
+  .crt-older-btn {
+    font-size: 0.74rem;
+    padding: 6px 12px;
+  }
+}
+
+.server-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: monospace;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  transition: all 0.25s ease;
+}
+.server-status-pill.online {
+  background: rgba(0, 255, 136, 0.12);
+  border: 1px solid rgba(0, 255, 136, 0.45);
+  color: #00ff88;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.18);
+}
+.server-status-pill.offline {
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.45);
+  color: #ff4757;
+  box-shadow: 0 0 12px rgba(255, 71, 87, 0.15);
+}
+.server-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* ========================================================================= */
+/* NECRON TOMB-SHIP MASTER MATRIX PERSONAL TERMINAL (TERMINAL BETA)          */
+/* ========================================================================= */
+body.theme-necron #cardBeta.selected {
+  background: linear-gradient(135deg, rgba(6, 48, 36, 0.72) 0%, rgba(3, 18, 14, 0.96) 100%);
+  border-color: #10b981;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.35), inset 0 0 14px rgba(16, 185, 129, 0.16);
+}
+
+body.theme-necron #cardBeta.selected .choice-title {
+  color: #6ee7b7;
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
+}
+
+body.theme-necron .crt-monitor-frame {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.15) 0%, rgba(2, 8, 6, 0.98) 72%),
+    linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px),
+    #020806;
+  background-size: 100% 100%, 28px 28px, 28px 28px, 100% 100%;
+  border: 2px solid #10b981;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  box-shadow:
+    inset 0 0 48px rgba(0, 0, 0, 0.96),
+    inset 0 0 24px rgba(16, 185, 129, 0.15),
+    0 0 28px rgba(16, 185, 129, 0.22);
+}
+
+body.theme-necron .crt-monitor-frame::after {
+  background: linear-gradient(
+    rgba(16, 185, 129, 0) 50%,
+    rgba(0, 12, 8, 0.38) 50%
+  );
+  background-size: 100% 4px;
+}
+
+body.theme-necron .crt-msg-card {
+  background: linear-gradient(135deg, rgba(4, 24, 26, 0.92) 0%, rgba(2, 12, 14, 0.96) 100%);
+  border: 1px solid rgba(45, 212, 191, 0.45);
+  border-left: 3px solid #2dd4bf;
+  color: #ccfbf1;
+  text-shadow: 0 0 6px rgba(45, 212, 191, 0.38);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+}
+
+body.theme-necron .crt-msg-header {
+  color: #5eead4;
+  border-bottom: 1px dashed rgba(45, 212, 191, 0.35);
+}
+
+body.theme-necron .crt-reply-card {
+  background: linear-gradient(135deg, rgba(4, 26, 18, 0.95) 0%, rgba(2, 12, 8, 0.98) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  border-left: 3px solid #10b981;
+  color: #a7f3d0;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+body.theme-necron .crt-reply-header {
+  color: #34d399;
+  border-bottom: 1px dashed rgba(16, 185, 129, 0.38);
+}
+
+body.theme-necron .crt-pending-line {
+  background: rgba(4, 24, 18, 0.8);
+  border: 1px dashed rgba(45, 212, 191, 0.48);
+  color: #5eead4;
+}
+
+body.theme-necron .crt-input-textarea {
+  background: #020907;
+  color: #6ee7b7;
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+  border: 1.5px solid rgba(16, 185, 129, 0.48);
+}
+
+body.theme-necron .crt-input-textarea:focus {
+  border-color: #34d399;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.32);
+}
+
+body.theme-necron #subWinDirect button.btn-red {
+  background: linear-gradient(180deg, rgba(6, 95, 70, 0.95) 0%, rgba(4, 47, 46, 0.98) 100%);
+  border-color: #10b981;
+  color: #ecfdf5;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.32);
+}
+
+/* ========================================================================= */
+/* ASTRA MILITARUM // SANCTUARY OF ASH PERSONAL TERMINAL (TERMINAL ALPHA)    */
+/* ========================================================================= */
+body.theme-militarum #cardAlpha.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 18px rgba(212, 163, 73, 0.25);
+}
 ````

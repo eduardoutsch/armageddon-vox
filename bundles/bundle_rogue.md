@@ -1,9 +1,11 @@
 # 📦 Fires of Armageddon // Bundle: Mode 3 - Rogue Sector & AI Tracker
 
-Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impact reference (`pages/rogue.html`).
+Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impact reference (`pages/rogue.html`, `css/rogue.css`, `js/rogue.js`).
 
 ## 📑 Table of Contents
 - [pages/rogue.html](#file-pagesroguehtml)
+- [css/rogue.css](#file-cssroguecss)
+- [js/rogue.js](#file-jsroguejs)
 
 ---
 
@@ -19,21 +21,7 @@ Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impac
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
-  <style>
-    .master-dossier-preview {
-      background: #030805;
-      border: 1.5px dashed rgba(0, 255, 136, 0.45);
-      border-radius: 10px;
-      padding: 15px;
-      font-family: 'Courier New', Consolas, monospace;
-      font-size: 0.84rem;
-      color: #66ffb8;
-      text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
-      white-space: pre-wrap;
-      line-height: 1.52;
-      margin: 14px 0;
-    }
-  </style>
+  <link rel="stylesheet" href="../css/rogue.css">
 </head>
 <body>
 
@@ -169,15 +157,56 @@ Complete source code for the autonomous AI Turn Sequencer and Rogue Sector impac
 
   </div>
 
-<script>
-const STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
-let currentAiStep = 0;
+<script src="../js/rogue.js"></script>
+<script src="../js/vox-audio.js"></script>
+</body>
+</html>
+````
+
+---
+
+## File: `css/rogue.css` <a id="file-cssroguecss"></a>
+
+````css
+/* =========================================================================
+   FIRES OF ARMAGEDDON // ROGUE SECTOR & AI TRACKER STYLES
+   Modular styling for pages/rogue.html
+   ========================================================================= */
+
+.master-dossier-preview {
+  background: #030805;
+  border: 1.5px dashed rgba(0, 255, 136, 0.45);
+  border-radius: 10px;
+  padding: 15px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.84rem;
+  color: #66ffb8;
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+  white-space: pre-wrap;
+  line-height: 1.52;
+  margin: 14px 0;
+}
+````
+
+---
+
+## File: `js/rogue.js` <a id="file-jsroguejs"></a>
+
+````javascript
+/**
+ * @fileoverview Fires of Armageddon // Rogue Sector & AI Tracker Logic
+ * Step-by-Step Horde / Unbound Adversary Phase Pilot &
+ * Mode 3 Rogue Sector Auxiliary Battle Dossier compilation.
+ */
+
+var STORAGE_KEY_ROGUE = 'foa_rogue_state_v1';
+var currentAiStep = 0;
 
 /**
  * Declarative lookup table mapping Rogue Sector battle outcomes to their
  * planetary consequences and Alliance Hegemony Strategic Point shifts.
  */
-const ROGUE_OUTCOME_IMPACTS = {
+var ROGUE_OUTCOME_IMPACTS = {
   'Imperium Victory': {
     planetaryImpact: 'Stabilizes sector: Next main game Warp Intensity drops to Minor (or -1 to 1st R1 Horde Spawn Roll)',
     hegemonyImpact: '+1 SPt to Gatebreakers'
@@ -203,56 +232,61 @@ const ROGUE_OUTCOME_IMPACTS = {
  * @param {object} [input={}] - Plain Rogue Sector battle report parameters.
  * @returns {string} Formatted teletype dossier string.
  */
-function compileRogueDossier(input = {}) {
-  const chan = input.channel || 'alpha';
-  const isBeta = chan === 'beta';
-  const cmdr = isBeta
+function compileRogueDossier(input) {
+  input = input || {};
+  var chan = input.channel || 'alpha';
+  var isBeta = chan === 'beta';
+  var cmdr = isBeta
     ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP QUANTUM INTERCEPT'
     : 'THE EXILE // SANCTUARY OF ASH';
 
-  const subHeader = isBeta
-    ? `• TELEMETRY SOURCE: SUB-CRUSTAL DOLMEN & QUANTUM AUGUR ARRAY [NECRON DYNASTY]`
-    : `• TELEMETRY SOURCE: MUNITORUM LONG-RANGE SEISMOGRAPH & AUGUR RELAY [ASTRA MILITARUM]`;
+  var subHeader = isBeta
+    ? '• TELEMETRY SOURCE: SUB-CRUSTAL DOLMEN & QUANTUM AUGUR ARRAY [NECRON DYNASTY]'
+    : '• TELEMETRY SOURCE: MUNITORUM LONG-RANGE SEISMOGRAPH & AUGUR RELAY [ASTRA MILITARUM]';
 
-  const requestLine = isBeta
-    ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please emit a Dual-Channel Black-Box Interstitial Recording (Pattern 2 + Pattern 5) logging this Rogue Sector battle's planetary shift on our next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and indexing any nominated hostile specimen!`
-    : `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree (Pattern 2 + Pattern 5) logging this Rogue Sector battle's planetary consequence on the next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and reviewing any nominated hostile entity for induction into the Cross-Mode Nemesis Ledger!`;
+  var requestLine = isBeta
+    ? 'REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please emit a Dual-Channel Black-Box Interstitial Recording (Pattern 2 + Pattern 5) logging this Rogue Sector battle\'s planetary shift on our next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and indexing any nominated hostile specimen!'
+    : 'REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree (Pattern 2 + Pattern 5) logging this Rogue Sector battle\'s planetary consequence on the next engagement, crediting the winning Alliance Hegemony SPt (+1 SPt), and reviewing any nominated hostile entity for induction into the Cross-Mode Nemesis Ledger!';
 
-  const combatants = (input.combatants || '').trim() || 'Auxiliary Forces (Unspecified Factions)';
-  const outcome = input.outcome || 'Imperium Victory';
-  const nominee = (input.nominee || '').trim();
-  const notes = (input.notes || '').trim() || 'Auxiliary clash concluded in the disputed zone. Awaiting Campaign Master chronicle.';
+  var combatants = (input.combatants || '').trim() || 'Auxiliary Forces (Unspecified Factions)';
+  var outcome = input.outcome || 'Imperium Victory';
+  var nominee = (input.nominee || '').trim();
+  var notes = (input.notes || '').trim() || 'Auxiliary clash concluded in the disputed zone. Awaiting Campaign Master chronicle.';
 
-  const matchedKey = Object.keys(ROGUE_OUTCOME_IMPACTS).find((key) => outcome.includes(key)) || 'Contested';
-  const { planetaryImpact, hegemonyImpact } = ROGUE_OUTCOME_IMPACTS[matchedKey];
+  var matchedKey = Object.keys(ROGUE_OUTCOME_IMPACTS).find(function(key) {
+    return outcome.indexOf(key) !== -1;
+  }) || 'Contested';
+  var impact = ROGUE_OUTCOME_IMPACTS[matchedKey];
+  var planetaryImpact = impact.planetaryImpact;
+  var hegemonyImpact = impact.hegemonyImpact;
 
-  const headerBanner = isBeta
-    ? `+++ TOMB-SHIP QUANTUM SURVEILLANCE // ROGUE SECTOR AUXILIARY BATTLE REPORT +++`
-    : `+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++`;
+  var headerBanner = isBeta
+    ? '+++ TOMB-SHIP QUANTUM SURVEILLANCE // ROGUE SECTOR AUXILIARY BATTLE REPORT +++'
+    : '+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++';
 
-  const logLabel = isBeta
-    ? `• CANOPTEK SENSOR OVERVIEW & ENGRAMMATIC LOG:`
-    : `• EYE-WITNESS COMBAT LOG:`;
+  var logLabel = isBeta
+    ? '• CANOPTEK SENSOR OVERVIEW & ENGRAMMATIC LOG:'
+    : '• EYE-WITNESS COMBAT LOG:';
 
-  const lines = [
+  var lines = [
     headerBanner,
-    `• REPORTING COMMANDER: ${cmdr}`,
+    '• REPORTING COMMANDER: ' + cmdr,
     subHeader,
-    `• THEATRE & COMBATANTS: ${combatants}`,
-    `• BATTLE OUTCOME: ${outcome}`,
-    `• PLANETARY SHIFT: ${planetaryImpact}`,
-    `• ALLIANCE HEGEMONY IMPACT: ${hegemonyImpact}`
+    '• THEATRE & COMBATANTS: ' + combatants,
+    '• BATTLE OUTCOME: ' + outcome,
+    '• PLANETARY SHIFT: ' + planetaryImpact,
+    '• ALLIANCE HEGEMONY IMPACT: ' + hegemonyImpact
   ];
 
   if (nominee) {
-    const nomLabel = isBeta ? `• SPECIMEN TARGETING NOMINEE:` : `• NEMESIS INDUCTION NOMINEE:`;
-    lines.push(`${nomLabel} ${nominee}`);
+    var nomLabel = isBeta ? '• SPECIMEN TARGETING NOMINEE:' : '• NEMESIS INDUCTION NOMINEE:';
+    lines.push(nomLabel + ' ' + nominee);
   }
 
   lines.push(
-    `------------------------------------------------`,
-    `${logLabel} "${notes}"`,
-    `------------------------------------------------`,
+    '------------------------------------------------',
+    logLabel + ' "' + notes + '"',
+    '------------------------------------------------',
     requestLine
   );
 
@@ -266,12 +300,19 @@ function compileRogueDossier(input = {}) {
  * @returns {object} Plain input snapshot for compileRogueDossier.
  */
 function readRogueFormInputs() {
+  if (typeof document === 'undefined') return {};
+  var chanEl = document.getElementById('rogueReportChannel');
+  var combEl = document.getElementById('rogueCombatants');
+  var outEl = document.getElementById('rogueOutcome');
+  var nomEl = document.getElementById('rogueNemesisNominee');
+  var notesEl = document.getElementById('rogueNotes');
+
   return {
-    channel: document.getElementById('rogueReportChannel')?.value || 'alpha',
-    combatants: document.getElementById('rogueCombatants')?.value || '',
-    outcome: document.getElementById('rogueOutcome')?.value || 'Imperium Victory',
-    nominee: document.getElementById('rogueNemesisNominee')?.value || '',
-    notes: document.getElementById('rogueNotes')?.value || ''
+    channel: (chanEl && chanEl.value) || 'alpha',
+    combatants: (combEl && combEl.value) || '',
+    outcome: (outEl && outEl.value) || 'Imperium Victory',
+    nominee: (nomEl && nomEl.value) || '',
+    notes: (notesEl && notesEl.value) || ''
   };
 }
 
@@ -285,9 +326,14 @@ function buildRogueDossierString() {
   return compileRogueDossier(readRogueFormInputs());
 }
 
+/**
+ * Updates the live teletype preview box for the Rogue Sector report.
+ */
 function updateRogueDossierPreview() {
-  const box = document.getElementById('rogueDossierPreviewBox');
-  const chan = document.getElementById('rogueReportChannel')?.value || 'alpha';
+  if (typeof document === 'undefined') return;
+  var box = document.getElementById('rogueDossierPreviewBox');
+  var chanEl = document.getElementById('rogueReportChannel');
+  var chan = (chanEl && chanEl.value) || 'alpha';
   if (box) {
     box.textContent = buildRogueDossierString();
     if (box.classList && typeof box.classList.toggle === 'function') {
@@ -298,9 +344,14 @@ function updateRogueDossierPreview() {
   saveRogueState();
 }
 
+/**
+ * Transmits the Rogue Sector Battle Report to Astropathic Vox.
+ */
 function transmitRogueDossier() {
-  const chan = document.getElementById('rogueReportChannel')?.value || 'alpha';
-  const payload = buildRogueDossierString();
+  if (typeof document === 'undefined') return;
+  var chanEl = document.getElementById('rogueReportChannel');
+  var chan = (chanEl && chanEl.value) || 'alpha';
+  var payload = buildRogueDossierString();
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
     window.VoxAudio.transmitToVox(chan, payload);
   }
@@ -311,11 +362,12 @@ function transmitRogueDossier() {
  * and refreshes the live dossier preview and persisted localStorage state.
  */
 function resetRogueDossierForm() {
-  const chanEl = document.getElementById('rogueReportChannel');
-  const combEl = document.getElementById('rogueCombatants');
-  const outEl = document.getElementById('rogueOutcome');
-  const nomEl = document.getElementById('rogueNemesisNominee');
-  const notesEl = document.getElementById('rogueNotes');
+  if (typeof document === 'undefined') return;
+  var chanEl = document.getElementById('rogueReportChannel');
+  var combEl = document.getElementById('rogueCombatants');
+  var outEl = document.getElementById('rogueOutcome');
+  var nomEl = document.getElementById('rogueNemesisNominee');
+  var notesEl = document.getElementById('rogueNotes');
 
   if (chanEl) chanEl.value = 'alpha';
   if (combEl) combEl.value = '';
@@ -329,17 +381,26 @@ function resetRogueDossierForm() {
   updateRogueDossierPreview();
 }
 
+/**
+ * Saves current Rogue Sector and AI Sequencer UI state to browser localStorage.
+ */
 function saveRogueState() {
   if (typeof localStorage === 'undefined') return;
-  if (!document.getElementById('aiStep0')) return;
+  if (typeof document !== 'undefined' && !document.getElementById('aiStep0')) return;
   try {
-    const data = {
-      currentAiStep,
-      reportChannel: document.getElementById('rogueReportChannel')?.value || 'alpha',
-      combatants: document.getElementById('rogueCombatants')?.value || '',
-      outcome: document.getElementById('rogueOutcome')?.value || 'Imperium Victory',
-      nemesisNominee: document.getElementById('rogueNemesisNominee')?.value || '',
-      notes: document.getElementById('rogueNotes')?.value || ''
+    var chanEl = document.getElementById('rogueReportChannel');
+    var combEl = document.getElementById('rogueCombatants');
+    var outEl = document.getElementById('rogueOutcome');
+    var nomEl = document.getElementById('rogueNemesisNominee');
+    var notesEl = document.getElementById('rogueNotes');
+
+    var data = {
+      currentAiStep: currentAiStep,
+      reportChannel: (chanEl && chanEl.value) || 'alpha',
+      combatants: (combEl && combEl.value) || '',
+      outcome: (outEl && outEl.value) || 'Imperium Victory',
+      nemesisNominee: (nomEl && nomEl.value) || '',
+      notes: (notesEl && notesEl.value) || ''
     };
     localStorage.setItem(STORAGE_KEY_ROGUE, JSON.stringify(data));
   } catch (e) {
@@ -347,34 +408,32 @@ function saveRogueState() {
   }
 }
 
+/**
+ * Restores Rogue Sector state from browser localStorage.
+ */
 function restoreRogueState() {
   if (typeof localStorage === 'undefined') return;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_ROGUE);
+    var raw = localStorage.getItem(STORAGE_KEY_ROGUE);
     if (!raw) {
       updateRogueDossierPreview();
       return;
     }
-    const data = JSON.parse(raw);
+    var data = JSON.parse(raw);
     if (data) {
       if (typeof data.currentAiStep === 'number') {
         setAiStep(data.currentAiStep, false);
       }
-      if (data.reportChannel && document.getElementById('rogueReportChannel')) {
-        document.getElementById('rogueReportChannel').value = data.reportChannel;
-      }
-      if (data.combatants && document.getElementById('rogueCombatants')) {
-        document.getElementById('rogueCombatants').value = data.combatants;
-      }
-      if (data.outcome && document.getElementById('rogueOutcome')) {
-        document.getElementById('rogueOutcome').value = data.outcome;
-      }
-      if (data.nemesisNominee && document.getElementById('rogueNemesisNominee')) {
-        document.getElementById('rogueNemesisNominee').value = data.nemesisNominee;
-      }
-      if (data.notes && document.getElementById('rogueNotes')) {
-        document.getElementById('rogueNotes').value = data.notes;
-      }
+      var chanEl = document.getElementById('rogueReportChannel');
+      if (data.reportChannel && chanEl) chanEl.value = data.reportChannel;
+      var combEl = document.getElementById('rogueCombatants');
+      if (data.combatants && combEl) combEl.value = data.combatants;
+      var outEl = document.getElementById('rogueOutcome');
+      if (data.outcome && outEl) outEl.value = data.outcome;
+      var nomEl = document.getElementById('rogueNemesisNominee');
+      if (data.nemesisNominee && nomEl) nomEl.value = data.nemesisNominee;
+      var notesEl = document.getElementById('rogueNotes');
+      if (data.notes && notesEl) notesEl.value = data.notes;
     }
     updateRogueDossierPreview();
   } catch (e) {
@@ -382,40 +441,75 @@ function restoreRogueState() {
   }
 }
 
-function setAiStep(step, shouldSave = true) {
+/**
+ * Sets the active AI Phase step index (0 = Movement, 1 = Shooting, 2 = Charge/Fight).
+ * @param {number} step
+ * @param {boolean} [shouldSave=true]
+ */
+function setAiStep(step, shouldSave) {
+  if (shouldSave === undefined) shouldSave = true;
   currentAiStep = step;
-  [0, 1, 2].forEach(i => {
-    const el = document.getElementById('aiStep' + i);
-    if (el) {
-      el.classList.toggle('active-step', i === currentAiStep);
-      const span = el.querySelector('.ai-step-title span:last-child');
-      if (span) span.innerText = (i === currentAiStep) ? '[Active]' : '';
-    }
-  });
+  if (typeof document !== 'undefined') {
+    [0, 1, 2].forEach(function(i) {
+      var el = document.getElementById('aiStep' + i);
+      if (el && el.classList) {
+        el.classList.toggle('active-step', i === currentAiStep);
+        var span = el.querySelector('.ai-step-title span:last-child');
+        if (span) span.innerText = (i === currentAiStep) ? '[Active]' : '';
+      }
+    });
+  }
   if (shouldSave) saveRogueState();
 }
 
+/**
+ * Advances to the next AI Phase step cyclically.
+ */
 function nextAiStep() {
   setAiStep((currentAiStep + 1) % 3);
 }
 
 if (typeof window !== 'undefined') {
+  window.STORAGE_KEY_ROGUE = STORAGE_KEY_ROGUE;
+  window.ROGUE_OUTCOME_IMPACTS = ROGUE_OUTCOME_IMPACTS;
+  window.compileRogueDossier = compileRogueDossier;
+  window.readRogueFormInputs = readRogueFormInputs;
   window.buildRogueDossierString = buildRogueDossierString;
   window.updateRogueDossierPreview = updateRogueDossierPreview;
   window.transmitRogueDossier = transmitRogueDossier;
   window.resetRogueDossierForm = resetRogueDossierForm;
+  window.saveRogueState = saveRogueState;
+  window.restoreRogueState = restoreRogueState;
+  window.setAiStep = setAiStep;
+  window.nextAiStep = nextAiStep;
+
+  if (typeof document !== 'undefined') {
+    restoreRogueState();
+  }
+
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('DOMContentLoaded', restoreRogueState);
+    window.addEventListener('vox:page-swapped', function() {
+      if (document.getElementById('aiStep0')) restoreRogueState();
+    });
+  }
 }
 
-restoreRogueState();
-
-if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-  window.addEventListener('DOMContentLoaded', restoreRogueState);
-  window.addEventListener('vox:page-swapped', () => {
-    if (document.getElementById('aiStep0')) restoreRogueState();
-  });
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    STORAGE_KEY_ROGUE: STORAGE_KEY_ROGUE,
+    ROGUE_OUTCOME_IMPACTS: ROGUE_OUTCOME_IMPACTS,
+    compileRogueDossier: compileRogueDossier,
+    readRogueFormInputs: readRogueFormInputs,
+    buildRogueDossierString: buildRogueDossierString,
+    updateRogueDossierPreview: updateRogueDossierPreview,
+    transmitRogueDossier: transmitRogueDossier,
+    resetRogueDossierForm: resetRogueDossierForm,
+    saveRogueState: saveRogueState,
+    restoreRogueState: restoreRogueState,
+    setAiStep: setAiStep,
+    nextAiStep: nextAiStep,
+    getCurrentAiStep: function() { return currentAiStep; }
+  };
 }
-</script>
-<script src="../js/vox-audio.js"></script>
-</body>
-</html>
 ````

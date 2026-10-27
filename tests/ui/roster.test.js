@@ -12,11 +12,13 @@ const dataJsCode = fs.readFileSync(DATA_JS_PATH, 'utf8');
 const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES };`);
 const { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES } = dataFn();
 
-// Read roster.html and extract script block
+// Read roster.html and modular js/roster.js
 const rosterHtml = fs.readFileSync(ROSTER_HTML_PATH, 'utf8');
-const scriptMatches = rosterHtml.match(/<script>([\s\S]*?)<\/script>/);
-assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/roster.html');
-const rosterScriptCode = scriptMatches[1];
+assert.ok(rosterHtml.includes('<script src="../js/roster.js"></script>'), 'pages/roster.html must link to js/roster.js');
+const ROSTER_JS_PATH = path.join(ROOT_DIR, 'js/roster.js');
+const rosterScriptCode = fs.existsSync(ROSTER_JS_PATH)
+  ? fs.readFileSync(ROSTER_JS_PATH, 'utf8')
+  : (rosterHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '');
 
 // Set up mock DOM and localStorage environment
 const storageStore = new Map();
@@ -452,12 +454,14 @@ test('roster: Active Nemesis cards are collapsible windows sharing the same desi
 
 test('roster: uses valid Supabase publishable anon key, aligns #cloudSyncBadge with .status-pill, and manual pull populates inputs & shows notice', async () => {
   assert.ok(
-    rosterHtml.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO'),
-    'pages/roster.html must configure the valid Supabase publishable key'
+    rosterHtml.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO') ||
+    rosterScriptCode.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO'),
+    'pages/roster.html or js/roster.js must configure the valid Supabase publishable key'
   );
   assert.ok(
-    !rosterHtml.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500'),
-    'pages/roster.html must not contain the invalid placeholder JWT key'
+    !rosterHtml.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500') &&
+    !rosterScriptCode.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500'),
+    'pages/roster.html or js/roster.js must not contain the invalid placeholder JWT key'
   );
 
   // Verify hero header aligns status-pill and cloudSyncBadge on the same centered row without vertical offset

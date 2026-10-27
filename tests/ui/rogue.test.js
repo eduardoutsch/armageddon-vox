@@ -5,12 +5,15 @@ const path = require('node:path');
 
 const ROOT_DIR = path.resolve(__dirname, '../../');
 const ROGUE_HTML_PATH = path.join(ROOT_DIR, 'pages/rogue.html');
+const ROGUE_JS_PATH = path.join(ROOT_DIR, 'js/rogue.js');
 
-// Read rogue.html and extract script block
+// Read rogue.html and extract script block or modular js/rogue.js
 const rogueHtml = fs.readFileSync(ROGUE_HTML_PATH, 'utf8');
 const scriptMatches = rogueHtml.match(/<script>([\s\S]*?)<\/script>/);
-assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/rogue.html');
-const rogueScriptCode = scriptMatches[1];
+const rogueScriptCode = (scriptMatches && scriptMatches[1])
+  ? scriptMatches[1]
+  : (fs.existsSync(ROGUE_JS_PATH) ? fs.readFileSync(ROGUE_JS_PATH, 'utf8') : '');
+assert.ok(rogueScriptCode, 'Must locate script code inside pages/rogue.html or js/rogue.js');
 
 // Set up mock DOM and localStorage environment
 const storageStore = new Map();

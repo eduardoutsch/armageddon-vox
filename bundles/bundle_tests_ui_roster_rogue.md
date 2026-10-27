@@ -1,0 +1,883 @@
+# 📦 Fires of Armageddon // Bundle: UI Tests (Rogue Sector & Threat Matrix)
+
+UI integration and boundary test suites for Mode 3 Rogue Sector and Mode 4 Roster (`tests/ui/rogue.test.js`, `tests/ui/roster.test.js`).
+
+## 📑 Table of Contents
+- [tests/ui/rogue.test.js](#file-testsuiroguetestjs)
+- [tests/ui/roster.test.js](#file-testsuirostertestjs)
+
+---
+
+## File: `tests/ui/rogue.test.js` <a id="file-testsuiroguetestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const ROGUE_HTML_PATH = path.join(ROOT_DIR, 'pages/rogue.html');
+const ROGUE_JS_PATH = path.join(ROOT_DIR, 'js/rogue.js');
+
+// Read rogue.html and extract script block or modular js/rogue.js
+const rogueHtml = fs.readFileSync(ROGUE_HTML_PATH, 'utf8');
+const scriptMatches = rogueHtml.match(/<script>([\s\S]*?)<\/script>/);
+const rogueScriptCode = (scriptMatches && scriptMatches[1])
+  ? scriptMatches[1]
+  : (fs.existsSync(ROGUE_JS_PATH) ? fs.readFileSync(ROGUE_JS_PATH, 'utf8') : '');
+assert.ok(rogueScriptCode, 'Must locate script code inside pages/rogue.html or js/rogue.js');
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+function createMockAiStep() {
+  const span = { innerText: '' };
+  return {
+    classList: {
+      classes: new Set(),
+      toggle(cls, cond) {
+        if (cond) this.classes.add(cls);
+        else this.classes.delete(cls);
+      },
+      contains(cls) { return this.classes.has(cls); }
+    },
+    querySelector: (sel) => (sel.includes('span:last-child') ? span : null),
+    span
+  };
+}
+
+let transmittedChannel = null;
+let transmittedPayload = null;
+
+globalThis.window = {
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  VoxAudio: {
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
+const mockElements = {
+  aiStep0: createMockAiStep(),
+  aiStep1: createMockAiStep(),
+  aiStep2: createMockAiStep(),
+  rogueReportChannel: { value: 'alpha' },
+  rogueCombatants: { value: 'Imperium (144th Krieg) vs Chaos (World Eaters)' },
+  rogueOutcome: { value: 'Imperium Victory' },
+  rogueNemesisNominee: { value: 'Vorgh the Flayed' },
+  rogueNotes: { value: 'Fierce trench defense at Auxiliary Sector 9.' },
+  rogueDossierPreviewBox: { textContent: '' }
+};
+
+globalThis.document = {
+  getElementById: (id) => mockElements[id] || null
+};
+
+// Evaluate script in mock environment
+const fn = new Function('document', 'localStorage', 'console', 'window', `${rogueScriptCode}; return {
+  STORAGE_KEY_ROGUE,
+  ROGUE_OUTCOME_IMPACTS: (typeof ROGUE_OUTCOME_IMPACTS !== 'undefined' ? ROGUE_OUTCOME_IMPACTS : undefined),
+  getCurrentAiStep: () => currentAiStep,
+  setAiStep,
+  nextAiStep,
+  saveRogueState,
+  restoreRogueState,
+  compileRogueDossier: (typeof compileRogueDossier !== 'undefined' ? compileRogueDossier : undefined),
+  buildRogueDossierString,
+  updateRogueDossierPreview,
+  transmitRogueDossier,
+  resetRogueDossierForm: (typeof resetRogueDossierForm !== 'undefined' ? resetRogueDossierForm : undefined)
+};`);
+
+const rogue = fn(globalThis.document, globalThis.localStorage, console, globalThis.window);
+
+test('rogue: setAiStep updates DOM classes, badge text, and persists state', () => {
+  rogue.setAiStep(1, true);
+
+  assert.equal(rogue.getCurrentAiStep(), 1);
+  assert.equal(mockElements.aiStep1.classList.contains('active-step'), true);
+  assert.equal(mockElements.aiStep0.classList.contains('active-step'), false);
+  assert.equal(mockElements.aiStep2.classList.contains('active-step'), false);
+
+  assert.equal(mockElements.aiStep1.span.innerText, '[Active]');
+  assert.equal(mockElements.aiStep0.span.innerText, '');
+  assert.equal(mockElements.aiStep2.span.innerText, '');
+
+  const raw = localStorage.getItem(rogue.STORAGE_KEY_ROGUE);
+  assert.ok(raw);
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.currentAiStep, 1);
+});
+
+test('rogue: nextAiStep cycles predictably through phases 0 -> 1 -> 2 -> 0', () => {
+  rogue.setAiStep(0, false);
+  assert.equal(rogue.getCurrentAiStep(), 0);
+
+  rogue.nextAiStep();
+  assert.equal(rogue.getCurrentAiStep(), 1);
+
+  rogue.nextAiStep();
+  assert.equal(rogue.getCurrentAiStep(), 2);
+
+  rogue.nextAiStep();
+  assert.equal(rogue.getCurrentAiStep(), 0);
+});
+
+test('rogue: saveRogueState ignores save when aiStep0 element is absent', () => {
+  storageStore.clear();
+  storageStore.set(rogue.STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep: 2, custom: true }));
+
+  const origStep0 = mockElements.aiStep0;
+  delete mockElements.aiStep0;
+
+  rogue.saveRogueState();
+
+  const after = JSON.parse(localStorage.getItem(rogue.STORAGE_KEY_ROGUE));
+  assert.equal(after.custom, true, 'Must not overwrite stored state when aiStep0 is missing from DOM');
+
+  // Restore mock
+  mockElements.aiStep0 = origStep0;
+});
+
+test('rogue: restoreRogueState faithfully restores active phase from localStorage', () => {
+  localStorage.setItem(rogue.STORAGE_KEY_ROGUE, JSON.stringify({ currentAiStep: 2 }));
+
+  rogue.restoreRogueState();
+
+  assert.equal(rogue.getCurrentAiStep(), 2);
+  assert.equal(mockElements.aiStep2.classList.contains('active-step'), true);
+  assert.equal(mockElements.aiStep2.span.innerText, '[Active]');
+});
+
+test('rogue: buildRogueDossierString compiles Mode 3 Rogue Sector Battle Dossier with planetary consequences', () => {
+  mockElements.rogueReportChannel.value = 'alpha';
+  mockElements.rogueCombatants.value = 'Imperium (144th Krieg) vs Chaos (World Eaters)';
+  mockElements.rogueOutcome.value = 'Imperium Victory';
+  mockElements.rogueNemesisNominee.value = 'Vorgh the Flayed';
+  mockElements.rogueNotes.value = 'Fierce trench defense at Auxiliary Sector 9.';
+
+  const str = rogue.buildRogueDossierString();
+  assert.ok(str.includes('+++ ROGUE SECTOR AUXILIARY BATTLE REPORT +++'));
+  assert.ok(str.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(str.includes('Imperium (144th Krieg) vs Chaos (World Eaters)'));
+  assert.ok(str.includes('Imperium Victory'));
+  assert.ok(str.includes('PLANETARY SHIFT: Stabilizes sector'));
+  assert.ok(str.includes('ALLIANCE HEGEMONY IMPACT: +1 SPt to Gatebreakers'));
+  assert.ok(str.includes('NEMESIS INDUCTION NOMINEE: Vorgh the Flayed'));
+  assert.ok(str.includes('Fierce trench defense at Auxiliary Sector 9.'));
+});
+
+test('rogue: transmitRogueDossier triggers window.VoxAudio.transmitToVox with compiled payload', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.rogueReportChannel.value = 'beta';
+
+  rogue.transmitRogueDossier();
+  assert.equal(transmittedChannel, 'beta');
+  assert.ok(transmittedPayload.includes('ROGUE SECTOR AUXILIARY BATTLE REPORT'));
+  assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
+});
+
+test('rogue: saveRogueState and restoreRogueState preserve and restore Rogue Dossier form fields', () => {
+  mockElements.rogueCombatants.value = 'Custom Force Alpha vs Xenos';
+  mockElements.rogueOutcome.value = 'Xenos Victory';
+  mockElements.rogueNemesisNominee.value = 'Hive Tyrant Apex';
+  mockElements.rogueNotes.value = 'Spore mines detonated early.';
+
+  rogue.saveRogueState();
+  
+  // Wipe inputs
+  mockElements.rogueCombatants.value = '';
+  mockElements.rogueOutcome.value = '';
+  mockElements.rogueNemesisNominee.value = '';
+  mockElements.rogueNotes.value = '';
+
+  rogue.restoreRogueState();
+  assert.equal(mockElements.rogueCombatants.value, 'Custom Force Alpha vs Xenos');
+  assert.equal(mockElements.rogueOutcome.value, 'Xenos Victory');
+  assert.equal(mockElements.rogueNemesisNominee.value, 'Hive Tyrant Apex');
+  assert.equal(mockElements.rogueNotes.value, 'Spore mines detonated early.');
+});
+
+test('rogue: resetRogueDossierForm resets all Rogue Sector report form fields and preview to clean defaults', () => {
+  assert.ok(
+    rogueHtml.includes('resetRogueDossierForm()'),
+    'pages/rogue.html must include a button calling resetRogueDossierForm()'
+  );
+  assert.equal(typeof rogue.resetRogueDossierForm, 'function', 'resetRogueDossierForm must be defined');
+
+  mockElements.rogueReportChannel.value = 'beta';
+  mockElements.rogueCombatants.value = 'Orks vs Tyranids';
+  mockElements.rogueOutcome.value = 'Xenos Victory';
+  mockElements.rogueNemesisNominee.value = 'Gorgutz';
+  mockElements.rogueNotes.value = 'Custom battle notes.';
+
+  rogue.resetRogueDossierForm();
+
+  assert.equal(mockElements.rogueReportChannel.value, 'alpha');
+  assert.equal(mockElements.rogueCombatants.value, '');
+  assert.equal(mockElements.rogueOutcome.value, 'Imperium Victory');
+  assert.equal(mockElements.rogueNemesisNominee.value, '');
+  assert.equal(mockElements.rogueNotes.value, '');
+  assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.rogueDossierPreviewBox.textContent.includes('Auxiliary Forces (Unspecified Factions)'));
+  assert.equal(mockElements.rogueDossierPreviewBox.textContent.includes('Gorgutz'), false);
+});
+
+test('rogue: compileRogueDossier pure functional core formats dossier from plain data and ROGUE_OUTCOME_IMPACTS lookup table without DOM dependency', () => {
+  assert.ok(rogue.ROGUE_OUTCOME_IMPACTS, 'Must define declarative ROGUE_OUTCOME_IMPACTS lookup table');
+  assert.equal(typeof rogue.compileRogueDossier, 'function', 'Must define pure compileRogueDossier function');
+
+  const out = rogue.compileRogueDossier({
+    channel: 'beta',
+    combatants: 'Necrons vs World Eaters',
+    outcome: 'Chaos Victory',
+    nominee: '',
+    notes: 'Blood rain flooded the valley.'
+  });
+  assert.ok(out.includes('• REPORTING COMMANDER: LORD COMMANDER JUNEBUG'));
+  assert.ok(out.includes('• ALLIANCE HEGEMONY IMPACT: +1 SPt to Desecrators'));
+  assert.equal(out.includes('NEMESIS INDUCTION NOMINEE'), false);
+});
+
+````
+
+---
+
+## File: `tests/ui/roster.test.js` <a id="file-testsuirostertestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+const ROSTER_HTML_PATH = path.join(ROOT_DIR, 'pages/roster.html');
+const DATA_JS_PATH = path.join(ROOT_DIR, 'js/data.js');
+
+// Load HORDE_FACTIONS and HORDE_FACTION_SPAWN_TABLES from js/data.js
+const dataJsCode = fs.readFileSync(DATA_JS_PATH, 'utf8');
+const dataFn = new Function(`${dataJsCode}; return { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES };`);
+const { HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES } = dataFn();
+
+// Read roster.html and modular js/roster.js
+const rosterHtml = fs.readFileSync(ROSTER_HTML_PATH, 'utf8');
+assert.ok(rosterHtml.includes('<script src="../js/roster.js"></script>'), 'pages/roster.html must link to js/roster.js');
+const ROSTER_JS_PATH = path.join(ROOT_DIR, 'js/roster.js');
+const rosterScriptCode = fs.existsSync(ROSTER_JS_PATH)
+  ? fs.readFileSync(ROSTER_JS_PATH, 'utf8')
+  : (rosterHtml.match(/<script>([\s\S]*?)<\/script>/)?.[1] || '');
+
+// Set up mock DOM and localStorage environment
+const storageStore = new Map();
+const mockLocalStorage = {
+  getItem: (k) => (storageStore.has(k) ? storageStore.get(k) : null),
+  setItem: (k, v) => storageStore.set(k, String(v)),
+  removeItem: (k) => storageStore.delete(k),
+  clear: () => storageStore.clear()
+};
+
+function createMockClassList() {
+  const classes = new Set();
+  return {
+    add: (c) => classes.add(c),
+    remove: (c) => classes.delete(c),
+    toggle: (c, force) => {
+      if (force === undefined) {
+        if (classes.has(c)) classes.delete(c);
+        else classes.add(c);
+      } else if (force) {
+        classes.add(c);
+      } else {
+        classes.delete(c);
+      }
+    },
+    contains: (c) => classes.has(c)
+  };
+}
+
+const mockElements = {
+  rosTabNemesis: { classList: createMockClassList() },
+  rosTabUnbound: { classList: createMockClassList() },
+  rosTabBrackets: { classList: createMockClassList() },
+  rosTabBtn1: { classList: createMockClassList() },
+  rosTabBtn2: { classList: createMockClassList() },
+  rosTabBtn3: { classList: createMockClassList() },
+  nemStatus1: { value: 'roaming' },
+  nemStatus2: { value: 'roaming' },
+  nemStatus3: { value: 'roaming' },
+  toggleAllNemBtn: { textContent: '▴ Collapse All' },
+  nemReportChannel: { value: 'alpha' },
+  nemReportSector: { value: 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)' },
+  nemReportUnit: { value: 'Tyranids — Screamer-Killer' },
+  nemReportFeat: { value: 'Slain a Player Warlord / Character in combat' },
+  nemReportNotes: { value: 'Survived two Vanquisher shots and wiped Krieg squad.' },
+  nemDossierPreview: { textContent: '' },
+  rosterPool34: { value: '10 Hormagaunts, 10 Termagants' },
+  rosterPool56: { value: '10 Genestealers, 5 Chaos Terminators' },
+  rosterPool79: { value: '1 Screamer-Killer, 1 Trygon' },
+  rosterPool10: { value: '1 Norn Emissary, 1 Hive Tyrant' },
+  rosterPool13: { value: '1 Hierophant Bio-Titan' },
+  shelfSaveNotice: { classList: createMockClassList() },
+  cloudSyncBadge: { textContent: '' },
+  bracketFactionPicker: { value: 'Space Marines', innerHTML: '' },
+  factionBracketDisplay: { innerHTML: '' },
+  ttsUnitTypesBox: { innerHTML: '' },
+  ttsUnitCount: { textContent: '' },
+  ttsFactionName: { textContent: '' },
+  ttsCopyNotice: { classList: createMockClassList() }
+};
+
+const mockNemesisCards = [{ open: true }, { open: true }, { open: true }];
+
+const mockDocument = {
+  getElementById: (id) => mockElements[id] || null,
+  querySelectorAll: (sel) => (sel.includes('details.nemesis-card') ? mockNemesisCards : [])
+};
+
+let transmittedChannel = null;
+let transmittedPayload = null;
+let cloudSyncChimesPlayed = 0;
+
+const mockWindow = {
+  addEventListener: () => {},
+  VoxAudio: {
+    playCloudSyncChime: () => {
+      cloudSyncChimesPlayed++;
+    },
+    transmitToVox: (chan, payload) => {
+      transmittedChannel = chan;
+      transmittedPayload = payload;
+    }
+  }
+};
+
+let enableCloudMock = false;
+let lastFetchUrl = null;
+let lastFetchBody = null;
+
+const mockFetch = async (url, options = {}) => {
+  lastFetchUrl = url;
+  lastFetchBody = options.body ? JSON.parse(options.body) : null;
+
+  if (!enableCloudMock) {
+    return { ok: false };
+  }
+
+  if (url.includes('save_shared_spawn_pools')) {
+    return {
+      ok: true,
+      json: async () => ({ ok: true })
+    };
+  }
+
+  if (url.includes('get_shared_spawn_pools')) {
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        horde_pool: {
+          b34: 'Cloud Gaunts 20',
+          b56: 'Cloud Warriors 5',
+          b79: 'Cloud Carnifex 2',
+          b10: 'Cloud Tyrant 1',
+          b13: 'Cloud Titan 1'
+        },
+        nemesis_status: {
+          nem1: 'deployed',
+          nem2: 'slain'
+        }
+      })
+    };
+  }
+
+  return { ok: false };
+};
+
+// Evaluate script in mock environment
+const evalFn = new Function(
+  'document',
+  'window',
+  'localStorage',
+  'HORDE_FACTIONS',
+  'HORDE_FACTION_SPAWN_TABLES',
+  'console',
+  'fetch',
+  `${rosterScriptCode}; return {
+    ROSTER_STATE_KEY,
+    CUSTOM_POOL_STORAGE_KEY,
+    HORDE_FACTION_SPAWN_TABLES: (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined' ? HORDE_FACTION_SPAWN_TABLES : (window && window.HORDE_FACTION_SPAWN_TABLES)),
+    switchRosterTab,
+    buildNemesisDossierString,
+    updateNemesisPreview,
+    transmitNemesisDossier,
+    saveShelfBarracks,
+    syncPoolsToSupabaseCloud,
+    pullSharedPoolsFromCloud,
+    renderFactionBracketTable,
+    saveRosterPageState,
+    initRosterPage,
+    getStoredPoolRoot,
+    getFactionPoolFromStore,
+    loadFactionInputs,
+    onFactionPickerChange,
+    resetNemesisDossierForm: (typeof resetNemesisDossierForm !== 'undefined' ? resetNemesisDossierForm : undefined),
+    compileNemesisDossier: (typeof compileNemesisDossier !== 'undefined' ? compileNemesisDossier : undefined),
+    extractUniqueUnitTypes: (typeof extractUniqueUnitTypes !== 'undefined' ? extractUniqueUnitTypes : undefined),
+    formatTtsUnitList: (typeof formatTtsUnitList !== 'undefined' ? formatTtsUnitList : undefined),
+    renderTtsUnitTypes: (typeof renderTtsUnitTypes !== 'undefined' ? renderTtsUnitTypes : undefined),
+    copyTtsUnitTypesList: (typeof copyTtsUnitTypesList !== 'undefined' ? copyTtsUnitTypesList : undefined)
+  };`
+);
+
+const roster = evalFn(mockDocument, mockWindow, mockLocalStorage, HORDE_FACTIONS, HORDE_FACTION_SPAWN_TABLES, console, mockFetch);
+
+test('roster: runs cleanly in browser global scope alongside data.js without syntax errors and populates preview', () => {
+  // Test sequential script execution in shared scope to verify no duplicate declarations
+  const runner = new Function(
+    'document',
+    'window',
+    'localStorage',
+    'console',
+    'fetch',
+    `
+    ${dataJsCode}
+    ${rosterScriptCode}
+    return {
+      initRosterPage,
+      updateNemesisPreview,
+      switchRosterTab,
+      buildNemesisDossierString
+    };
+    `
+  );
+  assert.doesNotThrow(() => {
+    const res = runner(mockDocument, mockWindow, mockLocalStorage, console, mockFetch);
+    assert.ok(res.switchRosterTab, 'switchRosterTab must be defined');
+    res.initRosterPage();
+    assert.ok(mockElements.nemDossierPreview.textContent.includes('ORDO MALLEUS'), 'Preview must have text');
+  }, 'Must not throw SyntaxError when data.js and roster.html run together');
+});
+
+test('roster: HORDE_FACTION_SPAWN_TABLES contains valid threat brackets for factions', () => {
+  assert.ok(roster.HORDE_FACTION_SPAWN_TABLES, 'Must define HORDE_FACTION_SPAWN_TABLES');
+  const sm = roster.HORDE_FACTION_SPAWN_TABLES['Space Marines'];
+  assert.ok(sm, 'Must define Space Marines table');
+  assert.ok(Array.isArray(sm.b34) && sm.b34.length > 0, 'Space Marines must have bracket [3-4]');
+  assert.ok(Array.isArray(sm.b56) && sm.b56.length > 0, 'Space Marines must have bracket [5-6]');
+  assert.ok(Array.isArray(sm.b79) && sm.b79.length > 0, 'Space Marines must have bracket [7-9]');
+  assert.ok(Array.isArray(sm.b10) && sm.b10.length > 0, 'Space Marines must have bracket [10+]');
+  assert.ok(Array.isArray(sm.b13) && sm.b13.length > 0, 'Space Marines must have bracket [13+]');
+});
+
+test('roster: switchRosterTab toggles active tab and DOM visibility classes', () => {
+  roster.switchRosterTab('unbound', false);
+  assert.equal(mockElements.rosTabNemesis.classList.contains('hidden'), true);
+  assert.equal(mockElements.rosTabUnbound.classList.contains('hidden'), false);
+  assert.equal(mockElements.rosTabBrackets.classList.contains('hidden'), true);
+  assert.equal(mockElements.rosTabBtn2.classList.contains('active'), true);
+  assert.equal(mockElements.rosTabBtn1.classList.contains('active'), false);
+
+  roster.switchRosterTab('brackets', false);
+  assert.equal(mockElements.rosTabBrackets.classList.contains('hidden'), false);
+  assert.equal(mockElements.rosTabBtn3.classList.contains('active'), true);
+
+  roster.switchRosterTab('nemesis', false);
+  assert.equal(mockElements.rosTabNemesis.classList.contains('hidden'), false);
+  assert.equal(mockElements.rosTabBtn1.classList.contains('active'), true);
+});
+
+test('roster: buildNemesisDossierString formats Nemesis Induction Dossier for Campaign Master', () => {
+  mockElements.nemReportChannel.value = 'alpha';
+  mockElements.nemReportUnit.value = 'Tyranids — Screamer-Killer';
+  mockElements.nemReportNotes.value = 'Survived two Vanquisher shots on 1 Wound and slaughtered Death Riders.';
+
+  const str = roster.buildNemesisDossierString();
+  assert.ok(str.includes('+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++'));
+  assert.ok(str.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(str.includes('• HOSTILE DATASHEET / FACTION: Tyranids — Screamer-Killer'));
+  assert.ok(str.includes('slaughtered Death Riders'));
+
+  mockElements.nemReportChannel.value = 'beta';
+  const strBeta = roster.buildNemesisDossierString();
+  assert.ok(strBeta.includes('+++ TOMB-SHIP MASTER MATRIX // DYNASTIC NEMESIS INDUCTION ENGRAM +++'));
+  assert.ok(!strBeta.includes('ORDO MALLEUS'), 'Beta report must NEVER contain ORDO MALLEUS');
+  assert.ok(strBeta.includes('• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP PHAERON INTERLINK'));
+  assert.ok(strBeta.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this hostile specimen\'s engrammatic threat profile into the Dynastic Nemesis Matrix (Pattern 3)'));
+});
+
+test('roster: updateNemesisPreview populates preview box and saves state', () => {
+  mockElements.nemReportChannel.value = 'alpha';
+  roster.updateNemesisPreview();
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('ORDO MALLEUS'));
+
+  const rawState = mockLocalStorage.getItem(roster.ROSTER_STATE_KEY);
+  assert.ok(rawState, 'Must persist roster state to localStorage');
+  const state = JSON.parse(rawState);
+  assert.equal(state.nemReportUnit, 'Tyranids — Screamer-Killer');
+});
+
+test('roster: transmitNemesisDossier triggers window.VoxAudio.transmitToVox with compiled payload', () => {
+  transmittedChannel = null;
+  transmittedPayload = null;
+  mockElements.nemReportChannel.value = 'beta';
+
+  roster.transmitNemesisDossier();
+  assert.equal(transmittedChannel, 'beta');
+  assert.ok(transmittedPayload.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(!transmittedPayload.includes('ORDO MALLEUS'), 'Beta transmission must NEVER contain ORDO MALLEUS');
+  assert.ok(transmittedPayload.includes('DYNASTIC NEMESIS INDUCTION ENGRAM'));
+});
+
+test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
+  mockElements.rosterPool34.value = '20 Termagants';
+  mockElements.rosterPool56.value = '5 Tyranid Warriors';
+  mockElements.rosterPool79.value = '1 Maleceptor';
+  mockElements.rosterPool10.value = '1 Tyrannofex';
+  mockElements.rosterPool13.value = '1 Hierophant Bio-Titan';
+
+  cloudSyncChimesPlayed = 0;
+  roster.saveShelfBarracks();
+
+  assert.equal(cloudSyncChimesPlayed, 1, 'saveShelfBarracks must play cloud sync chime');
+  const saved = mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY);
+  assert.ok(saved, 'Must persist custom shelf pool to localStorage');
+  const pool = JSON.parse(saved);
+  assert.equal(pool.b34, '20 Termagants');
+  assert.equal(pool.b56, '5 Tyranid Warriors');
+  assert.equal(pool.b79, '1 Maleceptor');
+  assert.equal(pool.b10, '1 Tyrannofex');
+  assert.equal(pool.b13, '1 Hierophant Bio-Titan');
+});
+
+test('roster: renderFactionBracketTable displays faction rules and bracket units', () => {
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  roster.renderFactionBracketTable();
+
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Tyranids'));
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Neurons Activated'));
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('10 Termagants'));
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Norn Emissary'));
+});
+
+test('roster: saveRosterPageState and initRosterPage preserve and restore form and tab state', () => {
+  mockLocalStorage.clear();
+  mockLocalStorage.setItem(roster.ROSTER_STATE_KEY, JSON.stringify({
+    activeRosterTab: 'unbound',
+    nemStatus1: 'slain',
+    nemStatus2: 'deployed',
+    nemReportChannel: 'beta',
+    nemReportSector: 'Mode 2: 1v1 PvP // Unbound Adversary',
+    nemReportUnit: 'Chaos Lord in Terminator Armour',
+    nemReportFeat: 'Slain a Player Warlord / Character in combat',
+    nemReportNotes: 'Struck down Commander Alpha in heroic intervention.'
+  }));
+
+  mockLocalStorage.setItem(roster.CUSTOM_POOL_STORAGE_KEY, JSON.stringify({
+    b34: 'Custom Chaff A, B',
+    b56: 'Custom Elites C',
+    b79: 'Custom Heavy D',
+    b10: 'Custom Super-Heavy E'
+  }));
+
+  roster.initRosterPage();
+
+  assert.equal(mockElements.nemStatus1.value, 'slain');
+  assert.equal(mockElements.nemStatus2.value, 'deployed');
+  assert.equal(mockElements.nemReportChannel.value, 'beta');
+  assert.equal(mockElements.nemReportUnit.value, 'Chaos Lord in Terminator Armour');
+  assert.equal(mockElements.rosterPool34.value, 'Custom Chaff A, B');
+  assert.equal(mockElements.rosterPool10.value, 'Custom Super-Heavy E');
+});
+
+test('roster: syncPoolsToSupabaseCloud sends pool payload to Supabase RPC and updates badge', async () => {
+  enableCloudMock = true;
+  lastFetchUrl = null;
+  lastFetchBody = null;
+
+  const testPool = {
+    b34: '10 Hormagaunts',
+    b56: '5 Terminators',
+    b79: '1 Trygon',
+    b10: '1 Norn Emissary',
+    b13: '1 Bio-Titan'
+  };
+
+  const ok = await roster.syncPoolsToSupabaseCloud(testPool);
+  assert.equal(ok, true);
+  assert.ok(lastFetchUrl.includes('save_shared_spawn_pools'));
+  assert.deepEqual(lastFetchBody.p_horde_pool, testPool);
+  assert.ok(mockElements.cloudSyncBadge.textContent.includes('Cloud Pool Synced'));
+
+  enableCloudMock = false;
+});
+
+test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supabase RPC', async () => {
+  enableCloudMock = true;
+  lastFetchUrl = null;
+
+  cloudSyncChimesPlayed = 0;
+  const ok = await roster.pullSharedPoolsFromCloud();
+  assert.equal(ok, true);
+  assert.equal(cloudSyncChimesPlayed, 1, 'pullSharedPoolsFromCloud must play cloud sync chime');
+  assert.ok(lastFetchUrl.includes('get_shared_spawn_pools'));
+  assert.equal(mockElements.rosterPool34.value, 'Cloud Gaunts 20');
+  assert.equal(mockElements.rosterPool56.value, 'Cloud Warriors 5');
+  assert.equal(mockElements.nemStatus1.value, 'deployed');
+  assert.equal(mockElements.nemStatus2.value, 'slain');
+
+  const savedPool = JSON.parse(mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY));
+  assert.equal(savedPool.b34, 'Cloud Gaunts 20');
+
+  enableCloudMock = false;
+});
+
+test('roster: per-faction shelf pool storage preserves separate pools per faction', () => {
+  mockLocalStorage.clear();
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  mockElements.rosterPool34.value = '10 Hormagaunts';
+  mockElements.rosterPool56.value = '3 Warriors';
+  mockElements.rosterPool79.value = '1 Carnifex';
+  mockElements.rosterPool10.value = '1 Norn Emissary';
+  mockElements.rosterPool13.value = '1 Hierophant';
+  roster.saveShelfBarracks();
+
+  // Switch to Orks
+  mockElements.bracketFactionPicker.value = 'Orks';
+  mockElements.rosterPool34.value = '10 Boyz';
+  mockElements.rosterPool56.value = '5 Nobz';
+  mockElements.rosterPool79.value = '1 Battlewagon';
+  mockElements.rosterPool10.value = '1 Ghazghkull';
+  mockElements.rosterPool13.value = '1 Stompa';
+  roster.saveShelfBarracks();
+
+  // Verify stored JSON has byFaction
+  const root = roster.getStoredPoolRoot();
+  assert.ok(root.byFaction);
+  assert.equal(root.byFaction['Tyranids'].b34, '10 Hormagaunts');
+  assert.equal(root.byFaction['Orks'].b34, '10 Boyz');
+
+  // Switch faction picker back to Tyranids and trigger onFactionPickerChange
+  mockElements.bracketFactionPicker.value = 'Tyranids';
+  roster.onFactionPickerChange();
+  assert.equal(mockElements.rosterPool34.value, '10 Hormagaunts');
+  assert.equal(mockElements.rosterPool10.value, '1 Norn Emissary');
+
+  // Switch to an unconfigured faction and verify empty values
+  mockElements.bracketFactionPicker.value = 'Necrons';
+  roster.onFactionPickerChange();
+  assert.equal(mockElements.rosterPool34.value, '');
+});
+
+test('roster: Active Nemesis cards are collapsible windows sharing the same design pattern without an Expand All button', () => {
+  // Verify Expand/Collapse All button is removed
+  assert.ok(!rosterHtml.includes('id="toggleAllNemBtn"'), 'Must not include #toggleAllNemBtn Expand/Collapse All button');
+  assert.ok(!rosterHtml.includes('toggleAllNemesisCards'), 'Must not include toggleAllNemesisCards handler');
+
+  // Verify all 3 active nemeses are rendered as collapsible <details> windows
+  const detailsMatches = rosterHtml.match(/<details\s+class="datasheet-card nemesis-card"/g) || [];
+  assert.equal(detailsMatches.length, 3, 'Must render 3 collapsible <details class="datasheet-card nemesis-card"> windows');
+
+  // Verify all 3 share the unified rule-tag header pattern (NEMESIS #01, NEMESIS #02, NEMESIS #03)
+  assert.ok(rosterHtml.includes('NEMESIS #01 • SESSION 0 INDUCTION (PL 4)'), 'Must include NEMESIS #01 rule-tag');
+  assert.ok(rosterHtml.includes('NEMESIS #02 • SESSION 0 INDUCTION (PL 3)'), 'Must include NEMESIS #02 rule-tag');
+  assert.ok(rosterHtml.includes('NEMESIS #03 • ROGUE SECTOR APEX NEMESIS (PL 4)'), 'Must include NEMESIS #03 rule-tag');
+
+  // Verify all 3 use the unified .locked-status-select dropdown (#nemStatus1, #nemStatus2, #nemStatus3)
+  assert.match(rosterHtml, /<select\s+id="nemStatus1"\s+class="locked-status-select"/);
+  assert.match(rosterHtml, /<select\s+id="nemStatus2"\s+class="locked-status-select"/);
+  assert.match(rosterHtml, /<select\s+id="nemStatus3"\s+class="locked-status-select"/);
+
+  // Verify Nemesis 3: C'tan Shard of the Void Dragon content and placement after Aestred Thurga
+  const thurgaIdx = rosterHtml.indexOf('Aestred Thurga');
+  const voidDragonIdx = rosterHtml.indexOf("C'tan Shard of the Void Dragon");
+  assert.ok(thurgaIdx > -1, 'Must include Aestred Thurga card');
+  assert.ok(voidDragonIdx > thurgaIdx, "C'tan Shard of the Void Dragon card must appear after Aestred Thurga's card");
+
+  assert.ok(rosterHtml.includes('"The World-Eater of the Iron-Oxide Wastes"'), 'Must include Void Dragon title');
+  assert.ok(rosterHtml.includes('Faction: Xenos / Necrons (Hypercrypt Phalanx)'), 'Must include unified Faction subtitle for Void Dragon');
+  assert.ok(rosterHtml.includes('Tesseract Arc-Discharge'), 'Must include Void Dragon Boss Battle Trait');
+  assert.ok(rosterHtml.includes('🎯 Bounty Payout: +3 XP to killer unit &amp; +1 Strategic Point'), 'Must include Bounty Payout');
+});
+
+test('roster: uses valid Supabase publishable anon key, aligns #cloudSyncBadge with .status-pill, and manual pull populates inputs & shows notice', async () => {
+  assert.ok(
+    rosterHtml.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO') ||
+    rosterScriptCode.includes('sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO'),
+    'pages/roster.html or js/roster.js must configure the valid Supabase publishable key'
+  );
+  assert.ok(
+    !rosterHtml.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500') &&
+    !rosterScriptCode.includes('fc9652398N1BP1126h1-t0h22H2y519a119918b500'),
+    'pages/roster.html or js/roster.js must not contain the invalid placeholder JWT key'
+  );
+
+  // Verify hero header aligns status-pill and cloudSyncBadge on the same centered row without vertical offset
+  assert.match(
+    rosterHtml,
+    /justify-content:\s*center;\s*align-items:\s*center;[^>]*>[\s\S]*?class="status-pill"\s+style="margin:0;"[\s\S]*?id="cloudSyncBadge"/,
+    'Hero header must center and align .status-pill (margin:0) and #cloudSyncBadge on the same row'
+  );
+
+  // Test manual click on "Pull Latest from Cloud": pullSharedPoolsFromCloud(true)
+  enableCloudMock = true;
+  mockElements.shelfSaveNotice.classList.add('hidden');
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+
+  const ok = await roster.pullSharedPoolsFromCloud(true);
+  assert.equal(ok, true);
+  assert.equal(
+    mockElements.shelfSaveNotice.classList.contains('hidden'),
+    false,
+    'Manual pullSharedPoolsFromCloud(true) must un-hide #shelfSaveNotice for visual confirmation'
+  );
+  assert.ok(mockElements.cloudSyncBadge.textContent.includes('Cloud Pool Synced'));
+  enableCloudMock = false;
+});
+
+test('roster: resetNemesisDossierForm resets all Nemesis Induction Dossier form fields and preview to clean defaults', () => {
+  assert.ok(
+    rosterHtml.includes('resetNemesisDossierForm()'),
+    'pages/roster.html must include a button calling resetNemesisDossierForm()'
+  );
+  assert.equal(typeof roster.resetNemesisDossierForm, 'function', 'resetNemesisDossierForm must be defined');
+
+  mockElements.nemReportChannel.value = 'beta';
+  mockElements.nemReportSector.value = 'Mode 3: Rogue Sector Auxiliary Clash';
+  mockElements.nemReportUnit.value = 'World Eaters — Eightbound';
+  mockElements.nemReportFeat.value = 'Epic cinematic moment / Unbelievable dice streak';
+  mockElements.nemReportNotes.value = 'Custom nemesis combat notes.';
+
+  roster.resetNemesisDossierForm();
+
+  assert.equal(mockElements.nemReportChannel.value, 'alpha');
+  assert.equal(mockElements.nemReportSector.value, 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  assert.equal(mockElements.nemReportUnit.value, '');
+  assert.equal(mockElements.nemReportFeat.value, 'Slain a Player Warlord / Character in combat');
+  assert.equal(mockElements.nemReportNotes.value, '');
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(mockElements.nemDossierPreview.textContent.includes('[Unspecified Hostile Entity]'));
+  assert.equal(mockElements.nemDossierPreview.textContent.includes('Eightbound'), false);
+});
+
+test('roster: compileNemesisDossier is a pure domain compiler separated from DOM reads (Dumb UI pattern)', () => {
+  assert.equal(typeof roster.compileNemesisDossier, 'function', 'compileNemesisDossier must be defined as a pure function');
+
+  const report = roster.compileNemesisDossier({
+    channel: 'beta',
+    sector: 'Mode 2: 1v1 Ash Wastes // Vulture Raid',
+    unit: 'Orks — Deff Dread',
+    feat: 'Destroyed a Titanic / Vehicle centerpiece unit',
+    notes: 'Ripped a Rogal Dorn tank apart in melee.'
+  });
+
+  assert.ok(report.includes('+++ TOMB-SHIP MASTER MATRIX // DYNASTIC NEMESIS INDUCTION ENGRAM +++'));
+  assert.ok(!report.includes('ORDO MALLEUS'), 'Beta report must not contain ORDO MALLEUS');
+  assert.ok(report.includes('• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP PHAERON INTERLINK'));
+  assert.ok(report.includes('• ENGAGEMENT THEATRE & SECTOR: Mode 2: 1v1 Ash Wastes // Vulture Raid'));
+  assert.ok(report.includes('• TARGET SPECIMEN / INTRUDER FACTION: Orks — Deff Dread'));
+  assert.ok(report.includes('• OBSERVED ANOMALY / SLAIN DYNASTIC ASSETS: Destroyed a Titanic / Vehicle centerpiece unit'));
+  assert.ok(report.includes('• CANOPTEK TELEMETRY & ENGRAMMATIC LOG: "Ripped a Rogal Dorn tank apart in melee."'));
+  assert.ok(report.includes('REQUEST FOR TOMB-SHIP MASTER MATRIX & CAMPAIGN MASTER: Please etch this hostile specimen\'s engrammatic threat profile into the Dynastic Nemesis Matrix (Pattern 3)'));
+
+  // Test Alpha channel
+  const alphaReport = roster.compileNemesisDossier({
+    channel: 'alpha',
+    sector: 'Mode 1: Horde Breach // Node 0 (Golgotha Arbor-Basin)',
+    unit: 'World Eaters — Eightbound',
+    feat: 'Slain a Player Warlord / Character in combat',
+    notes: 'Slaughtered command squad.'
+  });
+
+  assert.ok(alphaReport.includes('+++ ORDO MALLEUS // NEMESIS THREAT INDUCTION DOSSIER +++'));
+  assert.ok(alphaReport.includes('• FILING COMMANDER: THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(alphaReport.includes('REQUEST FOR CAMPAIGN MASTER: Please induct this hostile entity into the Cross-Mode Nemesis Ledger (Pattern 3)'));
+});
+
+test('roster: extractUniqueUnitTypes correctly normalizes and deduplicates unit types from faction tables and custom pools', () => {
+  assert.equal(typeof roster.extractUniqueUnitTypes, 'function', 'extractUniqueUnitTypes must be defined as a pure function');
+
+  // Test Space Marines standard table
+  const smTable = HORDE_FACTION_SPAWN_TABLES['Space Marines'];
+  const smTypes = roster.extractUniqueUnitTypes(smTable);
+
+  assert.ok(Array.isArray(smTypes), 'Must return an array of unit types');
+  assert.ok(smTypes.includes('Bladeguard Veterans'), 'Must include Bladeguard Veterans');
+  assert.equal(smTypes.includes('Bladeguard'), false, 'Must deduplicate shorthand Bladeguard into Bladeguard Veterans');
+  assert.ok(smTypes.includes('Terminator Squad'), 'Must include Terminator Squad');
+  assert.equal(smTypes.includes('Terminators'), false, 'Must deduplicate shorthand Terminators into Terminator Squad');
+  assert.ok(smTypes.includes('Land Raider Redeemer'), 'Must split compound units like 1 Land Raider Redeemer + 6 Bladeguard');
+  assert.ok(smTypes.includes('Captain'), 'Must extract Captain from 5 Terminator Squad + Captain');
+
+  // Test custom shelf pool format (comma-separated strings)
+  const customPool = {
+    b34: '10 Cadian Shock Troops, 1 Scout Sentinel',
+    b56: '1 Rogal Dorn Battle Tank',
+    b79: '',
+    b10: '1 Baneblade Super-Heavy Tank',
+    b13: ''
+  };
+  const cTypes = roster.extractUniqueUnitTypes(customPool);
+  assert.deepEqual(cTypes, [
+    'Baneblade Super-Heavy Tank',
+    'Cadian Shock Troops',
+    'Rogal Dorn Battle Tank',
+    'Scout Sentinel'
+  ]);
+
+  // Test null / empty
+  assert.deepEqual(roster.extractUniqueUnitTypes(null), []);
+  assert.deepEqual(roster.extractUniqueUnitTypes({}), []);
+});
+
+test('roster: formatTtsUnitList formats copyable Tabletop Simulator preparation checklist', () => {
+  assert.equal(typeof roster.formatTtsUnitList, 'function', 'formatTtsUnitList must be defined');
+
+  const formatted = roster.formatTtsUnitList('Space Marines', ['Bladeguard Veterans', 'Land Raider Redeemer']);
+  assert.ok(formatted.includes('+++ TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES +++'));
+  assert.ok(formatted.includes('Total Unique Unit Types Required: 2'));
+  assert.ok(formatted.includes('[ ] Bladeguard Veterans'));
+  assert.ok(formatted.includes('[ ] Land Raider Redeemer'));
+});
+
+test('roster: renderFactionBracketTable populates TTS unit types preview and count', () => {
+  storageStore.clear();
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+  roster.renderFactionBracketTable();
+
+  assert.equal(mockElements.ttsFactionName.textContent, 'Space Marines');
+  assert.ok(parseInt(mockElements.ttsUnitCount.textContent, 10) > 0, 'Must show positive unit count');
+  assert.ok(mockElements.ttsUnitTypesBox.innerHTML.includes('Bladeguard Veterans'), 'Must render Bladeguard Veterans pill/tag');
+});
+
+test('roster: copyTtsUnitTypesList copies checklist to clipboard and flashes notice', () => {
+  assert.ok(rosterHtml.includes('copyTtsUnitTypesList()'), 'pages/roster.html must have button calling copyTtsUnitTypesList()');
+  assert.equal(typeof roster.copyTtsUnitTypesList, 'function', 'copyTtsUnitTypesList must be defined');
+
+  let copiedText = null;
+  mockWindow.navigator = {
+    clipboard: {
+      writeText: async (txt) => { copiedText = txt; }
+    }
+  };
+
+  mockElements.bracketFactionPicker.value = 'Space Marines';
+  roster.renderFactionBracketTable();
+  roster.copyTtsUnitTypesList();
+
+  assert.ok(copiedText && copiedText.includes('TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES'));
+  assert.equal(mockElements.ttsCopyNotice.classList.contains('hidden'), false);
+});
+
+````

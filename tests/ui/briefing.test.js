@@ -5,12 +5,17 @@ const path = require('node:path');
 
 const ROOT_DIR = path.resolve(__dirname, '../../');
 const BRIEFING_HTML_PATH = path.join(ROOT_DIR, 'pages/briefing.html');
+const BRIEFING_JS_PATH = path.join(ROOT_DIR, 'js/briefing.js');
+const BRIEFING_CSS_PATH = path.join(ROOT_DIR, 'css/briefing.css');
 
-// Read briefing.html and extract script block
+// Read briefing.html, script, and style
 const briefingHtml = fs.readFileSync(BRIEFING_HTML_PATH, 'utf8');
+const briefingCss = fs.existsSync(BRIEFING_CSS_PATH) ? fs.readFileSync(BRIEFING_CSS_PATH, 'utf8') : '';
 const scriptMatches = briefingHtml.match(/<script>([\s\S]*?)<\/script>/);
-assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/briefing.html');
-const briefingScriptCode = scriptMatches[1];
+const briefingScriptCode = (scriptMatches && scriptMatches[1])
+  ? scriptMatches[1]
+  : (fs.existsSync(BRIEFING_JS_PATH) ? fs.readFileSync(BRIEFING_JS_PATH, 'utf8') : '');
+assert.ok(briefingScriptCode, 'Must locate script code inside pages/briefing.html or js/briefing.js');
 
 // Set up mock DOM and localStorage environment
 const storageStore = new Map();
@@ -267,7 +272,7 @@ test('briefing: restoreBriefingState restores all user choices from localStorage
 test('briefing: DOM includes read-only slider gauge, Operational Thresholds in Alpha, reckRow-1 highlight, and CURRENT_SHIP_SLIDER = -1', () => {
   // Check read-only styling
   assert.ok(
-    /pointer-events:\s*none;/i.test(briefingHtml),
+    /pointer-events:\s*none;/i.test(briefingHtml) || /pointer-events:\s*none;/i.test(briefingCss),
     'Must define pointer-events none'
   );
   assert.ok(briefingHtml.includes('aria-label="Current Shipboard Balance Gauge (Read-Only)"'), 'Must define read-only aria-label');
@@ -290,8 +295,14 @@ test('briefing: DOM includes read-only slider gauge, Operational Thresholds in A
   assert.ok(!briefingHtml.includes('<tr id="reckRow0" class="highlight-row">'), 'reckRow0 must not have highlight-row');
 
   // Check script locked campaign state
-  assert.ok(briefingHtml.includes('const CURRENT_SHIP_SLIDER = -1;'), 'Must define locked CURRENT_SHIP_SLIDER = -1');
-  assert.ok(briefingHtml.includes('selectSlider(CURRENT_SHIP_SLIDER);'), 'Must invoke selectSlider(CURRENT_SHIP_SLIDER)');
+  assert.ok(
+    briefingHtml.includes('const CURRENT_SHIP_SLIDER = -1;') || briefingScriptCode.includes('CURRENT_SHIP_SLIDER = -1'),
+    'Must define locked CURRENT_SHIP_SLIDER = -1'
+  );
+  assert.ok(
+    briefingHtml.includes('selectSlider(CURRENT_SHIP_SLIDER);') || briefingScriptCode.includes('selectSlider(CURRENT_SHIP_SLIDER);'),
+    'Must invoke selectSlider(CURRENT_SHIP_SLIDER)'
+  );
 });
 
 test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, Beta Tomb-Ship Equilibrium Gauge, and Flagship muster protocol', () => {
@@ -374,17 +385,17 @@ test('briefing: DOM includes telemetry grids, Session 0 prologue chronicle, Beta
 });
 
 test('briefing: #dossierBeta, #btnBeta, and body.necron-briefing-active include Necron Noctolith, Cartouche, Ankh & Gauss Emerald styling', () => {
-  assert.ok(briefingHtml.includes('body.necron-briefing-active'), 'Must style body.necron-briefing-active for full-page Tomb-Ship atmosphere');
-  assert.ok(briefingHtml.includes('@keyframes necronGaussPulse'), 'Must define @keyframes necronGaussPulse animation');
-  assert.ok(briefingHtml.includes('.necron-ankh-divider'), 'Must define .necron-ankh-divider Royal Cartouche ornament');
-  assert.ok(briefingHtml.includes('#btnBeta.active'), 'Must style #btnBeta.active with Necron Gauss Emerald theme');
-  assert.ok(briefingHtml.includes('#dossierBeta .hero-card'), 'Must style #dossierBeta .hero-card with Noctolith Obsidian & Gauss Emerald');
-  assert.ok(briefingHtml.includes('#dossierBeta .hero-title'), 'Must style #dossierBeta .hero-title with Living Metal & Gauss Emerald gradient');
-  assert.ok(briefingHtml.includes('#gateBeta .unlock-btn'), 'Must style #gateBeta .unlock-btn with Royal Engram emerald button');
-  assert.ok(briefingHtml.includes('#dossierBeta .slider-node.active-brig'), 'Must style #dossierBeta .slider-node.active-brig with Gauss Overclock glow');
-  assert.ok(briefingHtml.includes('#dossierBeta table.reckoning-table th'), 'Must style #dossierBeta reckoning table headers with Tomb-Ship aesthetic');
-  assert.ok(briefingHtml.includes('#dossierBeta tr.highlight-row'), 'Must style #dossierBeta highlight-row with Gauss Emerald highlight');
-  assert.ok(briefingHtml.includes('#dossierBeta code'), 'Must style #dossierBeta code as Engrammatic Hex-Glyph chips');
+  assert.ok(briefingHtml.includes('body.necron-briefing-active') || briefingCss.includes('body.necron-briefing-active'), 'Must style body.necron-briefing-active for full-page Tomb-Ship atmosphere');
+  assert.ok(briefingHtml.includes('@keyframes necronGaussPulse') || briefingCss.includes('@keyframes necronGaussPulse'), 'Must define @keyframes necronGaussPulse animation');
+  assert.ok(briefingHtml.includes('.necron-ankh-divider') || briefingCss.includes('.necron-ankh-divider'), 'Must define .necron-ankh-divider Royal Cartouche ornament');
+  assert.ok(briefingHtml.includes('#btnBeta.active') || briefingCss.includes('#btnBeta.active'), 'Must style #btnBeta.active with Necron Gauss Emerald theme');
+  assert.ok(briefingHtml.includes('#dossierBeta .hero-card') || briefingCss.includes('#dossierBeta .hero-card'), 'Must style #dossierBeta .hero-card with Noctolith Obsidian & Gauss Emerald');
+  assert.ok(briefingHtml.includes('#dossierBeta .hero-title') || briefingCss.includes('#dossierBeta .hero-title'), 'Must style #dossierBeta .hero-title with Living Metal & Gauss Emerald gradient');
+  assert.ok(briefingHtml.includes('#gateBeta .unlock-btn') || briefingCss.includes('#gateBeta .unlock-btn'), 'Must style #gateBeta .unlock-btn with Royal Engram emerald button');
+  assert.ok(briefingHtml.includes('#dossierBeta .slider-node.active-brig') || briefingCss.includes('#dossierBeta .slider-node.active-brig'), 'Must style #dossierBeta .slider-node.active-brig with Gauss Overclock glow');
+  assert.ok(briefingHtml.includes('#dossierBeta table.reckoning-table th') || briefingCss.includes('#dossierBeta table.reckoning-table th'), 'Must style #dossierBeta reckoning table headers with Tomb-Ship aesthetic');
+  assert.ok(briefingHtml.includes('#dossierBeta tr.highlight-row') || briefingCss.includes('#dossierBeta tr.highlight-row'), 'Must style #dossierBeta highlight-row with Gauss Emerald highlight');
+  assert.ok(briefingHtml.includes('#dossierBeta code') || briefingCss.includes('#dossierBeta code'), 'Must style #dossierBeta code as Engrammatic Hex-Glyph chips');
 });
 
 

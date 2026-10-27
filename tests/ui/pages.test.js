@@ -189,20 +189,23 @@ test('pages/briefing.html contains the 8-Node SVG Sector Map and 3-way Parallel 
 });
 
 test('UI Boundary: pages integrate localStorage persistence so users can navigate tabs without resetting progress', () => {
-  const briefingHtml = readPage('pages/briefing.html');
-  assert.ok(briefingHtml.includes('foa_briefing_state_v1'), 'pages/briefing.html must persist state to foa_briefing_state_v1');
-  assert.ok(briefingHtml.includes('saveBriefingState'), 'pages/briefing.html must have saveBriefingState');
-  assert.ok(briefingHtml.includes('restoreBriefingState'), 'pages/briefing.html must have restoreBriefingState');
+  const briefingJs = fs.existsSync(path.join(ROOT_DIR, 'js/briefing.js')) ? fs.readFileSync(path.join(ROOT_DIR, 'js/briefing.js'), 'utf8') : '';
+  const briefingContent = readPage('pages/briefing.html') + '\n' + briefingJs;
+  assert.ok(briefingContent.includes('foa_briefing_state_v1'), 'pages/briefing.html or js/briefing.js must persist state to foa_briefing_state_v1');
+  assert.ok(briefingContent.includes('saveBriefingState'), 'pages/briefing.html or js/briefing.js must have saveBriefingState');
+  assert.ok(briefingContent.includes('restoreBriefingState'), 'pages/briefing.html or js/briefing.js must have restoreBriefingState');
 
-  const pvpHtml = readPage('pages/pvp.html');
-  assert.ok(pvpHtml.includes('foa_pvp_state_v1'), 'pages/pvp.html must persist state to foa_pvp_state_v1');
-  assert.ok(pvpHtml.includes('savePvpState'), 'pages/pvp.html must have savePvpState');
-  assert.ok(pvpHtml.includes('restorePvpState'), 'pages/pvp.html must have restorePvpState');
+  const pvpJs = fs.existsSync(path.join(ROOT_DIR, 'js/pvp.js')) ? fs.readFileSync(path.join(ROOT_DIR, 'js/pvp.js'), 'utf8') : '';
+  const pvpContent = readPage('pages/pvp.html') + '\n' + pvpJs;
+  assert.ok(pvpContent.includes('foa_pvp_state_v1'), 'pages/pvp.html or js/pvp.js must persist state to foa_pvp_state_v1');
+  assert.ok(pvpContent.includes('savePvpState'), 'pages/pvp.html or js/pvp.js must have savePvpState');
+  assert.ok(pvpContent.includes('restorePvpState'), 'pages/pvp.html or js/pvp.js must have restorePvpState');
 
-  const rogueHtml = readPage('pages/rogue.html');
-  assert.ok(rogueHtml.includes('foa_rogue_state_v1'), 'pages/rogue.html must persist state to foa_rogue_state_v1');
-  assert.ok(rogueHtml.includes('saveRogueState'), 'pages/rogue.html must have saveRogueState');
-  assert.ok(rogueHtml.includes('restoreRogueState'), 'pages/rogue.html must have restoreRogueState');
+  const rogueJs = fs.existsSync(path.join(ROOT_DIR, 'js/rogue.js')) ? fs.readFileSync(path.join(ROOT_DIR, 'js/rogue.js'), 'utf8') : '';
+  const rogueContent = readPage('pages/rogue.html') + '\n' + rogueJs;
+  assert.ok(rogueContent.includes('foa_rogue_state_v1'), 'pages/rogue.html or js/rogue.js must persist state to foa_rogue_state_v1');
+  assert.ok(rogueContent.includes('saveRogueState'), 'pages/rogue.html or js/rogue.js must have saveRogueState');
+  assert.ok(rogueContent.includes('restoreRogueState'), 'pages/rogue.html or js/rogue.js must have restoreRogueState');
 
   const appJs = fs.readFileSync(path.join(ROOT_DIR, 'js/app.js'), 'utf8');
   assert.ok(appJs.includes('foa_horde_session_v1'), 'app.js must persist session to foa_horde_session_v1');
@@ -236,6 +239,13 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     assert.ok(content.length > 500, `${b.file} must not be empty`);
     assert.ok(content.includes(b.check), `${b.file} must contain its target file ${b.check}`);
     assert.equal(content.includes('\0'), false, `${b.file} must not contain null bytes`);
+  }
+
+  // All markdown bundles in /bundles/ must be strictly <= 1000 lines for AI context-window chunking
+  const bundleFiles = fs.readdirSync(bundlesDir).filter(f => f.endsWith('.md'));
+  for (const bf of bundleFiles) {
+    const lines = fs.readFileSync(path.join(bundlesDir, bf), 'utf8').split('\n').length;
+    assert.ok(lines <= 1000, `${bf} must be <= 1000 lines (current: ${lines})`);
   }
 
   // Deprecated bundle files must not exist

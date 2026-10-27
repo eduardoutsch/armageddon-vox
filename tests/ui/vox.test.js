@@ -5,12 +5,17 @@ const path = require('node:path');
 
 const ROOT_DIR = path.resolve(__dirname, '../../');
 const VOX_HTML_PATH = path.join(ROOT_DIR, 'pages/vox.html');
+const VOX_JS_PATH = path.join(ROOT_DIR, 'js/vox.js');
+const VOX_CSS_PATH = path.join(ROOT_DIR, 'css/vox.css');
 
-// Read vox.html and extract script block
+// Read vox.html and modular script/styles
 const voxHtml = fs.readFileSync(VOX_HTML_PATH, 'utf8');
+const voxCss = fs.existsSync(VOX_CSS_PATH) ? fs.readFileSync(VOX_CSS_PATH, 'utf8') : '';
 const scriptMatches = voxHtml.match(/<script>([\s\S]*?)<\/script>/);
-assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/vox.html');
-const voxScriptCode = scriptMatches[1];
+const voxScriptCode = (scriptMatches && scriptMatches[1])
+  ? scriptMatches[1]
+  : (fs.existsSync(VOX_JS_PATH) ? fs.readFileSync(VOX_JS_PATH, 'utf8') : '');
+assert.ok(voxScriptCode, 'Must locate script code inside pages/vox.html or js/vox.js');
 
 // Set up mock DOM, localStorage, and sessionStorage environment
 const sessionStore = new Map();
@@ -697,7 +702,7 @@ test('vox: renders Rogue Sector dual-channel interferences in a distinct color/c
 
   assert.ok(rogueCard.className.includes('rogue-intercept'), 'Rogue Sector intercept must include .rogue-intercept class');
   assert.ok(!rogueCard.innerHTML.includes('#ff4757'), 'Rogue Sector intercept header must use a distinct non-crimson color');
-  assert.ok(voxHtml.includes('.crt-intercept-card.rogue-intercept'), 'vox.html CSS must define .crt-intercept-card.rogue-intercept');
+  assert.ok(voxHtml.includes('.crt-intercept-card.rogue-intercept') || voxCss.includes('.crt-intercept-card.rogue-intercept'), 'vox.html or vox.css must define .crt-intercept-card.rogue-intercept');
 });
 
 test('vox: displays live Astropathic Server Online/Offline status on both Auth and Terminal screens via checkVoxServerStatus', async () => {
@@ -758,11 +763,11 @@ test('vox: selecting and unlocking Terminal Beta vs Terminal Alpha activates Nec
   assert.ok(mockElements.activeConduitLabel.textContent.includes('THE SANCTUARY OF ASH'));
   assert.ok(mockElements.questionInput.placeholder.includes('Transmit orders to Logis-Prefect Vane'));
 
-  // Verify pages/vox.html defines Necron personal terminal styling
-  assert.ok(voxHtml.includes('body.theme-necron .crt-monitor-frame'), 'vox.html must style .crt-monitor-frame in Necron Tomb-Ship mode');
-  assert.ok(voxHtml.includes('body.theme-necron .crt-msg-card'), 'vox.html must style .crt-msg-card in Necron Tomb-Ship mode');
-  assert.ok(voxHtml.includes('body.theme-necron .crt-reply-card'), 'vox.html must style .crt-reply-card in Necron Tomb-Ship mode');
-  assert.ok(voxHtml.includes('body.theme-necron .crt-input-textarea'), 'vox.html must style .crt-input-textarea in Necron Tomb-Ship mode');
+  // Verify pages/vox.html or css/vox.css defines Necron personal terminal styling
+  assert.ok(voxHtml.includes('body.theme-necron .crt-monitor-frame') || voxCss.includes('body.theme-necron .crt-monitor-frame'), 'vox.html or vox.css must style .crt-monitor-frame in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-msg-card') || voxCss.includes('body.theme-necron .crt-msg-card'), 'vox.html or vox.css must style .crt-msg-card in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-reply-card') || voxCss.includes('body.theme-necron .crt-reply-card'), 'vox.html or vox.css must style .crt-reply-card in Necron Tomb-Ship mode');
+  assert.ok(voxHtml.includes('body.theme-necron .crt-input-textarea') || voxCss.includes('body.theme-necron .crt-input-textarea'), 'vox.html or vox.css must style .crt-input-textarea in Necron Tomb-Ship mode');
 });
 
 test('vox: terminal does not retype already-seen messages upon login or refresh, streaming only new unseen messages', async () => {

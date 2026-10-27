@@ -5,12 +5,15 @@ const path = require('node:path');
 
 const ROOT_DIR = path.resolve(__dirname, '../../');
 const PVP_HTML_PATH = path.join(ROOT_DIR, 'pages/pvp.html');
+const PVP_JS_PATH = path.join(ROOT_DIR, 'js/pvp.js');
 
-// Read pvp.html and extract script block
+// Read pvp.html and extract script block or modular js/pvp.js
 const pvpHtml = fs.readFileSync(PVP_HTML_PATH, 'utf8');
 const scriptMatches = pvpHtml.match(/<script>([\s\S]*?)<\/script>/);
-assert.ok(scriptMatches && scriptMatches[1], 'Must locate script tag inside pages/pvp.html');
-const pvpScriptCode = scriptMatches[1];
+const pvpScriptCode = (scriptMatches && scriptMatches[1])
+  ? scriptMatches[1]
+  : (fs.existsSync(PVP_JS_PATH) ? fs.readFileSync(PVP_JS_PATH, 'utf8') : '');
+assert.ok(pvpScriptCode, 'Must locate script code inside pages/pvp.html or js/pvp.js');
 
 // Set up mock DOM and localStorage environment
 const storageStore = new Map();
@@ -206,8 +209,8 @@ test('pvp: buildPvpVultureReportString and transmitPvpVultureReport compile and 
     'pages/pvp.html must include a dedicated button calling transmitPvpVultureReport()'
   );
   assert.ok(
-    pvpHtml.includes('rollUnboundAdversary()') && pvpHtml.includes('transmitUnboundPing('),
-    'pages/pvp.html must keep rollUnboundAdversary() and transmitUnboundPing() separate'
+    pvpHtml.includes('rollUnboundAdversary()') && (pvpHtml.includes('transmitUnboundPing(') || pvpScriptCode.includes('transmitUnboundPing(')),
+    'pages/pvp.html or js/pvp.js must keep rollUnboundAdversary() and transmitUnboundPing() separate'
   );
 
   // Case 1: Base 3 SPts (no unit destroyed), Alpha channel
