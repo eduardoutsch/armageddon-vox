@@ -3,13 +3,44 @@
 DOM event handlers, Auspex telemetry HUD synchronization, and session state persistence (`js/app.js` lines 1401 to end).
 
 ## 📑 Table of Contents
-- [js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-1988)](#file-jsappjspart3uitelemetrypersistencelines14011988)
+- [js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)](#file-jsappjspart3uitelemetrypersistencelines1401end)
 
 ---
 
-## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-1988)` <a id="file-jsappjspart3uitelemetrypersistencelines14011988"></a>
+## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)` <a id="file-jsappjspart3uitelemetrypersistencelines1401end"></a>
 
 ````javascript
+
+    let currentHordePool = {};
+    let currentNemesisStatus = {};
+    try {
+      const getRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_spawn_pools`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify({})
+      });
+      if (getRes && getRes.ok) {
+        const cur = await getRes.json();
+        if (cur) {
+          currentHordePool = cur.horde_pool || {};
+          currentNemesisStatus = cur.nemesis_status || {};
+        }
+      }
+    } catch (e) {}
+
+    const spawnerRooms = (currentNemesisStatus && currentNemesisStatus.spawner_rooms) ? currentNemesisStatus.spawner_rooms : {};
+    spawnerRooms[roomCode] = sharedRoomState;
+
+    const saveRes = await fetch(`${supabaseUrl}/rest/v1/rpc/save_shared_spawn_pools`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
       },
       body: JSON.stringify({
         p_horde_pool: null,
@@ -179,22 +210,7 @@ function applyRemoteSharedState(remoteState) {
   }
 
   // Update round titles and HUD
-  if (typeof HARD_MODE_ROUNDS !== 'undefined' && battleRound > 0 && typeof document !== 'undefined') {
-    const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)] || HARD_MODE_ROUNDS[1];
-    const roundTitle = document.getElementById('roundTitle');
-    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
-    const spawnModDisplay = document.getElementById('spawnModDisplay');
-    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
-    const nextRoundBtn = document.getElementById('nextRoundBtn');
-    if (nextRoundBtn) {
-      nextRoundBtn.innerText = battleRound < 6
-        ? `Advance to Battle Round ${battleRound + 1}`
-        : `Battle Round 6 Active (Final Stand)`;
-    }
-    const btnRound = document.getElementById('spawnerBtnRound');
-    if (btnRound) btnRound.textContent = String(battleRound);
-  }
-
+  updateRoundBanner();
   updateHUD();
 
   if (isSessionActive && typeof document !== 'undefined') {
@@ -559,6 +575,26 @@ if (typeof window !== 'undefined') {
   }
 
   if (typeof window !== 'undefined') {
+    window.updateRoundBanner = updateRoundBanner;
+    window.state = {
+      get round() { return battleRound; },
+      set round(v) { battleRound = v; },
+      get battleRound() { return battleRound; },
+      set battleRound(v) { battleRound = v; },
+      get activeMiseries() { return activeMiseries; },
+      set activeMiseries(v) { activeMiseries = v; },
+      get activeSecondaries() { return activeSecondaries; },
+      set activeSecondaries(v) { activeSecondaries = v; },
+      get miseryDeck() { return sharedMiseryDeck; },
+      set miseryDeck(v) { sharedMiseryDeck = v; },
+      get secondaryDeck() { return sharedSecondaryDeck; },
+      set secondaryDeck(v) { sharedSecondaryDeck = v; },
+      get mode() { return isSoloMode ? 'solo' : selectedModeVal; },
+      get sp() { return sp; },
+      set sp(v) { sp = v; },
+      get cp() { return cp; },
+      set cp(v) { cp = v; }
+    };
     window.syncSpawnerPoolFromSupabase = syncSpawnerPoolFromSupabase;
     window.renderLiveSpawnerBracketTable = renderLiveSpawnerBracketTable;
     window.transmitHordeIntrusionPing = transmitHordeIntrusionPing;
@@ -598,4 +634,49 @@ if (typeof window !== 'undefined') {
         renderLiveSpawnerBracketTable();
         debouncedPushLiveSpawnerStateToCloud();
         return res;
+      };
+      wrappedManual._hasBracketRenderHook = true;
+      window.manualChangeFaction = wrappedManual;
+    }
+
+    let spawnerCloudPollTimer = null;
+    function initSpawnerCloudPolling() {
+      if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
+        syncSpawnerPoolFromSupabase();
+        renderLiveSpawnerBracketTable();
+        pollLiveSpawnerStateFromCloud();
+        if (!spawnerCloudPollTimer) {
+          spawnerCloudPollTimer = setInterval(() => {
+            if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
+              pollLiveSpawnerStateFromCloud();
+            } else {
+              clearInterval(spawnerCloudPollTimer);
+              spawnerCloudPollTimer = null;
+            }
+          }, 3500);
+        }
+      } else {
+        if (spawnerCloudPollTimer) {
+          clearInterval(spawnerCloudPollTimer);
+          spawnerCloudPollTimer = null;
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initSpawnerCloudPolling);
+    window.addEventListener('vox:page-swapped', initSpawnerCloudPolling);
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    Object.assign(module.exports, {
+      updateRoundBanner,
+      syncSpawnerPoolFromSupabase,
+      renderLiveSpawnerBracketTable,
+      transmitHordeIntrusionPing,
+      transmitIntrusionPing,
+      evaluateWarpBreachIntrusions,
+      triggerCardStaticShake
+    });
+  }
+})();
 ````

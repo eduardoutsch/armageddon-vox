@@ -1,12 +1,13 @@
-# 📦 Fires of Armageddon // Bundle: Unit Tests (Spawner Subsystems)
+# 📦 Fires of Armageddon // Bundle: Tests (Spawner Subsystems & UI Flow)
 
-Deterministic unit tests for spawner cards, cockpit telemetry, resupply table, and threat rules (`tests/js/spawner*.test.js`).
+Deterministic unit and Playwright UI tests for spawner cards, cockpit telemetry, resupply table, and threat rules (`tests/js/spawner*.test.js`, `tests/ui/spawner.test.js`).
 
 ## 📑 Table of Contents
 - [tests/js/spawner.test.js](#file-testsjsspawnertestjs)
 - [tests/js/spawner-cards.test.js](#file-testsjsspawnercardstestjs)
 - [tests/js/spawner-cockpit.test.js](#file-testsjsspawnercockpittestjs)
 - [tests/js/spawner-resupply.test.js](#file-testsjsspawnerresupplytestjs)
+- [tests/ui/spawner.test.js](#file-testsuispawnertestjs)
 
 ---
 
@@ -332,6 +333,84 @@ test('Spawner Cockpit: Guided phase step controls clamp and cycle within 1 to 5'
   stepGuidedPhase(1); // cycle back to 1
   assert.ok(true, 'Guided stepper safely cycled');
 });
+
+test('Spawner Cockpit: getCurrentBattleRound returns 0 for Pre-Game in HUD round element', () => {
+  globalThis.state = null;
+  globalThis.battleRound = undefined;
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'hudRound') return { innerText: 'Pre-Game' };
+      return null;
+    }
+  };
+
+  assert.equal(getCurrentBattleRound(), 0, 'Must return round 0 when hudRound indicates Pre-Game');
+
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'hudRound') return { innerText: 'Round 4/6' };
+      return null;
+    }
+  };
+  assert.equal(getCurrentBattleRound(), 4, 'Must return round 4 when hudRound indicates Round 4/6');
+
+  // Clean up
+  delete globalThis.document;
+});
+
+test('Spawner Cockpit: renderActiveMiseries and renderActiveSecondaries handle window.state fallback gracefully', () => {
+  const { renderActiveMiseries, renderActiveSecondaries } = require('../../js/spawner-cockpit.js');
+
+  const misBox = { innerHTML: '' };
+  const secBox = { innerHTML: '' };
+  const misCount = { textContent: '' };
+  const secCount = { textContent: '' };
+
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'activeMiseriesBox') return misBox;
+      if (id === 'activeSecondariesBox') return secBox;
+      if (id === 'misDeckCount') return misCount;
+      if (id === 'secDeckCount') return secCount;
+      return null;
+    },
+    querySelectorAll: () => []
+  };
+
+  // 1. Empty state
+  globalThis.window = {
+    state: {
+      activeMiseries: [],
+      activeSecondaries: [],
+      miseryDeck: new Array(36),
+      secondaryDeck: new Array(24)
+    }
+  };
+
+  renderActiveMiseries();
+  assert.ok(misBox.innerHTML.includes('No active Misery Cards.'), 'Empty miseries should display placeholder');
+  assert.equal(misCount.textContent, '36 in deck');
+
+  renderActiveSecondaries();
+  assert.ok(secBox.innerHTML.includes('No active Secondary Mission.'), 'Empty secondaries should display placeholder');
+  assert.equal(secCount.textContent, '24 in deck');
+
+  // 2. Active cards populated via window.state
+  globalThis.window.state.activeMiseries.push({ id: 1, name: 'Eye of Terror', desc: 'Warp storms brew' });
+  globalThis.window.state.activeSecondaries.push({ id: 2, name: 'Purge the Foe', cond: 'Destroy units', rew: '2 SP', pun: '+1 Misery' });
+
+  renderActiveMiseries();
+  assert.ok(misBox.innerHTML.includes('Eye of Terror'), 'Should render active misery card name');
+  assert.ok(!misBox.innerHTML.includes('No active Misery Cards.'), 'Should not render empty placeholder when cards present');
+
+  renderActiveSecondaries();
+  assert.ok(secBox.innerHTML.includes('Purge the Foe'), 'Should render active secondary mission name');
+  assert.ok(!secBox.innerHTML.includes('No active Secondary Mission.'), 'Should not render empty placeholder when mission present');
+
+  // Clean up
+  delete globalThis.document;
+  delete globalThis.window;
+});
 ````
 
 ---
@@ -429,5 +508,118 @@ test('Spawner Resupply: executeEnhancedResupplyPurchase checks SP and triggers c
   assert.equal(spLost, 2);
   assert.equal(globalThis.state.sp, 8);
   assert.equal(globalThis.testCp, 1, 'Basic Tactics auto-effect gains 1 CP');
+});
+````
+
+---
+
+## File: `tests/ui/spawner.test.js` <a id="file-testsuispawnertestjs"></a>
+
+````javascript
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { chromium } = require('playwright');
+
+const ROOT_DIR = path.resolve(__dirname, '../../');
+
+async function launchTestBrowser() {
+  for (const opts of [{ headless: true }, { channel: 'chrome', headless: true }, { channel: 'msedge', headless: true }]) {
+    try {
+      return await chromium.launch(opts);
+    } catch (_) {}
+  }
+  throw new Error('Could not launch headless Chromium, Chrome, or Edge for UI integration test');
+}
+
+test('UI Boundary: pages/spawner.html synchronizes Pre-Game (Round 0) vs Battle Round 1, draws cards, and supports manual draw', async () => {
+  const browser = await launchTestBrowser();
+  const page = await browser.newPage();
+
+  try {
+    await page.addInitScript(() => {
+      window.confirm = () => true;
+      try {
+        localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+          seed: 'TEST-PREGAME-99',
+          selectedModeVal: 'solo',
+          isSoloMode: true,
+          battleRound: 0,
+          activeMiseries: [],
+          activeSecondaries: [],
+          hasActiveSession: true
+        }));
+      } catch (e) {}
+    });
+
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+      if (typeof window.resetMatchToSetup === 'function') window.resetMatchToSetup();
+      if (typeof window.startSession === 'function') window.startSession();
+
+      if (typeof window.battleRound !== 'undefined') window.battleRound = 0;
+      if (window.state) {
+        window.state.round = 0;
+        window.state.activeMiseries = [];
+        window.state.activeSecondaries = [];
+      }
+      if (typeof window.switchTab === 'function') window.switchTab(1);
+      if (typeof window.updateHUD === 'function') window.updateHUD();
+      if (typeof window.renderSharedDecks === 'function') window.renderSharedDecks();
+      if (typeof window.renderActiveMiseries === 'function') window.renderActiveMiseries();
+      if (typeof window.renderActiveSecondaries === 'function') window.renderActiveSecondaries();
+    });
+
+    // 1. Verify Pre-Game (Round 0) UI elements
+    const hudRoundText = await page.$eval('#hudRound', el => el.innerText.trim());
+    const roundTitleText = await page.$eval('#roundTitle', el => el.innerText.trim());
+    const spawnModText = await page.$eval('#spawnModDisplay', el => el.innerText.trim());
+    const nextBtnText = await page.$eval('#nextRoundBtn', el => el.innerText.trim());
+    const secBoxContent = await page.$eval('#activeSecondariesBox', el => el.innerText.trim());
+    const misBoxContent = await page.$eval('#activeMiseriesBox', el => el.innerText.trim());
+
+    assert.equal(hudRoundText, 'Pre-Game', 'HUD Round must indicate Pre-Game at round 0');
+    assert.equal(roundTitleText.toUpperCase(), 'DEPLOYMENT & SETUP', 'Round title must be Deployment & Setup in Pre-Game');
+    assert.ok(spawnModText.includes('Roll your initial Round 1 Horde Spawns'), 'Spawn mod display must guide player to roll spawns in Pre-Game');
+    assert.ok(nextBtnText.toUpperCase().includes('BEGIN BATTLE ROUND 1'), 'Next round button must read Begin Battle Round 1 in Pre-Game');
+    assert.ok(secBoxContent.includes('No active Secondary Mission.'), 'Must show placeholder when no secondary mission is drawn in Pre-Game');
+    assert.ok(misBoxContent.includes('No active Misery Cards.'), 'Must show placeholder when no misery cards are drawn in Pre-Game');
+
+    // Verify manual + Draw buttons are present in dock headers
+    const secDrawBtn = await page.$('#btnManualDrawSecondary');
+    const misDrawBtn = await page.$('#btnManualDrawMisery');
+    assert.ok(secDrawBtn, 'Active Secondary dock header must contain #btnManualDrawSecondary');
+    assert.ok(misDrawBtn, 'Active Misery dock header must contain #btnManualDrawMisery');
+
+    // 2. Click "Begin Battle Round 1 →" to advance to Round 1
+    await page.click('#nextRoundBtn');
+    await page.waitForTimeout(200);
+
+    // 3. Verify Battle Round 1 UI state & card draws
+    const r1HudRound = await page.$eval('#hudRound', el => el.innerText.trim());
+    const r1Title = await page.$eval('#roundTitle', el => el.innerText.trim());
+    const r1SpawnMod = await page.$eval('#spawnModDisplay', el => el.innerText.trim());
+    const r1NextBtn = await page.$eval('#nextRoundBtn', el => el.innerText.trim());
+    const r1SecBox = await page.$eval('#activeSecondariesBox', el => el.innerHTML);
+    const r1MisBox = await page.$eval('#activeMiseriesBox', el => el.innerHTML);
+
+    assert.equal(r1HudRound, 'Round 1/6', 'HUD Round must update to Round 1/6');
+    assert.equal(r1Title.toUpperCase(), 'BATTLE ROUND 1', 'Round title must update to Battle Round 1');
+    assert.ok(r1SpawnMod.includes('1 Misery Drawn'), 'Spawn mod display must show 1 Misery Drawn');
+    assert.ok(r1NextBtn.toUpperCase().includes('ADVANCE TO BATTLE ROUND 2'), 'Next round button must read Advance to Battle Round 2');
+    assert.ok(!r1SecBox.includes('No active Secondary Mission.'), 'Secondary mission card must be drawn and rendered in Round 1');
+    assert.ok(!r1MisBox.includes('No active Misery Cards.'), 'Misery card must be drawn and rendered in Round 1');
+
+    // 4. Test manual draw button: draw another Secondary Mission
+    await page.click('#btnManualDrawSecondary');
+    await page.waitForTimeout(100);
+    const secCardsCount = await page.$$eval('#activeSecondariesBox .card', cards => cards.length);
+    assert.ok(secCardsCount >= 2, 'Clicking manual + Draw button must draw an additional Secondary Mission');
+  } finally {
+    await browser.close();
+  }
 });
 ````

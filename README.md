@@ -54,7 +54,7 @@ During live campaign play, AI acts as the autonomous **Campaign Master**, **3rd 
 ### 2. Development-Time AI Involvement (Human-Directed Agentic Engineering)
 - **Human Direction, Game Design & Architecture**: The tabletop game mechanics, asymmetric 3-Way Alliance Hegemony race, Tour of Duty progression, Warhammer 40k Crusade adaptations, UI/UX layout, and architectural constraints were designed and directed by the project creator.
 - **Agentic Pair Programming (Google Antigravity)**: Code implementation, refactoring, procedural Web Audio synthesis, SVG sector cartography, Playwright DOM-stream stabilization, and the automated test suite were co-developed with **Google Antigravity** (utilizing Claude and Gemini coding models) under the strict engineering constitution codified in [`AGENTS.md`](AGENTS.md):
-  - **100% Test-Driven Development (TDD)**: Every feature, bug fix, and UI boundary is backed by automated Node.js unit and headless Playwright browser tests (`171` passing tests across `tests/js/`, `tests/ui/`, and `tests/vox_bridge.test.js`) written via Red-Green-Refactor cycles.
+  - **100% Test-Driven Development (TDD)**: Every feature, bug fix, and UI boundary is backed by automated Node.js unit and headless Playwright browser tests (`245` passing tests across `tests/js/`, `tests/ui/`, and `tests/vox_bridge.test.js`) written via Red-Green-Refactor cycles.
   - **Continuous Bundle Synchronization**: Autonomous agents are strictly bound by `AGENTS.md` Principle IX to regenerate and verify `/bundles/*.md` on every file modification.
 
 ---
@@ -134,7 +134,7 @@ armageddon-vox/
 ├── scripts/
 │   └── generate_bundles.js     # Automated compiler for /bundles/*.md AI context artifacts
 ├── bundles/                    # 12 modular Markdown codebase bundles for Gemini / NotebookLM
-└── tests/                      # 171 automated tests (Node:test + VM sandboxes + Playwright)
+└── tests/                      # 245 automated tests (Node:test + VM sandboxes + Playwright)
     ├── vox_bridge.test.js      # Courier prompt routing, scrubbing, queue & heartbeat tests
     ├── js/                     # Unit tests mirroring js/*.js
     └── ui/                     # Boundary, DOM, and headless browser E2E integration tests
@@ -144,10 +144,10 @@ armageddon-vox/
 
 ## 🧪 Testing & Verification
 
-The repository maintains a strict **100% test pass target** (`242` tests across unit, courier, and headless browser UI suites) using Node's native test runner (`node:test`), `node:vm` lexical sandboxes, and headless Playwright Chromium/Edge integration:
+The repository maintains a strict **100% test pass target** (`245` tests across unit, courier, and headless browser UI suites) using Node's native test runner (`node:test`), `node:vm` lexical sandboxes, and headless Playwright Chromium/Edge integration:
 
 ```bash
-# Run the complete 242-test verification suite (unit + courier + headless browser E2E)
+# Run the complete 245-test verification suite (unit + courier + headless browser E2E)
 npm test
 
 # Regenerate and synchronize all modular Markdown bundles (<= 1000 lines) in /bundles/

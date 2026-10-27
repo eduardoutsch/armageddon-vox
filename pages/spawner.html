@@ -240,19 +240,23 @@
       margin: 0 0 10px 0;
       padding-bottom: 6px;
       border-bottom: 1px dashed var(--border);
-      min-height: 28px;
+      height: 38px;
+      min-height: 38px;
       box-sizing: border-box;
+      overflow: hidden;
     }
 
     .card-dock-header h3 {
       margin: 0;
-      font-size: 0.92rem;
+      font-size: 0.90rem;
       text-transform: uppercase;
       letter-spacing: 0.8px;
       color: var(--gold);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      flex-shrink: 1;
+      min-width: 0;
     }
 
     .card-dock-header .hud-sub {
@@ -627,7 +631,10 @@
           <div style="display:flex; flex-direction:column;">
             <div class="card-dock-header">
               <h3>🎯 Active Secondary Mission</h3>
-              <span id="secDeckCount" class="hud-sub"></span>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span id="secDeckCount" class="hud-sub"></span>
+                <button type="button" class="btn-ghost btn-sm" id="btnManualDrawSecondary" onclick="drawSecondary(false)" title="Draw a new Secondary Mission on demand" style="padding:2px 8px; font-size:0.75rem; line-height:1.2;">+ Draw</button>
+              </div>
             </div>
             <div id="activeSecondariesBox" style="flex:1; display:flex; flex-direction:column;"></div>
           </div>
@@ -635,7 +642,10 @@
           <div style="display:flex; flex-direction:column;">
             <div class="card-dock-header">
               <h3>☠️ Active Misery Cards</h3>
-              <span id="misDeckCount" class="hud-sub"></span>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span id="misDeckCount" class="hud-sub"></span>
+                <button type="button" class="btn-ghost btn-sm" id="btnManualDrawMisery" onclick="drawMisery(1)" title="Draw an additional Misery card on demand" style="padding:2px 8px; font-size:0.75rem; line-height:1.2;">+ Draw</button>
+              </div>
             </div>
             <div id="activeMiseriesBox" style="flex:1; display:flex; flex-direction:column;"></div>
           </div>

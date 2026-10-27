@@ -10,6 +10,26 @@ Wave generation cycle, threat level brackets, and battlefield event resolvers (`
 ## File: `js/app.js (Part 2: Wave Engine & Threat Escalation, Lines 701-1400)` <a id="file-jsappjspart2waveenginethreatescalationlines7011400"></a>
 
 ````javascript
+  saveSessionState();
+}
+
+function triggerSpecificMisery() {
+  const id = parseInt(document.getElementById('specificMiserySelect').value, 10);
+  const found = MISERIES.find(m => m.id === id);
+  if (!found) return;
+  sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
+  activeMiseries.push(found);
+  renderSharedDecks();
+  saveSessionState();
+}
+
+function drawSecondary(isRound1) {
+  if (sharedSecondaryDeck.length === 0) {
+    const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+    sharedSecondaryDeck = seededShuffle(SECONDARIES, mulberry32(hashString(code + "_MSN_R" + battleRound)));
+  }
+  let skipped = [];
+  let chosen = null;
   while (sharedSecondaryDeck.length > 0) {
     let candidate = sharedSecondaryDeck.shift();
     if (isRound1 && candidate.r1Skip) {
@@ -37,33 +57,41 @@ function renderSharedDecks() {
   document.getElementById('misDeckCount').innerText = `${sharedMiseryDeck.length} in deck`;
 
   const secBox = document.getElementById('activeSecondariesBox');
-  if (activeSecondaries.length === 0) {
-    secBox.innerHTML = `<div class="card secondary" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;"><p class="card-desc" style="margin:0;">No active Secondary Mission.</p></div>`;
-  } else {
-    secBox.innerHTML = activeSecondaries.map(s => `
-      <div class="card secondary">
-        <span class="badge gold">Secondary Mission</span>
-        <h4 class="card-title">${s.name}</h4>
-        <p class="card-desc">${s.cond}</p>
-        <div class="meta-row">
-          <span class="reward-pill"><strong>Reward:</strong> ${s.rew}</span>
-          <span class="punish-pill"><strong>Failure:</strong> ${s.pun}</span>
+  if (secBox) {
+    if (activeSecondaries.length === 0) {
+      secBox.innerHTML = `<div class="card secondary" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;"><p class="card-desc" style="margin:0;">No active Secondary Mission.</p></div>`;
+    } else if (typeof window !== 'undefined' && typeof window.renderActiveSecondaries === 'function') {
+      window.renderActiveSecondaries();
+    } else {
+      secBox.innerHTML = activeSecondaries.map(s => `
+        <div class="card secondary">
+          <span class="badge gold">Secondary Mission</span>
+          <h4 class="card-title">${s.name}</h4>
+          <p class="card-desc">${s.cond}</p>
+          <div class="meta-row">
+            <span class="reward-pill"><strong>Reward:</strong> ${s.rew}</span>
+            <span class="punish-pill"><strong>Failure:</strong> ${s.pun}</span>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    }
   }
 
   const misBox = document.getElementById('activeMiseriesBox');
-  if (activeMiseries.length === 0) {
-    misBox.innerHTML = `<div class="card misery" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;"><p class="card-desc" style="margin:0;">No active Misery Cards.</p></div>`;
-  } else {
-    misBox.innerHTML = activeMiseries.map(m => `
-      <div class="card misery">
-        <span class="badge red">Misery Effect</span>
-        <h4 class="card-title">${m.name}</h4>
-        <p class="card-desc">${m.desc}</p>
-      </div>
-    `).join('');
+  if (misBox) {
+    if (activeMiseries.length === 0) {
+      misBox.innerHTML = `<div class="card misery" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;"><p class="card-desc" style="margin:0;">No active Misery Cards.</p></div>`;
+    } else if (typeof window !== 'undefined' && typeof window.renderActiveMiseries === 'function') {
+      window.renderActiveMiseries();
+    } else {
+      misBox.innerHTML = activeMiseries.map(m => `
+        <div class="card misery">
+          <span class="badge red">Misery Effect</span>
+          <h4 class="card-title">${m.name}</h4>
+          <p class="card-desc">${m.desc}</p>
+        </div>
+      `).join('');
+    }
   }
 }
 
@@ -513,6 +541,9 @@ function resetMatchToSetup() {
   if (setupScreen) setupScreen.classList.remove('hidden');
   const gameScreen = document.getElementById('gameScreen');
   if (gameScreen) gameScreen.classList.add('hidden');
+  updateRoundBanner();
+  updateHUD();
+  renderSharedDecks();
   switchTab(1, false);
 }
 
@@ -679,35 +710,4 @@ async function pushLiveSpawnerStateToCloud() {
   try {
     const supabaseUrl = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://dsfvhjjalexqpbzqoaqb.supabase.co';
     const supabaseKey = (typeof window !== 'undefined' && window.SUPABASE_ANON_KEY) ? window.SUPABASE_ANON_KEY : 'sb_publishable_R3wXKsK7Gl54-8BNCauUNg_NIoosOOO';
-
-    let currentHordePool = {};
-    let currentNemesisStatus = {};
-    try {
-      const getRes = await fetch(`${supabaseUrl}/rest/v1/rpc/get_shared_spawn_pools`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
-        },
-        body: JSON.stringify({})
-      });
-      if (getRes && getRes.ok) {
-        const cur = await getRes.json();
-        if (cur) {
-          currentHordePool = cur.horde_pool || {};
-          currentNemesisStatus = cur.nemesis_status || {};
-        }
-      }
-    } catch (e) {}
-
-    const spawnerRooms = (currentNemesisStatus && currentNemesisStatus.spawner_rooms) ? currentNemesisStatus.spawner_rooms : {};
-    spawnerRooms[roomCode] = sharedRoomState;
-
-    const saveRes = await fetch(`${supabaseUrl}/rest/v1/rpc/save_shared_spawn_pools`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
 ````

@@ -157,7 +157,7 @@ compileBundle(
 compileBundle(
   '📦 Fires of Armageddon // Bundle: App Engine (Part 3: UI Telemetry & Persistence)',
   'DOM event handlers, Auspex telemetry HUD synchronization, and session state persistence (`js/app.js` lines 1401 to end).',
-  [{ file: 'js/app.js', label: 'js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-1988)', startLine: 1401, endLine: 1988 }],
+  [{ file: 'js/app.js', label: 'js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)', startLine: 1401, endLine: 2150 }],
   path.join(BUNDLES_DIR, 'bundle_app_part3.md')
 );
 
@@ -413,13 +413,14 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Unit Tests (Spawner Subsystems)',
-  'Deterministic unit tests for spawner cards, cockpit telemetry, resupply table, and threat rules (`tests/js/spawner*.test.js`).',
+  '📦 Fires of Armageddon // Bundle: Tests (Spawner Subsystems & UI Flow)',
+  'Deterministic unit and Playwright UI tests for spawner cards, cockpit telemetry, resupply table, and threat rules (`tests/js/spawner*.test.js`, `tests/ui/spawner.test.js`).',
   [
     'tests/js/spawner.test.js',
     'tests/js/spawner-cards.test.js',
     'tests/js/spawner-cockpit.test.js',
-    'tests/js/spawner-resupply.test.js'
+    'tests/js/spawner-resupply.test.js',
+    'tests/ui/spawner.test.js'
   ],
   path.join(BUNDLES_DIR, 'bundle_tests_js_spawner.md')
 );
@@ -518,7 +519,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_tests_ui_forge.md\`](bundle_tests_ui_forge.md) | **UI Tests (Munitorum Forge)** | \`tests/ui/crusade-forge.test.js\` |
 | [\`bundle_tests_ui_vox.md\`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal)** | \`tests/ui/vox.test.js\` |
 | [\`bundle_tests_bridge.md\`](bundle_tests_bridge.md) | **Courier Bridge Tests** | \`tests/vox_bridge.test.js\` |
-| [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | \`tests/js/spawner*.test.js\` |
+| [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Tests (Spawner Subsystems & UI Flow)** | \`tests/js/spawner*.test.js\`, \`tests/ui/spawner.test.js\` |
 | [\`bundle_tests_js_core.md\`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | \`tests/js/data.test.js\`, \`tests/js/rng.test.js\`, \`tests/js/vox-audio.test.js\` |
 | [\`bundle_tests_js_app.md\`](bundle_tests_js_app.md) | **Unit Tests (App Engine)** | \`tests/js/app.test.js\` |
 | [\`bundle_tests_js_modes.md\`](bundle_tests_js_modes.md) | **Unit Tests (Game Modes 2-7)** | \`tests/js/briefing.test.js\`, \`tests/js/pvp.test.js\`, \`tests/js/rogue.test.js\`, \`tests/js/roster.test.js\`, \`tests/js/vox.test.js\` |

@@ -24,6 +24,13 @@
   gRoot.lastClaimedCommandRound = gRoot.lastClaimedCommandRound || 0;
 
 
+  function getEffectiveState() {
+    if (typeof state !== 'undefined' && state) return state;
+    if (typeof window !== 'undefined' && window.state) return window.state;
+    if (typeof globalThis !== 'undefined' && globalThis.state) return globalThis.state;
+    return null;
+  }
+
   /**
    * =========================================================================
    * 1. SOLO MODE 2x SP DETECTION & COMMAND PHASE OBJECTIVE CLAIMS
@@ -32,7 +39,8 @@
   function isSoloModeActive() {
     if (typeof isSoloMode !== 'undefined' && isSoloMode) return true;
     if (typeof selectedModeVal !== 'undefined' && selectedModeVal === 'solo') return true;
-    if (typeof state !== 'undefined' && state && state.mode === 'solo') return true;
+    const effState = getEffectiveState();
+    if (effState && effState.mode === 'solo') return true;
     if (typeof document !== 'undefined') {
       const hudInfo = document.getElementById('hudSessionInfo')?.innerText || '';
       if (hudInfo.includes('SOLO')) return true;
@@ -78,9 +86,13 @@
 
   function getCurrentBattleRound() {
     if (typeof battleRound !== 'undefined') return battleRound;
-    if (typeof state !== 'undefined' && state && typeof state.round === 'number') return state.round;
+    if (typeof window !== 'undefined' && typeof window.battleRound !== 'undefined') return window.battleRound;
+    const effState = getEffectiveState();
+    if (effState && typeof effState.round === 'number') return effState.round;
+    if (effState && typeof effState.battleRound === 'number') return effState.battleRound;
     if (typeof document !== 'undefined') {
       const text = document.getElementById('hudRound')?.innerText || '';
+      if (text.toLowerCase().includes('pre-game')) return 0;
       const match = text.match(/\d+/);
       return match ? parseInt(match[0], 10) : 0;
     }
@@ -178,17 +190,19 @@
       const toggle = document.getElementById('unluckyNightSpawnerCheck');
       if (toggle && toggle.checked) return true;
     }
-    if (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries)) {
-      return state.activeMiseries.some(c => c.id === 7);
-    }
-    return false;
+    const effState = getEffectiveState();
+    const activeList = (effState && Array.isArray(effState.activeMiseries))
+      ? effState.activeMiseries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeMiseries) ? window.activeMiseries : []);
+    return activeList.some(c => c && c.id === 7);
   }
 
   function isPincerManeuverActive() {
-    if (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries)) {
-      return state.activeMiseries.some(c => c.id === 13);
-    }
-    return false;
+    const effState = getEffectiveState();
+    const activeList = (effState && Array.isArray(effState.activeMiseries))
+      ? effState.activeMiseries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeMiseries) ? window.activeMiseries : []);
+    return activeList.some(c => c && c.id === 13);
   }
 
   function ensureMiserySpawnerControls() {
@@ -216,7 +230,11 @@
 
   function syncMiserySpawnerBanner() {
     if (typeof document === 'undefined') return;
-    const hasUnlucky = (typeof state !== 'undefined' && state && Array.isArray(state.activeMiseries) && state.activeMiseries.some(c => c.id === 7));
+    const effState = getEffectiveState();
+    const activeM = (effState && Array.isArray(effState.activeMiseries))
+      ? effState.activeMiseries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeMiseries) ? window.activeMiseries : []);
+    const hasUnlucky = activeM.some(c => c && c.id === 7);
     const checkEl = document.getElementById('unluckyNightSpawnerCheck');
     if (checkEl && hasUnlucky && !checkEl.checked) {
       checkEl.checked = true;
@@ -277,7 +295,7 @@
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpStatic === 'function') {
       window.VoxAudio.playWarpStatic();
     }
-    const roundNum = (typeof state !== 'undefined' && state && state.round > 0) ? state.round : 1;
+    const roundNum = getCurrentBattleRound() || 1;
     const roundMod = (roundNum === 1) ? 0 : (roundNum === 2 ? 1 : (roundNum === 3 ? 2 : 3));
     const extraMod = (typeof document !== 'undefined') ? (parseInt(document.getElementById('extraSpawnMod')?.value, 10) || 0) : 0;
     const jammerMod = (typeof document !== 'undefined' && document.getElementById('jammerCheck')?.checked) ? -1 : 0;
@@ -337,17 +355,24 @@
   function renderActiveMiseries() {
     if (typeof document === 'undefined') return;
     const box = document.getElementById('activeMiseriesBox');
-    if (!box || typeof state === 'undefined' || !state) return;
+    if (!box) return;
+
+    const effState = getEffectiveState();
+    const activeList = (effState && Array.isArray(effState.activeMiseries))
+      ? effState.activeMiseries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeMiseries) ? window.activeMiseries : []);
+    const miseryDeck = (effState && Array.isArray(effState.miseryDeck))
+      ? effState.miseryDeck
+      : (typeof window !== 'undefined' && Array.isArray(window.sharedMiseryDeck) ? window.sharedMiseryDeck : null);
 
     const deckEl = document.getElementById('misDeckCount');
-    if (deckEl && Array.isArray(state.miseryDeck)) {
-      deckEl.textContent = `${state.miseryDeck.length} left in deck`;
+    if (deckEl && miseryDeck) {
+      deckEl.textContent = `${miseryDeck.length} in deck`;
     }
 
     ensureMiserySpawnerControls();
     syncMiserySpawnerBanner();
 
-    const activeList = state.activeMiseries || [];
     if (activeList.length === 0) {
       box.innerHTML = `<div class="card misery" style="opacity:0.65; padding:14px 16px; margin:0; min-height:52px; box-sizing:border-box; display:flex; align-items:center;">
         <p class="card-desc" style="margin:0;">No active Misery Cards.</p>
@@ -437,8 +462,11 @@
   }
 
   function resolveSecondaryOutcome(idx, isSuccess) {
-    if (typeof state === 'undefined' || !state || !Array.isArray(state.activeSecondaries)) return;
-    const rawCard = state.activeSecondaries[idx];
+    const effState = getEffectiveState();
+    const activeList = (effState && Array.isArray(effState.activeSecondaries))
+      ? effState.activeSecondaries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeSecondaries) ? window.activeSecondaries : []);
+    const rawCard = activeList[idx];
     if (!rawCard) return;
     const overrides = gRoot.SECONDARY_MISSION_OFFICIAL_OVERRIDES || {};
     const official = overrides[rawCard.id] || rawCard;
@@ -525,9 +553,10 @@
       }
     }
 
-    state.activeSecondaries.splice(idx, 1);
+    activeList.splice(idx, 1);
     renderActiveSecondaries();
-    if (typeof window.saveState === 'function') window.saveState();
+    if (typeof window !== 'undefined' && typeof window.saveSessionState === 'function') window.saveSessionState();
+    else if (typeof window !== 'undefined' && typeof window.saveState === 'function') window.saveState();
   }
 
   function redeemSavedSecondaryCard(savedIdx) {
@@ -541,14 +570,22 @@
   function renderActiveSecondaries() {
     if (typeof document === 'undefined') return;
     const box = document.getElementById('activeSecondariesBox');
-    if (!box || typeof state === 'undefined' || !state) return;
+    if (!box) return;
+
+    const effState = getEffectiveState();
+    const activeList = (effState && Array.isArray(effState.activeSecondaries))
+      ? effState.activeSecondaries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeSecondaries) ? window.activeSecondaries : []);
+    const secondaryDeck = (effState && Array.isArray(effState.secondaryDeck))
+      ? effState.secondaryDeck
+      : (typeof window !== 'undefined' && Array.isArray(window.sharedSecondaryDeck) ? window.sharedSecondaryDeck : null);
 
     const deckEl = document.getElementById('secDeckCount');
-    if (deckEl && Array.isArray(state.secondaryDeck)) {
-      deckEl.textContent = `${state.secondaryDeck.length} left in deck`;
+    if (deckEl && secondaryDeck) {
+      deckEl.textContent = `${secondaryDeck.length} in deck`;
     }
 
-    const activeList = state.activeSecondaries || [];
+    const currentRnd = getCurrentBattleRound();
     const solo = isSoloModeActive();
     const overrides = gRoot.SECONDARY_MISSION_OFFICIAL_OVERRIDES || {};
 
@@ -562,7 +599,7 @@
         const typeTag = official.typeTag || 'Secondary Mission';
         const tallyVal = gRoot.secondaryTallyMap[rawCard.id] || 0;
 
-        const r1Warning = (official.round1Restricted && state.round === 1)
+        const r1Warning = (official.round1Restricted && currentRnd === 1)
           ? `<div style="background:rgba(234,179,8,0.18); border:1px solid var(--gold); color:var(--gold); padding:6px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; margin-bottom:8px;">
                ⚠️ ROUND 1 RESTRICTION: If drawn during Battle Round 1, click [🔄 Redraw (R1 Rule)] below to reveal another Secondary Mission and shuffle this back into the deck!
              </div>`
@@ -896,10 +933,8 @@
     bindSpawnerCockpitWrappers();
     ensureMiserySpawnerControls();
     syncSoloSpUiIndicators();
-    if (typeof state !== 'undefined' && state) {
-      if (Array.isArray(state.activeMiseries)) renderActiveMiseries();
-      if (Array.isArray(state.activeSecondaries)) renderActiveSecondaries();
-    }
+    renderActiveMiseries();
+    renderActiveSecondaries();
     if (typeof renderResupplyTable === 'function') {
       renderResupplyTable();
     }

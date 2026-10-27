@@ -209,25 +209,7 @@ function restoreSessionState() {
     if (setupScreen) setupScreen.classList.add('hidden');
     if (gameScreen) gameScreen.classList.remove('hidden');
 
-    const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)]) ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)] : { misery: 1, spawnMod: '2D6+0' };
-    const roundTitle = document.getElementById('roundTitle');
-    if (roundTitle) roundTitle.innerText = battleRound === 0 ? "Deployment & Setup" : `Battle Round ${battleRound}`;
-    const spawnModDisplay = document.getElementById('spawnModDisplay');
-    if (spawnModDisplay) {
-      spawnModDisplay.innerText = battleRound === 0
-        ? "Open Tab 4 (Spawner) to roll Round 1 Horde Spawns!"
-        : `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
-    }
-    const nextRoundBtn = document.getElementById('nextRoundBtn');
-    if (nextRoundBtn) {
-      nextRoundBtn.innerText = battleRound === 0
-        ? "Begin Battle Round 1"
-        : (battleRound < 6 ? `Advance to Battle Round ${battleRound + 1}` : `Battle Round 6 Active (Final Stand)`);
-    }
-    const spawnerBtnRound = document.getElementById('spawnerBtnRound');
-    if (spawnerBtnRound) {
-      spawnerBtnRound.innerText = Math.max(1, battleRound);
-    }
+    updateRoundBanner();
 
     if (activeCard) {
       const activeCardBox = document.getElementById('activeCardBox');
@@ -527,6 +509,7 @@ function startSession() {
 
   currentChoices = drawSecretCards(2);
   renderSecretChoices("Select 1 Initial Secret Objective");
+  updateRoundBanner();
   updateHUD();
   renderSharedDecks();
   renderResupplyTable();
@@ -550,6 +533,44 @@ function switchTab(tabNum, persist = true) {
   if (persist) saveSessionState();
 }
 
+function updateRoundBanner() {
+  if (typeof document === 'undefined') return;
+  const roundTitle = document.getElementById('roundTitle');
+  const spawnModDisplay = document.getElementById('spawnModDisplay');
+  const nextRoundBtn = document.getElementById('nextRoundBtn');
+  const btnRound = document.getElementById('spawnerBtnRound');
+  const cockpitBtnRound = document.getElementById('cockpitSpawnBtnRound');
+
+  if (battleRound === 0) {
+    if (roundTitle) roundTitle.innerText = "Deployment & Setup";
+    if (spawnModDisplay) {
+      spawnModDisplay.innerText = "Step 1: Roll your initial Round 1 Horde Spawns below, lock your Secret Objective, then click Begin Battle Round 1!";
+    }
+    if (nextRoundBtn) {
+      nextRoundBtn.innerText = "Begin Battle Round 1 →";
+    }
+    if (btnRound) btnRound.textContent = "1";
+    if (cockpitBtnRound) cockpitBtnRound.textContent = "1";
+  } else {
+    const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)])
+      ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)]
+      : { misery: 1, spawnMod: '+0 to Spawn Rolls' };
+    if (roundTitle) roundTitle.innerText = `Battle Round ${battleRound}`;
+    if (spawnModDisplay) spawnModDisplay.innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
+    if (nextRoundBtn) {
+      nextRoundBtn.innerText = battleRound < 6
+        ? `Advance to Battle Round ${battleRound + 1}`
+        : `Battle Round 6 Active (Final Stand)`;
+    }
+    if (btnRound) btnRound.textContent = String(battleRound);
+    if (cockpitBtnRound) cockpitBtnRound.textContent = String(battleRound);
+  }
+
+  if (typeof window !== 'undefined' && typeof window.updateGuidedFlowForRound === 'function') {
+    window.updateGuidedFlowForRound();
+  }
+}
+
 function updateHUD() {
   const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
   document.getElementById('hudSessionInfo').innerText = isSoloMode ? `${code} • SOLO` : `${code} • P${selectedRoleVal}`;
@@ -559,6 +580,7 @@ function updateHUD() {
   document.getElementById('hudCp').innerText = cp;
   document.getElementById('hudStratTally').innerText = `(${stratCount} Strats)`;
   document.getElementById('spawnerBtnRound').innerText = Math.max(1, battleRound);
+  updateRoundBanner();
   saveSessionState();
 }
 
@@ -653,12 +675,10 @@ function advanceBattleRound() {
     window.resetCommandObjectiveClaimState();
   }
 
-  const cfg = HARD_MODE_ROUNDS[Math.min(battleRound, 6)];
-  document.getElementById('roundTitle').innerText = `Battle Round ${battleRound}`;
-  document.getElementById('spawnModDisplay').innerText = `${cfg.misery} Misery Drawn • ${cfg.spawnMod}`;
-  document.getElementById('nextRoundBtn').innerText = battleRound < 6
-    ? `Advance to Battle Round ${battleRound + 1}`
-    : `Battle Round 6 Active (Final Stand)`;
+  const cfg = (typeof HARD_MODE_ROUNDS !== 'undefined' && HARD_MODE_ROUNDS[Math.min(battleRound, 6)])
+    ? HARD_MODE_ROUNDS[Math.min(battleRound, 6)]
+    : { misery: 1, spawnMod: '+0 to Spawn Rolls' };
+  updateRoundBanner();
 
   activeMiseries = [];
   activeSecondaries = [];
@@ -690,24 +710,4 @@ function drawMisery(count) {
     if (card.id === 14 && isSoloMode) drawMisery(2);
   }
   renderSharedDecks();
-  saveSessionState();
-}
-
-function triggerSpecificMisery() {
-  const id = parseInt(document.getElementById('specificMiserySelect').value, 10);
-  const found = MISERIES.find(m => m.id === id);
-  if (!found) return;
-  sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
-  activeMiseries.push(found);
-  renderSharedDecks();
-  saveSessionState();
-}
-
-function drawSecondary(isRound1) {
-  if (sharedSecondaryDeck.length === 0) {
-    const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
-    sharedSecondaryDeck = seededShuffle(SECONDARIES, mulberry32(hashString(code + "_MSN_R" + battleRound)));
-  }
-  let skipped = [];
-  let chosen = null;
 ````
