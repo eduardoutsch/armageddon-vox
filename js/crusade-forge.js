@@ -50,6 +50,8 @@ var crusadeState = {
     expBattles: 0,
     expWins: 0,
     expeditionsCompleted: 0,
+    goalProgress: 0,
+    expTotals: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 },
     assets: {}
   }
 };

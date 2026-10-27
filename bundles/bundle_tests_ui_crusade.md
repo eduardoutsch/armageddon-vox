@@ -139,7 +139,23 @@ const mockElements = {
   necronRecipientUnit: { value: 'Hypercrypt Phalanx' },
   necronVaultPreviewBox: { innerHTML: '' },
   tombAwakeningNotes: { value: '' },
-  tombAwakeningPreviewBox: { textContent: '' }
+  tombAwakeningPreviewBox: { textContent: '' },
+  votExpBattlesLabel: { textContent: '0 / 5' },
+  votExpWinsLabel: { textContent: '0' },
+  votGoalPips: { innerHTML: '' },
+  votGoalProgressLabel: { textContent: '0 / 3' },
+  votExpTotalsDisplay: { textContent: '' },
+  votRes_rawMinerals: { textContent: '0' },
+  votRes_biomatter: { textContent: '0' },
+  votRes_energySources: { textContent: '0' },
+  votRes_galacticIntel: { textContent: '0' },
+  votRare_rawMinerals: { textContent: '0' },
+  votRare_biomatter: { textContent: '0' },
+  votRare_energySources: { textContent: '0' },
+  votRare_galacticIntel: { textContent: '0' },
+  votannAssetsGrid: { innerHTML: '' },
+  votActiveAssetsCount: { textContent: '0' },
+  votannDispatchPreviewBox: { textContent: '' }
 };
 
 const mockDocument = {
@@ -244,7 +260,14 @@ const evalFn = new Function(
     initCrusadePage,
     importHordeBattleStatsToCrusade,
     detachHordeBattleStatsFromCrusade,
-    renderHordeStatsAttachmentCard
+    renderHordeStatsAttachmentCard,
+    ensureVotannState,
+    adjVotannRes,
+    adjVotannRare,
+    adjVotannExpField,
+    renderVotannTab,
+    compileVotannDispatch,
+    buildVotannSummaryLine
   };`
 );
 
@@ -594,6 +617,26 @@ test('UI Integration: importHordeBattleStatsToCrusade updates attachment card an
   assert.ok(!mockElements.masterDossierPreviewBox.textContent.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]'));
 });
 
+test('UI Boundary: pages/crusade.html includes Condition Tracker, Goal Counter, and Expedition Totals UI', () => {
+  assert.ok(crusadeHtml.includes('id="votGoalProgressLabel"'), 'crusade.html must contain #votGoalProgressLabel');
+  assert.ok(crusadeHtml.includes('id="votGoalPips"'), 'crusade.html must contain #votGoalPips');
+  assert.ok(crusadeHtml.includes('id="votExpTotalsDisplay"'), 'crusade.html must contain #votExpTotalsDisplay');
+  assert.ok(crusadeHtml.includes(`adjVotannExpField('goalProgress', 1)`), 'crusade.html must have +1 Goal button');
+  assert.ok(crusadeHtml.includes(`adjVotannExpField('goalProgress', -1)`), 'crusade.html must have -1 Goal button');
+  assert.ok(crusadeHtml.includes('CONDITION TRACKER'), 'crusade.html must label the Condition Tracker');
+  assert.ok(crusadeHtml.includes('EXPEDITION TOTAL (CURRENT RUN)'), 'crusade.html must label Expedition Total');
+
+  // Exercise renderVotannTab DOM rendering
+  crusade.adjVotannExpField('goalProgress', 2);
+  assert.equal(mockElements.votGoalProgressLabel.textContent, '2 / 3');
+  assert.ok(mockElements.votGoalPips.innerHTML.includes('🟡'));
+
+  // Test Expedition Totals rendering
+  crusade.adjVotannRes('rawMinerals', 30);
+  assert.ok(mockElements.votExpTotalsDisplay.textContent.includes('Minerals: 30'));
+});
+
+
 
 ````
 
@@ -686,6 +729,66 @@ test('Crusade Pure Core: compileMasterDossier includes attached Horde Battle Sta
   assert.ok(result.includes('• SECONDARY MISSIONS: 1 Completed, 1 Failed'));
   assert.ok(result.includes('• SUPPLY ECONOMY: 28 SP Earned • 16 SP Spent on Resupply • 12 Leftover Banked'));
 });
+
+test('Crusade Votann Pure Core: compileVotannDispatch includes condition tracker and expedition totals', () => {
+  const result = crusade.compileVotannDispatch({
+    votann: {
+      expBacking: 'Lean Operation (Free // Max 5 Battles)',
+      expBattles: 2,
+      expWins: 1,
+      expGoal: 'Farstryd Exploration (Prospecting 3x)',
+      expContract: 'Mining — Extraction: Minerals',
+      goalProgress: 2,
+      expTotals: { rawMinerals: 70, biomatter: 20, energySources: 10, galacticIntel: 0, rare: 1 },
+      rawMinerals: 30,
+      biomatter: 0,
+      energySources: 10,
+      galacticIntel: 0,
+      rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
+      assets: { outpost1: 'Active' }
+    },
+    notes: 'Secured deep seam.'
+  });
+
+  assert.ok(result.includes('+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++'));
+  assert.ok(result.includes('• GOAL CONDITION TRACKER: 2 / 3'));
+  assert.ok(result.includes('• EXPEDITION TOTAL (CURRENT RUN): Minerals: 70 | Biomatter: 20 | Energy: 10 | Intel: 0'));
+  assert.ok(result.includes('• FUNDAMENTAL VAULT: Raw Minerals: 30 | Biomatter: 0 | Energy Sources: 10 | Galactic Intel: 0'));
+});
+
+test('Crusade Votann State: adjVotannRes accumulates expTotals on gain and expeditionsCompleted resets expedition', () => {
+  crusadeForge.crusadeState.votann = null;
+  const v = crusade.ensureVotannState();
+  assert.equal(v.goalProgress, 0);
+  assert.deepEqual(v.expTotals, { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 });
+
+  // Add 40 minerals
+  crusade.adjVotannRes('rawMinerals', 40);
+  assert.equal(v.rawMinerals, 40);
+  assert.equal(v.expTotals.rawMinerals, 40);
+
+  // Spend 20 minerals (vault decreases, expTotals remains 40)
+  crusade.adjVotannRes('rawMinerals', -20);
+  assert.equal(v.rawMinerals, 20);
+  assert.equal(v.expTotals.rawMinerals, 40);
+
+  // Adjust goal progress
+  crusade.adjVotannExpField('goalProgress', 1);
+  assert.equal(v.goalProgress, 1);
+  crusade.adjVotannExpField('goalProgress', 3); // Clamped at 3
+  assert.equal(v.goalProgress, 3);
+  crusade.adjVotannExpField('goalProgress', -1);
+  assert.equal(v.goalProgress, 2);
+
+  // Complete and reset expedition
+  crusade.adjVotannExpField('expeditionsCompleted', 1);
+  assert.equal(v.expeditionsCompleted, 1);
+  assert.equal(v.goalProgress, 0);
+  assert.equal(v.expBattles, 0);
+  assert.equal(v.expWins, 0);
+  assert.deepEqual(v.expTotals, { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 });
+});
+
 ````
 
 ---

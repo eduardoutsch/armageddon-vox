@@ -791,6 +791,32 @@
         </div>
       </div>
 
+      <!-- CONDITION TRACKER (3-BOX GOAL COUNTER) & EXPEDITION TOTAL -->
+      <div style="background:#090b10; border:1px solid rgba(0,212,255,0.25); border-radius:6px; padding:12px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div>
+            <span class="hud-label" style="color:var(--blue);">🎯 CONDITION TRACKER (EXPEDITION GOAL PROGRESS)</span>
+            <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+              <span id="votGoalPips" style="font-size:1.15rem; letter-spacing:3px;">⚪ ⚪ ⚪</span>
+              <strong id="votGoalProgressLabel" style="color:var(--gold); font-size:1.1rem;">0 / 3</strong>
+              <span style="font-size:0.8rem; color:var(--muted);">(e.g. 2+ Prospecting XP in 3 Battles)</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="mini-btn" style="padding:4px 10px;" onclick="adjVotannExpField('goalProgress', -1)">−1 Goal</button>
+            <button type="button" class="mini-btn" style="padding:4px 10px; border-color:var(--gold); color:var(--gold);" onclick="adjVotannExpField('goalProgress', 1)">+1 Goal</button>
+          </div>
+        </div>
+
+        <div style="margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:0.82rem;">
+          <div>
+            <strong style="color:var(--gold);">⭕ EXPEDITION TOTAL (CURRENT RUN):</strong>
+            <span id="votExpTotalsDisplay" style="color:#fff; margin-left:6px;">Minerals: 0 | Biomatter: 0 | Energy: 0 | Intel: 0</span>
+          </div>
+          <span style="color:var(--muted); font-size:0.75rem;">Cumulative harvest — persists through Asset purchases; resets on Expedition completion</span>
+        </div>
+      </div>
+
       <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:center; align-items:center;">
         <button type="button" class="btn-ghost btn-sm" onclick="adjVotannExpField('expBattles', 1)">⚔️ Log Expedition Battle (+1)</button>
         <button type="button" class="btn-ghost btn-sm" onclick="adjVotannExpField('expBattles', -1)">↩️ Battle (−1)</button>

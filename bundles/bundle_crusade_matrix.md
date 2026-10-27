@@ -25,6 +25,14 @@ if (typeof require === 'function') {
     if (hStats?.compileHordeBattleStatsDossierSection) _compileHordeBattleStatsDossierSection = hStats.compileHordeBattleStatsDossierSection;
     if (hStats?.loadHordeBattleStats) _loadHordeBattleStats = hStats.loadHordeBattleStats;
   } catch (e) {}
+  if (typeof crusadeState === 'undefined') {
+    try {
+      const forge = require('./crusade-forge.js');
+      if (forge && forge.crusadeState) {
+        global.crusadeState = forge.crusadeState;
+      }
+    } catch (e) {}
+  }
 }
 
 /**
@@ -361,8 +369,17 @@ function ensureVotannState() {
       expBacking: 'Lean Operation (Free // Max 5 Battles)',
       expGoal: 'Farstryd Exploration (Prospecting 2+ XP in 3+ Battles → +3 XP Character & 1 Free Mining Outpost)',
       expContract: 'Mining — Extraction: Minerals (60+ Raw Minerals → +1 Rare Raw Mineral)',
-      expBattles: 0, expWins: 0, expeditionsCompleted: 0, assets: {}
+      expBattles: 0, expWins: 0, expeditionsCompleted: 0,
+      goalProgress: 0,
+      expTotals: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 },
+      assets: {}
     };
+  }
+  if (crusadeState.votann.goalProgress === undefined) {
+    crusadeState.votann.goalProgress = 0;
+  }
+  if (!crusadeState.votann.expTotals) {
+    crusadeState.votann.expTotals = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
   }
   return crusadeState.votann;
 }
@@ -370,6 +387,10 @@ function ensureVotannState() {
 function adjVotannRes(key, delta) {
   const v = ensureVotannState();
   v[key] = Math.max(0, (v[key] || 0) + delta);
+  if (delta > 0) {
+    v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+    v.expTotals[key] = (v.expTotals[key] || 0) + delta;
+  }
   renderVotannTab();
   if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
   if (typeof saveCrusadeState === 'function') saveCrusadeState();
@@ -379,6 +400,10 @@ function adjVotannRare(key, delta) {
   const v = ensureVotannState();
   if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
   v.rare[key] = Math.max(0, (v.rare[key] || 0) + delta);
+  if (delta > 0) {
+    v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+    v.expTotals.rare = (v.expTotals.rare || 0) + delta;
+  }
   renderVotannTab();
   if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
   if (typeof saveCrusadeState === 'function') saveCrusadeState();
@@ -400,9 +425,13 @@ function rollVotannPostBattleHarvest() {
     });
   }
   v[picked[0]] = (v[picked[0]] || 0) + amt;
+  v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+  v.expTotals[picked[0]] = (v.expTotals[picked[0]] || 0) + amt;
+
   let bioBonus = '';
   if (picked[0] !== 'biomatter' && (v.assets.biorecyc === 'Active' || v.assets.biorecyc === 'Upgraded')) {
     v.biomatter = (v.biomatter || 0) + 20;
+    v.expTotals.biomatter = (v.expTotals.biomatter || 0) + 20;
     bioBonus = ' (+20 Biomatter from Biorecyc Fabricator)';
   }
   const notice = document.getElementById('votHarvestNotice');
@@ -419,6 +448,8 @@ function rollVotannRareResourceCheck() {
   const notice = document.getElementById('votHarvestNotice');
   if (d6 === 6) {
     v.rare.rawMinerals = (v.rare.rawMinerals || 0) + 1;
+    v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+    v.expTotals.rare = (v.expTotals.rare || 0) + 1;
     if (notice) notice.innerHTML = `<strong style="color:var(--green);">D6 = 6! Unearthed +1 Rare Resource!</strong>`;
   } else {
     if (notice) notice.innerHTML = `<span style="color:var(--muted);">Victory Rare Roll: D6 = ${d6} (Requires 6+).</span>`;
@@ -442,6 +473,10 @@ function adjVotannExpField(field, delta) {
     v.expeditionsCompleted = Math.max(0, (v.expeditionsCompleted || 0) + delta);
     v.expBattles = 0;
     v.expWins = 0;
+    v.goalProgress = 0;
+    v.expTotals = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+  } else if (field === 'goalProgress') {
+    v.goalProgress = Math.min(3, Math.max(0, (v.goalProgress || 0) + delta));
   } else {
     v[field] = Math.max(0, (v[field] || 0) + delta);
   }
@@ -504,6 +539,7 @@ function attachVotannVaultToDossier() {
 }
 
 function renderVotannTab() {
+  if (typeof document === 'undefined') return;
   const v = ensureVotannState();
   ['rawMinerals', 'biomatter', 'energySources', 'galacticIntel'].forEach(k => {
     const rEl = document.getElementById('votRes_' + k);
@@ -517,47 +553,11 @@ function renderVotannTab() {
   if (bLbl) bLbl.textContent = `${v.expBattles || 0} / ${maxB}`;
   if (wLbl) wLbl.textContent = String(v.expWins || 0);
 
-  const grid = document.getElementById('votannAssetsGrid');
-  const assetsCatalog = (typeof VOTANN_KINDRED_ASSETS !== 'undefined') ? VOTANN_KINDRED_ASSETS : (typeof window !== 'undefined' ? window.VOTANN_KINDRED_ASSETS : []);
-  let activeCount = 0;
-  if (grid) {
-    grid.innerHTML = (assetsCatalog || []).map(a => {
-      const st = v.assets[a.key] || 'Locked';
-      if (st === 'Active' || st === 'Upgraded') activeCount++;
-      const badgeColor = st === 'Upgraded' ? 'var(--green)' : (st === 'Active' ? 'var(--gold)' : (st === 'Inactive' ? 'var(--red)' : 'var(--muted)'));
-      return `
-        <div class="logistics-card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><strong style="color:#fff; font-size:0.88rem;">${a.title}</strong><button type="button" class="mini-btn" style="width:auto; padding:2px 8px; border-color:${badgeColor}; color:${badgeColor};" onclick="cycleVotannAssetState('${a.key}')">${st.toUpperCase()}</button></div>
-          <div style="font-size:0.74rem; color:var(--muted); margin-bottom:4px;">Cost: ${a.cost} | Upg: ${a.upgCost}</div>
-          <div style="font-size:0.79rem; color:var(--text);">${st === 'Upgraded' ? a.upgDesc : a.baseDesc}</div>
-        </div>`;
-    }).join('');
+  const gp = Math.min(3, Math.max(0, v.goalProgress || 0));
+  const gpLabel = document.getElementById('votGoalProgressLabel');
+  if (gpLabel) gpLabel.textContent = `${gp} / 3`;
+  const gpPips = document.getElementById('votGoalPips');
+  if (gpPips) {
+    gpPips.innerHTML = [0, 1, 2].map(i => i < gp ? '🟡' : '⚪').join(' ');
   }
-  const cEl = document.getElementById('votActiveAssetsCount');
-  if (cEl) cEl.textContent = String(activeCount);
-  updateVotannDispatchPreview();
-}
-
-function buildVotannSummaryLine() {
-  const v = ensureVotannState();
-  const r = v.rare || {};
-  return `Charter: ${v.expBacking || 'Lean'} (${v.expBattles || 0} Battles, ${v.expWins || 0} Wins) | Goal: ${v.expGoal || 'Farstryd'} | Vault: Minerals:${v.rawMinerals || 0} Biomatter:${v.biomatter || 0} Energy:${v.energySources || 0} Intel:${v.galacticIntel || 0} (Rare: M:${r.rawMinerals || 0}, B:${r.biomatter || 0}, E:${r.energySources || 0}, I:${r.galacticIntel || 0})`;
-}
-
-function compileVotannDispatch(input = {}) {
-  const v = input.votann || ensureVotannState();
-  const activeAssets = Object.entries(v.assets || {})
-    .filter(([, st]) => st === 'Active' || st === 'Upgraded')
-    .map(([k, st]) => `${k} (${st})`).join(', ') || 'None yet';
-  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('votannDispatchNotes')?.value) || '').trim();
-  const lines = [
-    `+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++`,
-    `• REPORTING WARLORD: KÂHL HÂRKYN GRÎMLEDGER // THE LEDGER OF EMBERS (1,200 PTS)`,
-    `• EXPEDITION CHARTER: ${v.expBacking} | Progress: ${v.expBattles} Battles (${v.expWins} Wins)`,
-    `• EXPEDITION GOAL: ${v.expGoal}`,
-    `• GUILD CONTRACT: ${v.expContract}`,
-    `• FUNDAMENTAL VAULT: Raw Minerals: ${v.rawMinerals} | Biomatter: ${v.biomatter} | Energy Sources: ${v.energySources} | Galactic Intel: ${v.galacticIntel}`,
-    `• RARE RESOURCE VAULT: Minerals: ${v.rare?.rawMinerals || 0} | Biomatter: ${v.rare?.biomatter || 0} | Energy: ${v.rare?.energySources || 0} | Intel: ${v.rare?.galacticIntel || 0}`,
-    `• ACTIVE KINDRED ASSETS: ${activeAssets}`
-  ];
 ````

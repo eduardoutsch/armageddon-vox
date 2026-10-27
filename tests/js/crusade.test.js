@@ -82,3 +82,63 @@ test('Crusade Pure Core: compileMasterDossier includes attached Horde Battle Sta
   assert.ok(result.includes('• SECONDARY MISSIONS: 1 Completed, 1 Failed'));
   assert.ok(result.includes('• SUPPLY ECONOMY: 28 SP Earned • 16 SP Spent on Resupply • 12 Leftover Banked'));
 });
+
+test('Crusade Votann Pure Core: compileVotannDispatch includes condition tracker and expedition totals', () => {
+  const result = crusade.compileVotannDispatch({
+    votann: {
+      expBacking: 'Lean Operation (Free // Max 5 Battles)',
+      expBattles: 2,
+      expWins: 1,
+      expGoal: 'Farstryd Exploration (Prospecting 3x)',
+      expContract: 'Mining — Extraction: Minerals',
+      goalProgress: 2,
+      expTotals: { rawMinerals: 70, biomatter: 20, energySources: 10, galacticIntel: 0, rare: 1 },
+      rawMinerals: 30,
+      biomatter: 0,
+      energySources: 10,
+      galacticIntel: 0,
+      rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
+      assets: { outpost1: 'Active' }
+    },
+    notes: 'Secured deep seam.'
+  });
+
+  assert.ok(result.includes('+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++'));
+  assert.ok(result.includes('• GOAL CONDITION TRACKER: 2 / 3'));
+  assert.ok(result.includes('• EXPEDITION TOTAL (CURRENT RUN): Minerals: 70 | Biomatter: 20 | Energy: 10 | Intel: 0'));
+  assert.ok(result.includes('• FUNDAMENTAL VAULT: Raw Minerals: 30 | Biomatter: 0 | Energy Sources: 10 | Galactic Intel: 0'));
+});
+
+test('Crusade Votann State: adjVotannRes accumulates expTotals on gain and expeditionsCompleted resets expedition', () => {
+  crusadeForge.crusadeState.votann = null;
+  const v = crusade.ensureVotannState();
+  assert.equal(v.goalProgress, 0);
+  assert.deepEqual(v.expTotals, { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 });
+
+  // Add 40 minerals
+  crusade.adjVotannRes('rawMinerals', 40);
+  assert.equal(v.rawMinerals, 40);
+  assert.equal(v.expTotals.rawMinerals, 40);
+
+  // Spend 20 minerals (vault decreases, expTotals remains 40)
+  crusade.adjVotannRes('rawMinerals', -20);
+  assert.equal(v.rawMinerals, 20);
+  assert.equal(v.expTotals.rawMinerals, 40);
+
+  // Adjust goal progress
+  crusade.adjVotannExpField('goalProgress', 1);
+  assert.equal(v.goalProgress, 1);
+  crusade.adjVotannExpField('goalProgress', 3); // Clamped at 3
+  assert.equal(v.goalProgress, 3);
+  crusade.adjVotannExpField('goalProgress', -1);
+  assert.equal(v.goalProgress, 2);
+
+  // Complete and reset expedition
+  crusade.adjVotannExpField('expeditionsCompleted', 1);
+  assert.equal(v.expeditionsCompleted, 1);
+  assert.equal(v.goalProgress, 0);
+  assert.equal(v.expBattles, 0);
+  assert.equal(v.expWins, 0);
+  assert.deepEqual(v.expTotals, { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 });
+});
+

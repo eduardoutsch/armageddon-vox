@@ -913,6 +913,8 @@ test('routeSpeakerPersona: routes gamma to Fane-Node Vôl-09 with allowIntercept
   assert.equal(p1.allowIntercept, false);
   assert.equal(p1.pattern, 'Pattern 4C (Fane-Node Vôl-09 Readout)');
   assert.ok(p1.promptPrefix.includes('Fane-Node Vôl-09 ("The Deaf Ear")'));
+  assert.ok(p1.promptPrefix.includes('Commander Omega - The Ledger of Embers (Story, Roster & Acquisitions Ledger).md'));
+  assert.ok(p1.promptPrefix.includes('Force Warlord Kâhl Hârkyn Grîmledger: '));
   assert.ok(p1.promptPrefix.includes('Pattern 4C / Pattern 2 / Pattern 3, REF-ID: 12345678'));
   assert.ok(p1.promptPrefix.includes('DO NOT include any Pattern 5 intercept block'));
 

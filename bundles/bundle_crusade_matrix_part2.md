@@ -10,6 +10,59 @@ Crusade resource adjustments, harvest rollers, expedition fields, and master dos
 ## File: `js/crusade.js (Part 2: Operations & Dispatch)` <a id="file-jscrusadejspart2operationsdispatch"></a>
 
 ````javascript
+
+  const expTot = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+  const expTotEl = document.getElementById('votExpTotalsDisplay');
+  if (expTotEl) {
+    expTotEl.textContent = `Minerals: ${expTot.rawMinerals || 0} | Biomatter: ${expTot.biomatter || 0} | Energy: ${expTot.energySources || 0} | Intel: ${expTot.galacticIntel || 0}${expTot.rare ? ` | Rare: ${expTot.rare}` : ''}`;
+  }
+
+  const grid = document.getElementById('votannAssetsGrid');
+  const assetsCatalog = (typeof VOTANN_KINDRED_ASSETS !== 'undefined') ? VOTANN_KINDRED_ASSETS : (typeof window !== 'undefined' ? window.VOTANN_KINDRED_ASSETS : []);
+  let activeCount = 0;
+  if (grid) {
+    grid.innerHTML = (assetsCatalog || []).map(a => {
+      const st = v.assets[a.key] || 'Locked';
+      if (st === 'Active' || st === 'Upgraded') activeCount++;
+      const badgeColor = st === 'Upgraded' ? 'var(--green)' : (st === 'Active' ? 'var(--gold)' : (st === 'Inactive' ? 'var(--red)' : 'var(--muted)'));
+      return `
+        <div class="logistics-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><strong style="color:#fff; font-size:0.88rem;">${a.title}</strong><button type="button" class="mini-btn" style="width:auto; padding:2px 8px; border-color:${badgeColor}; color:${badgeColor};" onclick="cycleVotannAssetState('${a.key}')">${st.toUpperCase()}</button></div>
+          <div style="font-size:0.74rem; color:var(--muted); margin-bottom:4px;">Cost: ${a.cost} | Upg: ${a.upgCost}</div>
+          <div style="font-size:0.79rem; color:var(--text);">${st === 'Upgraded' ? a.upgDesc : a.baseDesc}</div>
+        </div>`;
+    }).join('');
+  }
+  const cEl = document.getElementById('votActiveAssetsCount');
+  if (cEl) cEl.textContent = String(activeCount);
+  updateVotannDispatchPreview();
+}
+
+function buildVotannSummaryLine() {
+  const v = ensureVotannState();
+  const r = v.rare || {};
+  const tot = v.expTotals || {};
+  return `Charter: ${v.expBacking || 'Lean'} (${v.expBattles || 0} Battles, ${v.expWins || 0} Wins, Goal: ${v.goalProgress || 0}/3) | Exp Total: M:${tot.rawMinerals || 0} B:${tot.biomatter || 0} E:${tot.energySources || 0} I:${tot.galacticIntel || 0} | Vault: M:${v.rawMinerals || 0} B:${v.biomatter || 0} E:${v.energySources || 0} I:${v.galacticIntel || 0} (Rare: M:${r.rawMinerals || 0}, B:${r.biomatter || 0}, E:${r.energySources || 0}, I:${r.galacticIntel || 0})`;
+}
+
+function compileVotannDispatch(input = {}) {
+  const v = input.votann || ensureVotannState();
+  const activeAssets = Object.entries(v.assets || {})
+    .filter(([, st]) => st === 'Active' || st === 'Upgraded')
+    .map(([k, st]) => `${k} (${st})`).join(', ') || 'None yet';
+  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('votannDispatchNotes')?.value) || '').trim();
+  const lines = [
+    `+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++`,
+    `• REPORTING WARLORD: KÂHL HÂRKYN GRÎMLEDGER // THE LEDGER OF EMBERS (1,200 PTS)`,
+    `• EXPEDITION CHARTER: ${v.expBacking} | Progress: ${v.expBattles} Battles (${v.expWins} Wins)`,
+    `• EXPEDITION GOAL: ${v.expGoal}`,
+    `• GOAL CONDITION TRACKER: ${v.goalProgress || 0} / 3`,
+    `• GUILD CONTRACT: ${v.expContract}`,
+    `• EXPEDITION TOTAL (CURRENT RUN): Minerals: ${v.expTotals?.rawMinerals || 0} | Biomatter: ${v.expTotals?.biomatter || 0} | Energy: ${v.expTotals?.energySources || 0} | Intel: ${v.expTotals?.galacticIntel || 0}`,
+    `• FUNDAMENTAL VAULT: Raw Minerals: ${v.rawMinerals} | Biomatter: ${v.biomatter} | Energy Sources: ${v.energySources} | Galactic Intel: ${v.galacticIntel}`,
+    `• RARE RESOURCE VAULT: Minerals: ${v.rare?.rawMinerals || 0} | Biomatter: ${v.rare?.biomatter || 0} | Energy: ${v.rare?.energySources || 0} | Intel: ${v.rare?.galacticIntel || 0}`,
+    `• ACTIVE KINDRED ASSETS: ${activeAssets}`
+  ];
   if (notes) lines.push(`• CLAIM-RECKONER FIELD LOG: "${notes}"`);
   lines.push(
     `------------------------------------------------`,
@@ -239,6 +292,7 @@ function buildMasterDossierString() {
 }
 
 function updateMasterDossierPreview() {
+  if (typeof document === 'undefined') return;
   updateDistantForceVisibility();
   const box = document.getElementById('masterDossierPreviewBox');
   const chan = document.getElementById('dossierChannel')?.value || 'alpha';
@@ -262,10 +316,12 @@ function transmitMasterBattleDossier() {
 }
 
 function saveCrusadeState() {
-  ['dossierDistantForce', 'dossierChannel', 'dossierModeNode'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) crusadeState[id] = el.value;
-  });
+  if (typeof document !== 'undefined') {
+    ['dossierDistantForce', 'dossierChannel', 'dossierModeNode'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) crusadeState[id] = el.value;
+    });
+  }
   try {
     if (typeof localStorage !== 'undefined') {
       const stateKey = (typeof CRUSADE_STATE_KEY !== 'undefined') ? CRUSADE_STATE_KEY : (typeof window !== 'undefined' ? window.CRUSADE_STATE_KEY : 'foa_crusade_quartermaster_v1');
@@ -404,59 +460,4 @@ function renderHordeStatsAttachmentCard() {
     `;
     return;
   }
-
-  const kills = stats.hordeKills || 0;
-  const misCount = Array.isArray(stats.miseriesDrawn) ? stats.miseriesDrawn.length : 0;
-  const secComp = Array.isArray(stats.secondariesCompleted) ? stats.secondariesCompleted.length : 0;
-  const secFail = Array.isArray(stats.secondariesFailed) ? stats.secondariesFailed.length : 0;
-  const faction = stats.hordeFaction || 'Horde Enemy';
-  const mode = stats.gameMode || 'CO-OP';
-
-  card.style.borderColor = 'var(--gold)';
-  card.style.background = 'rgba(217,119,6,0.08)';
-  card.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span class="badge gold">📎 TELEMETRY ATTACHED</span>
-        <strong style="color:#fff; font-size:0.9rem;">${faction} (${mode})</strong>
-      </div>
-      <div style="display:flex; gap:6px;">
-        <button type="button" class="btn-ghost btn-sm" onclick="importHordeBattleStatsToCrusade()" title="Re-sync latest stats">🔄 Re-sync</button>
-        <button type="button" class="btn-red btn-sm" onclick="detachHordeBattleStatsFromCrusade()" title="Remove attached stats">✕ Detach</button>
-      </div>
-    </div>
-    <div style="font-size:0.82rem; color:#e2e8f0; line-height:1.4;">
-      💀 <strong>${kills}</strong> Units Slain • 📜 <strong>${misCount}</strong> Miseries • 🎯 <strong>${secComp}</strong> Secondaries Won / <strong>${secFail}</strong> Failed • ⚡ <strong>${stats.spEarned || 0}</strong> SP Earned / <strong>${stats.spSpent || 0}</strong> Spent
-    </div>
-  `;
-}
-
-const crusadeExports = {
-  adjTombField, togglePowerReserves, adjTombSystemPt, rollMasterSystemReset,
-  renderTombAwakeningMatrix, populateNecronDynasticVault, renderSelectedNecronVaultPreview,
-  attachNecronVaultToDossier, buildTombMatrixSummaryLine, compileTombAwakeningDossier,
-  buildTombAwakeningDossierString, updateTombAwakeningPreview, transmitTombAwakeningDossier,
-  resetTombAwakeningTab, ensureVotannState, adjVotannRes, adjVotannRare,
-  rollVotannPostBattleHarvest, rollVotannRareResourceCheck, syncVotannExpeditionSelectors,
-  adjVotannExpField, cycleVotannAssetState, populateVotannVault,
-  renderSelectedVotannVaultPreview, attachVotannVaultToDossier, renderVotannTab,
-  buildVotannSummaryLine, compileVotannDispatch, updateVotannDispatchPreview,
-  transmitVotannDispatch, resetMasterDossierForm, updateDistantForceVisibility,
-  compileMasterDossier, readMasterDossierFormInputs, buildMasterDossierString,
-  updateMasterDossierPreview, transmitMasterBattleDossier, saveCrusadeState,
-  initCrusadePage, importHordeBattleStatsToCrusade, detachHordeBattleStatsFromCrusade,
-  renderHordeStatsAttachmentCard
-};
-
-if (typeof window !== 'undefined') {
-  Object.assign(window, crusadeExports);
-  window.addEventListener('DOMContentLoaded', initCrusadePage);
-  window.addEventListener('vox:page-swapped', () => {
-    if (document.getElementById('cruTabBoard')) initCrusadePage();
-  });
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = crusadeExports;
-}
 ````

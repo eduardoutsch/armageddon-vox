@@ -125,7 +125,23 @@ const mockElements = {
   necronRecipientUnit: { value: 'Hypercrypt Phalanx' },
   necronVaultPreviewBox: { innerHTML: '' },
   tombAwakeningNotes: { value: '' },
-  tombAwakeningPreviewBox: { textContent: '' }
+  tombAwakeningPreviewBox: { textContent: '' },
+  votExpBattlesLabel: { textContent: '0 / 5' },
+  votExpWinsLabel: { textContent: '0' },
+  votGoalPips: { innerHTML: '' },
+  votGoalProgressLabel: { textContent: '0 / 3' },
+  votExpTotalsDisplay: { textContent: '' },
+  votRes_rawMinerals: { textContent: '0' },
+  votRes_biomatter: { textContent: '0' },
+  votRes_energySources: { textContent: '0' },
+  votRes_galacticIntel: { textContent: '0' },
+  votRare_rawMinerals: { textContent: '0' },
+  votRare_biomatter: { textContent: '0' },
+  votRare_energySources: { textContent: '0' },
+  votRare_galacticIntel: { textContent: '0' },
+  votannAssetsGrid: { innerHTML: '' },
+  votActiveAssetsCount: { textContent: '0' },
+  votannDispatchPreviewBox: { textContent: '' }
 };
 
 const mockDocument = {
@@ -230,7 +246,14 @@ const evalFn = new Function(
     initCrusadePage,
     importHordeBattleStatsToCrusade,
     detachHordeBattleStatsFromCrusade,
-    renderHordeStatsAttachmentCard
+    renderHordeStatsAttachmentCard,
+    ensureVotannState,
+    adjVotannRes,
+    adjVotannRare,
+    adjVotannExpField,
+    renderVotannTab,
+    compileVotannDispatch,
+    buildVotannSummaryLine
   };`
 );
 
@@ -579,5 +602,25 @@ test('UI Integration: importHordeBattleStatsToCrusade updates attachment card an
   assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('No Horde Battle Telemetry attached'));
   assert.ok(!mockElements.masterDossierPreviewBox.textContent.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]'));
 });
+
+test('UI Boundary: pages/crusade.html includes Condition Tracker, Goal Counter, and Expedition Totals UI', () => {
+  assert.ok(crusadeHtml.includes('id="votGoalProgressLabel"'), 'crusade.html must contain #votGoalProgressLabel');
+  assert.ok(crusadeHtml.includes('id="votGoalPips"'), 'crusade.html must contain #votGoalPips');
+  assert.ok(crusadeHtml.includes('id="votExpTotalsDisplay"'), 'crusade.html must contain #votExpTotalsDisplay');
+  assert.ok(crusadeHtml.includes(`adjVotannExpField('goalProgress', 1)`), 'crusade.html must have +1 Goal button');
+  assert.ok(crusadeHtml.includes(`adjVotannExpField('goalProgress', -1)`), 'crusade.html must have -1 Goal button');
+  assert.ok(crusadeHtml.includes('CONDITION TRACKER'), 'crusade.html must label the Condition Tracker');
+  assert.ok(crusadeHtml.includes('EXPEDITION TOTAL (CURRENT RUN)'), 'crusade.html must label Expedition Total');
+
+  // Exercise renderVotannTab DOM rendering
+  crusade.adjVotannExpField('goalProgress', 2);
+  assert.equal(mockElements.votGoalProgressLabel.textContent, '2 / 3');
+  assert.ok(mockElements.votGoalPips.innerHTML.includes('🟡'));
+
+  // Test Expedition Totals rendering
+  crusade.adjVotannRes('rawMinerals', 30);
+  assert.ok(mockElements.votExpTotalsDisplay.textContent.includes('Minerals: 30'));
+});
+
 
 

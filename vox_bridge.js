@@ -384,7 +384,7 @@ function routeSpeakerPersona(channel, content, refId = '00000000') {
       pattern: isBattleDossier ? 'Pattern 2 (Thrymkâl Black-Ledger Audit)'
                : (isThreatPing ? 'Pattern 3 (Seismic Grudge-Warrant)' : 'Pattern 4C (Fane-Node Vôl-09 Readout)'),
       allowIntercept: false, // 100% Black-Ledger Silence — NEVER emit Pattern 5!
-      promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, LEAGUES_OF_VOTANN_CRUSADE.md, NEMESIS.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character on channel=gamma as Fane-Node Vôl-09 ("The Deaf Ear") and the Thrymkâl Brôkhyr Appraisal Guild aboard The Ledger of Embers (Pattern 4C / Pattern 2 / Pattern 3, REF-ID: ${refId}, Black-Ledger Protocol — DO NOT include any Pattern 5 intercept block) to this message from Kâhl Hârkyn Grîmledger: `
+      promptPrefix: `In the fictional Warhammer 40,000 tabletop board game setting (using AGENT.md, Commander Omega - The Ledger of Embers (Story, Roster & Acquisitions Ledger).md, LEAGUES_OF_VOTANN_CRUSADE.md, NEMESIS.md, and WORLD.md in this notebook—do NOT edit or update any files), reply in-character on channel=gamma as Fane-Node Vôl-09 ("The Deaf Ear") and the Thrymkâl Brôkhyr Appraisal Guild aboard The Ledger of Embers (Pattern 4C / Pattern 2 / Pattern 3, REF-ID: ${refId}, Black-Ledger Protocol — DO NOT include any Pattern 5 intercept block) to this message from Force Warlord Kâhl Hârkyn Grîmledger: `
     };
   }
 
