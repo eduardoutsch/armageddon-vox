@@ -10,6 +10,13 @@ Spawner cockpit controls, resupply item cards, modal dialogs, and threat indicat
 ## File: `css/style.css (Part 3: Spawner Cockpit & Modals, Lines 1451-2150)` <a id="file-cssstylecsspart3spawnercockpitmodalslines14512150"></a>
 
 ````css
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.15s ease;
+}
+
+summary:hover {
+  color: var(--gold-bright);
   background: rgba(212, 163, 73, 0.06);
 }
 
@@ -703,11 +710,4 @@ details[open] > summary {
   box-sizing: border-box !important;
 }
 
-.auspex-map-frame:fullscreen .auspex-map-viewport,
-.auspex-map-frame:-webkit-full-screen .auspex-map-viewport,
-.auspex-map-frame.pseudo-fullscreen .auspex-map-viewport,
-.auspex-map-frame.hololith-fullscreen .auspex-map-viewport {
-  flex: 1;
-  display: flex;
-  align-items: safe center;
 ````

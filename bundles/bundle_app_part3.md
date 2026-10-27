@@ -10,6 +10,50 @@ DOM event handlers, Auspex telemetry HUD synchronization, and session state pers
 ## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-1988)` <a id="file-jsappjspart3uitelemetrypersistencelines14011988"></a>
 
 ````javascript
+      },
+      body: JSON.stringify({
+        p_horde_pool: null,
+        p_nemesis_status: {
+          ...currentNemesisStatus,
+          spawner_rooms: spawnerRooms
+        }
+      })
+    });
+
+    if (saveRes && saveRes.ok) {
+      updateSyncBadge(true, `☁️ Room Synced (${roomCode})`);
+      return true;
+    }
+  } catch (err) {
+    console.warn('Live spawner cloud push error:', err);
+  } finally {
+    isPushingToCloud = false;
+  }
+  return false;
+}
+
+function debouncedPushLiveSpawnerStateToCloud() {
+  if (pushCloudTimer) clearTimeout(pushCloudTimer);
+  pushCloudTimer = setTimeout(() => {
+    pushLiveSpawnerStateToCloud();
+  }, 400);
+}
+
+function applyRemoteSharedState(remoteState) {
+  if (!remoteState) return;
+  const isSessionActive = !!remoteState.hasActiveSession;
+
+  const prevRound = battleRound;
+  const prevFaction = activeHordeFaction ? activeHordeFaction.name : null;
+  const prevSpawns = Array.isArray(currentZoneSpawns) ? [...currentZoneSpawns] : [];
+  const prevMiseries = Array.isArray(activeMiseries) ? [...activeMiseries] : [];
+  const prevSecondaries = Array.isArray(activeSecondaries) ? [...activeSecondaries] : [];
+
+  const roundChanged = typeof remoteState.battleRound === 'number' && remoteState.battleRound !== prevRound;
+  const factionChanged = !!(remoteState.activeHordeFactionName && remoteState.activeHordeFactionName !== prevFaction);
+  const spawnsChanged = Array.isArray(remoteState.currentZoneSpawns) && JSON.stringify(remoteState.currentZoneSpawns) !== JSON.stringify(prevSpawns);
+  const miseriesChanged = Array.isArray(remoteState.activeMiseries) && JSON.stringify(remoteState.activeMiseries) !== JSON.stringify(prevMiseries);
+  const secondariesChanged = Array.isArray(remoteState.activeSecondaries) && JSON.stringify(remoteState.activeSecondaries) !== JSON.stringify(prevSecondaries);
 
   if (typeof remoteState.battleRound === 'number') {
     battleRound = remoteState.battleRound;
@@ -260,6 +304,7 @@ if (typeof module !== 'undefined' && module.exports) {
     adjustSpRoundTally,
     adjustStratTally,
     adjCP,
+    adjustCpDirect,
     spendCPForStrat,
     buyResupply,
     leaveSession,
@@ -553,48 +598,4 @@ if (typeof window !== 'undefined') {
         renderLiveSpawnerBracketTable();
         debouncedPushLiveSpawnerStateToCloud();
         return res;
-      };
-      wrappedManual._hasBracketRenderHook = true;
-      window.manualChangeFaction = wrappedManual;
-    }
-
-    let spawnerCloudPollTimer = null;
-    function initSpawnerCloudPolling() {
-      if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
-        syncSpawnerPoolFromSupabase();
-        renderLiveSpawnerBracketTable();
-        pollLiveSpawnerStateFromCloud();
-        if (!spawnerCloudPollTimer) {
-          spawnerCloudPollTimer = setInterval(() => {
-            if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
-              pollLiveSpawnerStateFromCloud();
-            } else {
-              clearInterval(spawnerCloudPollTimer);
-              spawnerCloudPollTimer = null;
-            }
-          }, 3500);
-        }
-      } else {
-        if (spawnerCloudPollTimer) {
-          clearInterval(spawnerCloudPollTimer);
-          spawnerCloudPollTimer = null;
-        }
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', initSpawnerCloudPolling);
-    window.addEventListener('vox:page-swapped', initSpawnerCloudPolling);
-  }
-
-  if (typeof module !== 'undefined' && module.exports) {
-    Object.assign(module.exports, {
-      syncSpawnerPoolFromSupabase,
-      renderLiveSpawnerBracketTable,
-      transmitHordeIntrusionPing,
-      transmitIntrusionPing,
-      evaluateWarpBreachIntrusions,
-      triggerCardStaticShake
-    });
-  }
-})();
 ````

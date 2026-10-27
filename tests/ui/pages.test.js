@@ -221,6 +221,7 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_index.md', check: 'index.html' },
     { file: 'bundle_javascript.md', check: 'js/vox-audio.js' },
     { file: 'bundle_tests.md', check: 'tests/ui/pages.test.js' },
+    { file: 'bundle_tests_part2.md', check: 'tests/ui/pages.test.js' },
     { file: 'bundle_briefing.md', check: 'pages/briefing.html' },
     { file: 'bundle_pvp.md', check: 'pages/pvp.html' },
     { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
@@ -957,8 +958,40 @@ test('UI Boundary: pages/spawner.html awards strictly 2 SP per objective in Solo
   }
 });
 
+test('UI Boundary: pages/spawner.html Command (CP) HUD supports 1, 2, and 3 CP Stratagem spend buttons', async () => {
+  const html = readPage('pages/spawner.html');
+  assert.ok(html.includes('spendCPForStrat(1)'), 'pages/spawner.html must include spendCPForStrat(1) button');
+  assert.ok(html.includes('spendCPForStrat(2)'), 'pages/spawner.html must include spendCPForStrat(2) button');
+  assert.ok(html.includes('spendCPForStrat(3)'), 'pages/spawner.html must include spendCPForStrat(3) button');
+  assert.ok(html.includes('adjustCpDirect()'), 'pages/spawner.html must include adjustCpDirect() on #hudCp');
 
+  const browser = await launchTestBrowser();
+  const page = await browser.newPage();
+  try {
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.goto(filePath, { waitUntil: 'load' });
+    await page.evaluate(() => {
+      localStorage.clear();
+      if (typeof window.resetMatchToSetup === 'function') window.resetMatchToSetup();
+      if (typeof window.startSession === 'function') window.startSession();
+      if (typeof window.adjCP === 'function') window.adjCP(6);
+    });
 
+    let cpVal = await page.$eval('#hudCp', el => parseInt(el.innerText, 10));
+    assert.equal(cpVal, 8);
 
+    await page.click('button[onclick*="spendCPForStrat(2)"]');
+    cpVal = await page.$eval('#hudCp', el => parseInt(el.innerText, 10));
+    let stratTally = await page.$eval('#hudStratTally', el => el.innerText);
+    assert.equal(cpVal, 6, 'Spending a 2 CP stratagem must deduct exactly 2 CP');
+    assert.ok(stratTally.toLowerCase().includes('1 strats'), 'Spending a 2 CP stratagem must count as 1 Stratagem used');
 
-
+    await page.click('button[onclick*="spendCPForStrat(3)"]');
+    cpVal = await page.$eval('#hudCp', el => parseInt(el.innerText, 10));
+    stratTally = await page.$eval('#hudStratTally', el => el.innerText);
+    assert.equal(cpVal, 3, 'Spending a 3 CP stratagem must deduct exactly 3 CP');
+    assert.ok(stratTally.toLowerCase().includes('2 strats'), 'Spending a 3 CP stratagem must count as 1 additional Stratagem (total 2)');
+  } finally {
+    await browser.close();
+  }
+});

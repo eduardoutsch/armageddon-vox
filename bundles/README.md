@@ -50,7 +50,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_css_part4.md`](bundle_css_part4.md) | **Styles (Part 4: Utilities & SVG)** | `css/style.css` (Lines 2151-end), `assets/favicon.svg` |
 | [`bundle_packages.md`](bundle_packages.md) | **Configs & Engineering Directives** | `package.json`, `wrangler.jsonc`, `README.md`, `AGENTS.md`, `.gitignore`, `.env.example`, `vox_autopilot.bat` |
 | [`bundle_bridge.md`](bundle_bridge.md) | **Courier WebSocket Bridge** | `vox_bridge.js` |
-| [`bundle_tests.md`](bundle_tests.md) | **Pages & Boundary Tests** | `tests/ui/pages.test.js` |
+| [`bundle_tests.md`](bundle_tests.md) | **Pages & Boundary Tests (Part 1: UI & Bundles)** | `tests/ui/pages.test.js` (Lines 1-558) |
+| [`bundle_tests_part2.md`](bundle_tests_part2.md) | **Pages & Boundary Tests (Part 2: Headless Playwright E2E)** | `tests/ui/pages.test.js` (Lines 559-end) |
 | [`bundle_tests_ui_overview.md`](bundle_tests_ui_overview.md) | **UI Tests (Briefing & PvP)** | `tests/ui/briefing.test.js`, `tests/ui/pvp.test.js` |
 | [`bundle_tests_ui_roster_rogue.md`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | `tests/ui/rogue.test.js`, `tests/ui/roster.test.js` |
 | [`bundle_tests_ui_crusade.md`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | `tests/ui/crusade.test.js`, `tests/js/crusade.test.js` |

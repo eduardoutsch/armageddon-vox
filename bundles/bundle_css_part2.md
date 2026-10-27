@@ -10,6 +10,13 @@ Header tabs, responsive navigation bars, layout grids, and 45-degree chamfered c
 ## File: `css/style.css (Part 2: Navigation & Cards, Lines 751-1450)` <a id="file-cssstylecsspart2navigationcardslines7511450"></a>
 
 ````css
+  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+  touch-action: manipulation;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+button:hover,
+.gate-btn:hover,
 .terminal-link-btn:hover {
   filter: brightness(1.14);
   border-color: var(--gold);
@@ -703,11 +710,4 @@ summary {
   color: var(--gold);
   cursor: pointer;
   user-select: none;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.02);
-  transition: all 0.15s ease;
-}
-
-summary:hover {
-  color: var(--gold-bright);
 ````

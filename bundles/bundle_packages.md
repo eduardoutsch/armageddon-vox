@@ -205,10 +205,10 @@ armageddon-vox/
 
 ## 🧪 Testing & Verification
 
-The repository maintains a strict **100% test pass target** (`241` tests across unit, courier, and headless browser UI suites) using Node's native test runner (`node:test`), `node:vm` lexical sandboxes, and headless Playwright Chromium/Edge integration:
+The repository maintains a strict **100% test pass target** (`242` tests across unit, courier, and headless browser UI suites) using Node's native test runner (`node:test`), `node:vm` lexical sandboxes, and headless Playwright Chromium/Edge integration:
 
 ```bash
-# Run the complete 241-test verification suite (unit + courier + headless browser E2E)
+# Run the complete 242-test verification suite (unit + courier + headless browser E2E)
 npm test
 
 # Regenerate and synchronize all modular Markdown bundles (<= 1000 lines) in /bundles/

@@ -315,12 +315,35 @@ test('app: resource economy (SP & CP) functions update counters and tally', () =
   app.gainSP(4);
   assert.equal(String(document.getElementById('hudSp').innerText), '4');
 
-  app.adjCP(3);
-  assert.equal(String(document.getElementById('hudCp').innerText), '4');
+  app.adjCP(5);
+  assert.equal(String(document.getElementById('hudCp').innerText), '6');
 
-  app.spendCPForStrat();
-  assert.equal(String(document.getElementById('hudCp').innerText), '3');
+  // 1 CP stratagem
+  app.spendCPForStrat(1);
+  assert.equal(String(document.getElementById('hudCp').innerText), '5');
   assert.ok(document.getElementById('hudStratTally').innerText.includes('1 Strats'));
+
+  // 2 CP stratagem
+  app.spendCPForStrat(2);
+  assert.equal(String(document.getElementById('hudCp').innerText), '3');
+  assert.ok(document.getElementById('hudStratTally').innerText.includes('2 Strats'));
+
+  // 3 CP stratagem
+  app.spendCPForStrat(3);
+  assert.equal(String(document.getElementById('hudCp').innerText), '0');
+  assert.ok(document.getElementById('hudStratTally').innerText.includes('3 Strats'));
+
+  // Insufficient CP check
+  let alertMsg = null;
+  globalThis.alert = (m) => { alertMsg = m; };
+  app.spendCPForStrat(2);
+  assert.equal(String(document.getElementById('hudCp').innerText), '0');
+  assert.ok(alertMsg && alertMsg.includes('0 CP'));
+
+  // adjustCpDirect
+  globalThis.prompt = () => '5';
+  app.adjustCpDirect();
+  assert.equal(String(document.getElementById('hudCp').innerText), '5');
 });
 
 test('app: reducing SP and increasing it again does not falsely increment finite round cap tally (x/8)', () => {

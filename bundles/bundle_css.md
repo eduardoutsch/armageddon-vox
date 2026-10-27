@@ -689,6 +689,13 @@ code {
   font-size: 1rem;
 }
 
+.hud-val-row .mini-btn.strat-btn {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  padding: 0;
+}
+
 .hud-label {
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -753,11 +760,4 @@ button,
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
-  transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
-  touch-action: manipulation;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-button:hover,
-.gate-btn:hover,
 ````

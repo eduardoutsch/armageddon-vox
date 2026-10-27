@@ -494,8 +494,11 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
               onclick="adjustStratTally()" title="Click to adjust or reset Stratagems used count">(0
               Strats)</span></span>
           <div class="hud-val-row">
-            <button class="mini-btn" onclick="spendCPForStrat()" title="Spend 1 CP on Stratagem">−</button>
-            <span class="hud-num" id="hudCp" style="color:var(--purple);">2</span>
+            <button class="mini-btn strat-btn" onclick="spendCPForStrat(1)" title="Spend 1 CP on Stratagem">−1</button>
+            <button class="mini-btn strat-btn" onclick="spendCPForStrat(2)" title="Spend 2 CP on Stratagem">−2</button>
+            <button class="mini-btn strat-btn" onclick="spendCPForStrat(3)" title="Spend 3 CP on Stratagem">−3</button>
+            <span class="hud-num" id="hudCp" style="color:var(--purple); cursor:pointer;" onclick="adjustCpDirect()"
+              title="Current CP. Click to manually adjust.">2</span>
             <button class="mini-btn" onclick="adjCP(1)" title="Add 1 CP">+</button>
           </div>
         </div>

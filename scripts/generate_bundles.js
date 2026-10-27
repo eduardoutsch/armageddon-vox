@@ -357,10 +357,17 @@ compileBundle(
 // 12. TEST SUITES & VERIFICATION
 // ============================================================================
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Pages & Boundary Tests',
-  'Automated UI boundary verification, bundle integrity checks, and cross-tab persistence test suite (`tests/ui/pages.test.js`).',
-  ['tests/ui/pages.test.js'],
+  '📦 Fires of Armageddon // Bundle: Pages & Boundary Tests (Part 1: UI & Bundles)',
+  'Automated UI boundary verification, bundle integrity checks, and cross-tab persistence test suite (`tests/ui/pages.test.js` lines 1 to 558).',
+  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 1: UI & Bundles, Lines 1-558)', startLine: 1, endLine: 558 }],
   path.join(BUNDLES_DIR, 'bundle_tests.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Pages & Boundary Tests (Part 2: Headless Playwright E2E)',
+  'Headless browser E2E verification, cockpit controls, and multi-CP stratagem validation (`tests/ui/pages.test.js` lines 559 to end).',
+  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 559-1100)', startLine: 559, endLine: 1100 }],
+  path.join(BUNDLES_DIR, 'bundle_tests_part2.md')
 );
 
 compileBundle(
@@ -503,7 +510,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_css_part4.md\`](bundle_css_part4.md) | **Styles (Part 4: Utilities & SVG)** | \`css/style.css\` (Lines 2151-end), \`assets/favicon.svg\` |
 | [\`bundle_packages.md\`](bundle_packages.md) | **Configs & Engineering Directives** | \`package.json\`, \`wrangler.jsonc\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\`, \`.env.example\`, \`vox_autopilot.bat\` |
 | [\`bundle_bridge.md\`](bundle_bridge.md) | **Courier WebSocket Bridge** | \`vox_bridge.js\` |
-| [\`bundle_tests.md\`](bundle_tests.md) | **Pages & Boundary Tests** | \`tests/ui/pages.test.js\` |
+| [\`bundle_tests.md\`](bundle_tests.md) | **Pages & Boundary Tests (Part 1: UI & Bundles)** | \`tests/ui/pages.test.js\` (Lines 1-558) |
+| [\`bundle_tests_part2.md\`](bundle_tests_part2.md) | **Pages & Boundary Tests (Part 2: Headless Playwright E2E)** | \`tests/ui/pages.test.js\` (Lines 559-end) |
 | [\`bundle_tests_ui_overview.md\`](bundle_tests_ui_overview.md) | **UI Tests (Briefing & PvP)** | \`tests/ui/briefing.test.js\`, \`tests/ui/pvp.test.js\` |
 | [\`bundle_tests_ui_roster_rogue.md\`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | \`tests/ui/rogue.test.js\`, \`tests/ui/roster.test.js\` |
 | [\`bundle_tests_ui_crusade.md\`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | \`tests/ui/crusade.test.js\`, \`tests/js/crusade.test.js\` |

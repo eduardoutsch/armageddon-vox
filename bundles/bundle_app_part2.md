@@ -333,11 +333,55 @@ function adjCP(delta) {
   updateHUD();
 }
 
-function spendCPForStrat() {
-  if (cp <= 0) return alert("0 CP remaining!");
-  cp--;
+/**
+ * Deducts CP for using a Stratagem and increments the Stratagems used tally.
+ * Supports Stratagems costing 1, 2, 3, or custom CP amounts.
+ * @param {number|string} cost - Amount of CP to spend (defaults to 1).
+ */
+function spendCPForStrat(cost = 1) {
+  let c = cost;
+  if (c === 'custom') {
+    if (typeof prompt !== 'function') return;
+    const input = prompt("Enter CP cost for Stratagem (e.g. 1, 2, 3):", "1");
+    if (input === null) return;
+    c = parseInt(input, 10);
+  } else {
+    c = parseInt(c, 10);
+  }
+  if (isNaN(c) || c < 1) c = 1;
+
+  // Check for Misery #22 (Comms Jammed) lockout
+  const commsJammed = Array.isArray(activeMiseries) && activeMiseries.some(m => m && m.id === 22);
+  if (commsJammed && typeof confirm === 'function') {
+    const override = confirm("⚠️ Warning: Misery #22 (Comms Jammed) is active! Players cannot use Stratagems or spend Command Points this round.\n\nDo you want to override and spend CP anyway?");
+    if (!override) return;
+  }
+
+  if (cp < c) {
+    const msg = cp <= 0
+      ? "0 CP remaining!"
+      : `Not enough CP! Have ${cp} CP, but Stratagem costs ${c} CP.`;
+    return alert(msg);
+  }
+
+  cp -= c;
   stratCount++;
   updateHUD();
+}
+
+/**
+ * Manually sets the Command Points (CP) pool via prompt.
+ */
+function adjustCpDirect() {
+  if (typeof prompt !== 'function') return;
+  const input = prompt("Set Command Points (CP) pool:", String(cp));
+  if (input !== null) {
+    const val = parseInt(input, 10);
+    if (!isNaN(val) && val >= 0) {
+      cp = val;
+      updateHUD();
+    }
+  }
 }
 
 function adjMarker(id, delta, max) {
@@ -666,48 +710,4 @@ async function pushLiveSpawnerStateToCloud() {
         'Content-Type': 'application/json',
         'apikey': supabaseKey,
         'Authorization': `Bearer ${supabaseKey}`
-      },
-      body: JSON.stringify({
-        p_horde_pool: null,
-        p_nemesis_status: {
-          ...currentNemesisStatus,
-          spawner_rooms: spawnerRooms
-        }
-      })
-    });
-
-    if (saveRes && saveRes.ok) {
-      updateSyncBadge(true, `☁️ Room Synced (${roomCode})`);
-      return true;
-    }
-  } catch (err) {
-    console.warn('Live spawner cloud push error:', err);
-  } finally {
-    isPushingToCloud = false;
-  }
-  return false;
-}
-
-function debouncedPushLiveSpawnerStateToCloud() {
-  if (pushCloudTimer) clearTimeout(pushCloudTimer);
-  pushCloudTimer = setTimeout(() => {
-    pushLiveSpawnerStateToCloud();
-  }, 400);
-}
-
-function applyRemoteSharedState(remoteState) {
-  if (!remoteState) return;
-  const isSessionActive = !!remoteState.hasActiveSession;
-
-  const prevRound = battleRound;
-  const prevFaction = activeHordeFaction ? activeHordeFaction.name : null;
-  const prevSpawns = Array.isArray(currentZoneSpawns) ? [...currentZoneSpawns] : [];
-  const prevMiseries = Array.isArray(activeMiseries) ? [...activeMiseries] : [];
-  const prevSecondaries = Array.isArray(activeSecondaries) ? [...activeSecondaries] : [];
-
-  const roundChanged = typeof remoteState.battleRound === 'number' && remoteState.battleRound !== prevRound;
-  const factionChanged = !!(remoteState.activeHordeFactionName && remoteState.activeHordeFactionName !== prevFaction);
-  const spawnsChanged = Array.isArray(remoteState.currentZoneSpawns) && JSON.stringify(remoteState.currentZoneSpawns) !== JSON.stringify(prevSpawns);
-  const miseriesChanged = Array.isArray(remoteState.activeMiseries) && JSON.stringify(remoteState.activeMiseries) !== JSON.stringify(prevMiseries);
-  const secondariesChanged = Array.isArray(remoteState.activeSecondaries) && JSON.stringify(remoteState.activeSecondaries) !== JSON.stringify(prevSecondaries);
 ````

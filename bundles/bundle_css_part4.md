@@ -11,6 +11,13 @@ Tactical utility classes, responsive media queries, and vector skull insignia (`
 ## File: `css/style.css (Part 4: Utilities & Media Queries, Lines 2151-2800)` <a id="file-cssstylecsspart4utilitiesmediaquerieslines21512800"></a>
 
 ````css
+.auspex-map-frame:fullscreen .auspex-map-viewport,
+.auspex-map-frame:-webkit-full-screen .auspex-map-viewport,
+.auspex-map-frame.pseudo-fullscreen .auspex-map-viewport,
+.auspex-map-frame.hololith-fullscreen .auspex-map-viewport {
+  flex: 1;
+  display: flex;
+  align-items: safe center;
   justify-content: safe center;
   overflow: auto;
   border: 1px solid rgba(16, 185, 129, 0.25);
@@ -654,12 +661,6 @@ body.theme-militarum .suite-nav {
 }
 
 .vox-preview-beta {
-  background: #020b07 !important;
-  border: 1.5px dashed rgba(16, 185, 129, 0.65) !important;
-  color: #34d399 !important;
-  text-shadow: 0 0 8px rgba(16, 185, 129, 0.45) !important;
-  box-shadow: inset 0 0 18px rgba(16, 185, 129, 0.08);
-}
 ````
 
 ---
