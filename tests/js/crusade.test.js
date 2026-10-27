@@ -47,3 +47,38 @@ test('Crusade Pure Core: compileMasterDossier formats distant augur telemetries 
   assert.ok(result.includes('Steel Legion Vanguard (Neither Main Player Fielded)'));
   assert.ok(result.includes('Zero Alliance SPt Shift'));
 });
+
+test('Crusade Pure Core: compileMasterDossier includes attached Horde Battle Stats in Master Dossier', () => {
+  const result = crusade.compileMasterDossier({
+    channel: 'alpha',
+    modeNode: 'Mode 1: The Ashen Breach (Horde Defence)',
+    outcome: 'Victory: Survived All 6 Battle Rounds (+5 SPts)',
+    secretCode: 'L2Y',
+    secretTag: 'Early Reveal / End of Game',
+    leftoverSp: '12 Leftover SP',
+    battleNotes: 'Grim holdout against the greenskin tide.',
+    queuedRolls: [],
+    hordeBattleStats: {
+      hordeKills: 17,
+      spEarned: 28,
+      spSpent: 16,
+      leftoverSp: 12,
+      leftoverCp: 3,
+      stratagemsUsed: 5,
+      roundsPlayed: 6,
+      hordeFaction: 'Orks',
+      roomSeed: 'HADES-1',
+      gameMode: 'SOLO',
+      miseriesDrawn: [{ id: 1, name: 'Eye of Terror' }],
+      miseriesNullified: 0,
+      secondariesCompleted: [{ id: 4, name: 'Hold the Line', rewardText: '3 SP' }],
+      secondariesFailed: [{ id: 8, name: 'Desperate Stand', punText: '+2 Misery' }]
+    }
+  });
+
+  assert.ok(result.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]:'));
+  assert.ok(result.includes('• HORDE ADVERSARY: Orks (Room Code: HADES-1 • Mode: SOLO)'));
+  assert.ok(result.includes('• HORDE UNITS DESTROYED: 17 Units Slain'));
+  assert.ok(result.includes('• SECONDARY MISSIONS: 1 Completed, 1 Failed'));
+  assert.ok(result.includes('• SUPPLY ECONOMY: 28 SP Earned • 16 SP Spent on Resupply • 12 Leftover Banked'));
+});

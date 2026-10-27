@@ -10,6 +10,7 @@ Wave generation cycle, threat level brackets, and battlefield event resolvers (`
 ## File: `js/app.js (Part 2: Wave Engine & Threat Escalation, Lines 701-1400)` <a id="file-jsappjspart2waveenginethreatescalationlines7011400"></a>
 
 ````javascript
+    if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(card);
     if (card.id === 20) drawMisery(2);
     if (card.id === 14 && isSoloMode) drawMisery(2);
   }
@@ -23,6 +24,7 @@ function triggerSpecificMisery() {
   if (!found) return;
   sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
   activeMiseries.push(found);
+  if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(found);
   renderSharedDecks();
   saveSessionState();
 }
@@ -140,7 +142,7 @@ function rollAllSpawnZones() {
   const fac = activeHordeFaction ? activeHordeFaction.name : (document.getElementById('hordeFactionSelect')?.value || 'Chaos Daemons');
   const extraMod = parseInt(document.getElementById('extraSpawnMod')?.value, 10) || 0;
   const jammerActive = !!document.getElementById('jammerCheck')?.checked;
-  const unluckyNightActive = activeMiseries.some(m => m.id === 7);
+  const unluckyNightActive = (typeof isUnluckyNightActive === 'function' && isUnluckyNightActive()) || !!document.getElementById('unluckyNightSpawnerCheck')?.checked || activeMiseries.some(m => m.id === 7);
   const firstBonus6 = !!document.getElementById('firstRollBonusCheck')?.checked;
   const firstBonus12 = !!document.getElementById('baitTrapBonusCheck')?.checked;
 
@@ -151,8 +153,6 @@ function rollAllSpawnZones() {
   currentZoneSpawns = [];
 
   for (let z = 1; z <= numZones; z++) {
-    // Seeded RNG per Room + Round + Zone so both phones roll identical spawns!
-    const rngZone = mulberry32(hashString(`${code}_SPAWN_R${effRound}_Z${z}`));
     let unmod = 0;
     let diceStr = "";
 
@@ -160,15 +160,15 @@ function rollAllSpawnZones() {
       unmod = 12;
       diceStr = "Auto-12 (Martyrs & Miracles)";
     } else if (unluckyNightActive) {
-      const d1 = Math.floor(rngZone() * 6) + 1;
-      const d2 = Math.floor(rngZone() * 6) + 1;
-      const d3 = Math.floor(rngZone() * 6) + 1;
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
+      const d3 = Math.floor(Math.random() * 6) + 1;
       const sorted = [d1, d2, d3].sort((a,b) => b - a);
       unmod = sorted[0] + sorted[1];
       diceStr = `3D6 Drop Lowest (${d1},${d2},${d3} → ${unmod})`;
     } else {
-      const d1 = Math.floor(rngZone() * 6) + 1;
-      const d2 = Math.floor(rngZone() * 6) + 1;
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
       unmod = d1 + d2;
       diceStr = `2D6 (${d1}+${d2} = ${unmod})`;
     }
@@ -179,7 +179,7 @@ function rollAllSpawnZones() {
 
     const finalRoll = unmod + totalMod;
     const bInfo = getBracketInfo(finalRoll, unmod);
-    const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, rngZone);
+    const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, Math.random);
 
     currentZoneSpawns.push({
       zone: z,
@@ -206,13 +206,10 @@ function rollDownZone(idx) {
   }
 
   const { nextKey, bracketLabel, pts } = rollDownResult;
-  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
-  const rngDown = mulberry32(hashString(`${code}_ROLLDOWN_R${battleRound}_Z${z.zone}_${nextKey}`));
-
   const newCount = z.units.length * 2;
   let newUnits = [];
   for (let i = 0; i < newCount; i++) {
-    newUnits.push(pickSyncedUnitFromBracket(nextKey, rngDown));
+    newUnits.push(pickSyncedUnitFromBracket(nextKey, Math.random));
   }
   z.bracketKey = nextKey;
   z.bracketLabel = bracketLabel;
@@ -220,6 +217,10 @@ function rollDownZone(idx) {
   z.units = newUnits;
   renderSpawnZones();
   saveSessionState();
+}
+
+function triggerZoneRollDown(idx) {
+  return rollDownZone(idx);
 }
 
 function renderSpawnZones() {
@@ -269,6 +270,7 @@ function renderSpawnZones() {
  * @param {number} amount
  */
 function gainSP(amount) {
+  if (typeof recordSpEarned === 'function') recordSpEarned(amount);
   let toAdd = amount;
   if (bankedSpLost > 0) {
     const restore = Math.min(toAdd, bankedSpLost);
@@ -311,6 +313,7 @@ function gainSP(amount) {
 function spendSP(amount) {
   const toSpend = Number(amount) || 0;
   if (toSpend <= 0) return 0;
+  if (typeof recordSpSpent === 'function') recordSpSpent(toSpend);
   const prevSp = sp;
   sp = Math.max(0, sp - toSpend);
   const actualSpent = prevSp - sp;
@@ -421,6 +424,7 @@ function spendCPForStrat(cost = 1) {
 
   cp -= c;
   stratCount++;
+  if (typeof recordStratagemUsed === 'function') recordStratagemUsed();
   updateHUD();
 }
 
@@ -706,8 +710,4 @@ async function pushLiveSpawnerStateToCloud() {
   const setupFactionModeVal = (typeof document !== 'undefined' && document.getElementById('setupFactionMode')?.value) || 'SYNC_ALL';
   const firstRollBonus = !!(typeof document !== 'undefined' && document.getElementById('firstRollBonusCheck')?.checked);
   const baitTrapBonus = !!(typeof document !== 'undefined' && document.getElementById('baitTrapBonusCheck')?.checked);
-  const doubleCost = !!(typeof document !== 'undefined' && document.getElementById('doubleCostToggle')?.checked);
-  const teleCount = parseInt((typeof document !== 'undefined' && document.getElementById('teleCount')?.innerText) || '0', 10);
-  const wireCount = parseInt((typeof document !== 'undefined' && document.getElementById('wireCount')?.innerText) || '0', 10);
-  const mineCount = parseInt((typeof document !== 'undefined' && document.getElementById('mineCount')?.innerText) || '0', 10);
 ````

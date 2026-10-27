@@ -5,6 +5,18 @@
  * and page lifecycle persistence.
  */
 
+let _compileHordeBattleStatsDossierSection = typeof compileHordeBattleStatsDossierSection === 'function' ? compileHordeBattleStatsDossierSection : null;
+let _loadHordeBattleStats = typeof loadHordeBattleStats === 'function' ? loadHordeBattleStats : null;
+if (typeof require === 'function') {
+  try {
+    const hStats = require('./horde-battle-stats.js');
+    if (hStats) {
+      if (typeof hStats.compileHordeBattleStatsDossierSection === 'function') _compileHordeBattleStatsDossierSection = hStats.compileHordeBattleStatsDossierSection;
+      if (typeof hStats.loadHordeBattleStats === 'function') _loadHordeBattleStats = hStats.loadHordeBattleStats;
+    }
+  } catch (e) {}
+}
+
 /**
  * Adjusts numeric Tomb World Awakening counters (tombAgendasCompleted, tombAwakeningCycles),
  * clamping at zero and synchronizing previews and storage.
@@ -390,6 +402,10 @@ function resetMasterDossierForm() {
   crusadeState.queuedRolls = [];
   crusadeState.dossierDistantForce = '';
   crusadeState.dossierChannel = 'alpha';
+  crusadeState.attachedHordeStats = null;
+  if (typeof renderHordeStatsAttachmentCard === 'function') {
+    renderHordeStatsAttachmentCard();
+  }
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
     window.VoxAudio.playClank('card');
   }
@@ -457,7 +473,20 @@ function compileMasterDossier(input = {}) {
       `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
       `• LEFTOVER SP SALVAGE: ${leftover}`,
       `• STRATEGIC POINTS & ALLIANCE IMPACT: Zero Alliance SPt Shift (Off-Roster Narrative Telemetry)`,
-      `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`,
+      `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`
+    ];
+
+    if (input.hordeBattleStats) {
+      const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
+        ? compileHordeBattleStatsDossierSection
+        : _compileHordeBattleStatsDossierSection;
+      const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
+      if (statsSection) {
+        lines.push(statsSection);
+      }
+    }
+
+    lines.push(
       `------------------------------------------------`,
       `• OBSERVED REMOTE UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES IN THE ASH-STORM"):`,
       unitLines,
@@ -465,7 +494,7 @@ function compileMasterDossier(input = {}) {
       `• ORBITAL AUGUR AFTER-ACTION LOG: "${notes}"`,
       `------------------------------------------------`,
       `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this distant solo horde breach caught in the distance by our orbital augurs. As neither main player participated, no Alliance SPts are shifted—please chronicle the narrative fate of this remote detachment and christen custom in-universe Lore Names & Backstories for their attached unit Upgrades, Relics, and Battle Scars!`
-    ];
+    );
     return lines.join('\n');
   }
 
@@ -508,6 +537,16 @@ function compileMasterDossier(input = {}) {
     }
   }
 
+  if (input.hordeBattleStats) {
+    const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
+      ? compileHordeBattleStatsDossierSection
+      : _compileHordeBattleStatsDossierSection;
+    const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
+    if (statsSection) {
+      lines.push(statsSection);
+    }
+  }
+
   lines.push(
     `------------------------------------------------`,
     upgradeSectionTitle,
@@ -545,6 +584,7 @@ function readMasterDossierFormInputs() {
     distantForce: document.getElementById('dossierDistantForce')?.value || '',
     fortifications: forts,
     queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
+    hordeBattleStats: crusadeState.attachedHordeStats || null,
     logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null,
     tombSummary: typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : null
   };
@@ -639,9 +679,134 @@ function initCrusadePage() {
   renderTombAwakeningMatrix();
   populateNecronDynasticVault();
   if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
+  renderHordeStatsAttachmentCard();
   updateMasterDossierPreview();
   if (typeof updateStartOfTourPreview === 'function') updateStartOfTourPreview();
   updateTombAwakeningPreview();
+}
+
+/**
+ * Imports the latest saved Horde Battle Stats from localStorage into Crusade state
+ * and automatically pre-fills matching form fields (secret objective, fortifications,
+ * leftover SP, and mode).
+ */
+function importHordeBattleStatsToCrusade() {
+  const loader = (typeof loadHordeBattleStats === 'function') ? loadHordeBattleStats : _loadHordeBattleStats;
+  const stats = loader ? loader() : null;
+  if (!stats) {
+    if (typeof alert === 'function') {
+      alert("No saved Horde Mode Battle Telemetry found in local memory.\nPlay a match in Spawner / Mode 1 and click 'Export to Crusade' first!");
+    }
+    return;
+  }
+  crusadeState.attachedHordeStats = stats;
+
+  if (stats.secretObjective && stats.secretObjective.code) {
+    const secCodeInput = document.getElementById('dossierSecretCode');
+    if (secCodeInput) secCodeInput.value = stats.secretObjective.code;
+  }
+  if (stats.gameMode === 'SOLO') {
+    const modeEl = document.getElementById('dossierModeNode');
+    if (modeEl && !modeEl.value.includes('Solo')) {
+      modeEl.value = 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+    }
+  }
+
+  if (Array.isArray(stats.fortifications)) {
+    const fortList = stats.fortifications.map(f => String(f).toLowerCase());
+    const fortHosp = document.getElementById('fortHosp');
+    if (fortHosp) fortHosp.checked = fortList.some(f => f.includes('hospital'));
+    const fortAmmo = document.getElementById('fortAmmo');
+    if (fortAmmo) fortAmmo.checked = fortList.some(f => f.includes('ammo'));
+    const fortTrench = document.getElementById('fortTrench');
+    if (fortTrench) fortTrench.checked = fortList.some(f => f.includes('trench'));
+    const fortFob = document.getElementById('fortFob');
+    if (fortFob) fortFob.checked = fortList.some(f => f.includes('fob') || f.includes('forward operating'));
+  }
+
+  const leftoverVal = Number(stats.leftoverSp) || 0;
+  const leftoverEl = document.getElementById('dossierLeftoverSp');
+  if (leftoverEl) {
+    if (leftoverVal >= 8) leftoverEl.value = '8 Leftover SP → +1 RP or +100 pts Supply Limit';
+    else if (leftoverVal >= 5) leftoverEl.value = '5 Leftover SP → +2 XP to Surviving Unit';
+    else if (leftoverVal >= 3) leftoverEl.value = '3 Leftover SP → Bank 1v1 Supply Cache Token';
+    else if (leftoverVal >= 2) leftoverEl.value = '2 Leftover SP → Orbital Auspex Recon Probe (Reveal Adjacent Node)';
+    else leftoverEl.value = '0 Leftover SP';
+  }
+
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
+    window.VoxAudio.playPowerSurge();
+  }
+
+  saveCrusadeState();
+  renderHordeStatsAttachmentCard();
+  updateMasterDossierPreview();
+}
+
+/**
+ * Detaches the currently attached Horde Battle Stats from Crusade state.
+ */
+function detachHordeBattleStatsFromCrusade() {
+  crusadeState.attachedHordeStats = null;
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
+    window.VoxAudio.playClank('card');
+  }
+  saveCrusadeState();
+  renderHordeStatsAttachmentCard();
+  updateMasterDossierPreview();
+}
+
+/**
+ * Dumb UI renderer for the Attached Horde Battle Stats card.
+ */
+function renderHordeStatsAttachmentCard() {
+  const card = document.getElementById('hordeStatsAttachCard');
+  if (!card) return;
+
+  const stats = crusadeState.attachedHordeStats;
+  if (!stats) {
+    const hasSaved = (typeof loadHordeBattleStats === 'function') && loadHordeBattleStats() !== null;
+    card.style.borderColor = 'rgba(255,255,255,0.15)';
+    card.style.background = '#0b0d13';
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <span class="hud-label" style="display:block; color:var(--muted);">ATTACHED HORDE BATTLE TELEMETRY</span>
+          <span style="font-size:0.84rem; color:#94a3b8;">No Horde Battle Telemetry attached to this dossier.</span>
+        </div>
+        <button type="button" class="btn-gold btn-sm" onclick="importHordeBattleStatsToCrusade()">
+          📥 Import Latest Horde Battle Stats
+        </button>
+      </div>
+      ${hasSaved ? '<div style="margin-top:6px; font-size:0.75rem; color:var(--green);">⚡ Saved battle telemetry detected in local cogitator memory.</div>' : ''}
+    `;
+    return;
+  }
+
+  const kills = stats.hordeKills || 0;
+  const misCount = Array.isArray(stats.miseriesDrawn) ? stats.miseriesDrawn.length : 0;
+  const secComp = Array.isArray(stats.secondariesCompleted) ? stats.secondariesCompleted.length : 0;
+  const secFail = Array.isArray(stats.secondariesFailed) ? stats.secondariesFailed.length : 0;
+  const faction = stats.hordeFaction || 'Horde Enemy';
+  const mode = stats.gameMode || 'CO-OP';
+
+  card.style.borderColor = 'var(--gold)';
+  card.style.background = 'rgba(217,119,6,0.08)';
+  card.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge gold">📎 TELEMETRY ATTACHED</span>
+        <strong style="color:#fff; font-size:0.9rem;">${faction} (${mode})</strong>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="btn-ghost btn-sm" onclick="importHordeBattleStatsToCrusade()" title="Re-sync latest stats">🔄 Re-sync</button>
+        <button type="button" class="btn-red btn-sm" onclick="detachHordeBattleStatsFromCrusade()" title="Remove attached stats">✕ Detach</button>
+      </div>
+    </div>
+    <div style="font-size:0.82rem; color:#e2e8f0; line-height:1.4;">
+      💀 <strong>${kills}</strong> Units Slain • 📜 <strong>${misCount}</strong> Miseries • 🎯 <strong>${secComp}</strong> Secondaries Won / <strong>${secFail}</strong> Failed • ⚡ <strong>${stats.spEarned || 0}</strong> SP Earned / <strong>${stats.spSpent || 0}</strong> Spent
+    </div>
+  `;
 }
 
 // Attach to window for browser global scope
@@ -669,6 +834,9 @@ if (typeof window !== 'undefined') {
   window.transmitMasterBattleDossier = transmitMasterBattleDossier;
   window.saveCrusadeState = saveCrusadeState;
   window.initCrusadePage = initCrusadePage;
+  window.importHordeBattleStatsToCrusade = importHordeBattleStatsToCrusade;
+  window.detachHordeBattleStatsFromCrusade = detachHordeBattleStatsFromCrusade;
+  window.renderHordeStatsAttachmentCard = renderHordeStatsAttachmentCard;
 
   window.addEventListener('DOMContentLoaded', initCrusadePage);
   window.addEventListener('vox:page-swapped', () => {
@@ -701,6 +869,9 @@ if (typeof module !== 'undefined' && module.exports) {
     updateMasterDossierPreview,
     transmitMasterBattleDossier,
     saveCrusadeState,
-    initCrusadePage
+    initCrusadePage,
+    importHordeBattleStatsToCrusade,
+    detachHordeBattleStatsFromCrusade,
+    renderHordeStatsAttachmentCard
   };
 }

@@ -324,6 +324,11 @@ Complete markup and theme styles for 3-Way Alliance Scoreboard, Branching Narrat
         <input type="text" id="dossierDistantForce" oninput="updateMasterDossierPreview()" placeholder="e.g. 019th Steel Legion Outpost, Iron Warriors Contingent, Local PDF Militia, Blood Angels Strike Force" style="width:100%; padding:10px;">
       </div>
 
+      <!-- ATTACHED HORDE MODE COMBAT TELEMETRY CARD -->
+      <div id="hordeStatsAttachCard" class="card" style="background:#0b0d13; border:1px dashed var(--gold); margin-bottom:14px; padding:12px 14px;">
+        <!-- Populated dynamically by renderHordeStatsAttachmentCard() -->
+      </div>
+
       <div class="choice-grid" style="margin-bottom:12px;">
         <div>
           <label class="hud-label" style="display:block; margin-bottom:4px;">Battle Outcome &amp; Survival</label>
@@ -670,6 +675,7 @@ Complete markup and theme styles for 3-Way Alliance Scoreboard, Branching Narrat
 
 <script src="../js/vox-audio.js"></script>
 <script src="../js/crusade-data.js"></script>
+<script src="../js/horde-battle-stats.js"></script>
 <script src="../js/crusade-forge.js"></script>
 <script src="../js/crusade.js"></script>
 </body>

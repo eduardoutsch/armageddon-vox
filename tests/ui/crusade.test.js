@@ -9,15 +9,19 @@ const CRUSADE_HTML_PATH = path.join(ROOT_DIR, 'pages/crusade.html');
 // Read crusade.html and modular crusade scripts
 const crusadeHtml = fs.readFileSync(CRUSADE_HTML_PATH, 'utf8');
 assert.ok(crusadeHtml.includes('<script src="../js/crusade-data.js"></script>'), 'pages/crusade.html must link to js/crusade-data.js');
+assert.ok(crusadeHtml.includes('<script src="../js/horde-battle-stats.js"></script>'), 'pages/crusade.html must link to js/horde-battle-stats.js');
 assert.ok(crusadeHtml.includes('<script src="../js/crusade-forge.js"></script>'), 'pages/crusade.html must link to js/crusade-forge.js');
 assert.ok(crusadeHtml.includes('<script src="../js/crusade.js"></script>'), 'pages/crusade.html must link to js/crusade.js');
+assert.ok(crusadeHtml.includes('id="hordeStatsAttachCard"'), 'pages/crusade.html must include #hordeStatsAttachCard');
 
 const CRUSADE_DATA_JS = path.join(ROOT_DIR, 'js/crusade-data.js');
+const HORDE_STATS_JS = path.join(ROOT_DIR, 'js/horde-battle-stats.js');
 const CRUSADE_FORGE_JS = path.join(ROOT_DIR, 'js/crusade-forge.js');
 const CRUSADE_JS = path.join(ROOT_DIR, 'js/crusade.js');
 
 const crusadeScriptCode = [
   fs.readFileSync(CRUSADE_DATA_JS, 'utf8'),
+  fs.readFileSync(HORDE_STATS_JS, 'utf8'),
   fs.readFileSync(CRUSADE_FORGE_JS, 'utf8'),
   fs.readFileSync(CRUSADE_JS, 'utf8')
 ].join('\n;\n');
@@ -95,7 +99,8 @@ const mockElements = {
   fortFob: { checked: false },
   queuedCountLabel: { textContent: '0' },
   queuedRollsContainer: { innerHTML: '' },
-  masterDossierPreviewBox: { textContent: '' },
+  hordeStatsAttachCard: { innerHTML: '', style: {} },
+  masterDossierPreviewBox: { textContent: '', classList: createMockClassList() },
   tourBattlesRem: { textContent: '0' },
   tourWinsRem: { textContent: '0' },
   commendationPts: { textContent: '0' },
@@ -222,7 +227,10 @@ const evalFn = new Function(
     updateStartOfTourPreview,
     transmitStartOfTourDossier,
     saveCrusadeState,
-    initCrusadePage
+    initCrusadePage,
+    importHordeBattleStatsToCrusade,
+    detachHordeBattleStatsFromCrusade,
+    renderHordeStatsAttachmentCard
   };`
 );
 
@@ -523,4 +531,53 @@ test('crusade: adjTourField, rollNewTourQuotas, and rollVictoryCommendationPts m
   assert.equal(crusade.getCrusadeState().toursCompletedCount, 0);
   assert.equal(mockElements.toursCompletedCount.textContent, '0');
 });
+
+test('UI Integration: importHordeBattleStatsToCrusade updates attachment card and injects telemetry into preview', () => {
+  // Save simulated Horde battle stats to localStorage
+  const simulatedStats = {
+    hordeKills: 23,
+    spEarned: 32,
+    spSpent: 18,
+    leftoverSp: 14,
+    leftoverCp: 2,
+    stratagemsUsed: 6,
+    roundsPlayed: 6,
+    hordeFaction: 'Chaos Daemons',
+    roomSeed: 'TERRA-9',
+    gameMode: 'SOLO',
+    miseriesDrawn: [{ id: 7, name: 'Unlucky Night' }],
+    miseriesNullified: 0,
+    secondariesCompleted: [{ id: 1, name: 'Purge the Warp', rewardText: '+4 SP' }],
+    secondariesFailed: [],
+    secretObjective: { code: 'K9X', name: 'Daemon Core Extraction' },
+    fortifications: ['Field Hospital', 'War Trench']
+  };
+
+  mockLocalStorage.setItem('foa_horde_battle_stats_v1', JSON.stringify(simulatedStats));
+
+  // Import into Crusade page
+  crusade.importHordeBattleStatsToCrusade();
+
+  // Check that attachment card re-rendered
+  assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('TELEMETRY ATTACHED'));
+  assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('Chaos Daemons (SOLO)'));
+  assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('23'));
+
+  // Check pre-filled inputs
+  assert.equal(mockElements.dossierSecretCode.value, 'K9X');
+  assert.equal(mockElements.fortHosp.checked, true);
+  assert.equal(mockElements.fortTrench.checked, true);
+
+  // Check live Master Dossier preview contains combat telemetry
+  const preview = mockElements.masterDossierPreviewBox.textContent;
+  assert.ok(preview.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]:'));
+  assert.ok(preview.includes('• HORDE UNITS DESTROYED: 23 Units Slain'));
+  assert.ok(preview.includes('• HORDE ADVERSARY: Chaos Daemons (Room Code: TERRA-9 • Mode: SOLO)'));
+
+  // Detach stats
+  crusade.detachHordeBattleStatsFromCrusade();
+  assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('No Horde Battle Telemetry attached'));
+  assert.ok(!mockElements.masterDossierPreviewBox.textContent.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]'));
+});
+
 

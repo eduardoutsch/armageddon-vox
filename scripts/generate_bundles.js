@@ -267,6 +267,13 @@ compileBundle(
   path.join(BUNDLES_DIR, 'bundle_crusade_data.md')
 );
 
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Horde Battle Stats & Crusade Telemetry Engine',
+  'After-action Horde battle telemetry tracking (kills, miseries, secondaries, SP economy) and Crusade Master Dossier compiler adapter (`js/horde-battle-stats.js`).',
+  ['js/horde-battle-stats.js'],
+  path.join(BUNDLES_DIR, 'bundle_horde_battle_stats.md')
+);
+
 // ============================================================================
 // 8. PAGE 7: MODE 7 - ASTROPATHIC CRT VOX-TERMINAL
 // ============================================================================
@@ -386,8 +393,8 @@ compileBundle(
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: UI Tests (Crusade Command & Tour of Duty)',
-  'Crusade tab orchestration, 3-way scoreboard, tour quotas, and narrative tree test suites (`tests/ui/crusade.test.js`, `tests/js/crusade.test.js`).',
-  ['tests/ui/crusade.test.js', 'tests/js/crusade.test.js'],
+  'Crusade tab orchestration, 3-way scoreboard, tour quotas, and narrative tree test suites (`tests/ui/crusade.test.js`, `tests/js/crusade.test.js`, `tests/js/horde-battle-stats.test.js`).',
+  ['tests/ui/crusade.test.js', 'tests/js/crusade.test.js', 'tests/js/horde-battle-stats.test.js'],
   path.join(BUNDLES_DIR, 'bundle_tests_ui_crusade.md')
 );
 

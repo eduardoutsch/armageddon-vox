@@ -10,6 +10,10 @@ DOM event handlers, Auspex telemetry HUD synchronization, and session state pers
 ## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)` <a id="file-jsappjspart3uitelemetrypersistencelines1401end"></a>
 
 ````javascript
+  const doubleCost = !!(typeof document !== 'undefined' && document.getElementById('doubleCostToggle')?.checked);
+  const teleCount = parseInt((typeof document !== 'undefined' && document.getElementById('teleCount')?.innerText) || '0', 10);
+  const wireCount = parseInt((typeof document !== 'undefined' && document.getElementById('wireCount')?.innerText) || '0', 10);
+  const mineCount = parseInt((typeof document !== 'undefined' && document.getElementById('mineCount')?.innerText) || '0', 10);
 
   const now = Date.now();
   lastSyncedUpdatedAt = now;
@@ -325,6 +329,28 @@ async function pollLiveSpawnerStateFromCloud(force = false) {
 }
 
 
+function exportHordeStatsToCrusade() {
+  const snapshot = (typeof snapshotCurrentHordeStats === 'function')
+    ? snapshotCurrentHordeStats()
+    : null;
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
+    window.VoxAudio.playPowerSurge();
+  }
+  if (typeof document !== 'undefined') {
+    const noticeEl = document.getElementById('exportCrusadeNotice');
+    if (noticeEl) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = `✅ <strong>Horde Battle Telemetry Exported!</strong><br>Kills: <strong>${snapshot?.hordeKills || 0}</strong> • SP: <strong>${snapshot?.spEarned || 0}</strong> Earned / <strong>${snapshot?.spSpent || 0}</strong> Spent • Miseries: <strong>${snapshot?.miseriesDrawn?.length || 0}</strong> • Secondaries: <strong>${snapshot?.secondariesCompleted?.length || 0}</strong> Won / <strong>${snapshot?.secondariesFailed?.length || 0}</strong> Failed.<br>Ready to attach in <a href="crusade.html" style="color:var(--gold); text-decoration:underline;">Mode 5 Crusade Dossier</a>!`;
+      setTimeout(() => {
+        if (noticeEl) noticeEl.style.display = 'none';
+      }, 8000);
+    } else if (typeof alert === 'function') {
+      alert(`✅ Horde Battle Telemetry Exported!\nKills: ${snapshot?.hordeKills || 0}\nSP: ${snapshot?.spEarned || 0} Earned / ${snapshot?.spSpent || 0} Spent\nMiseries: ${snapshot?.miseriesDrawn?.length || 0}\n\nGo to crusade.html to attach it to your Master Dossier!`);
+    }
+  }
+  return snapshot;
+}
+
 // Dual export for Node.js test runner and browser environment
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -377,6 +403,8 @@ if (typeof module !== 'undefined' && module.exports) {
     triggerChangeOfPlans,
     rollAllSpawnZones,
     rollDownZone,
+    triggerZoneRollDown,
+    exportHordeStatsToCrusade,
     saveCustomPool,
     loadCustomPool,
     pushLiveSpawnerStateToCloud,
@@ -398,6 +426,8 @@ if (typeof window !== 'undefined') {
   window.onSetupFactionModeChanged = onSetupFactionModeChanged;
   window.pollLiveSpawnerStateFromCloud = pollLiveSpawnerStateFromCloud;
   window.debouncedPushLiveSpawnerStateToCloud = debouncedPushLiveSpawnerStateToCloud;
+  window.triggerZoneRollDown = triggerZoneRollDown;
+  window.exportHordeStatsToCrusade = exportHordeStatsToCrusade;
 }
 
 // =========================================================================

@@ -698,6 +698,7 @@ function drawMisery(count) {
     }
     const card = sharedMiseryDeck.shift();
     activeMiseries.push(card);
+    if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(card);
     if (card.id === 20) drawMisery(2);
     if (card.id === 14 && isSoloMode) drawMisery(2);
   }
@@ -711,6 +712,7 @@ function triggerSpecificMisery() {
   if (!found) return;
   sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
   activeMiseries.push(found);
+  if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(found);
   renderSharedDecks();
   saveSessionState();
 }
@@ -828,7 +830,7 @@ function rollAllSpawnZones() {
   const fac = activeHordeFaction ? activeHordeFaction.name : (document.getElementById('hordeFactionSelect')?.value || 'Chaos Daemons');
   const extraMod = parseInt(document.getElementById('extraSpawnMod')?.value, 10) || 0;
   const jammerActive = !!document.getElementById('jammerCheck')?.checked;
-  const unluckyNightActive = activeMiseries.some(m => m.id === 7);
+  const unluckyNightActive = (typeof isUnluckyNightActive === 'function' && isUnluckyNightActive()) || !!document.getElementById('unluckyNightSpawnerCheck')?.checked || activeMiseries.some(m => m.id === 7);
   const firstBonus6 = !!document.getElementById('firstRollBonusCheck')?.checked;
   const firstBonus12 = !!document.getElementById('baitTrapBonusCheck')?.checked;
 
@@ -839,8 +841,6 @@ function rollAllSpawnZones() {
   currentZoneSpawns = [];
 
   for (let z = 1; z <= numZones; z++) {
-    // Seeded RNG per Room + Round + Zone so both phones roll identical spawns!
-    const rngZone = mulberry32(hashString(`${code}_SPAWN_R${effRound}_Z${z}`));
     let unmod = 0;
     let diceStr = "";
 
@@ -848,15 +848,15 @@ function rollAllSpawnZones() {
       unmod = 12;
       diceStr = "Auto-12 (Martyrs & Miracles)";
     } else if (unluckyNightActive) {
-      const d1 = Math.floor(rngZone() * 6) + 1;
-      const d2 = Math.floor(rngZone() * 6) + 1;
-      const d3 = Math.floor(rngZone() * 6) + 1;
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
+      const d3 = Math.floor(Math.random() * 6) + 1;
       const sorted = [d1, d2, d3].sort((a,b) => b - a);
       unmod = sorted[0] + sorted[1];
       diceStr = `3D6 Drop Lowest (${d1},${d2},${d3} → ${unmod})`;
     } else {
-      const d1 = Math.floor(rngZone() * 6) + 1;
-      const d2 = Math.floor(rngZone() * 6) + 1;
+      const d1 = Math.floor(Math.random() * 6) + 1;
+      const d2 = Math.floor(Math.random() * 6) + 1;
       unmod = d1 + d2;
       diceStr = `2D6 (${d1}+${d2} = ${unmod})`;
     }
@@ -867,7 +867,7 @@ function rollAllSpawnZones() {
 
     const finalRoll = unmod + totalMod;
     const bInfo = getBracketInfo(finalRoll, unmod);
-    const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, rngZone);
+    const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, Math.random);
 
     currentZoneSpawns.push({
       zone: z,
@@ -894,13 +894,10 @@ function rollDownZone(idx) {
   }
 
   const { nextKey, bracketLabel, pts } = rollDownResult;
-  const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
-  const rngDown = mulberry32(hashString(`${code}_ROLLDOWN_R${battleRound}_Z${z.zone}_${nextKey}`));
-
   const newCount = z.units.length * 2;
   let newUnits = [];
   for (let i = 0; i < newCount; i++) {
-    newUnits.push(pickSyncedUnitFromBracket(nextKey, rngDown));
+    newUnits.push(pickSyncedUnitFromBracket(nextKey, Math.random));
   }
   z.bracketKey = nextKey;
   z.bracketLabel = bracketLabel;
@@ -908,6 +905,10 @@ function rollDownZone(idx) {
   z.units = newUnits;
   renderSpawnZones();
   saveSessionState();
+}
+
+function triggerZoneRollDown(idx) {
+  return rollDownZone(idx);
 }
 
 function renderSpawnZones() {
@@ -957,6 +958,7 @@ function renderSpawnZones() {
  * @param {number} amount
  */
 function gainSP(amount) {
+  if (typeof recordSpEarned === 'function') recordSpEarned(amount);
   let toAdd = amount;
   if (bankedSpLost > 0) {
     const restore = Math.min(toAdd, bankedSpLost);
@@ -999,6 +1001,7 @@ function gainSP(amount) {
 function spendSP(amount) {
   const toSpend = Number(amount) || 0;
   if (toSpend <= 0) return 0;
+  if (typeof recordSpSpent === 'function') recordSpSpent(toSpend);
   const prevSp = sp;
   sp = Math.max(0, sp - toSpend);
   const actualSpent = prevSp - sp;
@@ -1109,6 +1112,7 @@ function spendCPForStrat(cost = 1) {
 
   cp -= c;
   stratCount++;
+  if (typeof recordStratagemUsed === 'function') recordStratagemUsed();
   updateHUD();
 }
 
@@ -1713,6 +1717,28 @@ async function pollLiveSpawnerStateFromCloud(force = false) {
 }
 
 
+function exportHordeStatsToCrusade() {
+  const snapshot = (typeof snapshotCurrentHordeStats === 'function')
+    ? snapshotCurrentHordeStats()
+    : null;
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
+    window.VoxAudio.playPowerSurge();
+  }
+  if (typeof document !== 'undefined') {
+    const noticeEl = document.getElementById('exportCrusadeNotice');
+    if (noticeEl) {
+      noticeEl.style.display = 'block';
+      noticeEl.innerHTML = `✅ <strong>Horde Battle Telemetry Exported!</strong><br>Kills: <strong>${snapshot?.hordeKills || 0}</strong> • SP: <strong>${snapshot?.spEarned || 0}</strong> Earned / <strong>${snapshot?.spSpent || 0}</strong> Spent • Miseries: <strong>${snapshot?.miseriesDrawn?.length || 0}</strong> • Secondaries: <strong>${snapshot?.secondariesCompleted?.length || 0}</strong> Won / <strong>${snapshot?.secondariesFailed?.length || 0}</strong> Failed.<br>Ready to attach in <a href="crusade.html" style="color:var(--gold); text-decoration:underline;">Mode 5 Crusade Dossier</a>!`;
+      setTimeout(() => {
+        if (noticeEl) noticeEl.style.display = 'none';
+      }, 8000);
+    } else if (typeof alert === 'function') {
+      alert(`✅ Horde Battle Telemetry Exported!\nKills: ${snapshot?.hordeKills || 0}\nSP: ${snapshot?.spEarned || 0} Earned / ${snapshot?.spSpent || 0} Spent\nMiseries: ${snapshot?.miseriesDrawn?.length || 0}\n\nGo to crusade.html to attach it to your Master Dossier!`);
+    }
+  }
+  return snapshot;
+}
+
 // Dual export for Node.js test runner and browser environment
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -1765,6 +1791,8 @@ if (typeof module !== 'undefined' && module.exports) {
     triggerChangeOfPlans,
     rollAllSpawnZones,
     rollDownZone,
+    triggerZoneRollDown,
+    exportHordeStatsToCrusade,
     saveCustomPool,
     loadCustomPool,
     pushLiveSpawnerStateToCloud,
@@ -1786,6 +1814,8 @@ if (typeof window !== 'undefined') {
   window.onSetupFactionModeChanged = onSetupFactionModeChanged;
   window.pollLiveSpawnerStateFromCloud = pollLiveSpawnerStateFromCloud;
   window.debouncedPushLiveSpawnerStateToCloud = debouncedPushLiveSpawnerStateToCloud;
+  window.triggerZoneRollDown = triggerZoneRollDown;
+  window.exportHordeStatsToCrusade = exportHordeStatsToCrusade;
 }
 
 // =========================================================================

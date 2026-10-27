@@ -508,11 +508,16 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
         </div>
 
         <div class="hud-actions" style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+          <button type="button" class="btn-ghost btn-sm" onclick="exportHordeStatsToCrusade()"
+            title="Snapshot Horde Battle stats and copy telemetry for your Crusade Battle Report">📋 Export to Crusade</button>
           <button class="btn-ghost btn-sm" onclick="resetMatchToSetup()"
             title="Reset battle and clear all spawner cards">🔄 Reset</button>
           <button class="btn-ghost btn-sm" onclick="leaveSession()" title="Exit to mission setup">Exit</button>
         </div>
       </div>
+
+      <!-- EXPORT CRUSADE NOTIFICATION BANNER -->
+      <div id="exportCrusadeNotice" style="display:none; margin:8px 0; padding:10px 14px; background:rgba(217,119,6,0.18); border:1px solid var(--gold); border-radius:8px; font-size:0.86rem; color:#fef3c7;"></div>
 
       <!-- PERSISTENT SYNCED HORDE FACTION REMINDER BANNER -->
       <div class="faction-reminder-bar">
@@ -878,6 +883,7 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
   <script src="../js/data.js"></script>
   <script src="../js/rng.js"></script>
   <script src="../js/spawner.js"></script>
+  <script src="../js/horde-battle-stats.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/vox-audio.js"></script>
 

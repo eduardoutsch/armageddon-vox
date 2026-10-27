@@ -171,6 +171,7 @@
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBoltgunBlast === 'function') {
       window.VoxAudio.playBoltgunBlast();
     }
+    if (typeof recordHordeKill === 'function') recordHordeKill(kills);
     if (typeof window !== 'undefined' && typeof window.gainSP === 'function') {
       window.gainSP(kills);
     }
@@ -423,6 +424,21 @@
     }).join('');
   }
 
+  function nullifyMisery(idx) {
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playCogitatorStep === 'function') {
+      window.VoxAudio.playCogitatorStep();
+    }
+    const effState = getEffectiveState();
+    const activeList = (effState && Array.isArray(effState.activeMiseries))
+      ? effState.activeMiseries
+      : (typeof window !== 'undefined' && Array.isArray(window.activeMiseries) ? window.activeMiseries : []);
+    const removed = activeList.splice(idx, 1)[0];
+    if (typeof recordMiseryNullified === 'function') recordMiseryNullified(removed);
+    renderActiveMiseries();
+    if (typeof window !== 'undefined' && typeof window.saveSessionState === 'function') window.saveSessionState();
+    else if (typeof window !== 'undefined' && typeof window.saveState === 'function') window.saveState();
+  }
+
   function resolveOrbitalBombardmentRoll(idx) {
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBoltgunBlast === 'function') {
       window.VoxAudio.playBoltgunBlast();
@@ -539,6 +555,10 @@
       if (official.specialPunAction === 'CHANGE_OF_PLANS_RANDOM' && typeof window.triggerOrbitalPunishment === 'function') {
         window.triggerOrbitalPunishment();
       }
+    }
+
+    if (typeof recordSecondaryResolved === 'function') {
+      recordSecondaryResolved(official, isSuccess, { rewardText: official.rew || '', punText: official.pun || '' });
     }
 
     activeList.splice(idx, 1);
@@ -692,31 +712,11 @@
   // --- 5. GUIDED 5-STEP PHASE TRACKER COCKPIT ---
   let currentGuidedStep = 1;
   const PHASE_STEP_GUIDES = {
-    1: {
-      badge: "STEP 1 OF 5 • START OF BATTLE ROUND (RULE 3.2)",
-      heading: "1. Reveal Misery, Secondary Mission & Spawn the Horde",
-      body: "1) Discard last round's Misery cards & reveal this round's new Misery & Secondary cards.<br>2) <strong>Round 1:</strong> Spawns were rolled during Deployment (Rule 2.9). <strong>Rounds 2–5:</strong> Roll 2D6 for each Horde Spawn Zone below! (<strong>Round 6 Final Stand:</strong> 3 Misery cards, NO new Horde spawns)."
-    },
-    2: {
-      badge: "STEP 2 OF 5 • HORDE TURN (RULE 3.1 & SECTION 5)",
-      heading: "2. Horde Movement, Shooting, Charge & Fight",
-      body: "The Horde always has the first turn! Move, Shoot, Charge, and Fight with all Horde units using the active <strong>Horde Primary Faction Rule</strong> (top banner) and any active <strong>Misery Card</strong> buffs below. Horde units within a Spawn Zone have Benefit of Cover and are Hidden."
-    },
-    3: {
-      badge: "STEP 3 OF 5 • PLAYER COMMAND & RESUPPLY STEP (RULE 3.7 & 3.8)",
-      heading: "3. Battle-Shock, Claim Objective SP & Spend Resupply SP",
-      body: "1) Take Battle-shock tests for Player units below Half-strength (Note: Players do NOT gain core 1 CP in the Command Phase!).<br>2) Click <strong>🚩 Claim Command SP</strong> below to gain 1 SP per controlled objective (+1 for FOB) — <strong>automatically doubled to 2 SP per objective in Solo Mode!</strong><br>3) Open the <strong>Resupply Shop (Tab 3)</strong> to buy Fortifications, Strikes, or Reinforcements."
-    },
-    4: {
-      badge: "STEP 4 OF 5 • PLAYER TURN (MOVE / SHOOT / CHARGE / FIGHT)",
-      heading: "4. Execute Secondary Mission Actions & Destroy the Horde",
-      body: "Players move through phases together as a single team! Whenever your attack, ability, or action destroys a Horde unit, click <strong>💀 +1 Horde Unit Destroyed</strong> below (+1 SP in Co-op / <strong>+2 SP in Solo Mode</strong>, up to your 8 or 16 SP round cap)."
-    },
-    5: {
-      badge: "STEP 5 OF 5 • END OF BATTLE ROUND (RULE 3.6)",
-      heading: "5. Resolve Secondary Mission Rewards or Punishments",
-      body: "Check your Active Secondary Mission condition below: claim its <strong>Reward</strong> (SP rewards are automatically doubled in Solo Mode!) or apply its <strong>Punishment</strong> (+Misery cards or +Spawn Roll modifiers carry into next round). Then click the red <strong>Advance to Next Battle Round</strong> button at the top!"
-    }
+    1: { badge: "STEP 1 OF 5 • START OF BATTLE ROUND (RULE 3.2)", heading: "1. Reveal Misery, Secondary Mission & Spawn the Horde", body: "1) Discard last round's Misery cards & reveal this round's new Misery & Secondary cards.<br>2) <strong>Round 1:</strong> Spawns were rolled during Deployment (Rule 2.9). <strong>Rounds 2–5:</strong> Roll 2D6 for each Horde Spawn Zone below! (<strong>Round 6 Final Stand:</strong> 3 Misery cards, NO new Horde spawns)." },
+    2: { badge: "STEP 2 OF 5 • HORDE TURN (RULE 3.1 & SECTION 5)", heading: "2. Horde Movement, Shooting, Charge & Fight", body: "The Horde always has the first turn! Move, Shoot, Charge, and Fight with all Horde units using the active <strong>Horde Primary Faction Rule</strong> (top banner) and any active <strong>Misery Card</strong> buffs below. Horde units within a Spawn Zone have Benefit of Cover and are Hidden." },
+    3: { badge: "STEP 3 OF 5 • PLAYER COMMAND & RESUPPLY STEP (RULE 3.7 & 3.8)", heading: "3. Battle-Shock, Claim Objective SP & Spend Resupply SP", body: "1) Take Battle-shock tests for Player units below Half-strength (Note: Players do NOT gain core 1 CP in the Command Phase!).<br>2) Click <strong>🚩 Claim Command SP</strong> below to gain 1 SP per controlled objective (+1 for FOB) — <strong>automatically doubled to 2 SP per objective in Solo Mode!</strong><br>3) Open the <strong>Resupply Shop (Tab 3)</strong> to buy Fortifications, Strikes, or Reinforcements." },
+    4: { badge: "STEP 4 OF 5 • PLAYER TURN (MOVE / SHOOT / CHARGE / FIGHT)", heading: "4. Execute Secondary Mission Actions & Destroy the Horde", body: "Players move through phases together as a single team! Whenever your attack, ability, or action destroys a Horde unit, click <strong>💀 +1 Horde Unit Destroyed</strong> below (+1 SP in Co-op / <strong>+2 SP in Solo Mode</strong>, up to your 8 or 16 SP round cap)." },
+    5: { badge: "STEP 5 OF 5 • END OF BATTLE ROUND (RULE 3.6)", heading: "5. Resolve Secondary Mission Rewards or Punishments", body: "Check your Active Secondary Mission condition below: claim its <strong>Reward</strong> (SP rewards are automatically doubled in Solo Mode!) or apply its <strong>Punishment</strong> (+Misery cards or +Spawn Roll modifiers carry into next round). Then click the red <strong>Advance to Next Battle Round</strong> button at the top!" }
   };
 
   function setGuidedPhaseStep(stepNum, options = {}) {
@@ -884,6 +884,17 @@
       window.triggerZoneRollDown = wrappedTrigger;
     }
 
+    if (typeof window.rollDownZone === 'function' && !window.rollDownZone._isMirrorWrapped) {
+      const origRollDown = window.rollDownZone;
+      const wrappedRollDown = function () {
+        const res = origRollDown.apply(this, arguments);
+        mirrorSpawnerToCockpit();
+        return res;
+      };
+      wrappedRollDown._isMirrorWrapped = true;
+      window.rollDownZone = wrappedRollDown;
+    }
+
     // Wrap advanceBattleRound for round updates & auto-rolling spawns
     if (typeof window.advanceBattleRound === 'function' && !window.advanceBattleRound._isGuidedFlowWrapped) {
       const origAdvanceBattleRound = window.advanceBattleRound;
@@ -951,6 +962,7 @@
     rollPincerManeuverExtraSpawn,
     renderActiveMiseries,
     resolveOrbitalBombardmentRoll,
+    nullifyMisery,
     adjSecondaryTally,
     resolveSecondaryOutcome,
     redeemSavedSecondaryCard,
