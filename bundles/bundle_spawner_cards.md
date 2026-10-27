@@ -159,7 +159,8 @@ Modular visual threat card rendering, boss cards, audio integration, and chamfer
       id: 21, num: "21/36", name: "Bunkers Busted",
       timing: "Immediate + Persistent Resupply Lockout",
       desc: "Remove all fortified markers from all objectives. Players cannot make Fortify purchases.",
-      note: "Lockout: Strip all Fortified markers (FOB, Trench, Hospital, Jammer, etc.) and block [Fortify] shop purchases this round!"
+      note: "Lockout: Strip all Fortified markers (FOB, Trench, Hospital, Jammer, etc.) and block [Fortify] shop purchases this round!",
+      wipeFortifications: true
     },
     22: {
       id: 22, num: "22/36", name: "Comms Jammed",
@@ -452,7 +453,8 @@ Modular visual threat card rendering, boss cards, audio integration, and chamfer
       pun: "+1 Misery card, Remove all Fortified Markers from Objectives",
       rewardSp: 1,
       savedCardBenefit: "Discard anytime to NULLIFY 1 revealed Misery card",
-      punMisery: 1
+      punMisery: 1,
+      punWipeFortifications: true
     },
     18: {
       id: 18, num: "18/24", name: "Calling Shots",

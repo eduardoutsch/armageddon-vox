@@ -16,7 +16,8 @@ async function launchTestBrowser() {
 
 test('UI Boundary: pages/spawner.html synchronizes Pre-Game (Round 0) vs Battle Round 1, draws cards, and supports manual draw', async () => {
   const browser = await launchTestBrowser();
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -107,7 +108,8 @@ test('UI Boundary: pages/spawner.html synchronizes Pre-Game (Round 0) vs Battle 
 
 test('UI Boundary: pages/spawner.html guided phase stepper preserves active phase on button clicks and SP shop purchase updates tracker', async () => {
   const browser = await launchTestBrowser();
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -184,3 +186,94 @@ test('UI Boundary: pages/spawner.html guided phase stepper preserves active phas
     await browser.close();
   }
 });
+
+test('UI Boundary: pages/spawner.html failing Secondary #17 wipes all fortifications, and phase stepper does not cycle past phase 5', async () => {
+  const browser = await launchTestBrowser();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    await page.addInitScript(() => {
+      window.confirm = () => true;
+      try {
+        localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+          seed: 'TEST-FORT-WIPE',
+          selectedModeVal: 'solo',
+          isSoloMode: true,
+          battleRound: 2,
+          sp: 8,
+          activeMiseries: [],
+          activeSecondaries: [{ id: 17, name: 'Spruce This Place Up', punWipeFortifications: true }],
+          hasActiveSession: true,
+          fortChecks: [true, false, false, true, false, false, false],
+          teleCount: 2,
+          currentGuidedStep: 4
+        }));
+      } catch (e) {}
+    });
+
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.route('**/rest/v1/rpc/**', route => route.abort());
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+      if (typeof window.switchTab === 'function') window.switchTab(1);
+    });
+
+    // 1. Verify initial active fortifications (FOB and Field Hospital are checked, Teleporters = 2)
+    const fobChecked = await page.$eval('#fobFortCheck', el => el.checked);
+    const hospChecked = await page.$eval('#fieldHospitalCheck', el => el.checked);
+    const teleVal = await page.$eval('#teleCount', el => el.innerText.trim());
+
+    assert.equal(fobChecked, true, 'FOB check should initially be checked');
+    assert.equal(hospChecked, true, 'Field Hospital check should initially be checked');
+    assert.equal(teleVal, '2', 'Teleporters should initially be 2');
+
+    // 2. Fail Secondary #17 ("Spruce This Place Up")
+    await page.evaluate(() => {
+      if (typeof window.resolveSecondaryOutcome === 'function') {
+        window.resolveSecondaryOutcome(0, false);
+      }
+    });
+
+    // 3. Verify all fortifications have been wiped
+    const fobAfterWipe = await page.$eval('#fobFortCheck', el => el.checked);
+    const hospAfterWipe = await page.$eval('#fieldHospitalCheck', el => el.checked);
+    const teleAfterWipe = await page.$eval('#teleCount', el => el.innerText.trim());
+
+    assert.equal(fobAfterWipe, false, 'FOB must be unchecked after Secondary #17 fails');
+    assert.equal(hospAfterWipe, false, 'Field Hospital must be unchecked after Secondary #17 fails');
+    assert.equal(teleAfterWipe, '0', 'Teleporters must be reset to 0 after Secondary #17 fails');
+
+    // 4. Test phase stepper clamping at Step 5
+    await page.evaluate(() => {
+      if (typeof window.setGuidedPhaseStep === 'function') {
+        window.setGuidedPhaseStep(5);
+      }
+    });
+
+    let currentStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(currentStep, '5', 'Phase 5 should be active');
+
+    // Click Next Step button at Phase 5: must clamp at Phase 5 and not cycle back to 1
+    await page.click('#stepNextBtn');
+    currentStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(currentStep, '5', 'Clicking Next Step at Phase 5 must remain clamped at Phase 5');
+
+    // 5. Test page reload restores currentGuidedStep from localStorage
+    await page.evaluate(() => {
+      if (typeof window.setGuidedPhaseStep === 'function') {
+        window.setGuidedPhaseStep(4);
+      }
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(200);
+
+    const reloadedStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(reloadedStep, '4', 'Reloading page must restore currentGuidedStep without resetting to 1');
+  } finally {
+    await browser.close();
+  }
+});
+

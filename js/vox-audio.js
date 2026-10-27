@@ -825,6 +825,317 @@
     flutter.stop(now + 0.16);
   }
 
+  /**
+   * 20. Stray Orbital Bombardment / Lance Strike / Macro-Cannon Barrage
+   * Screeching atmospheric descent, high-energy concussive detonation, and deep sub-bass seismic rumble.
+   */
+  function playOrbitalBombardment() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. High-altitude atmospheric tearing whistle (screech descending rapidly)
+    const whistle = ctx.createOscillator();
+    const whistleGain = ctx.createGain();
+    const whistleFilter = ctx.createBiquadFilter();
+    whistle.type = 'sawtooth';
+    whistle.frequency.setValueAtTime(2600, now);
+    whistle.frequency.exponentialRampToValueAtTime(140, now + 0.35);
+
+    whistleFilter.type = 'bandpass';
+    whistleFilter.frequency.setValueAtTime(1800, now);
+    whistleFilter.frequency.exponentialRampToValueAtTime(320, now + 0.35);
+    whistleFilter.Q.value = 3.5;
+
+    whistleGain.gain.setValueAtTime(0.01, now);
+    whistleGain.gain.linearRampToValueAtTime(0.18, now + 0.08);
+    whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+    whistle.connect(whistleFilter);
+    whistleFilter.connect(whistleGain);
+    whistleGain.connect(ctx.destination);
+    whistle.start(now);
+    whistle.stop(now + 0.4);
+
+    // 2. Concussive explosive noise burst (impact detonation)
+    const impactTime = now + 0.28;
+    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.6), ctx.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.12));
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(450, impactTime);
+    noiseFilter.frequency.exponentialRampToValueAtTime(80, impactTime + 0.5);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, impactTime);
+    noiseGain.gain.linearRampToValueAtTime(0.32, impactTime + 0.02);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, impactTime + 0.58);
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(impactTime);
+    noiseSource.stop(impactTime + 0.6);
+
+    // 3. Sub-bass seismic reverberation rumble (planetary shockwave)
+    const rumbleOsc = ctx.createOscillator();
+    const rumbleGain = ctx.createGain();
+    rumbleOsc.type = 'sine';
+    rumbleOsc.frequency.setValueAtTime(58, impactTime);
+    rumbleOsc.frequency.exponentialRampToValueAtTime(32, impactTime + 0.9);
+
+    rumbleGain.gain.setValueAtTime(0.001, impactTime);
+    rumbleGain.gain.linearRampToValueAtTime(0.35, impactTime + 0.05);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.001, impactTime + 0.95);
+
+    rumbleOsc.connect(rumbleGain);
+    rumbleGain.connect(ctx.destination);
+    rumbleOsc.start(impactTime);
+    rumbleOsc.stop(impactTime + 1.0);
+  }
+
+  /**
+   * 21. Tactical Terminal Power On / Cathode Initialization
+   * Two distinct soundscapes:
+   * - Alpha: Imperial CRT cathode hum, heavy switch clunk, rising 15.75 kHz flyback whistle & high-voltage crackle.
+   * - Beta: Necron Gauss resonance, dual dissonant crystalline sine wave phase sweep with chronomantic ring-modulation.
+   *
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   */
+  function playTerminalPowerOn(channel = 'alpha') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const isBeta = String(channel).toLowerCase() === 'beta';
+
+    if (isBeta) {
+      const oscA = ctx.createOscillator();
+      const oscB = ctx.createOscillator();
+      const gainA = ctx.createGain();
+      const gainB = ctx.createGain();
+
+      oscA.type = 'sine';
+      oscB.type = 'triangle';
+      oscA.frequency.setValueAtTime(180, now);
+      oscA.frequency.exponentialRampToValueAtTime(540, now + 0.4);
+      oscB.frequency.setValueAtTime(370, now);
+      oscB.frequency.exponentialRampToValueAtTime(1110, now + 0.4);
+
+      gainA.gain.setValueAtTime(0.001, now);
+      gainA.gain.linearRampToValueAtTime(0.14, now + 0.06);
+      gainA.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+      gainB.gain.setValueAtTime(0.001, now);
+      gainB.gain.linearRampToValueAtTime(0.1, now + 0.1);
+      gainB.gain.exponentialRampToValueAtTime(0.001, now + 0.46);
+
+      oscA.connect(gainA);
+      oscB.connect(gainB);
+      gainA.connect(ctx.destination);
+      gainB.connect(ctx.destination);
+
+      oscA.start(now);
+      oscB.start(now);
+      oscA.stop(now + 0.5);
+      oscB.stop(now + 0.5);
+
+      const ping = ctx.createOscillator();
+      const pingGain = ctx.createGain();
+      ping.type = 'sine';
+      ping.frequency.setValueAtTime(1480, now + 0.2);
+      ping.frequency.exponentialRampToValueAtTime(740, now + 0.45);
+      pingGain.gain.setValueAtTime(0.001, now + 0.2);
+      pingGain.gain.linearRampToValueAtTime(0.12, now + 0.23);
+      pingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      ping.connect(pingGain);
+      pingGain.connect(ctx.destination);
+      ping.start(now + 0.2);
+      ping.stop(now + 0.5);
+
+    } else {
+      const switchSnap = ctx.createOscillator();
+      const switchGain = ctx.createGain();
+      switchSnap.type = 'square';
+      switchSnap.frequency.setValueAtTime(180, now);
+      switchSnap.frequency.exponentialRampToValueAtTime(45, now + 0.03);
+      switchGain.gain.setValueAtTime(0.16, now);
+      switchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      switchSnap.connect(switchGain);
+      switchGain.connect(ctx.destination);
+      switchSnap.start(now);
+      switchSnap.stop(now + 0.04);
+
+      const hum = ctx.createOscillator();
+      const humGain = ctx.createGain();
+      hum.type = 'sawtooth';
+      hum.frequency.setValueAtTime(60, now + 0.02);
+      hum.frequency.linearRampToValueAtTime(120, now + 0.45);
+      humGain.gain.setValueAtTime(0.001, now + 0.02);
+      humGain.gain.linearRampToValueAtTime(0.12, now + 0.12);
+      humGain.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
+      hum.connect(humGain);
+      humGain.connect(ctx.destination);
+      hum.start(now + 0.02);
+      hum.stop(now + 0.55);
+
+      const flyback = ctx.createOscillator();
+      const flybackGain = ctx.createGain();
+      flyback.type = 'sine';
+      flyback.frequency.setValueAtTime(3200, now + 0.05);
+      flyback.frequency.exponentialRampToValueAtTime(15750, now + 0.4);
+      flybackGain.gain.setValueAtTime(0.001, now + 0.05);
+      flybackGain.gain.linearRampToValueAtTime(0.035, now + 0.2);
+      flybackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      flyback.connect(flybackGain);
+      flybackGain.connect(ctx.destination);
+      flyback.start(now + 0.05);
+      flyback.stop(now + 0.5);
+    }
+  }
+
+  /**
+   * 22. Tactical Terminal Power Off / System Shutdown
+   * Two distinct soundscapes:
+   * - Alpha: Imperial CRT raster spot collapse snap, power supply discharge & decaying coil drain.
+   * - Beta: Necron Gauss dimensional phase-out, descending metallic dissonance & stasis fold.
+   *
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   */
+  function playTerminalPowerOff(channel = 'alpha') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const isBeta = String(channel).toLowerCase() === 'beta';
+
+    if (isBeta) {
+      const oscA = ctx.createOscillator();
+      const oscB = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscA.type = 'sine';
+      oscB.type = 'triangle';
+      oscA.frequency.setValueAtTime(680, now);
+      oscA.frequency.exponentialRampToValueAtTime(45, now + 0.42);
+      oscB.frequency.setValueAtTime(340, now);
+      oscB.frequency.exponentialRampToValueAtTime(32, now + 0.42);
+
+      gain.gain.setValueAtTime(0.13, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      oscA.connect(gain);
+      oscB.connect(gain);
+      gain.connect(ctx.destination);
+
+      oscA.start(now);
+      oscB.start(now);
+      oscA.stop(now + 0.48);
+      oscB.stop(now + 0.48);
+
+    } else {
+      const collapseSnap = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      collapseSnap.type = 'triangle';
+      collapseSnap.frequency.setValueAtTime(420, now);
+      collapseSnap.frequency.exponentialRampToValueAtTime(30, now + 0.025);
+      snapGain.gain.setValueAtTime(0.18, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.028);
+      collapseSnap.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      collapseSnap.start(now);
+      collapseSnap.stop(now + 0.03);
+
+      const drain = ctx.createOscillator();
+      const drainGain = ctx.createGain();
+      drain.type = 'sawtooth';
+      drain.frequency.setValueAtTime(140, now + 0.015);
+      drain.frequency.exponentialRampToValueAtTime(24, now + 0.38);
+      drainGain.gain.setValueAtTime(0.12, now + 0.015);
+      drainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      drain.connect(drainGain);
+      drainGain.connect(ctx.destination);
+      drain.start(now + 0.015);
+      drain.stop(now + 0.45);
+    }
+  }
+
+  /**
+   * 23. Classified Briefing Dossier Decode / Cipher Teleprinter
+   * Two distinct soundscapes:
+   * - Alpha: Departmento Munitorum cipher teleprinter mechanical relay chatter and high-speed encryption warble.
+   * - Beta: Necron Canoptek scarab crystalline arithmetic frequency chirps and resonant glyph deciphering.
+   *
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   */
+  function playBriefingDecode(channel = 'alpha') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const isBeta = String(channel).toLowerCase() === 'beta';
+
+    if (isBeta) {
+      const freqs = [784, 1046, 1318, 1568];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + idx * 0.055;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.05, t + 0.08);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.09, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.18);
+      });
+
+    } else {
+      for (let i = 0; i < 5; i++) {
+        const click = ctx.createOscillator();
+        const clickGain = ctx.createGain();
+        const t = now + i * 0.032;
+
+        click.type = (i % 2 === 0) ? 'square' : 'triangle';
+        click.frequency.setValueAtTime(1400 + (i * 220), t);
+        click.frequency.exponentialRampToValueAtTime(260, t + 0.016);
+
+        clickGain.gain.setValueAtTime(0.001, t);
+        clickGain.gain.linearRampToValueAtTime(0.08, t + 0.004);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
+
+        click.connect(clickGain);
+        clickGain.connect(ctx.destination);
+        click.start(t);
+        click.stop(t + 0.025);
+      }
+
+      const chirp = ctx.createOscillator();
+      const chirpGain = ctx.createGain();
+      chirp.type = 'sawtooth';
+      chirp.frequency.setValueAtTime(2200, now + 0.16);
+      chirp.frequency.exponentialRampToValueAtTime(3200, now + 0.22);
+      chirp.frequency.exponentialRampToValueAtTime(1600, now + 0.28);
+
+      chirpGain.gain.setValueAtTime(0.001, now + 0.16);
+      chirpGain.gain.linearRampToValueAtTime(0.06, now + 0.18);
+      chirpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      chirp.connect(chirpGain);
+      chirpGain.connect(ctx.destination);
+      chirp.start(now + 0.16);
+      chirp.stop(now + 0.32);
+    }
+  }
+
   let hasUserInteracted = false;
 
   function handleUserGestureForMusic(e) {
@@ -858,6 +1169,8 @@
         playPowerSurge();
       } else if (target.matches('[onclick*="loseSP"], [onclick*="spendCPForStrat"], [onclick*="buyResupply"], [onclick*="adjCP(-1)"]')) {
         playPneumaticDispense();
+      } else if (target.matches('[onclick*="triggerOrbitalPunishment"], [onclick*="resolveOrbitalBombardmentRoll"], .orbital-btn, [data-sfx="orbital"]')) {
+        playOrbitalBombardment();
       } else if (target.matches('[onclick*="drawMisery"], [onclick*="triggerSpecificMisery"], .btn-red[onclick*="Misery"]')) {
         playWarpStatic();
       } else if (target.matches('[onclick*="drawSecondary"], [onclick*="replaceSecondary"], [onclick*="triggerChangeOfPlans"]')) {
@@ -1565,6 +1878,10 @@
     playCogitatorStep: playCogitatorStep,
     playDegaussPurge: playDegaussPurge,
     playNecronGaussPulse: playNecronGaussPulse,
+    playOrbitalBombardment: playOrbitalBombardment,
+    playTerminalPowerOn: playTerminalPowerOn,
+    playTerminalPowerOff: playTerminalPowerOff,
+    playBriefingDecode: playBriefingDecode,
     navigateSeamlessly: navigateSeamlessly,
     transmitToVox: transmitToVox,
     resolveFactionThemeFromStorage: resolveFactionThemeFromStorage,
@@ -1652,6 +1969,10 @@
       playCogitatorStep,
       playDegaussPurge,
       playNecronGaussPulse,
+      playOrbitalBombardment,
+      playTerminalPowerOn,
+      playTerminalPowerOff,
+      playBriefingDecode,
       saveCurrentPosition,
       navigateSeamlessly,
       injectNavToggle,

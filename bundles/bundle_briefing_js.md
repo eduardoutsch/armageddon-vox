@@ -261,10 +261,16 @@ function unlockTab(who, persist) {
   if (who === 'Alpha') {
     briefingState.unlockedAlpha = true;
     applyGlobalFactionThemeFromBriefing('militarum', persist);
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBriefingDecode === 'function') {
+      window.VoxAudio.playBriefingDecode('alpha');
+    }
   }
   if (who === 'Beta') {
     briefingState.unlockedBeta = true;
     applyGlobalFactionThemeFromBriefing('necron', persist);
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBriefingDecode === 'function') {
+      window.VoxAudio.playBriefingDecode('beta');
+    }
   }
   if (persist) saveBriefingState();
 }
@@ -284,10 +290,16 @@ function lockTab(who, persist) {
   }
   if (who === 'Alpha') {
     briefingState.unlockedAlpha = false;
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOff === 'function') {
+      window.VoxAudio.playTerminalPowerOff('alpha');
+    }
     if (briefingState.unlockedBeta) applyGlobalFactionThemeFromBriefing('necron', persist);
   }
   if (who === 'Beta') {
     briefingState.unlockedBeta = false;
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOff === 'function') {
+      window.VoxAudio.playTerminalPowerOff('beta');
+    }
     if (briefingState.unlockedAlpha) applyGlobalFactionThemeFromBriefing('militarum', persist);
   }
   if (persist) saveBriefingState();

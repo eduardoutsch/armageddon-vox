@@ -600,8 +600,8 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
                 &amp; Spawn the Horde</h4>
             </div>
             <div style="display:flex; gap:6px;">
-              <button type="button" class="btn-ghost btn-sm" onclick="stepGuidedPhase(-1)">← Prev Step</button>
-              <button type="button" class="btn-gold btn-sm" onclick="stepGuidedPhase(1)">Next Step →</button>
+              <button type="button" id="stepPrevBtn" class="btn-ghost btn-sm" onclick="stepGuidedPhase(-1)">← Prev Step</button>
+              <button type="button" id="stepNextBtn" class="btn-gold btn-sm" onclick="stepGuidedPhase(1)">Next Step →</button>
             </div>
           </div>
           <div id="guidedPhaseInstructions" style="font-size:0.86rem; color:#cbd5e1; line-height:1.5;">
@@ -821,13 +821,19 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
           <div class="drawer-body">
             <div class="fort-grid">
               <label class="fort-item"><span>FOB (+1 SP / +2 Solo)</span><input type="checkbox"
-                  id="fobFortCheck"></label>
-              <label class="fort-item"><span>Warp-Relic (3 MW)</span><input type="checkbox"></label>
-              <label class="fort-item"><span>War Trench (+1S/AP)</span><input type="checkbox"></label>
-              <label class="fort-item"><span>Field Hospital (3W)</span><input type="checkbox"></label>
-              <label class="fort-item"><span>Jammer (-1 Spawn)</span><input type="checkbox" id="jammerCheck"></label>
-              <label class="fort-item"><span>Ammo (Sustained 1)</span><input type="checkbox"></label>
-              <label class="fort-item"><span>Shield (FNP 5+)</span><input type="checkbox"></label>
+                  id="fobFortCheck" onchange="saveSessionState()"></label>
+              <label class="fort-item"><span>Warp-Relic (3 MW)</span><input type="checkbox"
+                  id="warpRelicCheck" onchange="saveSessionState()"></label>
+              <label class="fort-item"><span>War Trench (+1S/AP)</span><input type="checkbox"
+                  id="warTrenchCheck" onchange="saveSessionState()"></label>
+              <label class="fort-item"><span>Field Hospital (3W)</span><input type="checkbox"
+                  id="fieldHospitalCheck" onchange="saveSessionState()"></label>
+              <label class="fort-item"><span>Jammer (-1 Spawn)</span><input type="checkbox"
+                  id="jammerCheck" onchange="saveSessionState()"></label>
+              <label class="fort-item"><span>Ammo (Sustained 1)</span><input type="checkbox"
+                  id="ammoDumpCheck" onchange="saveSessionState()"></label>
+              <label class="fort-item"><span>Shield (FNP 5+)</span><input type="checkbox"
+                  id="shieldGenCheck" onchange="saveSessionState()"></label>
               <div class="fort-item">
                 <span>Teleporters: <strong id="teleCount">0</strong>/3</span>
                 <div style="display:flex; gap:4px;">

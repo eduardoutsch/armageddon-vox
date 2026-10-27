@@ -837,27 +837,27 @@ Web Audio API sound generation, procedural ambient drones, and Auspex channel os
     flutter.stop(now + 0.16);
   }
 
-  let hasUserInteracted = false;
+  /**
+   * 20. Stray Orbital Bombardment / Lance Strike / Macro-Cannon Barrage
+   * Screeching atmospheric descent, high-energy concussive detonation, and deep sub-bass seismic rumble.
+   */
+  function playOrbitalBombardment() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
 
-  function handleUserGestureForMusic(e) {
-    hasUserInteracted = true;
-    if (!wantMusic) return;
-    if (e && e.target && typeof e.target.closest === 'function' && e.target.closest('#voxMusicToggle, #voxMusicSkip')) {
-      return;
-    }
-    if (!ytReady) {
-      loadYouTubeAPI();
-    } else if (!isPlayerActuallyPlaying()) {
-      resumeOrStartMusic(true);
-    }
-  }
+    // 1. High-altitude atmospheric tearing whistle (screech descending rapidly)
+    const whistle = ctx.createOscillator();
+    const whistleGain = ctx.createGain();
+    const whistleFilter = ctx.createBiquadFilter();
+    whistle.type = 'sawtooth';
+    whistle.frequency.setValueAtTime(2600, now);
+    whistle.frequency.exponentialRampToValueAtTime(140, now + 0.35);
 
-  // Global listener: contextually triggers sound profiles on clicks
-  document.addEventListener('click', (e) => {
-    const target = e.target.closest(
-      'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn, .fs-pill-btn, .mini-btn, .phase-step-btn, input[type="checkbox"], input[type="radio"], .chip, .nav-pills button'
-    );
-    if (target) {
-      if (target.dataset && target.dataset.sfx === 'custom') {
-        // Handled explicitly by upgrade roller / stamp / siren functions
+    whistleFilter.type = 'bandpass';
+    whistleFilter.frequency.setValueAtTime(1800, now);
+    whistleFilter.frequency.exponentialRampToValueAtTime(320, now + 0.35);
+    whistleFilter.Q.value = 3.5;
+
+    whistleGain.gain.setValueAtTime(0.01, now);
 ````

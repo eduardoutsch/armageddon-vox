@@ -10,6 +10,317 @@ CRT cathode chimes, forge anvil clanks, mechanical dice clatter, and teletype ty
 ## File: `js/vox-audio.js (Part 2: Audio FX & Teletype Synth, Lines 851-1670)` <a id="file-jsvoxaudiojspart2audiofxteletypesynthlines8511670"></a>
 
 ````javascript
+    whistleGain.gain.linearRampToValueAtTime(0.18, now + 0.08);
+    whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+
+    whistle.connect(whistleFilter);
+    whistleFilter.connect(whistleGain);
+    whistleGain.connect(ctx.destination);
+    whistle.start(now);
+    whistle.stop(now + 0.4);
+
+    // 2. Concussive explosive noise burst (impact detonation)
+    const impactTime = now + 0.28;
+    const noiseBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.6), ctx.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+      noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.12));
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(450, impactTime);
+    noiseFilter.frequency.exponentialRampToValueAtTime(80, impactTime + 0.5);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.001, impactTime);
+    noiseGain.gain.linearRampToValueAtTime(0.32, impactTime + 0.02);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, impactTime + 0.58);
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noiseSource.start(impactTime);
+    noiseSource.stop(impactTime + 0.6);
+
+    // 3. Sub-bass seismic reverberation rumble (planetary shockwave)
+    const rumbleOsc = ctx.createOscillator();
+    const rumbleGain = ctx.createGain();
+    rumbleOsc.type = 'sine';
+    rumbleOsc.frequency.setValueAtTime(58, impactTime);
+    rumbleOsc.frequency.exponentialRampToValueAtTime(32, impactTime + 0.9);
+
+    rumbleGain.gain.setValueAtTime(0.001, impactTime);
+    rumbleGain.gain.linearRampToValueAtTime(0.35, impactTime + 0.05);
+    rumbleGain.gain.exponentialRampToValueAtTime(0.001, impactTime + 0.95);
+
+    rumbleOsc.connect(rumbleGain);
+    rumbleGain.connect(ctx.destination);
+    rumbleOsc.start(impactTime);
+    rumbleOsc.stop(impactTime + 1.0);
+  }
+
+  /**
+   * 21. Tactical Terminal Power On / Cathode Initialization
+   * Two distinct soundscapes:
+   * - Alpha: Imperial CRT cathode hum, heavy switch clunk, rising 15.75 kHz flyback whistle & high-voltage crackle.
+   * - Beta: Necron Gauss resonance, dual dissonant crystalline sine wave phase sweep with chronomantic ring-modulation.
+   *
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   */
+  function playTerminalPowerOn(channel = 'alpha') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const isBeta = String(channel).toLowerCase() === 'beta';
+
+    if (isBeta) {
+      const oscA = ctx.createOscillator();
+      const oscB = ctx.createOscillator();
+      const gainA = ctx.createGain();
+      const gainB = ctx.createGain();
+
+      oscA.type = 'sine';
+      oscB.type = 'triangle';
+      oscA.frequency.setValueAtTime(180, now);
+      oscA.frequency.exponentialRampToValueAtTime(540, now + 0.4);
+      oscB.frequency.setValueAtTime(370, now);
+      oscB.frequency.exponentialRampToValueAtTime(1110, now + 0.4);
+
+      gainA.gain.setValueAtTime(0.001, now);
+      gainA.gain.linearRampToValueAtTime(0.14, now + 0.06);
+      gainA.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+      gainB.gain.setValueAtTime(0.001, now);
+      gainB.gain.linearRampToValueAtTime(0.1, now + 0.1);
+      gainB.gain.exponentialRampToValueAtTime(0.001, now + 0.46);
+
+      oscA.connect(gainA);
+      oscB.connect(gainB);
+      gainA.connect(ctx.destination);
+      gainB.connect(ctx.destination);
+
+      oscA.start(now);
+      oscB.start(now);
+      oscA.stop(now + 0.5);
+      oscB.stop(now + 0.5);
+
+      const ping = ctx.createOscillator();
+      const pingGain = ctx.createGain();
+      ping.type = 'sine';
+      ping.frequency.setValueAtTime(1480, now + 0.2);
+      ping.frequency.exponentialRampToValueAtTime(740, now + 0.45);
+      pingGain.gain.setValueAtTime(0.001, now + 0.2);
+      pingGain.gain.linearRampToValueAtTime(0.12, now + 0.23);
+      pingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      ping.connect(pingGain);
+      pingGain.connect(ctx.destination);
+      ping.start(now + 0.2);
+      ping.stop(now + 0.5);
+
+    } else {
+      const switchSnap = ctx.createOscillator();
+      const switchGain = ctx.createGain();
+      switchSnap.type = 'square';
+      switchSnap.frequency.setValueAtTime(180, now);
+      switchSnap.frequency.exponentialRampToValueAtTime(45, now + 0.03);
+      switchGain.gain.setValueAtTime(0.16, now);
+      switchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      switchSnap.connect(switchGain);
+      switchGain.connect(ctx.destination);
+      switchSnap.start(now);
+      switchSnap.stop(now + 0.04);
+
+      const hum = ctx.createOscillator();
+      const humGain = ctx.createGain();
+      hum.type = 'sawtooth';
+      hum.frequency.setValueAtTime(60, now + 0.02);
+      hum.frequency.linearRampToValueAtTime(120, now + 0.45);
+      humGain.gain.setValueAtTime(0.001, now + 0.02);
+      humGain.gain.linearRampToValueAtTime(0.12, now + 0.12);
+      humGain.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
+      hum.connect(humGain);
+      humGain.connect(ctx.destination);
+      hum.start(now + 0.02);
+      hum.stop(now + 0.55);
+
+      const flyback = ctx.createOscillator();
+      const flybackGain = ctx.createGain();
+      flyback.type = 'sine';
+      flyback.frequency.setValueAtTime(3200, now + 0.05);
+      flyback.frequency.exponentialRampToValueAtTime(15750, now + 0.4);
+      flybackGain.gain.setValueAtTime(0.001, now + 0.05);
+      flybackGain.gain.linearRampToValueAtTime(0.035, now + 0.2);
+      flybackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      flyback.connect(flybackGain);
+      flybackGain.connect(ctx.destination);
+      flyback.start(now + 0.05);
+      flyback.stop(now + 0.5);
+    }
+  }
+
+  /**
+   * 22. Tactical Terminal Power Off / System Shutdown
+   * Two distinct soundscapes:
+   * - Alpha: Imperial CRT raster spot collapse snap, power supply discharge & decaying coil drain.
+   * - Beta: Necron Gauss dimensional phase-out, descending metallic dissonance & stasis fold.
+   *
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   */
+  function playTerminalPowerOff(channel = 'alpha') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const isBeta = String(channel).toLowerCase() === 'beta';
+
+    if (isBeta) {
+      const oscA = ctx.createOscillator();
+      const oscB = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscA.type = 'sine';
+      oscB.type = 'triangle';
+      oscA.frequency.setValueAtTime(680, now);
+      oscA.frequency.exponentialRampToValueAtTime(45, now + 0.42);
+      oscB.frequency.setValueAtTime(340, now);
+      oscB.frequency.exponentialRampToValueAtTime(32, now + 0.42);
+
+      gain.gain.setValueAtTime(0.13, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+      oscA.connect(gain);
+      oscB.connect(gain);
+      gain.connect(ctx.destination);
+
+      oscA.start(now);
+      oscB.start(now);
+      oscA.stop(now + 0.48);
+      oscB.stop(now + 0.48);
+
+    } else {
+      const collapseSnap = ctx.createOscillator();
+      const snapGain = ctx.createGain();
+      collapseSnap.type = 'triangle';
+      collapseSnap.frequency.setValueAtTime(420, now);
+      collapseSnap.frequency.exponentialRampToValueAtTime(30, now + 0.025);
+      snapGain.gain.setValueAtTime(0.18, now);
+      snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.028);
+      collapseSnap.connect(snapGain);
+      snapGain.connect(ctx.destination);
+      collapseSnap.start(now);
+      collapseSnap.stop(now + 0.03);
+
+      const drain = ctx.createOscillator();
+      const drainGain = ctx.createGain();
+      drain.type = 'sawtooth';
+      drain.frequency.setValueAtTime(140, now + 0.015);
+      drain.frequency.exponentialRampToValueAtTime(24, now + 0.38);
+      drainGain.gain.setValueAtTime(0.12, now + 0.015);
+      drainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+      drain.connect(drainGain);
+      drainGain.connect(ctx.destination);
+      drain.start(now + 0.015);
+      drain.stop(now + 0.45);
+    }
+  }
+
+  /**
+   * 23. Classified Briefing Dossier Decode / Cipher Teleprinter
+   * Two distinct soundscapes:
+   * - Alpha: Departmento Munitorum cipher teleprinter mechanical relay chatter and high-speed encryption warble.
+   * - Beta: Necron Canoptek scarab crystalline arithmetic frequency chirps and resonant glyph deciphering.
+   *
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   */
+  function playBriefingDecode(channel = 'alpha') {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const isBeta = String(channel).toLowerCase() === 'beta';
+
+    if (isBeta) {
+      const freqs = [784, 1046, 1318, 1568];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const t = now + idx * 0.055;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, t);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.05, t + 0.08);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.09, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.18);
+      });
+
+    } else {
+      for (let i = 0; i < 5; i++) {
+        const click = ctx.createOscillator();
+        const clickGain = ctx.createGain();
+        const t = now + i * 0.032;
+
+        click.type = (i % 2 === 0) ? 'square' : 'triangle';
+        click.frequency.setValueAtTime(1400 + (i * 220), t);
+        click.frequency.exponentialRampToValueAtTime(260, t + 0.016);
+
+        clickGain.gain.setValueAtTime(0.001, t);
+        clickGain.gain.linearRampToValueAtTime(0.08, t + 0.004);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.022);
+
+        click.connect(clickGain);
+        clickGain.connect(ctx.destination);
+        click.start(t);
+        click.stop(t + 0.025);
+      }
+
+      const chirp = ctx.createOscillator();
+      const chirpGain = ctx.createGain();
+      chirp.type = 'sawtooth';
+      chirp.frequency.setValueAtTime(2200, now + 0.16);
+      chirp.frequency.exponentialRampToValueAtTime(3200, now + 0.22);
+      chirp.frequency.exponentialRampToValueAtTime(1600, now + 0.28);
+
+      chirpGain.gain.setValueAtTime(0.001, now + 0.16);
+      chirpGain.gain.linearRampToValueAtTime(0.06, now + 0.18);
+      chirpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+      chirp.connect(chirpGain);
+      chirpGain.connect(ctx.destination);
+      chirp.start(now + 0.16);
+      chirp.stop(now + 0.32);
+    }
+  }
+
+  let hasUserInteracted = false;
+
+  function handleUserGestureForMusic(e) {
+    hasUserInteracted = true;
+    if (!wantMusic) return;
+    if (e && e.target && typeof e.target.closest === 'function' && e.target.closest('#voxMusicToggle, #voxMusicSkip')) {
+      return;
+    }
+    if (!ytReady) {
+      loadYouTubeAPI();
+    } else if (!isPlayerActuallyPlaying()) {
+      resumeOrStartMusic(true);
+    }
+  }
+
+  // Global listener: contextually triggers sound profiles on clicks
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest(
+      'button, .suite-link, .choice-card, .slider-node, .map-node-group, summary, .terminal-link-btn, .fs-pill-btn, .mini-btn, .phase-step-btn, input[type="checkbox"], input[type="radio"], .chip, .nav-pills button'
+    );
+    if (target) {
+      if (target.dataset && target.dataset.sfx === 'custom') {
+        // Handled explicitly by upgrade roller / stamp / siren functions
       } else if (target.matches('#btnQuickKillSp, [onclick*="awardHordeKillSP"]')) {
         playBoltgunBlast();
       } else if (target.matches('#nextRoundBtn, [onclick*="advanceBattleRound"]')) {
@@ -20,6 +331,8 @@ CRT cathode chimes, forge anvil clanks, mechanical dice clatter, and teletype ty
         playPowerSurge();
       } else if (target.matches('[onclick*="loseSP"], [onclick*="spendCPForStrat"], [onclick*="buyResupply"], [onclick*="adjCP(-1)"]')) {
         playPneumaticDispense();
+      } else if (target.matches('[onclick*="triggerOrbitalPunishment"], [onclick*="resolveOrbitalBombardmentRoll"], .orbital-btn, [data-sfx="orbital"]')) {
+        playOrbitalBombardment();
       } else if (target.matches('[onclick*="drawMisery"], [onclick*="triggerSpecificMisery"], .btn-red[onclick*="Misery"]')) {
         playWarpStatic();
       } else if (target.matches('[onclick*="drawSecondary"], [onclick*="replaceSecondary"], [onclick*="triggerChangeOfPlans"]')) {
@@ -517,317 +830,4 @@ CRT cathode chimes, forge anvil clanks, mechanical dice clatter, and teletype ty
 
       const inlineScripts = doc.querySelectorAll('script:not([src])');
       inlineScripts.forEach(s => {
-        try {
-          const scriptEl = document.createElement('script');
-          // Replace top-level const and let with var so re-entrant seamless navigation
-          // across pages or repeated visits never throws "Identifier has already been declared".
-          const sanitized = s.textContent.replace(/(^|[\n\r;])\s*(const|let)\s+([a-zA-Z0-9_$]+)/g, '$1 var $3');
-          scriptEl.textContent = sanitized;
-          document.body.appendChild(scriptEl);
-        } catch (scriptErr) {
-          console.warn('Seamless inline script execution error:', scriptErr);
-        }
-      });
-
-      if (document.getElementById('setupScreen') || document.getElementById('gameScreen')) {
-        const hordeSel = document.getElementById('hordeFactionSelect');
-        if (hordeSel && typeof HORDE_FACTIONS !== 'undefined') {
-          hordeSel.innerHTML = HORDE_FACTIONS.map(f => `<option value="${f.name}">${f.name} (${f.ruleTitle})</option>`).join('');
-        }
-        if (typeof restoreSessionState === 'function') {
-          restoreSessionState();
-        }
-      }
-      if ((document.getElementById('atlas-node-inspector') || document.getElementById('dossierBeta')) && typeof restoreBriefingState === 'function') {
-        restoreBriefingState();
-      }
-      if (document.getElementById('hellscapeSelect') && typeof restorePvpState === 'function') {
-        restorePvpState();
-      }
-      if (document.getElementById('aiStep0') && typeof restoreRogueState === 'function') {
-        restoreRogueState();
-      }
-      if (document.getElementById('rosTabNemesis') && typeof window.initRosterPage === 'function') {
-        window.initRosterPage();
-      }
-
-      syncFactionTheme();
-
-      document.dispatchEvent(new Event('DOMContentLoaded'));
-      window.dispatchEvent(new Event('vox:page-swapped'));
-
-    } catch (err) {
-      console.warn('Seamless router fallback to standard navigation:', err);
-      if (typeof window.location.replace === 'function') {
-        window.location.replace(targetUrl);
-      } else {
-        window.location.href = targetUrl;
-      }
-    } finally {
-      isNavigating = false;
-    }
-  }
-
-  // =========================================================================
-  // GLOBAL FACTION COLOR MODE SYNCHRONIZATION (NECRON VS MILITARUM)
-  // =========================================================================
-  const STORAGE_KEY_FACTION_THEME = 'foa_faction_theme_v1';
-
-  /**
-   * Pure functional core helper: Resolves the active global faction theme
-   * ('necron' for Lord Commander Junebug / Beta, 'militarum' for The Exile / Alpha, or null)
-   * from browser storage based on which broadcast or terminal conduit is unlocked.
-   *
-   * @param {Storage} [localStore] - localStorage-compatible store
-   * @param {Storage} [sessionStore] - sessionStorage-compatible store
-   * @returns {'necron' | 'militarum' | null} Resolved faction theme
-   */
-  function resolveFactionThemeFromStorage(localStore, sessionStore) {
-    try {
-      if (localStore && typeof localStore.getItem === 'function') {
-        const explicit = localStore.getItem(STORAGE_KEY_FACTION_THEME);
-        if (explicit === 'necron' || explicit === 'militarum') {
-          return explicit;
-        }
-      }
-    } catch (e) {}
-
-    try {
-      if (sessionStore && typeof sessionStore.getItem === 'function') {
-        const rawVoxSession = sessionStore.getItem('foa_vox_active_session_v1');
-        if (rawVoxSession) {
-          const parsedVox = JSON.parse(rawVoxSession);
-          if (parsedVox && parsedVox.channel === 'beta') return 'necron';
-          if (parsedVox && parsedVox.channel === 'alpha') return 'militarum';
-        }
-      }
-    } catch (e) {}
-
-    try {
-      if (localStore && typeof localStore.getItem === 'function') {
-        const rawBriefing = localStore.getItem('foa_briefing_state_v3');
-        if (rawBriefing) {
-          const parsedBriefing = JSON.parse(rawBriefing);
-          if (parsedBriefing) {
-            if (parsedBriefing.unlockedBeta && !parsedBriefing.unlockedAlpha) return 'necron';
-            if (parsedBriefing.unlockedAlpha && !parsedBriefing.unlockedBeta) return 'militarum';
-            if (parsedBriefing.unlockedBeta && parsedBriefing.unlockedAlpha) {
-              return parsedBriefing.activeDossier === 'alpha' ? 'militarum' : 'necron';
-            }
-          }
-        }
-      }
-    } catch (e) {}
-
-    return null;
-  }
-
-  /**
-   * Applies the given faction theme ('necron' or 'militarum') to document.body
-   * and optionally persists it to localStorage across all pages.
-   *
-   * @param {'necron' | 'militarum' | null} theme - Target faction theme
-   * @param {boolean} [persist=true] - Whether to persist in localStorage
-   * @returns {'necron' | 'militarum' | null} Applied theme
-   */
-  function setFactionTheme(theme, persist = true) {
-    const normalized = theme === 'necron' ? 'necron' : (theme === 'militarum' ? 'militarum' : null);
-    if (persist) {
-      try {
-        if (normalized) {
-          localStorage.setItem(STORAGE_KEY_FACTION_THEME, normalized);
-        } else {
-          localStorage.removeItem(STORAGE_KEY_FACTION_THEME);
-        }
-      } catch (e) {}
-    }
-
-    if (document && document.body && document.body.classList) {
-      document.body.classList.toggle('theme-necron', normalized === 'necron');
-      document.body.classList.toggle('theme-militarum', normalized === 'militarum');
-      if (document.body.dataset) {
-        document.body.dataset.factionTheme = normalized || 'default';
-      }
-    }
-    return normalized;
-  }
-
-  /**
-   * Returns the currently active faction theme ('necron' | 'militarum' | null).
-   *
-   * @returns {'necron' | 'militarum' | null}
-   */
-  function getFactionTheme() {
-    return resolveFactionThemeFromStorage(
-      typeof localStorage !== 'undefined' ? localStorage : null,
-      typeof sessionStorage !== 'undefined' ? sessionStorage : null
-    );
-  }
-
-  /**
-   * Synchronizes document.body classes with the unlocked broadcast/terminal theme in storage.
-   *
-   * @returns {'necron' | 'militarum' | null}
-   */
-  function syncFactionTheme() {
-    const resolved = getFactionTheme();
-    if (resolved) {
-      setFactionTheme(resolved, false);
-    }
-    return resolved;
-  }
-
-  /**
-   * Queues a compiled Dossier payload into sessionStorage, plays the Inquisitorial
-   * Dossier Stamp SFX, and routes the user directly to pages/vox.html!
-   */
-  function transmitToVox(channel, payloadText) {
-    playDossierStamp();
-    try {
-      sessionStorage.setItem(
-        'foa_pending_vox_payload',
-        JSON.stringify({
-          channel: channel || 'alpha',
-          text: payloadText,
-          queuedAt: Date.now()
-        })
-      );
-      // Strictly prevent terminal password bypass: purge any pre-existing active session auth
-      sessionStorage.removeItem('foa_vox_active_session_v1');
-    } catch (e) {}
-
-    const inPagesDir = window.location.pathname.includes('/pages/');
-    const targetPath = inPagesDir ? 'vox.html' : 'pages/vox.html';
-    const fullUrl = new URL(targetPath, window.location.href).href;
-
-    setTimeout(() => {
-      navigateSeamlessly(fullUrl, true);
-    }, 260);
-  }
-
-  // Expose public audio & routing API for Crusade Rollers, Dossiers, Spawner & CRT Terminal
-  window.VoxAudio = {
-    playClank: playTerminalClank,
-    playTeletypeTick: playTeletypeTick,
-    playDiceClatter: playDiceClatter,
-    playForgeAnvil: playForgeAnvil,
-    playRelicChoir: playRelicChoir,
-    playScarHazard: playScarHazard,
-    playDossierStamp: playDossierStamp,
-    playWarpSiren: playWarpSiren,
-    playAuspexLock: playAuspexLock,
-    playCloudSyncChime: playCloudSyncChime,
-    playBoltgunBlast: playBoltgunBlast,
-    playPowerSurge: playPowerSurge,
-    playPneumaticDispense: playPneumaticDispense,
-    playMagLock: playMagLock,
-    playWarhorn: playWarhorn,
-    playWarpStatic: playWarpStatic,
-    playCipherDecryption: playCipherDecryption,
-    playCogitatorStep: playCogitatorStep,
-    playDegaussPurge: playDegaussPurge,
-    playNecronGaussPulse: playNecronGaussPulse,
-    navigateSeamlessly: navigateSeamlessly,
-    transmitToVox: transmitToVox,
-    resolveFactionThemeFromStorage: resolveFactionThemeFromStorage,
-    setFactionTheme: setFactionTheme,
-    getFactionTheme: getFactionTheme,
-    syncFactionTheme: syncFactionTheme
-  };
-
-  /**
-   * Normalizes URL pathnames so root '/' and '/index.html' (on Cloudflare Pages / static hosts)
-   * resolve to the same canonical path ('/').
-   *
-   * @param {string} pathname - URL pathname string
-   * @returns {string} Canonical pathname
-   */
-  function normalizePathname(pathname) {
-    const raw = String(pathname || '/');
-    return raw.replace(/\/index\.html$/i, '/') || '/';
-  }
-
-  document.addEventListener('click', (e) => {
-    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-
-    const link = e.target.closest('a[href]');
-    if (!link) return;
-
-    const hrefAttr = link.getAttribute('href');
-    if (!hrefAttr || hrefAttr.startsWith('#') || hrefAttr.startsWith('javascript:') || hrefAttr.startsWith('mailto:')) return;
-    if (link.target && link.target !== '_self') return;
-
-    try {
-      const url = new URL(link.href, window.location.href);
-      if (url.origin !== window.location.origin) return;
-
-      if (normalizePathname(url.pathname) === normalizePathname(window.location.pathname) && url.search === window.location.search) {
-        if (url.hash) return;
-        e.preventDefault();
-        return;
-      }
-
-      if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || !url.pathname.includes('.')) {
-        e.preventDefault();
-        navigateSeamlessly(url.href, true);
-      }
-    } catch (err) {}
-  });
-
-  window.addEventListener('popstate', () => {
-    navigateSeamlessly(window.location.href, false);
-  });
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      syncFactionTheme();
-      injectNavToggle();
-    });
-  } else {
-    syncFactionTheme();
-    injectNavToggle();
-  }
-
-  // Dual export for Node.js test runner
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-      PLAYLIST_ID,
-      VOX_TRACK_IDS,
-      STORAGE_KEY_FACTION_THEME,
-      playTerminalClank,
-      playTeletypeTick,
-      playDiceClatter,
-      playForgeAnvil,
-      playRelicChoir,
-      playScarHazard,
-      playDossierStamp,
-      playWarpSiren,
-      playAuspexLock,
-      playCloudSyncChime,
-      playBoltgunBlast,
-      playPowerSurge,
-      playPneumaticDispense,
-      playMagLock,
-      playWarhorn,
-      playWarpStatic,
-      playCipherDecryption,
-      playCogitatorStep,
-      playDegaussPurge,
-      playNecronGaussPulse,
-      saveCurrentPosition,
-      navigateSeamlessly,
-      injectNavToggle,
-      transmitToVox,
-      createPlayer,
-      isPlayerActuallyPlaying,
-      resumeOrStartMusic,
-      playNextRandomTrack,
-      normalizePathname,
-      resolveFactionThemeFromStorage,
-      setFactionTheme,
-      getFactionTheme,
-      syncFactionTheme
-    };
-  }
-})();
 ````

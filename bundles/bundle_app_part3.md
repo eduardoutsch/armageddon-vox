@@ -10,6 +10,32 @@ DOM event handlers, Auspex telemetry HUD synchronization, and session state pers
 ## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)` <a id="file-jsappjspart3uitelemetrypersistencelines1401end"></a>
 
 ````javascript
+  }
+}
+
+
+async function pushLiveSpawnerStateToCloud() {
+  if (typeof fetch !== 'function') return false;
+  const setupScreen = (typeof document !== 'undefined') ? document.getElementById('setupScreen') : null;
+  const gameScreen = (typeof document !== 'undefined') ? document.getElementById('gameScreen') : null;
+  if (!setupScreen && !gameScreen) return false;
+
+  const roomCode = getActiveRoomCode();
+  currentRoomCode = roomCode;
+  const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
+
+  const fortChecks = [];
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.fort-grid input[type="checkbox"]').forEach(cb => {
+      fortChecks.push(cb.checked);
+    });
+  }
+
+  const spawnZoneCount = (typeof document !== 'undefined' && document.getElementById('spawnZoneCountSelect')?.value) || '3';
+  const extraSpawnMod = (typeof document !== 'undefined' && document.getElementById('extraSpawnMod')?.value) || '0';
+  const setupFactionModeVal = (typeof document !== 'undefined' && document.getElementById('setupFactionMode')?.value) || 'SYNC_ALL';
+  const firstRollBonus = !!(typeof document !== 'undefined' && document.getElementById('firstRollBonusCheck')?.checked);
+  const baitTrapBonus = !!(typeof document !== 'undefined' && document.getElementById('baitTrapBonusCheck')?.checked);
   const doubleCost = !!(typeof document !== 'undefined' && document.getElementById('doubleCostToggle')?.checked);
   const teleCount = parseInt((typeof document !== 'undefined' && document.getElementById('teleCount')?.innerText) || '0', 10);
   const wireCount = parseInt((typeof document !== 'undefined' && document.getElementById('wireCount')?.innerText) || '0', 10);
@@ -734,14 +760,4 @@ if (typeof window !== 'undefined') {
 
   if (typeof module !== 'undefined' && module.exports) {
     Object.assign(module.exports, {
-      updateRoundBanner,
-      syncSpawnerPoolFromSupabase,
-      renderLiveSpawnerBracketTable,
-      transmitHordeIntrusionPing,
-      transmitIntrusionPing,
-      evaluateWarpBreachIntrusions,
-      triggerCardStaticShake
-    });
-  }
-})();
 ````

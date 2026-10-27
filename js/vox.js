@@ -252,6 +252,9 @@ async function handleSealAction() {
     const questionInput = document.getElementById('questionInput');
     if (authScreen) authScreen.classList.add('hidden');
     if (termScreen) termScreen.classList.remove('hidden');
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOn === 'function') {
+      window.VoxAudio.playTerminalPowerOn(selectedChannel);
+    }
     if (conduitLabel) {
       conduitLabel.textContent =
         selectedChannel === 'alpha'
@@ -790,6 +793,9 @@ function lockTerminal() {
   clearStreamTimers();
   if (pollTimer) clearInterval(pollTimer);
   try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (e) {}
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOff === 'function') {
+    window.VoxAudio.playTerminalPowerOff(selectedChannel);
+  }
   const termScreen = document.getElementById('terminalScreen');
   const authScreen = document.getElementById('authScreen');
   if (termScreen) termScreen.classList.add('hidden');

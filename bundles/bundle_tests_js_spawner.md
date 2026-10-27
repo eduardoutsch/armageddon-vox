@@ -426,6 +426,102 @@ test('Spawner Cockpit: updateGuidedFlowForRound does NOT reset active phase step
   cockpit.updateGuidedFlowForRound({ resetStep: true });
   assert.equal(cockpit.currentGuidedStep, 1, 'Must reset to step 1 when resetStep is true');
 });
+
+test('Spawner Cockpit: stepGuidedPhase clamps by default and prevents uncontrolled cycling', () => {
+  const cockpit = require('../../js/spawner-cockpit.js');
+
+  cockpit.setGuidedPhaseStep(5, { silent: true });
+  cockpit.stepGuidedPhase(1);
+  assert.equal(cockpit.currentGuidedStep, 5, 'Step 5 + 1 must clamp at 5 by default');
+
+  cockpit.setGuidedPhaseStep(1, { silent: true });
+  cockpit.stepGuidedPhase(-1);
+  assert.equal(cockpit.currentGuidedStep, 1, 'Step 1 - 1 must clamp at 1 by default');
+
+  // When explicit allowCycle is provided:
+  cockpit.setGuidedPhaseStep(5, { silent: true });
+  cockpit.stepGuidedPhase(1, { allowCycle: true });
+  assert.equal(cockpit.currentGuidedStep, 1, 'Step 5 + 1 with allowCycle must wrap to 1');
+});
+
+test('Spawner Cockpit: wipeAllFortifications unchecks DOM checkboxes, resets markers, and calls saveSessionState', () => {
+  const cockpit = require('../../js/spawner-cockpit.js');
+
+  const fortCheck1 = { checked: true, id: 'fobFortCheck' };
+  const fortCheck2 = { checked: true, id: 'fieldHospitalCheck' };
+  const teleCountEl = { innerText: '3' };
+  let savedCalled = false;
+  let sfxPlayed = false;
+
+  globalThis.document = {
+    querySelectorAll: (selector) => {
+      if (selector === '.fort-grid input[type="checkbox"]') return [fortCheck1, fortCheck2];
+      return [];
+    },
+    getElementById: (id) => {
+      if (id === 'teleCount') return teleCountEl;
+      return null;
+    }
+  };
+
+  globalThis.saveSessionState = () => { savedCalled = true; };
+  globalThis.window = {
+    VoxAudio: {
+      playDegaussPurge: () => { sfxPlayed = true; }
+    }
+  };
+
+  const wiped = cockpit.wipeAllFortifications({ reason: 'Failed Secondary #17 Spruce This Place Up' });
+
+  assert.equal(wiped, true);
+  assert.equal(fortCheck1.checked, false, 'FOB check must be unchecked');
+  assert.equal(fortCheck2.checked, false, 'Field Hospital check must be unchecked');
+  assert.equal(teleCountEl.innerText, '0', 'Teleporters count must be reset to 0');
+  assert.equal(savedCalled, true, 'saveSessionState must be called immediately');
+  assert.equal(sfxPlayed, true, 'playDegaussPurge audio cue must be triggered');
+
+  // Clean up
+  delete globalThis.document;
+  delete globalThis.saveSessionState;
+  delete globalThis.window;
+});
+
+test('Spawner Cockpit: resolveSecondaryOutcome on Secondary #17 failure triggers wipeAllFortifications', () => {
+  const cockpit = require('../../js/spawner-cockpit.js');
+
+  let wipeCalled = false;
+  let sfxPlayed = false;
+
+  globalThis.window = {
+    activeSecondaries: [{ id: 17, name: 'Spruce This Place Up', punWipeFortifications: true }],
+    state: null,
+    wipeAllFortifications: () => { wipeCalled = true; },
+    VoxAudio: {
+      playMagLock: () => { sfxPlayed = true; },
+      playDegaussPurge: () => {}
+    }
+  };
+
+  globalThis.document = {
+    getElementById: () => null,
+    querySelectorAll: () => []
+  };
+
+  // 1. Successful outcome does NOT wipe
+  cockpit.resolveSecondaryOutcome(0, true);
+  assert.equal(wipeCalled, false, 'Success must not wipe fortifications');
+
+  // Reset active secondaries
+  globalThis.window.activeSecondaries = [{ id: 17, name: 'Spruce This Place Up', punWipeFortifications: true }];
+
+  // 2. Failure outcome triggers wipe
+  cockpit.resolveSecondaryOutcome(0, false);
+  assert.equal(wipeCalled, true, 'Failing Secondary #17 must trigger wipeAllFortifications');
+
+  // Clean up
+  delete globalThis.window;
+  delete globalThis.document;
+});
 ````
 
 ---
@@ -564,7 +660,8 @@ async function launchTestBrowser() {
 
 test('UI Boundary: pages/spawner.html synchronizes Pre-Game (Round 0) vs Battle Round 1, draws cards, and supports manual draw', async () => {
   const browser = await launchTestBrowser();
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -655,7 +752,8 @@ test('UI Boundary: pages/spawner.html synchronizes Pre-Game (Round 0) vs Battle 
 
 test('UI Boundary: pages/spawner.html guided phase stepper preserves active phase on button clicks and SP shop purchase updates tracker', async () => {
   const browser = await launchTestBrowser();
-  const page = await browser.newPage();
+  const context = await browser.newContext();
+  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -732,4 +830,95 @@ test('UI Boundary: pages/spawner.html guided phase stepper preserves active phas
     await browser.close();
   }
 });
+
+test('UI Boundary: pages/spawner.html failing Secondary #17 wipes all fortifications, and phase stepper does not cycle past phase 5', async () => {
+  const browser = await launchTestBrowser();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    await page.addInitScript(() => {
+      window.confirm = () => true;
+      try {
+        localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+          seed: 'TEST-FORT-WIPE',
+          selectedModeVal: 'solo',
+          isSoloMode: true,
+          battleRound: 2,
+          sp: 8,
+          activeMiseries: [],
+          activeSecondaries: [{ id: 17, name: 'Spruce This Place Up', punWipeFortifications: true }],
+          hasActiveSession: true,
+          fortChecks: [true, false, false, true, false, false, false],
+          teleCount: 2,
+          currentGuidedStep: 4
+        }));
+      } catch (e) {}
+    });
+
+    const filePath = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    await page.route('**/rest/v1/rpc/**', route => route.abort());
+    await page.goto(filePath, { waitUntil: 'load' });
+
+    await page.evaluate(() => {
+      window.confirm = () => true;
+      if (typeof window.switchTab === 'function') window.switchTab(1);
+    });
+
+    // 1. Verify initial active fortifications (FOB and Field Hospital are checked, Teleporters = 2)
+    const fobChecked = await page.$eval('#fobFortCheck', el => el.checked);
+    const hospChecked = await page.$eval('#fieldHospitalCheck', el => el.checked);
+    const teleVal = await page.$eval('#teleCount', el => el.innerText.trim());
+
+    assert.equal(fobChecked, true, 'FOB check should initially be checked');
+    assert.equal(hospChecked, true, 'Field Hospital check should initially be checked');
+    assert.equal(teleVal, '2', 'Teleporters should initially be 2');
+
+    // 2. Fail Secondary #17 ("Spruce This Place Up")
+    await page.evaluate(() => {
+      if (typeof window.resolveSecondaryOutcome === 'function') {
+        window.resolveSecondaryOutcome(0, false);
+      }
+    });
+
+    // 3. Verify all fortifications have been wiped
+    const fobAfterWipe = await page.$eval('#fobFortCheck', el => el.checked);
+    const hospAfterWipe = await page.$eval('#fieldHospitalCheck', el => el.checked);
+    const teleAfterWipe = await page.$eval('#teleCount', el => el.innerText.trim());
+
+    assert.equal(fobAfterWipe, false, 'FOB must be unchecked after Secondary #17 fails');
+    assert.equal(hospAfterWipe, false, 'Field Hospital must be unchecked after Secondary #17 fails');
+    assert.equal(teleAfterWipe, '0', 'Teleporters must be reset to 0 after Secondary #17 fails');
+
+    // 4. Test phase stepper clamping at Step 5
+    await page.evaluate(() => {
+      if (typeof window.setGuidedPhaseStep === 'function') {
+        window.setGuidedPhaseStep(5);
+      }
+    });
+
+    let currentStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(currentStep, '5', 'Phase 5 should be active');
+
+    // Click Next Step button at Phase 5: must clamp at Phase 5 and not cycle back to 1
+    await page.click('#stepNextBtn');
+    currentStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(currentStep, '5', 'Clicking Next Step at Phase 5 must remain clamped at Phase 5');
+
+    // 5. Test page reload restores currentGuidedStep from localStorage
+    await page.evaluate(() => {
+      if (typeof window.setGuidedPhaseStep === 'function') {
+        window.setGuidedPhaseStep(4);
+      }
+    });
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForTimeout(200);
+
+    const reloadedStep = await page.$eval('#roundPhaseStepper .active-step', el => el.getAttribute('data-step'));
+    assert.equal(reloadedStep, '4', 'Reloading page must restore currentGuidedStep without resetting to 1');
+  } finally {
+    await browser.close();
+  }
+});
+
 ````

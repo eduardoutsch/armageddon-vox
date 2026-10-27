@@ -61,10 +61,21 @@ class MockGain extends MockAudioNode {
   }
 }
 
+class MockBiquadFilter extends MockAudioNode {
+  constructor() {
+    super();
+    this.type = 'lowpass';
+    this.frequency = new MockAudioParam(1000);
+    this.Q = new MockAudioParam(1);
+    this.gain = new MockAudioParam(0);
+  }
+}
+
 class MockAudioContext {
   constructor() {
     this.currentTime = 100.0;
     this.state = 'running';
+    this.sampleRate = 44100;
     this.destination = new MockAudioNode();
     this.oscillators = [];
     this.gains = [];
@@ -78,6 +89,24 @@ class MockAudioContext {
     const g = new MockGain();
     this.gains.push(g);
     return g;
+  }
+  createBiquadFilter() {
+    return new MockBiquadFilter();
+  }
+  createBuffer(channels, length, sampleRate) {
+    return {
+      numberOfChannels: channels,
+      length: length,
+      sampleRate: sampleRate || 44100,
+      getChannelData: () => new Float32Array(length)
+    };
+  }
+  createBufferSource() {
+    const src = new MockAudioNode();
+    src.buffer = null;
+    src.start = () => {};
+    src.stop = () => {};
+    return src;
   }
   resume() {
     this.state = 'running';
@@ -461,5 +490,24 @@ test('vox-audio: global click listener contextually triggers the new sound profi
   }
 });
 
+test('vox-audio: unique orbital bombardment, dual-faction terminal power, and briefing decode sound synthesizers execute without throwing', () => {
+  const newSynths = [
+    'playOrbitalBombardment',
+    'playTerminalPowerOn',
+    'playTerminalPowerOff',
+    'playBriefingDecode'
+  ];
 
+  for (const fnName of newSynths) {
+    assert.equal(typeof voxModule[fnName], 'function', `voxModule must export ${fnName}`);
+    assert.equal(typeof globalThis.window.VoxAudio[fnName], 'function', `window.VoxAudio must expose ${fnName}`);
+  }
 
+  assert.doesNotThrow(() => voxModule.playOrbitalBombardment());
+  assert.doesNotThrow(() => voxModule.playTerminalPowerOn('alpha'));
+  assert.doesNotThrow(() => voxModule.playTerminalPowerOn('beta'));
+  assert.doesNotThrow(() => voxModule.playTerminalPowerOff('alpha'));
+  assert.doesNotThrow(() => voxModule.playTerminalPowerOff('beta'));
+  assert.doesNotThrow(() => voxModule.playBriefingDecode('alpha'));
+  assert.doesNotThrow(() => voxModule.playBriefingDecode('beta'));
+});

@@ -10,7 +10,28 @@ Wave generation cycle, threat level brackets, and battlefield event resolvers (`
 ## File: `js/app.js (Part 2: Wave Engine & Threat Escalation, Lines 701-1400)` <a id="file-jsappjspart2waveenginethreatescalationlines7011400"></a>
 
 ````javascript
+    drawSecondary(battleRound === 1);
+  }
+
+  updateHUD();
+  renderSharedDecks();
+  debouncedPushLiveSpawnerStateToCloud();
+}
+
+function drawMisery(count) {
+  for (let i = 0; i < count; i++) {
+    if (sharedMiseryDeck.length === 0) {
+      const code = (document.getElementById('seedInput').value || 'HADES-1').trim().toUpperCase();
+      sharedMiseryDeck = seededShuffle(MISERIES, mulberry32(hashString(code + "_MIS_R" + battleRound)));
+    }
+    const card = sharedMiseryDeck.shift();
+    activeMiseries.push(card);
     if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(card);
+    if (card.wipeFortifications || card.id === 21) {
+      if (typeof window !== 'undefined' && typeof window.wipeAllFortifications === 'function') {
+        window.wipeAllFortifications({ reason: 'Misery #21 Bunkers Busted' });
+      }
+    }
     if (card.id === 20) drawMisery(2);
     if (card.id === 14 && isSoloMode) drawMisery(2);
   }
@@ -25,6 +46,11 @@ function triggerSpecificMisery() {
   sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
   activeMiseries.push(found);
   if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(found);
+  if (found.wipeFortifications || found.id === 21) {
+    if (typeof window !== 'undefined' && typeof window.wipeAllFortifications === 'function') {
+      window.wipeAllFortifications({ reason: 'Misery #21 Bunkers Busted' });
+    }
+  }
   renderSharedDecks();
   saveSessionState();
 }
@@ -684,30 +710,4 @@ function updateSyncBadge(isLive, labelText) {
     setupBadge.textContent = labelText || (activeHordeFaction
       ? `☁️ Room Synced (${getActiveRoomCode()} • ${activeHordeFaction.name})`
       : '☁️ Live Room Sync Active');
-  }
-}
-
-
-async function pushLiveSpawnerStateToCloud() {
-  if (typeof fetch !== 'function') return false;
-  const setupScreen = (typeof document !== 'undefined') ? document.getElementById('setupScreen') : null;
-  const gameScreen = (typeof document !== 'undefined') ? document.getElementById('gameScreen') : null;
-  if (!setupScreen && !gameScreen) return false;
-
-  const roomCode = getActiveRoomCode();
-  currentRoomCode = roomCode;
-  const isSessionActive = !!(gameScreen && !gameScreen.classList.contains('hidden'));
-
-  const fortChecks = [];
-  if (typeof document !== 'undefined') {
-    document.querySelectorAll('.fort-grid input[type="checkbox"]').forEach(cb => {
-      fortChecks.push(cb.checked);
-    });
-  }
-
-  const spawnZoneCount = (typeof document !== 'undefined' && document.getElementById('spawnZoneCountSelect')?.value) || '3';
-  const extraSpawnMod = (typeof document !== 'undefined' && document.getElementById('extraSpawnMod')?.value) || '0';
-  const setupFactionModeVal = (typeof document !== 'undefined' && document.getElementById('setupFactionMode')?.value) || 'SYNC_ALL';
-  const firstRollBonus = !!(typeof document !== 'undefined' && document.getElementById('firstRollBonusCheck')?.checked);
-  const baitTrapBonus = !!(typeof document !== 'undefined' && document.getElementById('baitTrapBonusCheck')?.checked);
 ````

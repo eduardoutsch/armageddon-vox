@@ -71,6 +71,9 @@ function saveSessionState() {
     const doubleCost = !!document.getElementById('doubleCostToggle')?.checked;
     const quickObjCount = parseInt(document.getElementById('quickObjCountInput')?.value || '2', 10);
     const lastClaimedCommandRound = (typeof window !== 'undefined' && window.lastClaimedCommandRound) ? window.lastClaimedCommandRound : 0;
+    const currentGuidedStep = (typeof window !== 'undefined' && typeof window.currentGuidedStep === 'number')
+      ? window.currentGuidedStep
+      : (typeof localStorage !== 'undefined' ? parseInt(localStorage.getItem('currentGuidedStep'), 10) : 1);
 
     const data = {
       hasActiveSession: isSessionActive,
@@ -108,7 +111,8 @@ function saveSessionState() {
       baitTrapBonus,
       doubleCost,
       quickObjCount,
-      lastClaimedCommandRound
+      lastClaimedCommandRound,
+      currentGuidedStep: (!isNaN(currentGuidedStep) && currentGuidedStep >= 1 && currentGuidedStep <= 5) ? currentGuidedStep : 1
     };
     localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(data));
     if (typeof debouncedPushLiveSpawnerStateToCloud === 'function') {
@@ -274,6 +278,15 @@ function restoreSessionState() {
     // Restore active tab
     if (data.activeTab && data.activeTab >= 1 && data.activeTab <= 4) {
       switchTab(data.activeTab, false);
+    }
+
+    // Restore guided phase step
+    if (typeof data.currentGuidedStep === 'number' && data.currentGuidedStep >= 1 && data.currentGuidedStep <= 5) {
+      if (typeof localStorage !== 'undefined') localStorage.setItem('currentGuidedStep', String(data.currentGuidedStep));
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('currentGuidedStep', String(data.currentGuidedStep));
+      if (typeof window !== 'undefined' && typeof window.setGuidedPhaseStep === 'function') {
+        window.setGuidedPhaseStep(data.currentGuidedStep, { silent: true });
+      }
     }
 
     return true;
@@ -636,6 +649,9 @@ function triggerChangeOfPlans() {
 
 function triggerOrbitalPunishment() {
   if (!confirm("Failed 'Establish Orbital Comms'? This draws 2 cards and assigns one at random!")) return;
+  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playOrbitalBombardment === 'function') {
+    window.VoxAudio.playOrbitalBombardment();
+  }
   const drawn = drawSecretCards(2);
   const pool = activeCard ? [activeCard, ...drawn] : drawn;
   const randIdx = Math.floor(Math.random() * pool.length);
@@ -699,6 +715,11 @@ function drawMisery(count) {
     const card = sharedMiseryDeck.shift();
     activeMiseries.push(card);
     if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(card);
+    if (card.wipeFortifications || card.id === 21) {
+      if (typeof window !== 'undefined' && typeof window.wipeAllFortifications === 'function') {
+        window.wipeAllFortifications({ reason: 'Misery #21 Bunkers Busted' });
+      }
+    }
     if (card.id === 20) drawMisery(2);
     if (card.id === 14 && isSoloMode) drawMisery(2);
   }
@@ -713,6 +734,11 @@ function triggerSpecificMisery() {
   sharedMiseryDeck = sharedMiseryDeck.filter(m => m.id !== id);
   activeMiseries.push(found);
   if (typeof recordMiseryDrawn === 'function') recordMiseryDrawn(found);
+  if (found.wipeFortifications || found.id === 21) {
+    if (typeof window !== 'undefined' && typeof window.wipeAllFortifications === 'function') {
+      window.wipeAllFortifications({ reason: 'Misery #21 Bunkers Busted' });
+    }
+  }
   renderSharedDecks();
   saveSessionState();
 }

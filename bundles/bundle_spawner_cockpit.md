@@ -175,8 +175,6 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     if (typeof saveSessionState === 'function') {
       saveSessionState();
     }
-
-    setGuidedPhaseStep(3);
   }
 
   function awardHordeKillSP(kills = 1) {
@@ -255,21 +253,11 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     const pincer = isPincerManeuverActive();
 
     const pills = [];
-    if (unlucky) {
-      pills.push(`<span class="badge red">🎲 MISERY #7 UNLUCKY NIGHT ACTIVE: All Spawn Rolls Use 3D6 Drop Lowest!</span>`);
-    }
-    if (pincer) {
-      pills.push(`<span class="badge purple">🪂 MISERY #13 PINCER MANEUVER ACTIVE: Spawn +1 Extra Deep Strike Unit (>3" from Players)!</span>`);
-    }
-    if (extraMod !== 0) {
-      pills.push(`<span class="badge gold">Extra Spawn Roll Mod: ${extraMod > 0 ? '+' + extraMod : extraMod}</span>`);
-    }
-    if (dSlayer) {
-      pills.push(`<span class="badge red">+6 First Spawn Zone (Dragon Slayer Failed)</span>`);
-    }
-    if (bTrap) {
-      pills.push(`<span class="badge gold">+12 First Spawn Zone (Baiting the Trap)</span>`);
-    }
+    if (unlucky) pills.push(`<span class="badge red">🎲 MISERY #7 UNLUCKY NIGHT ACTIVE: All Spawn Rolls Use 3D6 Drop Lowest!</span>`);
+    if (pincer) pills.push(`<span class="badge purple">🪂 MISERY #13 PINCER MANEUVER ACTIVE: Spawn +1 Extra Deep Strike Unit (>3" from Players)!</span>`);
+    if (extraMod !== 0) pills.push(`<span class="badge gold">Extra Spawn Roll Mod: ${extraMod > 0 ? '+' + extraMod : extraMod}</span>`);
+    if (dSlayer) pills.push(`<span class="badge red">+6 First Spawn Zone (Dragon Slayer Failed)</span>`);
+    if (bTrap) pills.push(`<span class="badge gold">+12 First Spawn Zone (Baiting the Trap)</span>`);
 
     banner.innerHTML = pills.length > 0
       ? `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; padding:8px 10px; background:rgba(255,71,87,0.1); border:1px solid rgba(255,71,87,0.35); border-radius:8px;">
@@ -289,9 +277,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
       if (el) el.checked = true;
     } else if (delta !== 0) {
       const modEl = document.getElementById('extraSpawnMod');
-      if (modEl) {
-        modEl.value = String((parseInt(modEl.value, 10) || 0) + delta);
-      }
+      if (modEl) modEl.value = String((parseInt(modEl.value, 10) || 0) + delta);
     }
     syncMiserySpawnerBanner();
   }
@@ -345,9 +331,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
 
     if (typeof document !== 'undefined') {
       const container = document.getElementById('spawnResultsContainer');
-      if (container) {
-        container.insertAdjacentHTML('afterbegin', cardHtml);
-      }
+      if (container) container.insertAdjacentHTML('afterbegin', cardHtml);
     }
     mirrorSpawnerToCockpit();
   }
@@ -381,9 +365,8 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
       return;
     }
 
-    const hasSellersMarket = activeList.some(c => c.id === 24);
     const dblToggle = document.getElementById('doubleCostToggle');
-    if (dblToggle && hasSellersMarket && !dblToggle.checked) {
+    if (dblToggle && activeList.some(c => c.id === 24) && !dblToggle.checked) {
       dblToggle.checked = true;
       if (typeof renderResupplyTable === 'function') renderResupplyTable();
     }
@@ -452,19 +435,35 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
   }
 
   function resolveOrbitalBombardmentRoll(idx) {
-    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBoltgunBlast === 'function') {
-      window.VoxAudio.playBoltgunBlast();
+    if (typeof window !== 'undefined' && window.VoxAudio) {
+      if (typeof window.VoxAudio.playOrbitalBombardment === 'function') window.VoxAudio.playOrbitalBombardment();
+      else if (typeof window.VoxAudio.playBoltgunBlast === 'function') window.VoxAudio.playBoltgunBlast();
     }
     const sector = Math.floor(Math.random() * 6) + 1;
-    const d3a = Math.floor(Math.random() * 3) + 1;
-    const d3b = Math.floor(Math.random() * 3) + 1;
-    const mw = d3a + d3b;
+    const d3a = Math.floor(Math.random() * 3) + 1, d3b = Math.floor(Math.random() * 3) + 1;
+    const el = (typeof document !== 'undefined') ? document.getElementById(`orbitalRollResult_${idx}`) : null;
+    if (el) el.innerHTML = `💥 <strong>Grid Sector #${sector} Hit!</strong> Every unit in Sector #${sector} suffers <strong>${d3a + d3b} Mortal Wounds</strong> (2D3: ${d3a}+${d3b})!`;
+  }
+
+  function wipeAllFortifications(options = {}) {
     if (typeof document !== 'undefined') {
-      const el = document.getElementById(`orbitalRollResult_${idx}`);
-      if (el) {
-        el.innerHTML = `💥 <strong>Grid Sector #${sector} Hit!</strong> Every unit in Sector #${sector} suffers <strong>${mw} Mortal Wounds</strong> (2D3: ${d3a}+${d3b})!`;
+      document.querySelectorAll('.fort-grid input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+      if (options.wipeAllMarkers || options.includeTeleporters !== false) {
+        const tele = document.getElementById('teleCount');
+        if (tele) tele.innerText = '0';
+      }
+      if (options.wipeAllMarkers) {
+        const wire = document.getElementById('wireCount'), mine = document.getElementById('mineCount');
+        if (wire) wire.innerText = '0';
+        if (mine) mine.innerText = '0';
       }
     }
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playDegaussPurge === 'function') {
+      window.VoxAudio.playDegaussPurge();
+    }
+    if (typeof saveSessionState === 'function') saveSessionState();
+    else if (typeof window !== 'undefined' && typeof window.saveSessionState === 'function') window.saveSessionState();
+    return true;
   }
 
   function adjSecondaryTally(cardId, delta) {
@@ -559,13 +558,12 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
           if (typeof window.triggerSpecificMisery === 'function') window.triggerSpecificMisery();
         }
       }
-
-      if (miseryToDraw > 0 && typeof window.drawMisery === 'function') {
-        window.drawMisery(miseryToDraw);
-      }
-
+      if (miseryToDraw > 0 && typeof window.drawMisery === 'function') window.drawMisery(miseryToDraw);
       if (official.specialPunAction === 'CHANGE_OF_PLANS_RANDOM' && typeof window.triggerOrbitalPunishment === 'function') {
         window.triggerOrbitalPunishment();
+      }
+      if (official.punWipeFortifications || official.id === 17) {
+        (typeof window !== 'undefined' && typeof window.wipeAllFortifications === 'function' ? window.wipeAllFortifications : wipeAllFortifications)();
       }
     }
 
@@ -708,16 +706,12 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
 
     const spawnerRoundEl = document.getElementById('spawnerBtnRound');
     const cockpitRoundEl = document.getElementById('cockpitSpawnBtnRound');
-    if (spawnerRoundEl && cockpitRoundEl) {
-      cockpitRoundEl.textContent = spawnerRoundEl.textContent;
-    }
+    if (spawnerRoundEl && cockpitRoundEl) cockpitRoundEl.textContent = spawnerRoundEl.textContent;
     syncMiserySpawnerBanner();
   }
 
   function rollSpawnsFromCockpit() {
-    if (typeof window !== 'undefined' && typeof window.rollAllSpawnZones === 'function') {
-      window.rollAllSpawnZones();
-    }
+    if (typeof window !== 'undefined' && typeof window.rollAllSpawnZones === 'function') window.rollAllSpawnZones();
     mirrorSpawnerToCockpit();
   }
 
@@ -736,8 +730,14 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
       window.VoxAudio.playCogitatorStep();
     }
     currentGuidedStep = Math.max(1, Math.min(5, Number(stepNum) || 1));
-    if (typeof sessionStorage !== 'undefined') {
-      try { sessionStorage.setItem('currentGuidedStep', String(currentGuidedStep)); } catch (e) {}
+    if (typeof window !== 'undefined') window.currentGuidedStep = currentGuidedStep;
+    try {
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('currentGuidedStep', String(currentGuidedStep));
+      if (typeof localStorage !== 'undefined') localStorage.setItem('currentGuidedStep', String(currentGuidedStep));
+    } catch (e) {}
+    if (!options.silent) {
+      if (typeof saveSessionState === 'function') saveSessionState();
+      else if (typeof window !== 'undefined' && typeof window.saveSessionState === 'function') window.saveSessionState();
     }
     if (typeof document !== 'undefined') {
       const buttons = document.querySelectorAll('#roundPhaseStepper .phase-step-btn');
@@ -758,10 +758,14 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     }
   }
 
-  function stepGuidedPhase(delta) {
+  function stepGuidedPhase(delta, options = {}) {
     let next = currentGuidedStep + delta;
-    if (next > 5) next = 1;
-    if (next < 1) next = 5;
+    if (options.allowCycle) {
+      if (next > 5) next = 1;
+      if (next < 1) next = 5;
+    } else {
+      next = Math.max(1, Math.min(5, next));
+    }
     setGuidedPhaseStep(next);
   }
 
@@ -790,9 +794,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
         }
       }
     }
-    if (options && options.resetStep) {
-      setGuidedPhaseStep(1, { silent: true });
-    }
+    if (options && options.resetStep) setGuidedPhaseStep(1, { silent: true });
   }
 
 
@@ -851,17 +853,12 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
         if (isUnluckyNightActive() && typeof document !== 'undefined') {
           const container = document.getElementById('spawnResultsContainer');
           if (container) {
-            const zoneCards = container.querySelectorAll('.spawn-zone');
-            zoneCards.forEach(card => {
-              const d1 = Math.floor(Math.random() * 6) + 1;
-              const d2 = Math.floor(Math.random() * 6) + 1;
-              const d3 = Math.floor(Math.random() * 6) + 1;
-              const sorted = [d1, d2, d3].sort((a, b) => b - a);
-              const unmod3d6 = sorted[0] + sorted[1];
-
+            container.querySelectorAll('.spawn-zone').forEach(card => {
+              const d = [1, 2, 3].map(() => Math.floor(Math.random() * 6) + 1).sort((a, b) => b - a);
+              const unmod3d6 = d[0] + d[1];
               const badge = document.createElement('div');
               badge.style.cssText = 'margin-top:6px; padding:4px 8px; background:rgba(255,71,87,0.16); border:1px solid var(--red); border-radius:6px; font-size:0.76rem; color:#fecdd3;';
-              badge.innerHTML = `🎲 <strong>#7 Unlucky Night (3D6 Drop Lowest):</strong> Rolled [${sorted[0]}, ${sorted[1]}, <s>${sorted[2]}</s>] → Base 2D6 = <strong>${unmod3d6}</strong>`;
+              badge.innerHTML = `🎲 <strong>#7 Unlucky Night (3D6 Drop Lowest):</strong> Rolled [${d[0]}, ${d[1]}, <s>${d[2]}</s>] → Base 2D6 = <strong>${unmod3d6}</strong>`;
               card.appendChild(badge);
             });
           }
@@ -939,23 +936,18 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     syncSoloSpUiIndicators();
     renderActiveMiseries();
     renderActiveSecondaries();
-    if (typeof renderResupplyTable === 'function') {
-      renderResupplyTable();
-    }
-    const savedStep = typeof sessionStorage !== 'undefined' ? parseInt(sessionStorage.getItem('currentGuidedStep'), 10) : 1;
+    if (typeof renderResupplyTable === 'function') renderResupplyTable();
+    const savedStep = (typeof localStorage !== 'undefined' && localStorage.getItem('currentGuidedStep'))
+      ? parseInt(localStorage.getItem('currentGuidedStep'), 10)
+      : (typeof sessionStorage !== 'undefined' ? parseInt(sessionStorage.getItem('currentGuidedStep'), 10) : 1);
     setGuidedPhaseStep((!isNaN(savedStep) && savedStep >= 1 && savedStep <= 5) ? savedStep : 1, { silent: true });
-    if (typeof setTimeout === 'function') {
-      setTimeout(mirrorSpawnerToCockpit, 150);
-    }
+    if (typeof setTimeout === 'function') setTimeout(mirrorSpawnerToCockpit, 150);
   }
 
   // Auto-init in browser if DOM is ready, or queue for DOMContentLoaded
   if (typeof window !== 'undefined') {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initSpawnerCockpit);
-    } else {
-      initSpawnerCockpit();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initSpawnerCockpit);
+    else initSpawnerCockpit();
   }
 
   return {
@@ -981,6 +973,7 @@ Tactical telemetry HUD, wave controls, escalation meters, mission modals, and co
     renderActiveSecondaries,
     mirrorSpawnerToCockpit,
     rollSpawnsFromCockpit,
+    wipeAllFortifications,
     get currentGuidedStep() { return currentGuidedStep; },
     setGuidedPhaseStep,
     stepGuidedPhase,
