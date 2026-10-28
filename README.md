@@ -59,7 +59,7 @@ During live campaign play, AI acts as the autonomous **Campaign Master**, **3rd 
 
 ---
 
-## 🏛️ Clean Code Architecture & "Dumb UI" (Humble View) Pattern
+## 🏛️ Clean Code Architecture & Pattern
 
 Per [`AGENTS.md`](AGENTS.md), the codebase enforces strict modularization and the **Functional Core, Imperative Shell** ("Dumb UI" / Humble View) pattern:
 
@@ -67,7 +67,7 @@ Per [`AGENTS.md`](AGENTS.md), the codebase enforces strict modularization and th
    - All game rules, Strategic Point calculations, PRNG algorithms, heartbeat staleness evaluators, and teletype dossier compilers (`compileRogueDossier`, `compilePvpVultureReport`, `compileNemesisDossier`, `isVoxServerOnline`, `mulberry32`, `resolveThreatBracket`, `executeRoundSpawns`) are written as pure, deterministic functions `(state, input) => output` with zero dependency on `document`, `window`, `localStorage`, or `fetch`.
 2. **Declarative Rule Lookup Tables**:
    - Game outcomes (`ROGUE_OUTCOME_IMPACTS`), faction spawn brackets (`HORDE_FACTION_SPAWN_TABLES`), room-code prefixes (`ROOM_CODE_PREFIXES`), and environmental tables (`HELLSCAPES`, `ANOMALIES`) are modeled as declarative data maps rather than deeply nested `if / else` branching chains.
-3. **Humble View ("Dumb UI") Imperative Shell**:
+3. **View Imperative Shell**:
    - DOM interaction is isolated to thin input readers (`readRogueFormInputs`, `readPvpVultureFormInputs`, `readNemesisFormInputs`) and idempotent UI renderers (`renderServerStatusIndicator`, `updateRogueDossierPreview`, `renderFactionBracketTable`) that project explicit state onto the DOM and forward user events back to the pure core.
 
 ---
@@ -94,7 +94,7 @@ Per [`AGENTS.md`](AGENTS.md), the codebase enforces strict modularization and th
 
 ---
 
-## 🎮 Suite Modules (`index.html` & `pages/*.html`)
+## Suite Modules (`index.html` & `pages/*.html`)
 
 | Module | File | Core Technical Capabilities |
 | :--- | :--- | :--- |
