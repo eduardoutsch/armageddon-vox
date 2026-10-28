@@ -286,7 +286,7 @@ test('vox: selectConduit toggles selected channel and updates UI elements', asyn
   assert.equal(mockElements.cardGamma.classList.contains('active'), true);
   assert.equal(mockElements.cardAlpha.classList.contains('selected'), false);
   assert.equal(mockElements.cardBeta.classList.contains('selected'), false);
-  assert.ok(mockElements.sealSubtitle.textContent.includes('Kâhl Hârkyn Grîmledger // The Ledger of Embers'));
+  assert.ok(mockElements.sealSubtitle.textContent.includes('Kâhl Hârkyn // The Ledger of Embers'));
   assert.equal(mockElements.voxTerminalTitle.textContent, '+++ FANE-NODE VÔL-09 ("THE DEAF EAR") // SUB-THERMOSPHERIC BLACK-LEDGER TERMINAL +++');
 
   await vox.selectConduit('alpha');
@@ -296,7 +296,7 @@ test('vox: selectConduit toggles selected channel and updates UI elements', asyn
   assert.equal(mockElements.cardGamma.classList.contains('selected'), false);
 });
 
-test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl Hârkyn Grîmledger and activate Votann theme', async () => {
+test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl Hârkyn and activate Votann theme', async () => {
   await vox.selectConduit('gamma');
   assert.equal(vox.getSelectedChannel(), 'gamma');
   assert.equal(mockDocument.body.classList.contains('theme-votann'), true, 'Selecting Terminal Gamma must activate theme-votann');
@@ -335,10 +335,10 @@ test('vox: checkPendingDossierBuffer formats target description for gamma Votann
   const detected = vox.checkPendingDossierBuffer();
   assert.ok(detected);
   assert.equal(detected.channel, 'gamma');
-  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Kâhl Hârkyn Grîmledger // The Ledger of Embers (Terminal Gamma)'));
+  assert.ok(mockElements.pendingDossierNotice.innerHTML.includes('Kâhl Hârkyn // The Ledger of Embers (Terminal Gamma)'));
 });
 
-test('vox: flushPendingDossierIfAny routes gamma channel transmission with Kâhl Hârkyn Grîmledger sender', async () => {
+test('vox: flushPendingDossierIfAny routes gamma channel transmission with Kâhl Hârkyn sender', async () => {
   sessionStore.clear();
   rpcCalls.length = 0;
   await vox.selectConduit('gamma');
@@ -356,7 +356,7 @@ test('vox: flushPendingDossierIfAny routes gamma channel transmission with Kâhl
 
   const sendCall = rpcCalls.find(c => c.fnName === 'send_vox_message' && c.params.p_channel === 'gamma');
   assert.ok(sendCall, 'Must call send_vox_message on gamma channel');
-  assert.equal(sendCall.params.p_sender, 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
+  assert.equal(sendCall.params.p_sender, 'Kâhl Hârkyn // The Ledger of Embers');
   assert.equal(sendCall.params.p_question, payload.text);
 
   // Reset to alpha channel so downstream tests start in expected baseline state
@@ -365,12 +365,33 @@ test('vox: flushPendingDossierIfAny routes gamma channel transmission with Kâhl
   await vox.handleSealAction();
 });
 
-test('vox.html defines #cardGamma for Kâhl Hârkyn Grîmledger in conduit selector', () => {
+test('vox.html defines #cardGamma for Kâhl Hârkyn in conduit selector and maintains valid shell containment', () => {
   assert.ok(voxHtml.includes('id="cardGamma"'), 'pages/vox.html must include #cardGamma');
   assert.ok(voxHtml.includes("selectConduit('gamma')"), 'pages/vox.html #cardGamma must invoke selectConduit(\'gamma\')');
-  assert.ok(voxHtml.includes('Kâhl Hârkyn Grîmledger'), 'pages/vox.html must reference Kâhl Hârkyn Grîmledger');
+  assert.ok(voxHtml.includes('Kâhl Hârkyn'), 'pages/vox.html must reference Kâhl Hârkyn');
+  assert.ok(!voxHtml.includes('Kâhl Hârkyn Grîmledger'), 'pages/vox.html must NOT reference Grîmledger');
   assert.ok(voxHtml.includes('The Ledger of Embers'), 'pages/vox.html must reference The Ledger of Embers');
+
+  // Verify DOM nesting: authScreen and terminalScreen must both be inside vox-shell
+  const shellStart = voxHtml.indexOf('class="app-shell vox-shell"');
+  assert.ok(shellStart !== -1, 'Must have .app-shell.vox-shell container');
+  const authIdx = voxHtml.indexOf('id="authScreen"', shellStart);
+  const termIdx = voxHtml.indexOf('id="terminalScreen"', authIdx);
+  const scriptIdx = voxHtml.indexOf('<script src="../js/vox-audio.js">', termIdx);
+  const closingDivIdx = voxHtml.lastIndexOf('</div>', scriptIdx);
+  assert.ok(authIdx !== -1, '#authScreen must be inside vox-shell');
+  assert.ok(termIdx !== -1, '#terminalScreen must be inside vox-shell after authScreen');
+  assert.ok(closingDivIdx > termIdx, '#terminalScreen must reside inside .app-shell.vox-shell prior to closing script tag');
+
+
+  // Verify authScreen contains passInput and sealActionBtn (not cut off by extra closing div)
+  const authEnd = voxHtml.indexOf('id="terminalScreen"');
+  const passIdx = voxHtml.indexOf('id="passInput"');
+  const btnIdx = voxHtml.indexOf('id="sealActionBtn"');
+  assert.ok(passIdx > authIdx && passIdx < authEnd, '#passInput must reside inside #authScreen');
+  assert.ok(btnIdx > authIdx && btnIdx < authEnd, '#sealActionBtn must reside inside #authScreen');
 });
+
 
 test('vox: switchSubWindow toggles Direct vs Interferences monitors', () => {
   vox.switchSubWindow('interferences');

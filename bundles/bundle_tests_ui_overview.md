@@ -444,8 +444,10 @@ test('briefing: #dossierGamma and #cardBriefGamma render Votann Glôk-Vâr lore,
   assert.ok(briefingHtml.includes('Glôk-Vâr'), 'Must include Glôk-Vâr vessel designation');
   assert.ok(briefingHtml.includes('Fane-Node Vôl-09') || briefingHtml.includes('Fane-Node'), 'Must include Fane-Node Vôl-09');
   assert.ok(briefingHtml.includes('900-Year Debt') || briefingHtml.includes('Hive Infernus'), 'Must include 900-Year Debt of Hive Infernus');
-  assert.ok(briefingHtml.includes('Kâhl Hârkyn Grîmledger'), 'Must include Kâhl Hârkyn Grîmledger');
+  assert.ok(briefingHtml.includes('Kâhl Hârkyn'), 'Must include Kâhl Hârkyn');
+  assert.ok(!briefingHtml.includes('Grîmledger'), 'Must NOT include Grîmledger');
   assert.ok(briefingHtml.includes('Oathbound Speculator'), 'Must include Oathbound Speculator');
+
   assert.ok(briefingHtml.includes('Hernkyn Yaegirs'), 'Must include Hernkyn Yaegirs');
 });
 
@@ -460,6 +462,14 @@ test('briefing: #dossierGamma, #btnGamma, and body.votann-briefing-active includ
   assert.ok(briefingHtml.includes('#dossierGamma tr.highlight-row') || briefingCss.includes('#dossierGamma tr.highlight-row'), 'Must style #dossierGamma highlight-row with Hearth Amber highlight');
   assert.ok(briefingHtml.includes('#dossierGamma code') || briefingCss.includes('#dossierGamma code'), 'Must style #dossierGamma code as Black-Ledger chips');
 });
+
+test('briefing: #dossierAlpha, #btnAlpha, and #gateAlpha include Astra Militarum Imperial Cadian Green & Brass Gold faction-locked styling', () => {
+  assert.ok(briefingHtml.includes('#btnAlpha.active') || briefingCss.includes('#btnAlpha.active'), 'Must style #btnAlpha.active with Militarum Brass Gold theme');
+  assert.ok(briefingHtml.includes('#dossierAlpha .hero-card') || briefingCss.includes('#dossierAlpha .hero-card'), 'Must style #dossierAlpha .hero-card with Militarum Brass & Regimental Slate');
+  assert.ok(briefingHtml.includes('#dossierAlpha .hero-title') || briefingCss.includes('#dossierAlpha .hero-title'), 'Must style #dossierAlpha .hero-title with Imperial Gold gradient');
+  assert.ok(briefingHtml.includes('#dossierAlpha .card') || briefingCss.includes('#dossierAlpha .card'), 'Must style #dossierAlpha .card with Militarum surface');
+});
+
 
 
 

@@ -113,6 +113,81 @@ Auspex CRT styling, SVG sector atlas glow tokens, and responsive ship telemetry 
 }
 
 /* =========================================================================
+   ASTRA MILITARUM THEME // THE EXILE (#btnAlpha & #dossierAlpha)
+   Aesthetic: Imperial Cadian Olive-Green, Brass Gold, Regimental Plate
+   ========================================================================= */
+#btnAlpha:hover {
+  color: #f5c96a;
+  border-color: rgba(212, 163, 73, 0.55);
+  background: rgba(28, 25, 22, 0.75);
+}
+
+#btnAlpha.active,
+body.theme-necron #btnAlpha.active,
+body.theme-votann #btnAlpha.active {
+  background: linear-gradient(135deg, rgba(212, 163, 73, 0.28) 0%, rgba(28, 25, 22, 0.96) 100%) !important;
+  color: #f5c96a !important;
+  border-color: #d4a349 !important;
+  box-shadow: inset 0 0 14px rgba(212, 163, 73, 0.28), 0 0 12px rgba(212, 163, 73, 0.2) !important;
+  text-shadow: 0 0 8px rgba(212, 163, 73, 0.45);
+}
+
+#dossierAlpha,
+body.theme-necron #dossierAlpha,
+body.theme-votann #dossierAlpha {
+  --bg: #0c0b09;
+  --surface: #171512;
+  --surface-alt: #12100d;
+  --surface-hover: #24201a;
+  --border: #3a3224;
+  --border-bright: #d4a349;
+  --text: #ece6d9;
+  --muted: #a69b86;
+  --gold: #d4a349;
+  --gold-bright: #f5c96a;
+  --gold-dim: rgba(212, 163, 73, 0.14);
+  --red: #cc2936;
+  --red-bright: #ef3e4a;
+  --green: #10b981;
+  --blue: #3b82f6;
+}
+
+#dossierAlpha .hero-card,
+body.theme-necron #dossierAlpha .hero-card,
+body.theme-votann #dossierAlpha .hero-card {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(212, 163, 73, 0.12) 0%, transparent 70%),
+    linear-gradient(165deg, rgba(28, 25, 22, 0.96) 0%, rgba(18, 16, 13, 0.98) 55%, rgba(23, 21, 18, 0.96) 100%) !important;
+  border-color: rgba(212, 163, 73, 0.42) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), inset 0 0 24px rgba(212, 163, 73, 0.06) !important;
+}
+
+#dossierAlpha .hero-title,
+body.theme-necron #dossierAlpha .hero-title,
+body.theme-votann #dossierAlpha .hero-title {
+  background: linear-gradient(135deg, #fff6e5 0%, #f5c96a 55%, #d4a349 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+#dossierAlpha .card,
+body.theme-necron #dossierAlpha .card,
+body.theme-votann #dossierAlpha .card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+#dossierAlpha .launch-btn,
+body.theme-necron #dossierAlpha .launch-btn,
+body.theme-votann #dossierAlpha .launch-btn {
+  background: linear-gradient(180deg, #d83140 0%, #991a24 100%) !important;
+  border-color: #ef3e4a !important;
+  color: #fff !important;
+  box-shadow: 0 4px 18px rgba(204, 41, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+/* =========================================================================
    NECRON TOMB-SHIP THEME // LORD COMMANDER JUNEBUG (#btnBeta & #dossierBeta)
    Aesthetic: Noctolith Obsidian, Living Metal Silver, Octagonal Cartouche
               & Animated Gauss Emerald / Tesseract Conduits
@@ -191,12 +266,34 @@ body.necron-briefing-active .terminal-link-btn:hover {
   background: rgba(6, 26, 21, 0.75);
 }
 
-#btnBeta.active {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(4, 18, 15, 0.96) 100%);
-  color: #6ee7b7;
-  border-color: var(--green);
-  box-shadow: inset 0 0 14px rgba(16, 185, 129, 0.28), 0 0 12px rgba(16, 185, 129, 0.2);
+#btnBeta.active,
+body.theme-votann #btnBeta.active,
+body.theme-militarum #btnBeta.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(4, 18, 15, 0.96) 100%) !important;
+  color: #6ee7b7 !important;
+  border-color: #10b981 !important;
+  box-shadow: inset 0 0 14px rgba(16, 185, 129, 0.28), 0 0 12px rgba(16, 185, 129, 0.2) !important;
   text-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
+}
+
+#dossierBeta,
+body.theme-votann #dossierBeta,
+body.theme-militarum #dossierBeta {
+  --bg: #020806;
+  --surface: #071812;
+  --surface-alt: #030c09;
+  --surface-hover: #0a261d;
+  --border: #0d3d2e;
+  --border-bright: #10b981;
+  --text: #e6fcf5;
+  --muted: #82a89c;
+  --gold: #10b981;
+  --gold-bright: #34d399;
+  --gold-dim: rgba(16, 185, 129, 0.14);
+  --red: #cc2936;
+  --red-bright: #ef3e4a;
+  --green: #10b981;
+  --blue: #2dd4bf;
 }
 
 .necron-ankh-divider {
@@ -515,12 +612,34 @@ body.votann-briefing-active .terminal-link-btn:hover {
   background: rgba(38, 22, 6, 0.75);
 }
 
-#btnGamma.active {
-  background: linear-gradient(135deg, rgba(245, 176, 65, 0.28) 0%, rgba(30, 16, 4, 0.96) 100%);
-  color: #fde68a;
-  border-color: #f5b041;
-  box-shadow: inset 0 0 14px rgba(245, 176, 65, 0.28), 0 0 12px rgba(245, 176, 65, 0.2);
+#btnGamma.active,
+body.theme-necron #btnGamma.active,
+body.theme-militarum #btnGamma.active {
+  background: linear-gradient(135deg, rgba(245, 176, 65, 0.28) 0%, rgba(30, 16, 4, 0.96) 100%) !important;
+  color: #fbbf24 !important;
+  border-color: #f5b041 !important;
+  box-shadow: inset 0 0 14px rgba(245, 176, 65, 0.28), 0 0 12px rgba(245, 176, 65, 0.2) !important;
   text-shadow: 0 0 8px rgba(245, 176, 65, 0.45);
+}
+
+#dossierGamma,
+body.theme-necron #dossierGamma,
+body.theme-militarum #dossierGamma {
+  --bg: #090603;
+  --surface: #140d06;
+  --surface-alt: #0d0803;
+  --surface-hover: #24160a;
+  --border: #523410;
+  --border-bright: #f5b041;
+  --text: #fef3c7;
+  --muted: #d4a373;
+  --gold: #f5b041;
+  --gold-bright: #fbbf24;
+  --gold-dim: rgba(245, 176, 65, 0.14);
+  --red: #c2410c;
+  --red-bright: #ea580c;
+  --green: #84cc16;
+  --blue: #38bdf8;
 }
 
 #dossierGamma .hero-card {

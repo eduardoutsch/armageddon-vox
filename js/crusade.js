@@ -591,7 +591,7 @@ function compileVotannDispatch(input = {}) {
   const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('votannDispatchNotes')?.value) || '').trim();
   const lines = [
     `+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++`,
-    `• REPORTING WARLORD: KÂHL HÂRKYN GRÎMLEDGER // THE LEDGER OF EMBERS (1,200 PTS)`,
+    `• REPORTING WARLORD: KÂHL HÂRKYN // THE LEDGER OF EMBERS (1,200 PTS)`,
     `• EXPEDITION CHARTER: ${v.expBacking} | Progress: ${v.expBattles} Battles (${v.expWins} Wins)`,
     `• EXPEDITION GOAL: ${v.expGoal}`,
     `• GOAL CONDITION TRACKER: ${v.goalProgress || 0} / 3`,
@@ -735,7 +735,7 @@ function compileMasterDossier(input = {}) {
     : (isGamma ? `+++ THRYMKÂL SALVAGE CONSORTIUM // MASTER POST-BATTLE DOSSIER & BLACK-LEDGER REPORT +++`
       : `+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++`);
   const cmdrLabel = isBeta ? `PHAERON JUNEBUG // TOMB-SHIP COMMAND INTERLINK (NECRONS)`
-    : (isGamma ? `KÂHL HÂRKYN GRÎMLEDGER // THE LEDGER OF EMBERS (THRYMKÂL SALVAGE CONSORTIUM)`
+    : (isGamma ? `KÂHL HÂRKYN // THE LEDGER OF EMBERS (THRYMKÂL SALVAGE CONSORTIUM)`
       : `THE EXILE // THE SANCTUARY OF ASH (ASTRA MILITARUM — 044TH KRIEG)`);
   const upgradeSectionTitle = isBeta ? `[2. CRYPTEK CONCLAVE // DYNASTIC EPITHETS, RELICS & ENGRAMMATIC FLAWS]:`
     : (isGamma ? `[2. BRÔKHYR GUILD-COUNCIL // BATTLE HONOURS, RELICS & SCARS]:`

@@ -720,19 +720,45 @@ test('crusade: resetTombAwakeningTab resets Tomb World Awakening tab state, cent
     'pages/crusade.html must center stat cards and button rows in Tomb World Awakening tab'
   );
 
-  // 3. Verify Tour of Duty tab (#cruTabTour) always keeps Militarum color scheme (like vox.html)
+  // 3. Verify Faction tabs (#cruTabTour = Militarum, #cruTabTomb = Necron, #cruTabVotann = Votann) are fixed on their faction colors
   crusade.switchCrusadeTab('tomb', false);
   assert.equal(mockDocument.body.classList.contains('theme-necron'), true, 'Switching to Tomb World tab activates theme-necron');
   assert.equal(mockDocument.body.classList.contains('theme-militarum'), false);
+  assert.equal(mockDocument.body.classList.contains('theme-votann'), false);
 
   crusade.switchCrusadeTab('tour', false);
   assert.equal(mockDocument.body.classList.contains('theme-militarum'), true, 'Switching to Tour of Duty tab always activates Militarum color mode (theme-militarum)');
   assert.equal(mockDocument.body.classList.contains('theme-necron'), false, 'Switching to Tour of Duty tab removes theme-necron');
+  assert.equal(mockDocument.body.classList.contains('theme-votann'), false, 'Switching to Tour of Duty tab removes theme-votann');
+
+  crusade.switchCrusadeTab('votann', false);
+  assert.equal(mockDocument.body.classList.contains('theme-votann'), true, 'Switching to Kindred Expeditions tab activates theme-votann');
+  assert.equal(mockDocument.body.classList.contains('theme-necron'), false, 'Switching to Kindred Expeditions tab removes theme-necron');
+  assert.equal(mockDocument.body.classList.contains('theme-militarum'), false, 'Switching to Kindred Expeditions tab removes theme-militarum');
+
   const crusadeCss = fs.readFileSync(path.join(ROOT_DIR, 'css/crusade.css'), 'utf8');
   assert.ok(
     (crusadeHtml.includes('#cruTabTour') || crusadeCss.includes('#cruTabTour')) &&
     (crusadeHtml.includes('#cruTabBtn3.active') || crusadeCss.includes('#cruTabBtn3.active')),
     'pages/crusade.html or css/crusade.css must include explicit Militarum color styling for #cruTabTour and #cruTabBtn3.active'
+  );
+  assert.ok(
+    (crusadeHtml.includes('#cruTabTomb') || crusadeCss.includes('#cruTabTomb')) &&
+    (crusadeHtml.includes('#cruTabBtn4.active') || crusadeCss.includes('#cruTabBtn4.active')),
+    'pages/crusade.html or css/crusade.css must include explicit Necron color styling for #cruTabTomb and #cruTabBtn4.active'
+  );
+  assert.ok(
+    (crusadeHtml.includes('#cruTabVotann') || crusadeCss.includes('#cruTabVotann')) &&
+    (crusadeHtml.includes('#cruTabBtn5.active') || crusadeCss.includes('#cruTabBtn5.active')),
+    'pages/crusade.html or css/crusade.css must include explicit Votann color styling for #cruTabVotann and #cruTabBtn5.active'
+  );
+  assert.ok(
+    crusadeHtml.includes('votann-vault-grid') && crusadeCss.includes('.votann-vault-grid'),
+    'pages/crusade.html and css/crusade.css must define .votann-vault-grid for 4-column balanced resource card presentation'
+  );
+  assert.ok(
+    crusadeHtml.includes('votann-res-card') && crusadeCss.includes('.votann-res-card'),
+    'pages/crusade.html and css/crusade.css must define .votann-res-card with custom resource accent colors'
   );
 
   // 4. Verify choice-grid form column alignment & vault preview flex header layout

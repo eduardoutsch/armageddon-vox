@@ -719,9 +719,13 @@ test('vox-audio: unique orbital bombardment, dual-faction terminal power, and br
   assert.doesNotThrow(() => voxModule.playOrbitalBombardment());
   assert.doesNotThrow(() => voxModule.playTerminalPowerOn('alpha'));
   assert.doesNotThrow(() => voxModule.playTerminalPowerOn('beta'));
+  assert.doesNotThrow(() => voxModule.playTerminalPowerOn('gamma'));
   assert.doesNotThrow(() => voxModule.playTerminalPowerOff('alpha'));
   assert.doesNotThrow(() => voxModule.playTerminalPowerOff('beta'));
+  assert.doesNotThrow(() => voxModule.playTerminalPowerOff('gamma'));
   assert.doesNotThrow(() => voxModule.playBriefingDecode('alpha'));
   assert.doesNotThrow(() => voxModule.playBriefingDecode('beta'));
+  assert.doesNotThrow(() => voxModule.playBriefingDecode('gamma'));
 });
+
 ````

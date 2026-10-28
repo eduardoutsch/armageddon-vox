@@ -296,7 +296,7 @@ function unlockTab(who, persist) {
     briefingState.unlockedGamma = true;
     applyGlobalFactionThemeFromBriefing('votann', persist);
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playBriefingDecode === 'function') {
-      window.VoxAudio.playBriefingDecode('alpha');
+      window.VoxAudio.playBriefingDecode('gamma');
     }
   }
   if (persist) saveBriefingState();
@@ -332,7 +332,7 @@ function lockTab(who, persist) {
   if (who === 'Gamma') {
     briefingState.unlockedGamma = false;
     if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playTerminalPowerOff === 'function') {
-      window.VoxAudio.playTerminalPowerOff('alpha');
+      window.VoxAudio.playTerminalPowerOff('gamma');
     }
     if (briefingState.unlockedBeta) {
       applyGlobalFactionThemeFromBriefing('necron', persist);

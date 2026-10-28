@@ -87,13 +87,20 @@ function switchCrusadeTab(which, persist = true) {
   if (btn4) btn4.classList.toggle('active', which === 'tomb');
   if (btn5) btn5.classList.toggle('active', which === 'votann');
 
-  // Keep Tab 3 (Tour of Duty) always in Militarum color and Tab 4 (Tomb World) in Necron color
+  // Keep faction tabs fixed to their faction color:
+  // Tab 3 (Tour of Duty) = Militarum, Tab 4 (Tomb World) = Necron, Tab 5 (Kindred Expeditions) = Votann
   if (document.body && document.body.classList) {
     if (which === 'tour') {
       document.body.classList.add('theme-militarum');
       document.body.classList.remove('theme-necron');
+      document.body.classList.remove('theme-votann');
     } else if (which === 'tomb') {
       document.body.classList.add('theme-necron');
+      document.body.classList.remove('theme-militarum');
+      document.body.classList.remove('theme-votann');
+    } else if (which === 'votann') {
+      document.body.classList.add('theme-votann');
+      document.body.classList.remove('theme-necron');
       document.body.classList.remove('theme-militarum');
     } else if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.syncFactionTheme === 'function') {
       window.VoxAudio.syncFactionTheme();

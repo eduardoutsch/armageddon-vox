@@ -291,7 +291,7 @@
           <select id="dossierChannel" onchange="updateMasterDossierPreview()" style="width:100%; padding:10px;">
             <option value="alpha">🦅 The Exile // Sanctuary of Ash (Terminal Alpha)</option>
             <option value="beta">💀 Lord Commander Junebug (Terminal Beta)</option>
-            <option value="gamma">⛏️ Kâhl Hârkyn Grîmledger // The Ledger of Embers (Terminal Gamma)</option>
+            <option value="gamma">⛏️ Kâhl Hârkyn // The Ledger of Embers (Terminal Gamma)</option>
             <option value="augur_alpha">🛰️ Orbital Augur Array // Distant Intercept (Terminal Alpha Scan)</option>
             <option value="augur_beta">🛰️ Orbital Augur Array // Distant Intercept (Terminal Beta Scan)</option>
           </select>
@@ -673,70 +673,70 @@
         <span class="hud-sub">The Ledger of Embers (1,200 / 1,200 Pts • 3 RP • 1 CrP)</span>
       </div>
       <p class="card-desc" style="margin-bottom:14px;">
-        After every battle led by <strong>Kâhl Hârkyn Grîmledger</strong>, roll <strong>1D6</strong> for Fundamental Resource type (1=Minerals, 2=Biomatter, 3=Energy, 4=Intel, 5–6=Choice) and harvest by Battle Size (Incursion = <strong>D6×10</strong>; Strike Force = <strong>2D6×10</strong>). On a victory, roll <strong>1D6 (6+)</strong> to unearth a <strong>Rare Resource</strong> (convertible at any time into <strong>+50 Fundamental Resources</strong>)!
+        After every battle led by <strong>Kâhl Hârkyn</strong>, roll <strong>1D6</strong> for Fundamental Resource type (1=Minerals, 2=Biomatter, 3=Energy, 4=Intel, 5–6=Choice) and harvest by Battle Size (Incursion = <strong>D6×10</strong>; Strike Force = <strong>2D6×10</strong>). On a victory, roll <strong>1D6 (6+)</strong> to unearth a <strong>Rare Resource</strong> (convertible at any time into <strong>+50 Fundamental Resources</strong>)!
       </p>
 
-      <div class="scoreboard-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom:12px;">
+      <div class="votann-vault-grid">
         <!-- RAW MINERALS -->
-        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:12px; border-top:3px solid var(--gold);">
+        <div class="votann-res-card res-minerals">
           <span class="hud-label">🪨 RAW MINERALS</span>
-          <div class="hud-val-row" style="margin-top:6px;">
+          <div class="hud-val-row">
             <button type="button" class="mini-btn" onclick="adjVotannRes('rawMinerals', -10)">−10</button>
-            <span class="hud-num" id="votRes_rawMinerals" style="color:var(--gold); font-size:1.35rem;">0</span>
+            <span class="hud-num" id="votRes_rawMinerals">0</span>
             <button type="button" class="mini-btn" onclick="adjVotannRes('rawMinerals', 10)">+10</button>
           </div>
-          <div class="hud-val-row" style="margin-top:6px; font-size:0.78rem;">
-            <span style="color:var(--muted);">Rare Vault:</span>
+          <div class="rare-subrow">
+            <span class="rare-label">Rare Vault:</span>
             <button type="button" class="mini-btn" onclick="adjVotannRare('rawMinerals', -1)">−</button>
-            <strong id="votRare_rawMinerals" style="color:#fff;">0</strong>
+            <strong id="votRare_rawMinerals">0</strong>
             <button type="button" class="mini-btn" onclick="adjVotannRare('rawMinerals', 1)">+</button>
           </div>
         </div>
 
         <!-- BIOMATTER -->
-        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:12px; border-top:3px solid var(--green);">
+        <div class="votann-res-card res-biomatter">
           <span class="hud-label">🧬 BIOMATTER</span>
-          <div class="hud-val-row" style="margin-top:6px;">
+          <div class="hud-val-row">
             <button type="button" class="mini-btn" onclick="adjVotannRes('biomatter', -10)">−10</button>
-            <span class="hud-num" id="votRes_biomatter" style="color:var(--green); font-size:1.35rem;">0</span>
+            <span class="hud-num" id="votRes_biomatter">0</span>
             <button type="button" class="mini-btn" onclick="adjVotannRes('biomatter', 10)">+10</button>
           </div>
-          <div class="hud-val-row" style="margin-top:6px; font-size:0.78rem;">
-            <span style="color:var(--muted);">Rare Vault:</span>
+          <div class="rare-subrow">
+            <span class="rare-label">Rare Vault:</span>
             <button type="button" class="mini-btn" onclick="adjVotannRare('biomatter', -1)">−</button>
-            <strong id="votRare_biomatter" style="color:#fff;">0</strong>
+            <strong id="votRare_biomatter">0</strong>
             <button type="button" class="mini-btn" onclick="adjVotannRare('biomatter', 1)">+</button>
           </div>
         </div>
 
         <!-- ENERGY SOURCES -->
-        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:12px; border-top:3px solid var(--blue);">
+        <div class="votann-res-card res-energy">
           <span class="hud-label">⚡ ENERGY SOURCES</span>
-          <div class="hud-val-row" style="margin-top:6px;">
+          <div class="hud-val-row">
             <button type="button" class="mini-btn" onclick="adjVotannRes('energySources', -10)">−10</button>
-            <span class="hud-num" id="votRes_energySources" style="color:var(--blue); font-size:1.35rem;">0</span>
+            <span class="hud-num" id="votRes_energySources">0</span>
             <button type="button" class="mini-btn" onclick="adjVotannRes('energySources', 10)">+10</button>
           </div>
-          <div class="hud-val-row" style="margin-top:6px; font-size:0.78rem;">
-            <span style="color:var(--muted);">Rare Vault:</span>
+          <div class="rare-subrow">
+            <span class="rare-label">Rare Vault:</span>
             <button type="button" class="mini-btn" onclick="adjVotannRare('energySources', -1)">−</button>
-            <strong id="votRare_energySources" style="color:#fff;">0</strong>
+            <strong id="votRare_energySources">0</strong>
             <button type="button" class="mini-btn" onclick="adjVotannRare('energySources', 1)">+</button>
           </div>
         </div>
 
         <!-- GALACTIC INTEL -->
-        <div class="card stat-card-centered" style="background:#090b10; margin:0; padding:12px; border-top:3px solid var(--purple);">
+        <div class="votann-res-card res-intel">
           <span class="hud-label">📡 GALACTIC INTEL</span>
-          <div class="hud-val-row" style="margin-top:6px;">
+          <div class="hud-val-row">
             <button type="button" class="mini-btn" onclick="adjVotannRes('galacticIntel', -10)">−10</button>
-            <span class="hud-num" id="votRes_galacticIntel" style="color:#d8b4fe; font-size:1.35rem;">0</span>
+            <span class="hud-num" id="votRes_galacticIntel">0</span>
             <button type="button" class="mini-btn" onclick="adjVotannRes('galacticIntel', 10)">+10</button>
           </div>
-          <div class="hud-val-row" style="margin-top:6px; font-size:0.78rem;">
-            <span style="color:var(--muted);">Rare Vault:</span>
+          <div class="rare-subrow">
+            <span class="rare-label">Rare Vault:</span>
             <button type="button" class="mini-btn" onclick="adjVotannRare('galacticIntel', -1)">−</button>
-            <strong id="votRare_galacticIntel" style="color:#fff;">0</strong>
+            <strong id="votRare_galacticIntel">0</strong>
             <button type="button" class="mini-btn" onclick="adjVotannRare('galacticIntel', 1)">+</button>
           </div>
         </div>
@@ -755,7 +755,7 @@
     </div>
 
     <!-- 2. ACTIVE EXPEDITION, GOAL & GUILD CONTRACT CONSOLE -->
-    <div class="card" style="border-left:4px solid var(--blue); margin-bottom:18px;">
+    <div class="card" style="border-left:4px solid #ea580c; margin-bottom:18px;">
       <div class="section-header" style="margin-top:0;">
         <h3>2. Active Expedition Charter, Goal &amp; Guild Contract</h3>
         <span class="hud-sub">Battles: <strong id="votExpBattlesLabel" style="color:var(--gold);">0 / 5</strong> • Wins: <strong id="votExpWinsLabel" style="color:var(--green);">0</strong></span>
@@ -827,7 +827,7 @@
     </div>
 
     <!-- 3. KINDRED ASSETS REGISTRY (8 ASSETS / UP TO 3 MINING OUTPOSTS) -->
-    <div class="card" style="border-left:4px solid var(--purple); margin-bottom:18px;">
+    <div class="card" style="border-left:4px solid #d4a373; margin-bottom:18px;">
       <div class="section-header" style="margin-top:0;">
         <h3>3. Kindred Assets Registry &amp; Requisitions Vault</h3>
         <span class="hud-sub">Active Assets: <strong id="votActiveAssetsCount" style="color:var(--gold);">0</strong> (Cost of Failure at 4+ Assets)</span>
@@ -841,7 +841,7 @@
         </div>
         <div>
           <label class="hud-label" style="display:block; margin-bottom:4px;">Target Kin Unit Name</label>
-          <input type="text" id="votannRecipientUnit" placeholder="e.g. Kâhl Hârkyn Grîmledger / Einhyr Hearthguard / Yaegirs Alpha" style="width:100%; padding:10px;">
+          <input type="text" id="votannRecipientUnit" placeholder="e.g. Kâhl Hârkyn / Einhyr Hearthguard / Yaegirs Alpha" style="width:100%; padding:10px;">
         </div>
       </div>
       <div id="votannVaultPreviewBox" class="dice-result-box" style="min-height:70px; margin-bottom:12px;"></div>
@@ -851,7 +851,7 @@
     </div>
 
     <!-- 4. DEDICATED VOTANN EXPEDITION & ACQUISITIONS DISPATCH -->
-    <div class="card" style="border-left:4px solid var(--green);">
+    <div class="card" style="border-left:4px solid #f5b041;">
       <div class="section-header" style="margin-top:0;">
         <h3>4. Black-Ledger Expedition &amp; Acquisitions Dispatch (Fane-Node Vôl-09)</h3>
         <span class="hud-sub">Transmits Directly to Votann Terminal Gamma (Zero Orbital Choir Bleed)</span>
@@ -859,7 +859,7 @@
       <label class="hud-label" style="display:block; margin-bottom:4px;">Chief Claim-Reckoner's Field Log / Prospecting Notes (Optional)</label>
       <textarea id="votannDispatchNotes" oninput="updateVotannDispatchPreview()" placeholder="e.g. Anchored seismic drills in the Southern Iron-Oxide Flats; deploying 2x10 Hernkyn Yaegirs to screen the perimeter..." style="width:100%; min-height:60px; background:#0b0d13; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:10px; font-family:inherit; margin-bottom:10px;"></textarea>
 
-      <div class="master-dossier-preview vox-preview-alpha" id="votannDispatchPreviewBox"></div>
+      <div class="master-dossier-preview vox-preview-gamma" id="votannDispatchPreviewBox"></div>
 
       <button type="button" class="launch-btn" data-sfx="custom" onclick="transmitVotannDispatch()">
         📡 Transmit Black-Ledger Report to Fane-Node Vôl-09 (Terminal Gamma) →

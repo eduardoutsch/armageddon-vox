@@ -877,7 +877,7 @@ test('processSingleMessage: routes channel gamma to Fane-Node Vôl-09 and suppre
   const gammaMsg = {
     id: '11223344-gamma-report',
     channel: 'gamma',
-    sender: 'Kâhl Hârkyn Grîmledger',
+    sender: 'Kâhl Hârkyn',
     question: '+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++'
   };
 
@@ -914,12 +914,13 @@ test('routeSpeakerPersona: routes gamma to Fane-Node Vôl-09 with allowIntercept
   assert.equal(p1.pattern, 'Pattern 4C (Fane-Node Vôl-09 Readout)');
   assert.ok(p1.promptPrefix.includes('Fane-Node Vôl-09 ("The Deaf Ear")'));
   assert.ok(p1.promptPrefix.includes('Commander Omega - The Ledger of Embers (Story, Roster & Acquisitions Ledger).md'));
-  assert.ok(p1.promptPrefix.includes('Force Warlord Kâhl Hârkyn Grîmledger: '));
+  assert.ok(p1.promptPrefix.includes('Force Warlord Kâhl Hârkyn: '));
   assert.ok(p1.promptPrefix.includes('Pattern 4C / Pattern 2 / Pattern 3, REF-ID: 12345678'));
   assert.ok(p1.promptPrefix.includes('DO NOT include any Pattern 5 intercept block'));
 
   const p2 = routeSpeakerPersona('gamma', 'MASTER POST-BATTLE REPORT: Extraction complete', '12345678');
   assert.equal(p2.speaker, 'FANE_NODE_VOL_09');
+
   assert.equal(p2.allowIntercept, false);
   assert.equal(p2.pattern, 'Pattern 2 (Thrymkâl Black-Ledger Audit)');
 

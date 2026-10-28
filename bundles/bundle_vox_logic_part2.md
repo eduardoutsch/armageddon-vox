@@ -336,7 +336,7 @@ async function transmitQuestion() {
     ? 'The Exile // Sanctuary of Ash'
     : (selectedChannel === 'beta'
         ? 'Lord Commander Junebug'
-        : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
+        : 'Kâhl Hârkyn // The Ledger of Embers');
 
   await rpcCall('send_vox_message', {
     p_channel: selectedChannel,

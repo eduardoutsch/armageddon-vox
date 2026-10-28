@@ -149,26 +149,191 @@
 }
 
 /* ========================================================================= */
-/* FACTION-LOCKED CRUSADE TABS (TOUR OF DUTY = MILITARUM, TOMB = NECRON)     */
+/* VOTANN RESOURCE VAULT GRID & THEMED RESOURCE CARDS (TAB 5)                */
 /* ========================================================================= */
+.votann-vault-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 900px) {
+  .votann-vault-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .votann-vault-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.votann-res-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(20, 13, 6, 0.96) 0%, rgba(9, 6, 3, 0.98) 100%);
+  border: 1px solid var(--card-accent, rgba(245, 176, 65, 0.35));
+  border-top: 3px solid var(--card-accent, #f5b041);
+  border-radius: 6px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 10px var(--card-glow, rgba(245, 176, 65, 0.08));
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.votann-res-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 16px var(--card-glow, rgba(245, 176, 65, 0.18));
+}
+
+.votann-res-card.res-minerals {
+  --card-accent: #f5b041;
+  --card-glow: rgba(245, 176, 65, 0.22);
+}
+
+.votann-res-card.res-biomatter {
+  --card-accent: #10b981;
+  --card-glow: rgba(16, 185, 129, 0.22);
+}
+
+.votann-res-card.res-energy {
+  --card-accent: #38bdf8;
+  --card-glow: rgba(56, 189, 248, 0.22);
+}
+
+.votann-res-card.res-intel {
+  --card-accent: #c084fc;
+  --card-glow: rgba(192, 132, 252, 0.22);
+}
+
+.votann-res-card .hud-label {
+  font-size: 0.72rem;
+  letter-spacing: 1.2px;
+  font-weight: 700;
+  color: var(--card-accent);
+  text-shadow: 0 0 8px var(--card-glow);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.votann-res-card .hud-val-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.votann-res-card .mini-btn {
+  width: 36px;
+  height: 28px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border-radius: 4px;
+  background: rgba(10, 7, 3, 0.85);
+  border: 1px solid var(--card-accent);
+  color: var(--card-accent);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.votann-res-card .mini-btn:hover {
+  background: var(--card-accent);
+  color: #090603;
+  box-shadow: 0 0 10px var(--card-accent);
+}
+
+.votann-res-card .hud-num {
+  font-size: 1.45rem;
+  font-weight: 900;
+  min-width: 44px;
+  text-align: center;
+  color: var(--card-accent);
+  text-shadow: 0 0 10px var(--card-glow);
+}
+
+.votann-res-card .rare-subrow {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.votann-res-card .rare-subrow .rare-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.votann-res-card .rare-subrow strong {
+  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  color: #fff;
+  min-width: 16px;
+  text-align: center;
+}
+
+.votann-res-card .rare-subrow .mini-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0;
+}
+
+/* ========================================================================= */
+/* FACTION-LOCKED CRUSADE TABS (TOUR = MILITARUM, TOMB = NECRON, VOTANN = VOTANN) */
+/* ========================================================================= */
+
+/* Active tab buttons */
 #cruTabBtn3.active,
-body.theme-necron #cruTabBtn3.active {
-  background: linear-gradient(135deg, rgba(212, 163, 73, 0.24) 0%, rgba(28, 25, 22, 0.96) 100%) !important;
+body.theme-necron #cruTabBtn3.active,
+body.theme-votann #cruTabBtn3.active {
+  background: linear-gradient(135deg, rgba(212, 163, 73, 0.28) 0%, rgba(28, 25, 22, 0.96) 100%) !important;
   color: #f5c96a !important;
   border-color: #d4a349 !important;
-  box-shadow: 0 0 14px rgba(212, 163, 73, 0.25), inset 0 0 12px rgba(212, 163, 73, 0.2) !important;
+  box-shadow: 0 0 16px rgba(212, 163, 73, 0.28), inset 0 0 12px rgba(212, 163, 73, 0.16) !important;
+  text-shadow: 0 0 8px rgba(212, 163, 73, 0.45);
 }
 
 #cruTabBtn4.active,
-body.theme-militarum #cruTabBtn4.active {
+body.theme-militarum #cruTabBtn4.active,
+body.theme-votann #cruTabBtn4.active {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(4, 24, 18, 0.96) 100%) !important;
   color: #6ee7b7 !important;
   border-color: #10b981 !important;
   box-shadow: 0 0 16px rgba(16, 185, 129, 0.28), inset 0 0 12px rgba(16, 185, 129, 0.16) !important;
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.45);
 }
 
+#cruTabBtn5.active,
+body.theme-necron #cruTabBtn5.active,
+body.theme-militarum #cruTabBtn5.active {
+  background: linear-gradient(135deg, rgba(245, 176, 65, 0.28) 0%, rgba(38, 24, 8, 0.96) 100%) !important;
+  color: #fbbf24 !important;
+  border-color: #f5b041 !important;
+  box-shadow: 0 0 16px rgba(245, 176, 65, 0.28), inset 0 0 12px rgba(245, 176, 65, 0.16) !important;
+  text-shadow: 0 0 8px rgba(245, 176, 65, 0.45);
+}
+
+/* 1. TAB 3: ASTRA MILITARUM // TOUR OF DUTY (LOCKED) */
 #cruTabTour,
-body.theme-necron #cruTabTour {
+body.theme-necron #cruTabTour,
+body.theme-votann #cruTabTour {
   --bg: #0c0b09;
   --surface: #171512;
   --surface-alt: #12100d;
@@ -188,16 +353,169 @@ body.theme-necron #cruTabTour {
   --clip-card: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
 }
 
-body.theme-necron #cruTabTour .card {
-  background: var(--surface);
-  border-color: var(--border);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+#cruTabTour .card,
+body.theme-necron #cruTabTour .card,
+body.theme-votann #cruTabTour .card {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
 }
 
+#cruTabTour .launch-btn,
+#cruTabTour .btn-red,
 body.theme-necron #cruTabTour .launch-btn,
-body.theme-necron #cruTabTour .btn-red {
-  background: linear-gradient(180deg, #d83140 0%, #991a24 100%);
-  border-color: #ef3e4a;
-  color: #fff;
-  box-shadow: 0 4px 18px rgba(204, 41, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+body.theme-necron #cruTabTour .btn-red,
+body.theme-votann #cruTabTour .launch-btn,
+body.theme-votann #cruTabTour .btn-red {
+  background: linear-gradient(180deg, #d83140 0%, #991a24 100%) !important;
+  border-color: #ef3e4a !important;
+  color: #fff !important;
+  box-shadow: 0 4px 18px rgba(204, 41, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
+
+#cruTabTour .btn-gold,
+body.theme-necron #cruTabTour .btn-gold,
+body.theme-votann #cruTabTour .btn-gold {
+  background: linear-gradient(180deg, #d4a349 0%, #a67c2e 100%) !important;
+  border-color: #f5c96a !important;
+  color: #12100d !important;
+}
+
+/* 2. TAB 4: NECRON // TOMB WORLD AWAKENING MATRIX (LOCKED) */
+#cruTabTomb,
+body.theme-militarum #cruTabTomb,
+body.theme-votann #cruTabTomb {
+  --bg: #030806;
+  --surface: #071812;
+  --surface-alt: #030c09;
+  --surface-hover: #0a261d;
+  --border: #0d3d2e;
+  --border-bright: #10b981;
+  --text: #e6fcf5;
+  --muted: #82a89c;
+  --gold: #10b981;
+  --gold-bright: #34d399;
+  --gold-dim: rgba(16, 185, 129, 0.14);
+  --red: #cc2936;
+  --red-bright: #ef3e4a;
+  --red-dim: rgba(204, 41, 54, 0.18);
+  --green: #10b981;
+  --blue: #2dd4bf;
+  --clip-card: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+}
+
+#cruTabTomb .card,
+body.theme-militarum #cruTabTomb .card,
+body.theme-votann #cruTabTomb .card {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 70%),
+    linear-gradient(165deg, rgba(7, 24, 18, 0.96) 0%, rgba(3, 12, 9, 0.98) 55%, rgba(5, 18, 14, 0.96) 100%) !important;
+  border-color: rgba(16, 185, 129, 0.42) !important;
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.88),
+    0 0 22px rgba(16, 185, 129, 0.14),
+    inset 0 0 24px rgba(16, 185, 129, 0.06) !important;
+}
+
+#cruTabTomb .launch-btn,
+body.theme-militarum #cruTabTomb .launch-btn,
+body.theme-votann #cruTabTomb .launch-btn {
+  background: linear-gradient(180deg, #10b981 0%, #047857 100%) !important;
+  border-color: #34d399 !important;
+  color: #022c22 !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.35), inset 0 1px 0 rgba(167, 243, 208, 0.35) !important;
+}
+
+#cruTabTomb .launch-btn:hover,
+body.theme-militarum #cruTabTomb .launch-btn:hover,
+body.theme-votann #cruTabTomb .launch-btn:hover {
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%) !important;
+  border-color: #6ee7b7 !important;
+  color: #022c22 !important;
+  box-shadow: 0 0 26px rgba(16, 185, 129, 0.6) !important;
+}
+
+#cruTabTomb .btn-ghost,
+body.theme-militarum #cruTabTomb .btn-ghost,
+body.theme-votann #cruTabTomb .btn-ghost {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #a7f3d0 !important;
+}
+
+#cruTabTomb .mini-btn,
+body.theme-militarum #cruTabTomb .mini-btn,
+body.theme-votann #cruTabTomb .mini-btn {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  color: #34d399 !important;
+  background: #030c09 !important;
+}
+
+/* 3. TAB 5: LEAGUES OF VOTANN // KINDRED EXPEDITIONS & VAULT (LOCKED) */
+#cruTabVotann,
+body.theme-necron #cruTabVotann,
+body.theme-militarum #cruTabVotann {
+  --bg: #090603;
+  --surface: #140d06;
+  --surface-alt: #0d0803;
+  --surface-hover: #24160a;
+  --border: #523410;
+  --border-bright: #f5b041;
+  --text: #fef3c7;
+  --muted: #d4a373;
+  --gold: #f5b041;
+  --gold-bright: #fbbf24;
+  --gold-dim: rgba(245, 176, 65, 0.14);
+  --red: #c2410c;
+  --red-bright: #ea580c;
+  --red-dim: rgba(234, 88, 12, 0.18);
+  --green: #84cc16;
+  --blue: #38bdf8;
+  --clip-card: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+}
+
+#cruTabVotann .card:not(.votann-res-card),
+body.theme-necron #cruTabVotann .card:not(.votann-res-card),
+body.theme-militarum #cruTabVotann .card:not(.votann-res-card) {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(245, 176, 65, 0.12) 0%, transparent 70%),
+    linear-gradient(165deg, rgba(24, 16, 7, 0.96) 0%, rgba(12, 8, 3, 0.98) 55%, rgba(18, 12, 5, 0.96) 100%) !important;
+  border-color: rgba(245, 176, 65, 0.42) !important;
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.88),
+    0 0 22px rgba(245, 176, 65, 0.14),
+    inset 0 0 24px rgba(245, 176, 65, 0.06) !important;
+}
+
+#cruTabVotann .launch-btn,
+body.theme-necron #cruTabVotann .launch-btn,
+body.theme-militarum #cruTabVotann .launch-btn {
+  background: linear-gradient(180deg, rgba(180, 83, 9, 0.95) 0%, rgba(120, 53, 15, 0.98) 100%) !important;
+  border-color: #f5b041 !important;
+  color: #fffbeb !important;
+  box-shadow: 0 0 18px rgba(245, 176, 65, 0.32), inset 0 1px 0 rgba(254, 240, 138, 0.35) !important;
+}
+
+#cruTabVotann .launch-btn:hover,
+body.theme-necron #cruTabVotann .launch-btn:hover,
+body.theme-militarum #cruTabVotann .launch-btn:hover {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.95) 0%, rgba(180, 83, 9, 0.98) 100%) !important;
+  border-color: #fbbf24 !important;
+  color: #1c0d02 !important;
+  box-shadow: 0 0 26px rgba(245, 158, 11, 0.6) !important;
+}
+
+#cruTabVotann .btn-gold,
+body.theme-necron #cruTabVotann .btn-gold,
+body.theme-militarum #cruTabVotann .btn-gold {
+  background: linear-gradient(180deg, #d97706 0%, #92400e 100%) !important;
+  border-color: #fbbf24 !important;
+  color: #fffbeb !important;
+}
+
+#cruTabVotann .btn-ghost,
+body.theme-necron #cruTabVotann .btn-ghost,
+body.theme-militarum #cruTabVotann .btn-ghost {
+  border-color: rgba(245, 176, 65, 0.4) !important;
+  color: #fde68a !important;
+}
+

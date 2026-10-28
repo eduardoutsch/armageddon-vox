@@ -127,7 +127,7 @@ function checkPendingDossierBuffer() {
       if (parsed.channel === 'beta') {
         targetName = 'Lord Commander Junebug (Terminal Beta)';
       } else if (parsed.channel === 'gamma') {
-        targetName = 'Kâhl Hârkyn Grîmledger // The Ledger of Embers (Terminal Gamma)';
+        targetName = 'Kâhl Hârkyn // The Ledger of Embers (Terminal Gamma)';
       } else if (parsed.channel === 'distant' || /DISTANT|ORBITAL AUGUR/i.test(parsed.text || '')) {
         targetName = '🛰️ Distant Intercept // Orbital Augur Array (Neither Main Player Fielded)';
       }
@@ -234,7 +234,7 @@ async function selectConduit(chan, clearPendingCheck = false) {
       badge.innerHTML = `<span class="pulse-dot"></span> VERMILION SEAL ACTIVE • ENCRYPTED`;
       const conduitOwner = chan === 'alpha'
         ? 'The Exile // Sanctuary of Ash'
-        : (chan === 'beta' ? 'Lord Commander Junebug' : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
+        : (chan === 'beta' ? 'Lord Commander Junebug' : 'Kâhl Hârkyn // The Ledger of Embers');
       sub.textContent = `Conduit sealed to ${conduitOwner}. Enter your secret passphrase to decrypt.`;
       label.textContent = `2. Enter Secret Vermilion Pass-Seal`;
       btn.textContent = `🔓 Authenticate & Decrypt Conduit`;
@@ -357,7 +357,7 @@ async function flushPendingDossierIfAny() {
             ? 'The Exile // Sanctuary of Ash'
             : (selectedChannel === 'beta'
                 ? 'Lord Commander Junebug'
-                : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers'));
+                : 'Kâhl Hârkyn // The Ledger of Embers'));
 
       await rpcCall('send_vox_message', {
         p_channel: selectedChannel,
@@ -824,7 +824,7 @@ async function transmitQuestion() {
     ? 'The Exile // Sanctuary of Ash'
     : (selectedChannel === 'beta'
         ? 'Lord Commander Junebug'
-        : 'Kâhl Hârkyn Grîmledger // The Ledger of Embers');
+        : 'Kâhl Hârkyn // The Ledger of Embers');
 
   await rpcCall('send_vox_message', {
     p_channel: selectedChannel,

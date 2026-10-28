@@ -72,9 +72,24 @@ test('briefing pure: showDossier supports gamma and selectBriefingConduit routes
   assert.equal(briefingModule.briefingState.activeDossier, 'gamma');
 });
 
-test('briefing pure: unlockTab and lockTab handle Gamma', () => {
+test('briefing pure: unlockTab and lockTab handle Gamma with dedicated gamma audio cues', () => {
+  const audioCalls = [];
+  globalThis.window = {
+    VoxAudio: {
+      playBriefingDecode: (ch) => audioCalls.push(`decode:${ch}`),
+      playTerminalPowerOff: (ch) => audioCalls.push(`poweroff:${ch}`),
+      setFactionTheme: () => {}
+    }
+  };
+
   briefingModule.unlockTab('Gamma', false);
   assert.equal(briefingModule.briefingState.unlockedGamma, true);
+  assert.equal(audioCalls.includes('decode:gamma'), true, 'unlockTab(Gamma) must invoke playBriefingDecode("gamma")');
+  assert.equal(audioCalls.includes('decode:alpha'), false, 'unlockTab(Gamma) must NOT invoke playBriefingDecode("alpha")');
+
   briefingModule.lockTab('Gamma', false);
   assert.equal(briefingModule.briefingState.unlockedGamma, false);
+  assert.equal(audioCalls.includes('poweroff:gamma'), true, 'lockTab(Gamma) must invoke playTerminalPowerOff("gamma")');
+  assert.equal(audioCalls.includes('poweroff:alpha'), false, 'lockTab(Gamma) must NOT invoke playTerminalPowerOff("alpha")');
 });
+

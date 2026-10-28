@@ -901,19 +901,63 @@
 
   /**
    * 21. Tactical Terminal Power On / Cathode Initialization
-   * Two distinct soundscapes:
-   * - Alpha: Imperial CRT cathode hum, heavy switch clunk, rising 15.75 kHz flyback whistle & high-voltage crackle.
-   * - Beta: Necron Gauss resonance, dual dissonant crystalline sine wave phase sweep with chronomantic ring-modulation.
+   * Three distinct soundscapes:
+   * - Alpha (Militarum): Imperial CRT cathode hum, heavy switch clunk, rising 15.75 kHz flyback whistle & high-voltage crackle.
+   * - Beta (Necron): Necron Gauss resonance, dual dissonant crystalline sine wave phase sweep with chronomantic ring-modulation.
+   * - Gamma (Votann): Geothermal core ignition, magnetic hydraulic clamp thud, and resonant Hearth induction chime.
    *
-   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta' | 'gamma'
    */
   function playTerminalPowerOn(channel = 'alpha') {
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const isBeta = String(channel).toLowerCase() === 'beta';
+    const ch = String(channel).toLowerCase();
+    const isBeta = ch === 'beta' || ch === 'necron';
+    const isGamma = ch === 'gamma' || ch === 'votann';
 
-    if (isBeta) {
+    if (isGamma) {
+      // Votann Geothermal Reactor & Hearth Induction
+      const hum = ctx.createOscillator();
+      const humGain = ctx.createGain();
+      hum.type = 'triangle';
+      hum.frequency.setValueAtTime(65, now);
+      hum.frequency.exponentialRampToValueAtTime(130, now + 0.35);
+      humGain.gain.setValueAtTime(0.001, now);
+      humGain.gain.linearRampToValueAtTime(0.15, now + 0.08);
+      humGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      hum.connect(humGain);
+      humGain.connect(ctx.destination);
+      hum.start(now);
+      hum.stop(now + 0.48);
+
+      const clamp = ctx.createOscillator();
+      const clampGain = ctx.createGain();
+      clamp.type = 'square';
+      clamp.frequency.setValueAtTime(110, now + 0.04);
+      clamp.frequency.exponentialRampToValueAtTime(35, now + 0.12);
+      clampGain.gain.setValueAtTime(0.001, now + 0.04);
+      clampGain.gain.linearRampToValueAtTime(0.12, now + 0.05);
+      clampGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      clamp.connect(clampGain);
+      clampGain.connect(ctx.destination);
+      clamp.start(now + 0.04);
+      clamp.stop(now + 0.18);
+
+      const chime = ctx.createOscillator();
+      const chimeGain = ctx.createGain();
+      chime.type = 'sine';
+      chime.frequency.setValueAtTime(330, now + 0.15);
+      chime.frequency.exponentialRampToValueAtTime(440, now + 0.4);
+      chimeGain.gain.setValueAtTime(0.001, now + 0.15);
+      chimeGain.gain.linearRampToValueAtTime(0.11, now + 0.18);
+      chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.52);
+      chime.connect(chimeGain);
+      chimeGain.connect(ctx.destination);
+      chime.start(now + 0.15);
+      chime.stop(now + 0.55);
+
+    } else if (isBeta) {
       const oscA = ctx.createOscillator();
       const oscB = ctx.createOscillator();
       const gainA = ctx.createGain();
@@ -1000,19 +1044,48 @@
 
   /**
    * 22. Tactical Terminal Power Off / System Shutdown
-   * Two distinct soundscapes:
-   * - Alpha: Imperial CRT raster spot collapse snap, power supply discharge & decaying coil drain.
-   * - Beta: Necron Gauss dimensional phase-out, descending metallic dissonance & stasis fold.
+   * Three distinct soundscapes:
+   * - Alpha (Militarum): Imperial CRT raster spot collapse snap, power supply discharge & decaying coil drain.
+   * - Beta (Necron): Necron Gauss dimensional phase-out, descending metallic dissonance & stasis fold.
+   * - Gamma (Votann): Magnetic hydraulic decouple, pneumatic exhaust hiss & sub-bass generator spool-down.
    *
-   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta' | 'gamma'
    */
   function playTerminalPowerOff(channel = 'alpha') {
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const isBeta = String(channel).toLowerCase() === 'beta';
+    const ch = String(channel).toLowerCase();
+    const isBeta = ch === 'beta' || ch === 'necron';
+    const isGamma = ch === 'gamma' || ch === 'votann';
 
-    if (isBeta) {
+    if (isGamma) {
+      // Votann Magnetic Decouple & Forge Generator Spool-down
+      const exhaust = ctx.createOscillator();
+      const exhaustGain = ctx.createGain();
+      exhaust.type = 'triangle';
+      exhaust.frequency.setValueAtTime(130, now);
+      exhaust.frequency.exponentialRampToValueAtTime(28, now + 0.28);
+      exhaustGain.gain.setValueAtTime(0.14, now);
+      exhaustGain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+      exhaust.connect(exhaustGain);
+      exhaustGain.connect(ctx.destination);
+      exhaust.start(now);
+      exhaust.stop(now + 0.35);
+
+      const spool = ctx.createOscillator();
+      const spoolGain = ctx.createGain();
+      spool.type = 'sine';
+      spool.frequency.setValueAtTime(110, now + 0.02);
+      spool.frequency.exponentialRampToValueAtTime(22, now + 0.42);
+      spoolGain.gain.setValueAtTime(0.12, now + 0.02);
+      spoolGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      spool.connect(spoolGain);
+      spoolGain.connect(ctx.destination);
+      spool.start(now + 0.02);
+      spool.stop(now + 0.48);
+
+    } else if (isBeta) {
       const oscA = ctx.createOscillator();
       const oscB = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -1065,19 +1138,72 @@
 
   /**
    * 23. Classified Briefing Dossier Decode / Cipher Teleprinter
-   * Two distinct soundscapes:
-   * - Alpha: Departmento Munitorum cipher teleprinter mechanical relay chatter and high-speed encryption warble.
-   * - Beta: Necron Canoptek scarab crystalline arithmetic frequency chirps and resonant glyph deciphering.
+   * Three distinct faction soundscapes:
+   * - Alpha (Militarum / The Exile): Departmento Munitorum cipher teleprinter mechanical relay chatter and high-speed encryption warble.
+   * - Beta (Necron / Junebug): Necron Canoptek scarab crystalline arithmetic frequency chirps and resonant glyph deciphering.
+   * - Gamma (Votann / Kâhl Hârkyn): Ancestor Core deep harmonic forge pulse, industrial ratchets & warm Hearth chime.
    *
-   * @param {string} [channel='alpha'] - 'alpha' | 'beta'
+   * @param {string} [channel='alpha'] - 'alpha' | 'beta' | 'gamma'
    */
   function playBriefingDecode(channel = 'alpha') {
     const ctx = getAudioCtx();
     if (!ctx) return;
     const now = ctx.currentTime;
-    const isBeta = String(channel).toLowerCase() === 'beta';
+    const ch = String(channel).toLowerCase();
+    const isBeta = ch === 'beta' || ch === 'necron';
+    const isGamma = ch === 'gamma' || ch === 'votann';
 
-    if (isBeta) {
+    if (isGamma) {
+      // Votann Ancestor Core telemetry & Heavy Hearth Forge-Chime
+      for (let i = 0; i < 4; i++) {
+        const ratchet = ctx.createOscillator();
+        const ratchetGain = ctx.createGain();
+        const t = now + i * 0.045;
+        ratchet.type = 'triangle';
+        ratchet.frequency.setValueAtTime(320 + i * 65, t);
+        ratchet.frequency.exponentialRampToValueAtTime(90, t + 0.02);
+
+        ratchetGain.gain.setValueAtTime(0.001, t);
+        ratchetGain.gain.linearRampToValueAtTime(0.09, t + 0.003);
+        ratchetGain.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
+
+        ratchet.connect(ratchetGain);
+        ratchetGain.connect(ctx.destination);
+        ratchet.start(t);
+        ratchet.stop(t + 0.04);
+      }
+
+      // Sub-bass hearth forge resonance
+      const sub = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(88, now + 0.08);
+      sub.frequency.exponentialRampToValueAtTime(176, now + 0.35);
+      subGain.gain.setValueAtTime(0.001, now + 0.08);
+      subGain.gain.linearRampToValueAtTime(0.12, now + 0.14);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      sub.connect(subGain);
+      subGain.connect(ctx.destination);
+      sub.start(now + 0.08);
+      sub.stop(now + 0.48);
+
+      // Warm dual Hearth chime (A4 440Hz + C#5 554Hz)
+      const freqs = [440, 554];
+      freqs.forEach(f => {
+        const bell = ctx.createOscillator();
+        const bellGain = ctx.createGain();
+        bell.type = 'sine';
+        bell.frequency.setValueAtTime(f, now + 0.18);
+        bellGain.gain.setValueAtTime(0.001, now + 0.18);
+        bellGain.gain.linearRampToValueAtTime(0.08, now + 0.2);
+        bellGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        bell.connect(bellGain);
+        bellGain.connect(ctx.destination);
+        bell.start(now + 0.18);
+        bell.stop(now + 0.6);
+      });
+
+    } else if (isBeta) {
       const freqs = [784, 1046, 1318, 1568];
       freqs.forEach((freq, idx) => {
         const osc = ctx.createOscillator();

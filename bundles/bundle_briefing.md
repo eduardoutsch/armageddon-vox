@@ -54,7 +54,7 @@ Complete markup and Auspex layout for Commander Conduit Grid, and Commander Alph
       </div>
       <div class="conduit-card choice-card" id="cardBriefGamma" onclick="selectBriefingConduit('gamma')">
         <span class="conduit-tag" style="color:var(--gold); font-size:0.7rem; font-weight:800; text-transform:uppercase;">SOLO BLACK-LEDGER CONDUIT // SITE #44-KHA</span>
-        <div class="conduit-title" style="font-weight:800; font-size:1.05rem; color:#fff; margin:4px 0 2px 0;">⛏️ Kâhl Hârkyn Grîmledger</div>
+        <div class="conduit-title" style="font-weight:800; font-size:1.05rem; color:#fff; margin:4px 0 2px 0;">⛏️ Kâhl Hârkyn</div>
         <div class="conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Ledger of Embers (Leagues of Votann — 1,200 Pts)</div>
       </div>
     </div>
@@ -63,7 +63,7 @@ Complete markup and Auspex layout for Commander Conduit Grid, and Commander Alph
     <div class="nav-pills" style="margin-top:8px; margin-bottom:20px;">
       <button id="btnAlpha" onclick="showDossier('alpha')">🦅 The Exile // Sanctuary of Ash &amp; Ship</button>
       <button id="btnBeta" class="active" onclick="showDossier('beta')">💀 Lord Commander Junebug Briefing</button>
-      <button id="btnGamma" onclick="showDossier('gamma')">⛏️ Kâhl Hârkyn Grîmledger Briefing</button>
+      <button id="btnGamma" onclick="showDossier('gamma')">⛏️ Kâhl Hârkyn Briefing</button>
       <button id="btnAtlas" onclick="showDossier('atlas')">🗺️ Sector Atlas</button>
       <button id="btnRules" onclick="showDossier('rules')">⚡ Horde → Crusade Rules</button>
     </div>

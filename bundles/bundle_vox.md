@@ -80,10 +80,9 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
       <div class="choice-card conduit-card" id="cardGamma" onclick="selectConduit('gamma')">
         <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:2px;">CONDUIT GAMMA // SUB-CLOUD BLACK-LEDGER</span>
         <span class="choice-icon">⛏️</span>
-        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">⛏️ Kâhl Hârkyn Grîmledger</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">⛏️ Kâhl Hârkyn</div>
         <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Ledger of Embers • Fane-Node Vôl-09 (Radio-Silent Solo)</div>
       </div>
-    </div>
     </div>
 
     <label class="setup-label" id="passLabel">2. Enter Secret Vermilion Pass-Seal</label>
