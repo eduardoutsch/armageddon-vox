@@ -73,14 +73,14 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
       <div class="choice-card conduit-card" id="cardBeta" onclick="selectConduit('beta')">
         <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--green); text-transform:uppercase; margin-bottom:2px;">CONDUIT BETA // ORBITAL TOMB-SHIP MATRIX</span>
         <span class="choice-icon">💀</span>
-        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">💀 Lord Commander Junebug</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">Lord Commander Junebug</div>
         <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">Necron Awakening Phalanx • Sector Node 0</div>
       </div>
 
       <div class="choice-card conduit-card" id="cardGamma" onclick="selectConduit('gamma')">
         <span class="conduit-tag" style="display:block; font-size:0.7rem; font-weight:800; color:var(--gold); text-transform:uppercase; margin-bottom:2px;">CONDUIT GAMMA // SUB-CLOUD BLACK-LEDGER</span>
         <span class="choice-icon">⛏️</span>
-        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">⛏️ Kâhl Hârkyn</div>
+        <div class="choice-title conduit-title" style="font-weight:800; font-size:1.05rem;">Kâhl Hârkyn</div>
         <div class="choice-sub conduit-sub" style="font-size:0.78rem; color:var(--muted);">The Ledger of Embers • Fane-Node Vôl-09 (Radio-Silent Solo)</div>
       </div>
     </div>
@@ -391,53 +391,59 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
   50% { opacity: 0; }
 }
 
-/* Psychic Interferences (Crimson & Amber Glitch Phosphor) */
-.crt-intercept-card {
-  background: rgba(24, 6, 10, 0.85);
-  border: 1px dashed rgba(255, 71, 87, 0.55);
-  border-left: 4px solid #ff4757;
+/* Psychic Interferences (Crimson / Red Glitch Phosphor - Targeted Player Bleeds) */
+.crt-intercept-card,
+.crt-intercept-card.target-intercept {
+  background: rgba(24, 6, 10, 0.88) !important;
+  border: 1px dashed rgba(255, 71, 87, 0.55) !important;
+  border-left: 4px solid #ff4757 !important;
   border-radius: 8px;
   padding: 13px 15px;
-  color: #fda4af;
-  text-shadow: 0 0 6px rgba(255, 71, 87, 0.45);
+  color: #fda4af !important;
+  text-shadow: 0 0 6px rgba(255, 71, 87, 0.45) !important;
   font-size: 0.88rem;
   line-height: 1.58;
   white-space: pre-wrap;
 }
 
-.censor-bar {
-  background: #ff4757;
-  color: #160407;
+.censor-bar,
+.crt-intercept-card.target-intercept .censor-bar {
+  background: #ff4757 !important;
+  color: #160407 !important;
   padding: 1px 6px;
   border-radius: 3px;
   font-weight: 900;
   letter-spacing: 0.6px;
   text-shadow: none;
-  box-shadow: 0 0 8px rgba(255, 71, 87, 0.65);
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.65) !important;
 }
 
-/* Rogue Sector Dual-Broadcast Interferences (Warp Amethyst / Purple CRT Phosphor) */
-.crt-intercept-card.rogue-intercept {
-  background: rgba(18, 7, 30, 0.88);
-  border: 1px dashed rgba(168, 85, 247, 0.6);
-  border-left: 4px solid #a855f7;
-  color: #e9d5ff;
-  text-shadow: 0 0 7px rgba(168, 85, 247, 0.5);
+/* Rogue Sector Dual-Broadcast Interferences (Warp Amethyst / Purple CRT Phosphor - Sector-Wide for All Players) */
+.crt-intercept-card.rogue-intercept,
+.crt-intercept-card.sector-broadcast {
+  background: rgba(18, 7, 30, 0.88) !important;
+  border: 1px dashed rgba(168, 85, 247, 0.6) !important;
+  border-left: 4px solid #a855f7 !important;
+  color: #e9d5ff !important;
+  text-shadow: 0 0 7px rgba(168, 85, 247, 0.5) !important;
 }
 
-.crt-intercept-card.rogue-intercept .censor-bar {
-  background: #a855f7;
-  color: #0f041d;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.7);
+.crt-intercept-card.rogue-intercept .censor-bar,
+.crt-intercept-card.sector-broadcast .censor-bar {
+  background: #a855f7 !important;
+  color: #0f041d !important;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.7) !important;
 }
 
-.crt-intercept-card.rogue-intercept .crt-purge-btn {
+.crt-intercept-card.rogue-intercept .crt-purge-btn,
+.crt-intercept-card.sector-broadcast .crt-purge-btn {
   background: rgba(168, 85, 247, 0.12);
   border-color: rgba(168, 85, 247, 0.45);
   color: #d8b4fe;
 }
 
-.crt-intercept-card.rogue-intercept .crt-purge-btn:hover {
+.crt-intercept-card.rogue-intercept .crt-purge-btn:hover,
+.crt-intercept-card.sector-broadcast .crt-purge-btn:hover {
   background: rgba(168, 85, 247, 0.3);
   border-color: #a855f7;
   color: #fff;

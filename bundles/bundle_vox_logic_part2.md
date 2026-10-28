@@ -10,18 +10,6 @@ Real-time Teletype typewriter audio streaming, CRT message rendering, and interf
 ## File: `js/vox.js (Part 2: CRT Monitors & Streams)` <a id="file-jsvoxjspart2crtmonitorsstreams"></a>
 
 ````javascript
-    return {
-      cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
-      cleanBody: trimmed.slice(bannerMatch[0].length).trim()
-    };
-  }
-
-  // 3. Fallback inference if +++ banner was mid-text
-  if (/ASHEN SPIRIT|MU-TH-UR|DECK 44/i.test(trimmed)) {
-    return {
-      cardTitle: '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++',
-      cleanBody: trimmed
-    };
   }
 
   return { cardTitle: fallbackTitle, cleanBody: trimmed };
@@ -78,7 +66,7 @@ async function purgeVoxEntry(entryId, entryType = 'message') {
 function isRogueSectorInterference(ix) {
   if (!ix) return false;
   const combined = `${ix.origin_hint || ''} ${ix.redacted_text || ''}`;
-  return /PARALLEL SECTOR|ORBITAL AUGUR ARRAY|ROGUE SECTOR/i.test(combined);
+  return /PARALLEL SECTOR|ORBITAL AUGUR|ROGUE SECTOR|SECTOR BROADCAST|BROADCAST|ALL COMBATANTS|ALL PLAYERS|DISTANT SOLO HORDE|DISTANT WARP-BREACH|DISTANT ADVERSARY/i.test(combined);
 }
 
 /**
@@ -291,12 +279,14 @@ async function refreshTerminal(forceScroll = false) {
         }
 
         visibleInts.forEach(ix => {
-          const isRogue = isRogueSectorInterference(ix);
+          const isBroadcast = isRogueSectorInterference(ix);
           const card = document.createElement('div');
-          card.className = isRogue ? 'crt-intercept-card rogue-intercept' : 'crt-intercept-card';
-          const headerColor = isRogue ? '#c084fc' : '#ff4757';
-          const headerBorder = isRogue ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
-          const headerIcon = isRogue ? 'SECTOR BROADCAST' : 'INTERCEPT';
+          card.className = isBroadcast
+            ? 'crt-intercept-card rogue-intercept sector-broadcast'
+            : 'crt-intercept-card';
+          const headerColor = isBroadcast ? '#c084fc' : '#ff4757';
+          const headerBorder = isBroadcast ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
+          const headerIcon = isBroadcast ? 'SECTOR BROADCAST' : 'TARGET INTERCEPT';
           card.innerHTML = `
             <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:${headerColor}; border-bottom:1px dashed ${headerBorder}; padding-bottom:5px; margin-bottom:8px;">
               <span>${headerIcon} // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>

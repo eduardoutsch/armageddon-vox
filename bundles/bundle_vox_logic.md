@@ -175,18 +175,6 @@ function applyVoxFactionTheme(chan, persist = false) {
       document.body.dataset.factionTheme = theme || 'default';
     }
   }
-  const dBox = document.getElementById('directMessagesBox');
-  const iBox = document.getElementById('interferencesBox');
-  if (dBox && dBox.classList && typeof dBox.classList.toggle === 'function') {
-    dBox.classList.toggle('vox-preview-beta', chan === 'beta');
-    dBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
-    dBox.classList.toggle('vox-preview-gamma', chan === 'gamma');
-  }
-  if (iBox && iBox.classList && typeof iBox.classList.toggle === 'function') {
-    iBox.classList.toggle('vox-preview-beta', chan === 'beta');
-    iBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
-    iBox.classList.toggle('vox-preview-gamma', chan === 'gamma');
-  }
 }
 
 async function selectConduit(chan, clearPendingCheck = false) {
@@ -510,4 +498,16 @@ function extractDynamicReplyCardMeta(rawReply) {
   // 2. Check if the first line is a canonical +++ HEADER BANNER +++
   const bannerMatch = trimmed.match(/^\+{2,}\s*([^\n+]+?)\s*\+{2,}[ \t]*\n+/);
   if (bannerMatch) {
+    return {
+      cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
+      cleanBody: trimmed.slice(bannerMatch[0].length).trim()
+    };
+  }
+
+  // 3. Fallback inference if +++ banner was mid-text
+  if (/ASHEN SPIRIT|MU-TH-UR|DECK 44/i.test(trimmed)) {
+    return {
+      cardTitle: '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++',
+      cleanBody: trimmed
+    };
 ````

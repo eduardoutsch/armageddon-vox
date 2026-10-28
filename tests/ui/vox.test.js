@@ -211,6 +211,7 @@ const evalFn = new Function(
     getShowAllOlderMessages: () => showAllOlderMessages,
     getShowAllOlderInterferences: () => showAllOlderInterferences,
     isRogueSectorInterference: (typeof isRogueSectorInterference === 'function' ? isRogueSectorInterference : null),
+    applyVoxFactionTheme: (typeof applyVoxFactionTheme === 'function' ? applyVoxFactionTheme : null),
     isVoxServerOnline: (typeof isVoxServerOnline === 'function' ? isVoxServerOnline : null),
     checkVoxServerStatus: (typeof checkVoxServerStatus === 'function' ? checkVoxServerStatus : null),
     syncSeenTokensFromStorage: (typeof syncSeenTokensFromStorage === 'function' ? syncSeenTokensFromStorage : null),
@@ -301,9 +302,7 @@ test('vox: selectConduit and handleSealAction unlock Terminal Gamma for Kâhl H�
   assert.equal(vox.getSelectedChannel(), 'gamma');
   assert.equal(mockDocument.body.classList.contains('theme-votann'), true, 'Selecting Terminal Gamma must activate theme-votann');
   assert.equal(mockDocument.body.classList.contains('theme-necron'), false);
-  assert.equal(mockDocument.body.classList.contains('theme-militarum'), false);
-  assert.equal(mockElements.directMessagesBox.classList.contains('vox-preview-gamma'), true);
-  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-gamma'), true);
+  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-gamma'), false, 'Interferences box must not be clobbered by vox-preview-gamma');
 
   mockElements.passInput.value = 'votanngold777';
   await vox.handleSealAction();
@@ -939,3 +938,121 @@ test('vox: validChannels array includes gamma and pages/vox.html has .conduit-se
   assert.ok(voxHtml.includes('class="choice-grid conduit-selector"'), 'pages/vox.html must include .conduit-selector class');
   assert.ok(voxHtml.includes('id="voxTerminalTitle"'), 'pages/vox.html must define #voxTerminalTitle banner');
 });
+
+test('vox: conduit selection cards do not have duplicate emoji icons in their title headings', () => {
+  // Extract conduit title blocks from voxHtml
+  const betaMatch = voxHtml.match(/id="cardBeta"[\s\S]*?<div class="choice-title conduit-title"[^>]*>([\s\S]*?)<\/div>/);
+  const gammaMatch = voxHtml.match(/id="cardGamma"[\s\S]*?<div class="choice-title conduit-title"[^>]*>([\s\S]*?)<\/div>/);
+  const alphaMatch = voxHtml.match(/id="cardAlpha"[\s\S]*?<div class="choice-title conduit-title"[^>]*>([\s\S]*?)<\/div>/);
+
+  assert.ok(betaMatch, 'cardBeta must have a choice-title');
+  assert.ok(gammaMatch, 'cardGamma must have a choice-title');
+  assert.ok(alphaMatch, 'cardAlpha must have a choice-title');
+
+  const betaTitle = betaMatch[1].trim();
+  const gammaTitle = gammaMatch[1].trim();
+  const alphaTitle = alphaMatch[1].trim();
+
+  // Heading titles must NOT contain duplicate emoji icons because the choice-icon span already renders them above
+  assert.equal(betaTitle.includes('💀'), false, `Beta title must not duplicate skull emoji (was "${betaTitle}")`);
+  assert.equal(gammaTitle.includes('⛏️'), false, `Gamma title must not duplicate pickaxe emoji (was "${gammaTitle}")`);
+  assert.equal(alphaTitle.includes('🦅'), false, `Alpha title must not duplicate eagle emoji (was "${alphaTitle}")`);
+  assert.equal(betaTitle, 'Lord Commander Junebug');
+  assert.equal(gammaTitle, 'Kâhl Hârkyn');
+  assert.equal(alphaTitle, 'The Exile');
+});
+
+test('vox: pages/vox.html has balanced div tag containment inside .app-shell.vox-shell to prevent dimension breakages', () => {
+  // Extract everything inside <div class="app-shell vox-shell"> ... </div> prior to script tags
+  const shellStart = voxHtml.indexOf('<div class="app-shell vox-shell"');
+  assert.ok(shellStart !== -1, 'Must have .app-shell.vox-shell');
+  const scriptIdx = voxHtml.indexOf('<script', shellStart);
+  assert.ok(scriptIdx !== -1, 'Must have script tag after vox-shell');
+  const shellBlock = voxHtml.substring(shellStart, scriptIdx);
+
+  // Count opening <div vs closing </div
+  const openDivCount = (shellBlock.match(/<div(\s|>)/g) || []).length;
+  const closeDivCount = (shellBlock.match(/<\/div>/g) || []).length;
+
+  assert.equal(openDivCount, closeDivCount, `vox-shell must have exactly balanced <div> tags (found ${openDivCount} open vs ${closeDivCount} close)`);
+
+  // Verify #authScreen and #terminalScreen are siblings
+  const authIdx = shellBlock.indexOf('id="authScreen"');
+  const termIdx = shellBlock.indexOf('id="terminalScreen"');
+  assert.ok(authIdx !== -1, '#authScreen must exist inside shell');
+  assert.ok(termIdx !== -1, '#terminalScreen must exist inside shell');
+  assert.ok(termIdx > authIdx, '#terminalScreen must come after #authScreen');
+
+  // Verify authScreen closes BEFORE terminalScreen starts
+  const subBeforeTerm = shellBlock.substring(authIdx, termIdx);
+  const openInsideAuth = (subBeforeTerm.match(/<div(\s|>)/g) || []).length;
+  const closeInsideAuth = (subBeforeTerm.match(/<\/div>/g) || []).length;
+  assert.equal(openInsideAuth, closeInsideAuth, '#authScreen must fully close all its inner divs before #terminalScreen starts');
+});
+
+test('vox: interferences retain distinct colors (crimson for target vs purple for sector broadcast) and are not overridden by faction theme', async () => {
+  // 1. Verify isRogueSectorInterference broad classification
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'SECTOR BROADCAST // ALL COMBATANTS' }), true);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT' }), true);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'DISTANT SOLO HORDE // SECTOR TELEMETRY' }), true);
+  assert.equal(vox.isRogueSectorInterference({ redacted_text: '+++ SECTOR BROADCAST: WARP DISTORTION +++' }), true);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)' }), false);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'LOWER DECKS VOX-BLEED (SANCTUARY OF ASH)' }), false);
+  assert.equal(vox.isRogueSectorInterference({ origin_hint: 'ASHEN SPIRIT SYNTHETIC BLEED TEST // DECK 44 LOOPBACK' }), false);
+
+  // 2. Verify applyVoxFactionTheme does NOT add conflicting vox-preview-* classes to interferencesBox or directMessagesBox
+  assert.equal(typeof vox.applyVoxFactionTheme, 'function', 'applyVoxFactionTheme must be exported');
+  vox.applyVoxFactionTheme('beta');
+  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-beta'), false, 'interferencesBox must NOT have vox-preview-beta');
+  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-alpha'), false, 'interferencesBox must NOT have vox-preview-alpha');
+  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-gamma'), false, 'interferencesBox must NOT have vox-preview-gamma');
+  assert.equal(mockElements.directMessagesBox.classList.contains('vox-preview-beta'), false, 'directMessagesBox must NOT have vox-preview-beta');
+
+  vox.applyVoxFactionTheme('gamma');
+  assert.equal(mockElements.interferencesBox.classList.contains('vox-preview-gamma'), false, 'interferencesBox must NOT have vox-preview-gamma');
+
+  // 3. Render mixed interferences and verify distinct card classes & headers
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  mockInterferences = [
+    {
+      id: 'int_target_rival',
+      target_channel: 'alpha',
+      origin_hint: 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)',
+      redacted_text: 'Targeted enemy coordinates [REDACTED]',
+      created_at: '2026-10-24T14:00:00Z'
+    },
+    {
+      id: 'int_sector_broadcast',
+      target_channel: 'alpha',
+      origin_hint: 'SECTOR BROADCAST // ALL COMBATANTS',
+      redacted_text: 'Sector-wide distress signal near [REDACTED]',
+      created_at: '2026-10-24T14:05:00Z'
+    }
+  ];
+
+  mockElements.interferencesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  assert.equal(mockElements.interferencesBox.children.length, 2);
+  const targetCard = mockElements.interferencesBox.children[0];
+  const broadcastCard = mockElements.interferencesBox.children[1];
+
+  // Target interference: must have crt-intercept-card, not rogue-intercept, crimson color (#ff4757), and TARGET INTERCEPT header
+  assert.ok(targetCard.className.includes('crt-intercept-card'), 'Target interference must have .crt-intercept-card class');
+  assert.equal(targetCard.className.includes('rogue-intercept'), false, 'Target interference must NOT have .rogue-intercept class');
+  assert.ok(targetCard.innerHTML.includes('#ff4757'), 'Target interference must use crimson header color #ff4757');
+  assert.ok(targetCard.innerHTML.includes('TARGET INTERCEPT'), 'Target interference must state TARGET INTERCEPT in header');
+
+  // Sector broadcast: must have rogue-intercept and sector-broadcast classes, amethyst color (#c084fc), and SECTOR BROADCAST header
+  assert.ok(broadcastCard.className.includes('rogue-intercept'), 'Broadcast interference must have .rogue-intercept class');
+  assert.ok(broadcastCard.className.includes('sector-broadcast'), 'Broadcast interference must have .sector-broadcast class');
+  assert.ok(broadcastCard.innerHTML.includes('#c084fc'), 'Broadcast interference must use purple amethyst header color #c084fc');
+  assert.ok(broadcastCard.innerHTML.includes('SECTOR BROADCAST'), 'Broadcast interference must state SECTOR BROADCAST in header');
+
+  // Verify CSS defines explicit styles
+  assert.ok(voxCss.includes('.target-intercept') || voxCss.includes('.crt-intercept-card:not(.rogue-intercept)'), 'vox.css must define target intercept styling');
+  assert.ok(voxCss.includes('.rogue-intercept') || voxCss.includes('.sector-broadcast'), 'vox.css must define rogue/broadcast intercept styling');
+});
+

@@ -434,10 +434,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: UI Tests (Astropathic Vox-Terminal)',
-  'Astropathic Vox CRT terminal, teletype audio streaming, and pass-seal security test suite (`tests/ui/vox.test.js`).',
-  ['tests/ui/vox.test.js'],
+  '📦 Fires of Armageddon // Bundle: UI Tests (Astropathic Vox-Terminal Part 1)',
+  'Astropathic Vox CRT terminal, teletype audio streaming, and pass-seal security test suite (`tests/ui/vox.test.js` lines 1 to 550).',
+  [{ file: 'tests/ui/vox.test.js', label: 'tests/ui/vox.test.js (Part 1: Auth, Seals & Transmission Tests, Lines 1-550)', startLine: 1, endLine: 550 }],
   path.join(BUNDLES_DIR, 'bundle_tests_ui_vox.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: UI Tests (Astropathic Vox-Terminal Part 2)',
+  'Terminal display streaming, faction theme isolation, and interference rendering test suite (`tests/ui/vox.test.js` lines 551 to end).',
+  [{ file: 'tests/ui/vox.test.js', label: 'tests/ui/vox.test.js (Part 2: Terminal Display, Theme & Interference Tests, Lines 551-end)', startLine: 551, endLine: 1200 }],
+  path.join(BUNDLES_DIR, 'bundle_tests_ui_vox_part2.md')
 );
 
 compileBundle(
@@ -556,7 +563,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_tests_ui_roster_rogue.md\`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | \`tests/ui/rogue.test.js\`, \`tests/ui/roster.test.js\` |
 | [\`bundle_tests_ui_crusade.md\`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | \`tests/ui/crusade.test.js\`, \`tests/js/crusade.test.js\` |
 | [\`bundle_tests_ui_forge.md\`](bundle_tests_ui_forge.md) | **UI Tests (Munitorum Forge)** | \`tests/ui/crusade-forge.test.js\` |
-| [\`bundle_tests_ui_vox.md\`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal)** | \`tests/ui/vox.test.js\` |
+| [\`bundle_tests_ui_vox.md\`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal Part 1)** | \`tests/ui/vox.test.js\` (Lines 1-550) |
+| [\`bundle_tests_ui_vox_part2.md\`](bundle_tests_ui_vox_part2.md) | **UI Tests (Vox-Terminal Part 2)** | \`tests/ui/vox.test.js\` (Lines 551-end) |
 | [\`bundle_tests_bridge.md\`](bundle_tests_bridge.md) | **Courier Bridge Tests** | \`tests/vox_bridge.test.js\` |
 | [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Tests (Spawner Subsystems & UI Flow)** | \`tests/js/spawner*.test.js\`, \`tests/ui/spawner.test.js\` |
 | [\`bundle_tests_js_core.md\`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | \`tests/js/data.test.js\`, \`tests/js/rng.test.js\`, \`tests/js/vox-audio.test.js\` |

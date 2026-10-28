@@ -163,18 +163,6 @@ function applyVoxFactionTheme(chan, persist = false) {
       document.body.dataset.factionTheme = theme || 'default';
     }
   }
-  const dBox = document.getElementById('directMessagesBox');
-  const iBox = document.getElementById('interferencesBox');
-  if (dBox && dBox.classList && typeof dBox.classList.toggle === 'function') {
-    dBox.classList.toggle('vox-preview-beta', chan === 'beta');
-    dBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
-    dBox.classList.toggle('vox-preview-gamma', chan === 'gamma');
-  }
-  if (iBox && iBox.classList && typeof iBox.classList.toggle === 'function') {
-    iBox.classList.toggle('vox-preview-beta', chan === 'beta');
-    iBox.classList.toggle('vox-preview-alpha', chan === 'alpha');
-    iBox.classList.toggle('vox-preview-gamma', chan === 'gamma');
-  }
 }
 
 async function selectConduit(chan, clearPendingCheck = false) {
@@ -566,7 +554,7 @@ async function purgeVoxEntry(entryId, entryType = 'message') {
 function isRogueSectorInterference(ix) {
   if (!ix) return false;
   const combined = `${ix.origin_hint || ''} ${ix.redacted_text || ''}`;
-  return /PARALLEL SECTOR|ORBITAL AUGUR ARRAY|ROGUE SECTOR/i.test(combined);
+  return /PARALLEL SECTOR|ORBITAL AUGUR|ROGUE SECTOR|SECTOR BROADCAST|BROADCAST|ALL COMBATANTS|ALL PLAYERS|DISTANT SOLO HORDE|DISTANT WARP-BREACH|DISTANT ADVERSARY/i.test(combined);
 }
 
 /**
@@ -779,12 +767,14 @@ async function refreshTerminal(forceScroll = false) {
         }
 
         visibleInts.forEach(ix => {
-          const isRogue = isRogueSectorInterference(ix);
+          const isBroadcast = isRogueSectorInterference(ix);
           const card = document.createElement('div');
-          card.className = isRogue ? 'crt-intercept-card rogue-intercept' : 'crt-intercept-card';
-          const headerColor = isRogue ? '#c084fc' : '#ff4757';
-          const headerBorder = isRogue ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
-          const headerIcon = isRogue ? 'SECTOR BROADCAST' : 'INTERCEPT';
+          card.className = isBroadcast
+            ? 'crt-intercept-card rogue-intercept sector-broadcast'
+            : 'crt-intercept-card';
+          const headerColor = isBroadcast ? '#c084fc' : '#ff4757';
+          const headerBorder = isBroadcast ? 'rgba(168,85,247,0.35)' : 'rgba(255,71,87,0.3)';
+          const headerIcon = isBroadcast ? 'SECTOR BROADCAST' : 'TARGET INTERCEPT';
           card.innerHTML = `
             <div class="crt-msg-meta" style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:${headerColor}; border-bottom:1px dashed ${headerBorder}; padding-bottom:5px; margin-bottom:8px;">
               <span>${headerIcon} // ${escapeHtml(ix.origin_hint || 'UNKNOWN CARRIER WAVE')}</span>
