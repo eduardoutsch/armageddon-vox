@@ -142,3 +142,107 @@ test('Crusade Votann State: adjVotannRes accumulates expTotals on gain and exped
   assert.deepEqual(v.expTotals, { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 });
 });
 
+test('Crusade Pure Core: isHordeModeDossier returns true only for Mode 1 Horde battles and false for 1v1 PvP', () => {
+  assert.equal(typeof crusade.isHordeModeDossier, 'function', 'crusade.js must export isHordeModeDossier');
+  assert.equal(crusade.isHordeModeDossier('Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)'), true);
+  assert.equal(crusade.isHordeModeDossier('Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)'), true);
+  assert.equal(crusade.isHordeModeDossier('Mode 1: Distant Solo Horde Breach // Orbital Augur Telemetry'), true);
+  assert.equal(crusade.isHordeModeDossier('Mode 1: Horde Breach // Node 1 (Anthrand Munitions Vaults — Recon)'), true);
+  assert.equal(crusade.isHordeModeDossier('Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)'), false);
+  assert.equal(crusade.isHordeModeDossier('1v1 Ash Wastes PvP'), false);
+  assert.equal(crusade.isHordeModeDossier(''), false);
+  assert.equal(crusade.isHordeModeDossier(null), false);
+});
+
+test('Crusade Pure Core: compileMasterDossier omits Horde Battle Stats when reporting a 1v1 PvP battle', () => {
+  const pvpResult = crusade.compileMasterDossier({
+    channel: 'alpha',
+    modeNode: 'Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)',
+    outcome: '1v1 PvP Victory & Achieved Phase Narrative Goal (+5 SPts)',
+    secretCode: 'None',
+    secretTag: 'None / 1v1 Match',
+    leftoverSp: '0 Leftover SP',
+    battleNotes: 'Decisive 1v1 tank duel in the ash wastes.',
+    queuedRolls: [],
+    hordeBattleStats: {
+      hordeKills: 19,
+      spEarned: 24,
+      spSpent: 12,
+      leftoverSp: 12,
+      hordeFaction: 'Tyranids',
+      roomSeed: 'HIVE-4',
+      gameMode: 'CO-OP'
+    }
+  });
+
+  assert.ok(!pvpResult.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]:'), '1v1 PvP report must NOT include Horde Battle Stats telemetry');
+  assert.ok(!pvpResult.includes('Tyranids'), '1v1 PvP report must NOT include Horde Adversary line');
+});
+
+test('Crusade Tomb World Matrix: adjTombSystemPt, togglePowerReserves, rollMasterSystemReset, and compileTombAwakeningDossier', () => {
+  crusade.resetTombAwakeningTab();
+  assert.deepEqual(crusadeForge.crusadeState.tombSystems, { command: 0, reanimation: 0, translocation: 0 });
+  assert.equal(crusadeForge.crusadeState.tombAgendasCompleted, 0);
+
+  crusade.adjTombField('tombAgendasCompleted', 2);
+  assert.equal(crusadeForge.crusadeState.tombAgendasCompleted, 2);
+
+  // Standard max is 3 pts total
+  crusade.adjTombSystemPt('command', 1);
+  crusade.adjTombSystemPt('reanimation', 2);
+  crusade.adjTombSystemPt('translocation', 1); // Should be blocked since 1+2 = 3/3
+  assert.equal(crusadeForge.crusadeState.tombSystems.translocation, 0);
+
+  // Enable Power Reserves (expands capacity to 4)
+  crusadeForge.crusadeState.powerReservesAllocated = true;
+  crusade.adjTombSystemPt('translocation', 1);
+  assert.equal(crusadeForge.crusadeState.tombSystems.translocation, 1);
+
+  const summary = crusade.buildTombMatrixSummaryLine();
+  assert.ok(summary.includes('Allocated: 4/4 Pts'));
+  assert.ok(summary.includes('Status: [MASTER ONLINE]'));
+
+  const dispatch = crusade.compileTombAwakeningDossier({
+    tombSystems: crusadeForge.crusadeState.tombSystems,
+    powerReservesAllocated: true,
+    notes: 'Awakening protocols locked.'
+  });
+  assert.ok(dispatch.includes('4 / 4 Awakening Points Active'));
+  assert.ok(dispatch.includes('ONLINE (1D3 Power Drain Ready)'));
+  assert.ok(dispatch.includes('Awakening protocols locked.'));
+
+  // Roll Master System Reset (-D3 pts, +1 cycle)
+  const beforeTotal = Object.values(crusadeForge.crusadeState.tombSystems).reduce((a, b) => a + b, 0);
+  crusade.rollMasterSystemReset();
+  const afterTotal = Object.values(crusadeForge.crusadeState.tombSystems).reduce((a, b) => a + b, 0);
+  assert.ok(afterTotal < beforeTotal && afterTotal >= beforeTotal - 3);
+  assert.equal(crusadeForge.crusadeState.tombAwakeningCycles, 1);
+});
+
+test('Crusade Votann: cycleVotannAssetState, adjVotannRare, and rollVotannPostBattleHarvest update vault and totals', () => {
+  crusadeForge.crusadeState.votann = null;
+  const v = crusade.ensureVotannState();
+
+  // Cycle asset state: Locked -> Active -> Upgraded -> Inactive -> Locked
+  assert.equal(v.assets.outpost1 || 'Locked', 'Locked');
+  crusade.cycleVotannAssetState('outpost1');
+  assert.equal(v.assets.outpost1, 'Active');
+  crusade.cycleVotannAssetState('outpost1');
+  assert.equal(v.assets.outpost1, 'Upgraded');
+
+  // Rare resource adjustment
+  crusade.adjVotannRare('energySources', 2);
+  assert.equal(v.rare.energySources, 2);
+  assert.equal(v.expTotals.rare, 2);
+  crusade.adjVotannRare('energySources', -1);
+  assert.equal(v.rare.energySources, 1);
+  assert.equal(v.expTotals.rare, 2, 'Spending rare resource should not reduce expedition total');
+
+  // Post-battle harvest roll adds fundamental resources
+  const prevTotal = v.rawMinerals + v.biomatter + v.energySources + v.galacticIntel;
+  crusade.rollVotannPostBattleHarvest();
+  const nextTotal = v.rawMinerals + v.biomatter + v.energySources + v.galacticIntel;
+  assert.ok(nextTotal > prevTotal, 'Post-battle harvest must increase total fundamental resources');
+});
+
+

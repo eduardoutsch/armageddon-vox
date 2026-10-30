@@ -58,7 +58,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_tests_part2.md`](bundle_tests_part2.md) | **Pages & Boundary Tests (Part 2: Headless Playwright E2E)** | `tests/ui/pages.test.js` (Lines 559-end) |
 | [`bundle_tests_ui_overview.md`](bundle_tests_ui_overview.md) | **UI Tests (Briefing & PvP)** | `tests/ui/briefing.test.js`, `tests/ui/pvp.test.js` |
 | [`bundle_tests_ui_roster_rogue.md`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | `tests/ui/rogue.test.js`, `tests/ui/roster.test.js` |
-| [`bundle_tests_ui_crusade.md`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | `tests/ui/crusade.test.js`, `tests/js/crusade.test.js` |
+| [`bundle_tests_ui_crusade.md`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | `tests/ui/crusade.test.js`, `tests/js/horde-battle-stats.test.js` |
 | [`bundle_tests_ui_forge.md`](bundle_tests_ui_forge.md) | **UI Tests (Munitorum Forge)** | `tests/ui/crusade-forge.test.js` |
 | [`bundle_tests_ui_vox.md`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal Part 1)** | `tests/ui/vox.test.js` (Lines 1-550) |
 | [`bundle_tests_ui_vox_part2.md`](bundle_tests_ui_vox_part2.md) | **UI Tests (Vox-Terminal Part 2)** | `tests/ui/vox.test.js` (Lines 551-end) |

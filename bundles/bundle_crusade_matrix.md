@@ -44,7 +44,7 @@ if (typeof require === 'function') {
  */
 function adjTombField(field, delta) {
   crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = document.getElementById(field);
+  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
   if (el) el.textContent = String(crusadeState[field]);
   updateMasterDossierPreview();
   updateTombAwakeningPreview();
@@ -56,7 +56,7 @@ function adjTombField(field, delta) {
  * Awakening Matrix capacity from 3 points to 4 points.
  */
 function togglePowerReserves() {
-  const cb = document.getElementById('powerReservesToggle');
+  const cb = typeof document !== 'undefined' ? document.getElementById('powerReservesToggle') : null;
   crusadeState.powerReservesAllocated = !!(cb && cb.checked);
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
@@ -112,9 +112,9 @@ function rollMasterSystemReset() {
     }
   }
   crusadeState.tombAwakeningCycles = (crusadeState.tombAwakeningCycles || 0) + 1;
-  const cycEl = document.getElementById('tombAwakeningCycles');
+  const cycEl = typeof document !== 'undefined' ? document.getElementById('tombAwakeningCycles') : null;
   if (cycEl) cycEl.textContent = String(crusadeState.tombAwakeningCycles);
-  const noticeEl = document.getElementById('tombResetNotice');
+  const noticeEl = typeof document !== 'undefined' ? document.getElementById('tombResetNotice') : null;
   if (noticeEl) {
     noticeEl.innerHTML = `<strong style="color:var(--red);">Master System Surge! Rolled D3 = −${d3} Awakening Pt(s) Reset!</strong>`;
   }
@@ -134,6 +134,7 @@ function rollMasterSystemReset() {
  * Translocation) and updates Master System status indicators in Tab 4.
  */
 function renderTombAwakeningMatrix() {
+  if (typeof document === 'undefined') return;
   const grid = document.getElementById('tombMatrixGrid');
   const label = document.getElementById('tombMatrixAllocatedLabel');
   const statusEl = document.getElementById('tombMasterStatusVal');
@@ -316,11 +317,12 @@ function buildTombAwakeningDossierString() {
     tombAwakeningCycles: crusadeState.tombAwakeningCycles || 0,
     powerReservesAllocated: !!crusadeState.powerReservesAllocated,
     tombSystems: crusadeState.tombSystems,
-    notes: document.getElementById('tombAwakeningNotes')?.value || ''
+    notes: (typeof document !== 'undefined' ? document.getElementById('tombAwakeningNotes')?.value : '') || ''
   });
 }
 
 function updateTombAwakeningPreview() {
+  if (typeof document === 'undefined') return;
   const box = document.getElementById('tombAwakeningPreviewBox');
   if (box) {
     box.textContent = buildTombAwakeningDossierString();
@@ -347,12 +349,14 @@ function resetTombAwakeningTab() {
   crusadeState.tombAwakeningCycles = 0;
   crusadeState.powerReservesAllocated = false;
   crusadeState.tombSystems = { command: 0, reanimation: 0, translocation: 0 };
-  const txtIds = { tombAgendasCompleted: '0', tombAwakeningCycles: '0', necronRecipientUnit: '', tombAwakeningNotes: '' };
-  Object.entries(txtIds).forEach(([id, val]) => { const el = document.getElementById(id); if (el) { if ('value' in el) el.value = val; else el.textContent = val; } });
-  const reservesEl = document.getElementById('powerReservesToggle');
-  if (reservesEl) reservesEl.checked = false;
-  const noticeEl = document.getElementById('tombResetNotice');
-  if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
+  if (typeof document !== 'undefined') {
+    const txtIds = { tombAgendasCompleted: '0', tombAwakeningCycles: '0', necronRecipientUnit: '', tombAwakeningNotes: '' };
+    Object.entries(txtIds).forEach(([id, val]) => { const el = document.getElementById(id); if (el) { if ('value' in el) el.value = val; else el.textContent = val; } });
+    const reservesEl = document.getElementById('powerReservesToggle');
+    if (reservesEl) reservesEl.checked = false;
+    const noticeEl = document.getElementById('tombResetNotice');
+    if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
+  }
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') window.VoxAudio.playClank('card');
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
@@ -412,7 +416,7 @@ function adjVotannRare(key, delta) {
 function rollVotannPostBattleHarvest() {
   if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
   const v = ensureVotannState();
-  const mult = parseFloat(document.getElementById('votHarvestSizeSelect')?.value || '1');
+  const mult = parseFloat((typeof document !== 'undefined' ? document.getElementById('votHarvestSizeSelect')?.value : '') || '1');
   const typeRoll = Math.floor(Math.random() * 6) + 1;
   const d6Amt = Math.floor(Math.random() * 6) + 1 + (mult === 2 ? Math.floor(Math.random() * 6) + 1 : 0);
   let amt = mult === 0.5 ? d6Amt * 5 : d6Amt * 10;
@@ -434,7 +438,7 @@ function rollVotannPostBattleHarvest() {
     v.expTotals.biomatter = (v.expTotals.biomatter || 0) + 20;
     bioBonus = ' (+20 Biomatter from Biorecyc Fabricator)';
   }
-  const notice = document.getElementById('votHarvestNotice');
+  const notice = typeof document !== 'undefined' ? document.getElementById('votHarvestNotice') : null;
   if (notice) notice.innerHTML = `<strong style="color:var(--gold);">Rolled D6=${typeRoll}: +${amt} ${picked[1]}${bioBonus}!</strong>`;
   renderVotannTab();
   if (typeof saveCrusadeState === 'function') saveCrusadeState();
@@ -445,7 +449,7 @@ function rollVotannRareResourceCheck() {
   const v = ensureVotannState();
   if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
   const d6 = Math.floor(Math.random() * 6) + 1;
-  const notice = document.getElementById('votHarvestNotice');
+  const notice = typeof document !== 'undefined' ? document.getElementById('votHarvestNotice') : null;
   if (d6 === 6) {
     v.rare.rawMinerals = (v.rare.rawMinerals || 0) + 1;
     v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
@@ -556,8 +560,4 @@ function renderVotannTab() {
   const gp = Math.min(3, Math.max(0, v.goalProgress || 0));
   const gpLabel = document.getElementById('votGoalProgressLabel');
   if (gpLabel) gpLabel.textContent = `${gp} / 3`;
-  const gpPips = document.getElementById('votGoalPips');
-  if (gpPips) {
-    gpPips.innerHTML = [0, 1, 2].map(i => i < gp ? '🟡' : '⚪').join(' ');
-  }
 ````

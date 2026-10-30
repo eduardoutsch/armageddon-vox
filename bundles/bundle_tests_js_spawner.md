@@ -635,6 +635,43 @@ test('Spawner Resupply: executeEnhancedResupplyPurchase calls spendSP and tracks
 
   delete globalThis.spendSP;
 });
+
+test('Spawner Resupply: executeEnhancedResupplyPurchase blocks purchase on Misery lockout or insufficient SP', () => {
+  let spDeducted = 0;
+  globalThis.state = { sp: 10, activeMiseries: [{ id: 21 }] }; // #21 Bunkers Busted locks Fortify
+  globalThis.spendSP = (amt) => { spDeducted += amt; };
+
+  // Forward Operating Base has ['Fortify'] tag -> should be blocked by Misery #21
+  executeEnhancedResupplyPurchase('Forward Operating Base', 3);
+  assert.equal(spDeducted, 0, 'Must not deduct SP when locked out by active Misery card');
+
+  // Clear miseries, test insufficient SP (cost 12 > sp 2)
+  globalThis.state = { sp: 2, activeMiseries: [] };
+  executeEnhancedResupplyPurchase('Reinforcements Arrive', 12);
+  assert.equal(spDeducted, 0, 'Must not deduct SP when player has insufficient SP');
+
+  delete globalThis.spendSP;
+});
+
+test('Spawner Resupply: rollAirStrikeDamage and rollReinforcementsBracket execute without throwing', () => {
+  const airEl = { innerHTML: '' };
+  const reinfEl = { innerHTML: '' };
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'airStrikeRollOut') return airEl;
+      if (id === 'reinforcementsRollOut') return reinfEl;
+      return null;
+    }
+  };
+
+  rollAirStrikeDamage();
+  assert.ok(airEl.innerHTML.includes('2D3'), 'rollAirStrikeDamage must render 2D3 result into #airStrikeRollOut');
+
+  rollReinforcementsBracket();
+  assert.ok(reinfEl.innerHTML.includes('Rolled'), 'rollReinforcementsBracket must render 2D6 result into #reinforcementsRollOut');
+
+  delete globalThis.document;
+});
 ````
 
 ---

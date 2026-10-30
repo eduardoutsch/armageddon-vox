@@ -244,6 +244,7 @@ const evalFn = new Function(
     transmitStartOfTourDossier,
     saveCrusadeState,
     initCrusadePage,
+    isHordeModeDossier: (typeof isHordeModeDossier === 'function' ? isHordeModeDossier : null),
     importHordeBattleStatsToCrusade,
     detachHordeBattleStatsFromCrusade,
     renderHordeStatsAttachmentCard,
@@ -555,7 +556,10 @@ test('crusade: adjTourField, rollNewTourQuotas, and rollVictoryCommendationPts m
   assert.equal(mockElements.toursCompletedCount.textContent, '0');
 });
 
-test('UI Integration: importHordeBattleStatsToCrusade updates attachment card and injects telemetry into preview', () => {
+test('UI Integration: importHordeBattleStatsToCrusade updates attachment card and injects telemetry into preview when reporting a Horde Mode battle', () => {
+  mockElements.dossierModeNode.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  mockElements.dossierOutcome.value = 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)';
+
   // Save simulated Horde battle stats to localStorage
   const simulatedStats = {
     hordeKills: 23,
@@ -579,9 +583,11 @@ test('UI Integration: importHordeBattleStatsToCrusade updates attachment card an
   mockLocalStorage.setItem('foa_horde_battle_stats_v1', JSON.stringify(simulatedStats));
 
   // Import into Crusade page
-  crusade.importHordeBattleStatsToCrusade();
+  const imported = crusade.importHordeBattleStatsToCrusade();
+  assert.equal(imported, true);
 
   // Check that attachment card re-rendered
+  assert.equal(mockElements.hordeStatsAttachCard.style.display, 'block');
   assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('TELEMETRY ATTACHED'));
   assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('Chaos Daemons (SOLO)'));
   assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('23'));
@@ -601,6 +607,55 @@ test('UI Integration: importHordeBattleStatsToCrusade updates attachment card an
   crusade.detachHordeBattleStatsFromCrusade();
   assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('No Horde Battle Telemetry attached'));
   assert.ok(!mockElements.masterDossierPreviewBox.textContent.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]'));
+});
+
+test('UI Integration: Horde Battle Stats can ONLY be imported when reporting a Horde Mode battle and is blocked/hidden for 1v1 PvP', () => {
+  // 1. Start in Mode 1 (Horde Mode) and import stats
+  mockElements.dossierModeNode.value = 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  crusade.updateMasterDossierPreview();
+  assert.equal(mockElements.hordeStatsAttachCard.style.display, 'block', 'Horde stats card must be visible in Mode 1 Horde Mode');
+  assert.ok(
+    mockElements.hordeStatsAttachCard.innerHTML.includes('importHordeBattleStatsToCrusade()'),
+    'Import button must be present when Mode 1 Horde Mode is selected'
+  );
+
+  crusade.importHordeBattleStatsToCrusade();
+  assert.ok(crusade.getCrusadeState().attachedHordeStats, 'Horde stats must attach when Mode 1 is selected');
+
+  // 2. Switch to Mode 2: 1v1 Ash Wastes PvP
+  mockElements.dossierModeNode.value = 'Mode 2: 1v1 Ash Wastes PvP // Node 0 (Golgotha Arbor-Basin)';
+  mockElements.dossierOutcome.value = '1v1 PvP Victory & Achieved Phase Narrative Goal (+5 SPts)';
+  crusade.updateMasterDossierPreview();
+
+  assert.equal(
+    crusade.getCrusadeState().attachedHordeStats,
+    null,
+    'Switching to 1v1 PvP must automatically detach any previously attached Horde stats'
+  );
+  assert.equal(
+    mockElements.hordeStatsAttachCard.style.display,
+    'none',
+    'Horde stats card must be hidden when 1v1 PvP mode is selected'
+  );
+  assert.ok(
+    !mockElements.hordeStatsAttachCard.innerHTML.includes('importHordeBattleStatsToCrusade()'),
+    'Import button must not be rendered when 1v1 PvP mode is selected'
+  );
+  assert.ok(
+    !mockElements.masterDossierPreviewBox.textContent.includes('[HORDE ENGAGEMENT COMBAT TELEMETRY & BATTLE STATS]'),
+    'Master Dossier preview must not include Horde telemetry when 1v1 PvP is selected'
+  );
+
+  // 3. Attempting to call importHordeBattleStatsToCrusade() while on 1v1 PvP must be blocked
+  const imported = crusade.importHordeBattleStatsToCrusade();
+  assert.equal(imported, false, 'importHordeBattleStatsToCrusade must return false when not reporting a Horde Mode battle');
+  assert.equal(crusade.getCrusadeState().attachedHordeStats, null, 'attachedHordeStats must remain null when blocked');
+
+  // 4. Switch back to Mode 1 Horde Mode -> card becomes visible again
+  mockElements.dossierModeNode.value = 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)';
+  crusade.updateMasterDossierPreview();
+  assert.equal(mockElements.hordeStatsAttachCard.style.display, 'block', 'Horde stats card must reappear when switching back to Horde Mode');
+  assert.ok(mockElements.hordeStatsAttachCard.innerHTML.includes('importHordeBattleStatsToCrusade()'));
 });
 
 test('UI Boundary: pages/crusade.html includes Condition Tracker, Goal Counter, and Expedition Totals UI', () => {

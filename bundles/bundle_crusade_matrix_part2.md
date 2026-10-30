@@ -10,6 +10,10 @@ Crusade resource adjustments, harvest rollers, expedition fields, and master dos
 ## File: `js/crusade.js (Part 2: Operations & Dispatch)` <a id="file-jscrusadejspart2operationsdispatch"></a>
 
 ````javascript
+  const gpPips = document.getElementById('votGoalPips');
+  if (gpPips) {
+    gpPips.innerHTML = [0, 1, 2].map(i => i < gp ? '🟡' : '⚪').join(' ');
+  }
 
   const expTot = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
   const expTotEl = document.getElementById('votExpTotalsDisplay');
@@ -122,6 +126,20 @@ function updateDistantForceVisibility() {
 }
 
 /**
+ * Pure predicate: determines whether the selected engagement mode in the
+ * Master Battle Dossier represents a Mode 1 Horde Mode battle.
+ *
+ * @param {string} [modeNode] - Mode & Sector Node string from #dossierModeNode.
+ * @returns {boolean} True only if the engagement is a Horde Mode battle.
+ */
+function isHordeModeDossier(modeNode) {
+  const mode = String(modeNode || '').trim();
+  if (!mode) return false;
+  if (/mode\s*2|1v1|pvp/i.test(mode)) return false;
+  return /mode\s*1|horde/i.test(mode);
+}
+
+/**
  * Pure functional core: compiles the Master Post-Battle Dossier string from a plain data
  * object. Supports standard Player 1 / Player 2 engagements as well as Distant Solo Horde
  * Orbital Augur Telemetry where neither main player was fielded.
@@ -143,6 +161,7 @@ function compileMasterDossier(input = {}) {
   const distantForce = (input.distantForce || '').trim();
 
   const isDistantAugur = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(modeNode);
+  const allowHordeStats = modeNode ? isHordeModeDossier(modeNode) : true;
 
   const unitLines = queuedRolls.length > 0
     ? queuedRolls.map((q, i) =>
@@ -169,7 +188,7 @@ function compileMasterDossier(input = {}) {
       `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`
     ];
 
-    if (input.hordeBattleStats) {
+    if (allowHordeStats && input.hordeBattleStats) {
       const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
         ? compileHordeBattleStatsDossierSection
         : _compileHordeBattleStatsDossierSection;
@@ -227,7 +246,7 @@ function compileMasterDossier(input = {}) {
     if (logSummary) lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
   }
 
-  if (input.hordeBattleStats) {
+  if (allowHordeStats && input.hordeBattleStats) {
     const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
       ? compileHordeBattleStatsDossierSection
       : _compileHordeBattleStatsDossierSection;
@@ -263,9 +282,12 @@ function readMasterDossierFormInputs() {
   if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
   if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
 
+  const modeNode = document.getElementById('dossierModeNode')?.value || '';
+  const isHorde = isHordeModeDossier(modeNode);
+
   return {
     channel: document.getElementById('dossierChannel')?.value || 'alpha',
-    modeNode: document.getElementById('dossierModeNode')?.value || '',
+    modeNode,
     outcome: document.getElementById('dossierOutcome')?.value || '',
     secretCode: document.getElementById('dossierSecretCode')?.value || '',
     secretTag: document.getElementById('dossierSecretTag')?.value || '',
@@ -274,7 +296,7 @@ function readMasterDossierFormInputs() {
     distantForce: document.getElementById('dossierDistantForce')?.value || '',
     fortifications: forts,
     queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
-    hordeBattleStats: crusadeState.attachedHordeStats || null,
+    hordeBattleStats: isHorde ? (crusadeState.attachedHordeStats || null) : null,
     logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null,
     tombSummary: typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : null,
     votannSummary: typeof buildVotannSummaryLine === 'function' ? buildVotannSummaryLine() : null
@@ -294,6 +316,11 @@ function buildMasterDossierString() {
 function updateMasterDossierPreview() {
   if (typeof document === 'undefined') return;
   updateDistantForceVisibility();
+  const modeNode = document.getElementById('dossierModeNode')?.value || '';
+  if (modeNode && !isHordeModeDossier(modeNode) && crusadeState.attachedHordeStats) {
+    crusadeState.attachedHordeStats = null;
+  }
+  renderHordeStatsAttachmentCard();
   const box = document.getElementById('masterDossierPreviewBox');
   const chan = document.getElementById('dossierChannel')?.value || 'alpha';
   if (box) {
@@ -366,31 +393,41 @@ function initCrusadePage() {
 /**
  * Imports the latest saved Horde Battle Stats from localStorage into Crusade state
  * and automatically pre-fills matching form fields (secret objective, fortifications,
- * leftover SP, and mode).
+ * leftover SP, and mode). Only permitted when reporting a Mode 1 Horde Mode battle.
+ *
+ * @returns {boolean} True if telemetry was imported, false if blocked or unavailable.
  */
 function importHordeBattleStatsToCrusade() {
+  const modeEl = typeof document !== 'undefined' ? document.getElementById('dossierModeNode') : null;
+  const currentMode = modeEl ? modeEl.value : (crusadeState.dossierModeNode || 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  if (!isHordeModeDossier(currentMode)) {
+    if (typeof alert === 'function') {
+      alert("Horde Mode Battle Telemetry can only be imported when reporting a Mode 1 Horde Mode battle.\nSelect a Mode 1 Horde Breach option in 'Mode & Sector Node Fought' first!");
+    }
+    return false;
+  }
+
   const loader = (typeof loadHordeBattleStats === 'function') ? loadHordeBattleStats : _loadHordeBattleStats;
   const stats = loader ? loader() : null;
   if (!stats) {
     if (typeof alert === 'function') {
       alert("No saved Horde Mode Battle Telemetry found in local memory.\nPlay a match in Spawner / Mode 1 and click 'Export to Crusade' first!");
     }
-    return;
+    return false;
   }
   crusadeState.attachedHordeStats = stats;
 
   if (stats.secretObjective && stats.secretObjective.code) {
-    const secCodeInput = document.getElementById('dossierSecretCode');
+    const secCodeInput = typeof document !== 'undefined' ? document.getElementById('dossierSecretCode') : null;
     if (secCodeInput) secCodeInput.value = stats.secretObjective.code;
   }
   if (stats.gameMode === 'SOLO') {
-    const modeEl = document.getElementById('dossierModeNode');
     if (modeEl && !modeEl.value.includes('Solo')) {
       modeEl.value = 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)';
     }
   }
 
-  if (Array.isArray(stats.fortifications)) {
+  if (Array.isArray(stats.fortifications) && typeof document !== 'undefined') {
     const fortList = stats.fortifications.map(f => String(f).toLowerCase());
     const fortHosp = document.getElementById('fortHosp');
     if (fortHosp) fortHosp.checked = fortList.some(f => f.includes('hospital'));
@@ -403,7 +440,7 @@ function importHordeBattleStatsToCrusade() {
   }
 
   const leftoverVal = Number(stats.leftoverSp) || 0;
-  const leftoverEl = document.getElementById('dossierLeftoverSp');
+  const leftoverEl = typeof document !== 'undefined' ? document.getElementById('dossierLeftoverSp') : null;
   if (leftoverEl) {
     if (leftoverVal >= 8) leftoverEl.value = '8 Leftover SP → +1 RP or +100 pts Supply Limit';
     else if (leftoverVal >= 5) leftoverEl.value = '5 Leftover SP → +2 XP to Surviving Unit';
@@ -419,6 +456,7 @@ function importHordeBattleStatsToCrusade() {
   saveCrusadeState();
   renderHordeStatsAttachmentCard();
   updateMasterDossierPreview();
+  return true;
 }
 
 /**
@@ -436,10 +474,32 @@ function detachHordeBattleStatsFromCrusade() {
 
 /**
  * Dumb UI renderer for the Attached Horde Battle Stats card.
+ * Hides the card and disables importing when the selected battle mode is not Horde Mode.
  */
 function renderHordeStatsAttachmentCard() {
+  if (typeof document === 'undefined') return;
   const card = document.getElementById('hordeStatsAttachCard');
   if (!card) return;
+
+  const modeEl = document.getElementById('dossierModeNode');
+  const currentMode = modeEl ? modeEl.value : (crusadeState.dossierModeNode || 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  if (!isHordeModeDossier(currentMode)) {
+    if (card.style) {
+      card.style.display = 'none';
+      card.style.borderColor = 'rgba(255,255,255,0.08)';
+      card.style.background = '#0b0d13';
+    }
+    card.innerHTML = `
+      <div style="font-size:0.82rem; color:var(--muted);">
+        Horde Battle Telemetry import is only available when reporting a Mode 1 Horde Mode battle.
+      </div>
+    `;
+    return;
+  }
+
+  if (card.style) {
+    card.style.display = 'block';
+  }
 
   const stats = crusadeState.attachedHordeStats;
   if (!stats) {
@@ -460,4 +520,59 @@ function renderHordeStatsAttachmentCard() {
     `;
     return;
   }
+
+  const kills = stats.hordeKills || 0;
+  const misCount = Array.isArray(stats.miseriesDrawn) ? stats.miseriesDrawn.length : 0;
+  const secComp = Array.isArray(stats.secondariesCompleted) ? stats.secondariesCompleted.length : 0;
+  const secFail = Array.isArray(stats.secondariesFailed) ? stats.secondariesFailed.length : 0;
+  const faction = stats.hordeFaction || 'Horde Enemy';
+  const mode = stats.gameMode || 'CO-OP';
+
+  card.style.borderColor = 'var(--gold)';
+  card.style.background = 'rgba(217,119,6,0.08)';
+  card.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge gold">📎 TELEMETRY ATTACHED</span>
+        <strong style="color:#fff; font-size:0.9rem;">${faction} (${mode})</strong>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="btn-ghost btn-sm" onclick="importHordeBattleStatsToCrusade()" title="Re-sync latest stats">🔄 Re-sync</button>
+        <button type="button" class="btn-red btn-sm" onclick="detachHordeBattleStatsFromCrusade()" title="Remove attached stats">✕ Detach</button>
+      </div>
+    </div>
+    <div style="font-size:0.82rem; color:#e2e8f0; line-height:1.4;">
+      💀 <strong>${kills}</strong> Units Slain • 📜 <strong>${misCount}</strong> Miseries • 🎯 <strong>${secComp}</strong> Secondaries Won / <strong>${secFail}</strong> Failed • ⚡ <strong>${stats.spEarned || 0}</strong> SP Earned / <strong>${stats.spSpent || 0}</strong> Spent
+    </div>
+  `;
+}
+
+const crusadeExports = {
+  adjTombField, togglePowerReserves, adjTombSystemPt, rollMasterSystemReset,
+  renderTombAwakeningMatrix, populateNecronDynasticVault, renderSelectedNecronVaultPreview,
+  attachNecronVaultToDossier, buildTombMatrixSummaryLine, compileTombAwakeningDossier,
+  buildTombAwakeningDossierString, updateTombAwakeningPreview, transmitTombAwakeningDossier,
+  resetTombAwakeningTab, ensureVotannState, adjVotannRes, adjVotannRare,
+  rollVotannPostBattleHarvest, rollVotannRareResourceCheck, syncVotannExpeditionSelectors,
+  adjVotannExpField, cycleVotannAssetState, populateVotannVault,
+  renderSelectedVotannVaultPreview, attachVotannVaultToDossier, renderVotannTab,
+  buildVotannSummaryLine, compileVotannDispatch, updateVotannDispatchPreview,
+  transmitVotannDispatch, resetMasterDossierForm, updateDistantForceVisibility,
+  isHordeModeDossier, compileMasterDossier, readMasterDossierFormInputs, buildMasterDossierString,
+  updateMasterDossierPreview, transmitMasterBattleDossier, saveCrusadeState,
+  initCrusadePage, importHordeBattleStatsToCrusade, detachHordeBattleStatsFromCrusade,
+  renderHordeStatsAttachmentCard
+};
+
+if (typeof window !== 'undefined') {
+  Object.assign(window, crusadeExports);
+  window.addEventListener('DOMContentLoaded', initCrusadePage);
+  window.addEventListener('vox:page-swapped', () => {
+    if (document.getElementById('cruTabBoard')) initCrusadePage();
+  });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = crusadeExports;
+}
 ````

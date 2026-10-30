@@ -32,7 +32,7 @@ if (typeof require === 'function') {
  */
 function adjTombField(field, delta) {
   crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = document.getElementById(field);
+  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
   if (el) el.textContent = String(crusadeState[field]);
   updateMasterDossierPreview();
   updateTombAwakeningPreview();
@@ -44,7 +44,7 @@ function adjTombField(field, delta) {
  * Awakening Matrix capacity from 3 points to 4 points.
  */
 function togglePowerReserves() {
-  const cb = document.getElementById('powerReservesToggle');
+  const cb = typeof document !== 'undefined' ? document.getElementById('powerReservesToggle') : null;
   crusadeState.powerReservesAllocated = !!(cb && cb.checked);
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
@@ -100,9 +100,9 @@ function rollMasterSystemReset() {
     }
   }
   crusadeState.tombAwakeningCycles = (crusadeState.tombAwakeningCycles || 0) + 1;
-  const cycEl = document.getElementById('tombAwakeningCycles');
+  const cycEl = typeof document !== 'undefined' ? document.getElementById('tombAwakeningCycles') : null;
   if (cycEl) cycEl.textContent = String(crusadeState.tombAwakeningCycles);
-  const noticeEl = document.getElementById('tombResetNotice');
+  const noticeEl = typeof document !== 'undefined' ? document.getElementById('tombResetNotice') : null;
   if (noticeEl) {
     noticeEl.innerHTML = `<strong style="color:var(--red);">Master System Surge! Rolled D3 = −${d3} Awakening Pt(s) Reset!</strong>`;
   }
@@ -122,6 +122,7 @@ function rollMasterSystemReset() {
  * Translocation) and updates Master System status indicators in Tab 4.
  */
 function renderTombAwakeningMatrix() {
+  if (typeof document === 'undefined') return;
   const grid = document.getElementById('tombMatrixGrid');
   const label = document.getElementById('tombMatrixAllocatedLabel');
   const statusEl = document.getElementById('tombMasterStatusVal');
@@ -304,11 +305,12 @@ function buildTombAwakeningDossierString() {
     tombAwakeningCycles: crusadeState.tombAwakeningCycles || 0,
     powerReservesAllocated: !!crusadeState.powerReservesAllocated,
     tombSystems: crusadeState.tombSystems,
-    notes: document.getElementById('tombAwakeningNotes')?.value || ''
+    notes: (typeof document !== 'undefined' ? document.getElementById('tombAwakeningNotes')?.value : '') || ''
   });
 }
 
 function updateTombAwakeningPreview() {
+  if (typeof document === 'undefined') return;
   const box = document.getElementById('tombAwakeningPreviewBox');
   if (box) {
     box.textContent = buildTombAwakeningDossierString();
@@ -335,12 +337,14 @@ function resetTombAwakeningTab() {
   crusadeState.tombAwakeningCycles = 0;
   crusadeState.powerReservesAllocated = false;
   crusadeState.tombSystems = { command: 0, reanimation: 0, translocation: 0 };
-  const txtIds = { tombAgendasCompleted: '0', tombAwakeningCycles: '0', necronRecipientUnit: '', tombAwakeningNotes: '' };
-  Object.entries(txtIds).forEach(([id, val]) => { const el = document.getElementById(id); if (el) { if ('value' in el) el.value = val; else el.textContent = val; } });
-  const reservesEl = document.getElementById('powerReservesToggle');
-  if (reservesEl) reservesEl.checked = false;
-  const noticeEl = document.getElementById('tombResetNotice');
-  if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
+  if (typeof document !== 'undefined') {
+    const txtIds = { tombAgendasCompleted: '0', tombAwakeningCycles: '0', necronRecipientUnit: '', tombAwakeningNotes: '' };
+    Object.entries(txtIds).forEach(([id, val]) => { const el = document.getElementById(id); if (el) { if ('value' in el) el.value = val; else el.textContent = val; } });
+    const reservesEl = document.getElementById('powerReservesToggle');
+    if (reservesEl) reservesEl.checked = false;
+    const noticeEl = document.getElementById('tombResetNotice');
+    if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
+  }
   if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') window.VoxAudio.playClank('card');
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
@@ -400,7 +404,7 @@ function adjVotannRare(key, delta) {
 function rollVotannPostBattleHarvest() {
   if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
   const v = ensureVotannState();
-  const mult = parseFloat(document.getElementById('votHarvestSizeSelect')?.value || '1');
+  const mult = parseFloat((typeof document !== 'undefined' ? document.getElementById('votHarvestSizeSelect')?.value : '') || '1');
   const typeRoll = Math.floor(Math.random() * 6) + 1;
   const d6Amt = Math.floor(Math.random() * 6) + 1 + (mult === 2 ? Math.floor(Math.random() * 6) + 1 : 0);
   let amt = mult === 0.5 ? d6Amt * 5 : d6Amt * 10;
@@ -422,7 +426,7 @@ function rollVotannPostBattleHarvest() {
     v.expTotals.biomatter = (v.expTotals.biomatter || 0) + 20;
     bioBonus = ' (+20 Biomatter from Biorecyc Fabricator)';
   }
-  const notice = document.getElementById('votHarvestNotice');
+  const notice = typeof document !== 'undefined' ? document.getElementById('votHarvestNotice') : null;
   if (notice) notice.innerHTML = `<strong style="color:var(--gold);">Rolled D6=${typeRoll}: +${amt} ${picked[1]}${bioBonus}!</strong>`;
   renderVotannTab();
   if (typeof saveCrusadeState === 'function') saveCrusadeState();
@@ -433,7 +437,7 @@ function rollVotannRareResourceCheck() {
   const v = ensureVotannState();
   if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
   const d6 = Math.floor(Math.random() * 6) + 1;
-  const notice = document.getElementById('votHarvestNotice');
+  const notice = typeof document !== 'undefined' ? document.getElementById('votHarvestNotice') : null;
   if (d6 === 6) {
     v.rare.rawMinerals = (v.rare.rawMinerals || 0) + 1;
     v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
@@ -660,6 +664,20 @@ function updateDistantForceVisibility() {
 }
 
 /**
+ * Pure predicate: determines whether the selected engagement mode in the
+ * Master Battle Dossier represents a Mode 1 Horde Mode battle.
+ *
+ * @param {string} [modeNode] - Mode & Sector Node string from #dossierModeNode.
+ * @returns {boolean} True only if the engagement is a Horde Mode battle.
+ */
+function isHordeModeDossier(modeNode) {
+  const mode = String(modeNode || '').trim();
+  if (!mode) return false;
+  if (/mode\s*2|1v1|pvp/i.test(mode)) return false;
+  return /mode\s*1|horde/i.test(mode);
+}
+
+/**
  * Pure functional core: compiles the Master Post-Battle Dossier string from a plain data
  * object. Supports standard Player 1 / Player 2 engagements as well as Distant Solo Horde
  * Orbital Augur Telemetry where neither main player was fielded.
@@ -681,6 +699,7 @@ function compileMasterDossier(input = {}) {
   const distantForce = (input.distantForce || '').trim();
 
   const isDistantAugur = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(modeNode);
+  const allowHordeStats = modeNode ? isHordeModeDossier(modeNode) : true;
 
   const unitLines = queuedRolls.length > 0
     ? queuedRolls.map((q, i) =>
@@ -707,7 +726,7 @@ function compileMasterDossier(input = {}) {
       `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`
     ];
 
-    if (input.hordeBattleStats) {
+    if (allowHordeStats && input.hordeBattleStats) {
       const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
         ? compileHordeBattleStatsDossierSection
         : _compileHordeBattleStatsDossierSection;
@@ -765,7 +784,7 @@ function compileMasterDossier(input = {}) {
     if (logSummary) lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
   }
 
-  if (input.hordeBattleStats) {
+  if (allowHordeStats && input.hordeBattleStats) {
     const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
       ? compileHordeBattleStatsDossierSection
       : _compileHordeBattleStatsDossierSection;
@@ -801,9 +820,12 @@ function readMasterDossierFormInputs() {
   if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
   if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
 
+  const modeNode = document.getElementById('dossierModeNode')?.value || '';
+  const isHorde = isHordeModeDossier(modeNode);
+
   return {
     channel: document.getElementById('dossierChannel')?.value || 'alpha',
-    modeNode: document.getElementById('dossierModeNode')?.value || '',
+    modeNode,
     outcome: document.getElementById('dossierOutcome')?.value || '',
     secretCode: document.getElementById('dossierSecretCode')?.value || '',
     secretTag: document.getElementById('dossierSecretTag')?.value || '',
@@ -812,7 +834,7 @@ function readMasterDossierFormInputs() {
     distantForce: document.getElementById('dossierDistantForce')?.value || '',
     fortifications: forts,
     queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
-    hordeBattleStats: crusadeState.attachedHordeStats || null,
+    hordeBattleStats: isHorde ? (crusadeState.attachedHordeStats || null) : null,
     logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null,
     tombSummary: typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : null,
     votannSummary: typeof buildVotannSummaryLine === 'function' ? buildVotannSummaryLine() : null
@@ -832,6 +854,11 @@ function buildMasterDossierString() {
 function updateMasterDossierPreview() {
   if (typeof document === 'undefined') return;
   updateDistantForceVisibility();
+  const modeNode = document.getElementById('dossierModeNode')?.value || '';
+  if (modeNode && !isHordeModeDossier(modeNode) && crusadeState.attachedHordeStats) {
+    crusadeState.attachedHordeStats = null;
+  }
+  renderHordeStatsAttachmentCard();
   const box = document.getElementById('masterDossierPreviewBox');
   const chan = document.getElementById('dossierChannel')?.value || 'alpha';
   if (box) {
@@ -904,31 +931,41 @@ function initCrusadePage() {
 /**
  * Imports the latest saved Horde Battle Stats from localStorage into Crusade state
  * and automatically pre-fills matching form fields (secret objective, fortifications,
- * leftover SP, and mode).
+ * leftover SP, and mode). Only permitted when reporting a Mode 1 Horde Mode battle.
+ *
+ * @returns {boolean} True if telemetry was imported, false if blocked or unavailable.
  */
 function importHordeBattleStatsToCrusade() {
+  const modeEl = typeof document !== 'undefined' ? document.getElementById('dossierModeNode') : null;
+  const currentMode = modeEl ? modeEl.value : (crusadeState.dossierModeNode || 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  if (!isHordeModeDossier(currentMode)) {
+    if (typeof alert === 'function') {
+      alert("Horde Mode Battle Telemetry can only be imported when reporting a Mode 1 Horde Mode battle.\nSelect a Mode 1 Horde Breach option in 'Mode & Sector Node Fought' first!");
+    }
+    return false;
+  }
+
   const loader = (typeof loadHordeBattleStats === 'function') ? loadHordeBattleStats : _loadHordeBattleStats;
   const stats = loader ? loader() : null;
   if (!stats) {
     if (typeof alert === 'function') {
       alert("No saved Horde Mode Battle Telemetry found in local memory.\nPlay a match in Spawner / Mode 1 and click 'Export to Crusade' first!");
     }
-    return;
+    return false;
   }
   crusadeState.attachedHordeStats = stats;
 
   if (stats.secretObjective && stats.secretObjective.code) {
-    const secCodeInput = document.getElementById('dossierSecretCode');
+    const secCodeInput = typeof document !== 'undefined' ? document.getElementById('dossierSecretCode') : null;
     if (secCodeInput) secCodeInput.value = stats.secretObjective.code;
   }
   if (stats.gameMode === 'SOLO') {
-    const modeEl = document.getElementById('dossierModeNode');
     if (modeEl && !modeEl.value.includes('Solo')) {
       modeEl.value = 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)';
     }
   }
 
-  if (Array.isArray(stats.fortifications)) {
+  if (Array.isArray(stats.fortifications) && typeof document !== 'undefined') {
     const fortList = stats.fortifications.map(f => String(f).toLowerCase());
     const fortHosp = document.getElementById('fortHosp');
     if (fortHosp) fortHosp.checked = fortList.some(f => f.includes('hospital'));
@@ -941,7 +978,7 @@ function importHordeBattleStatsToCrusade() {
   }
 
   const leftoverVal = Number(stats.leftoverSp) || 0;
-  const leftoverEl = document.getElementById('dossierLeftoverSp');
+  const leftoverEl = typeof document !== 'undefined' ? document.getElementById('dossierLeftoverSp') : null;
   if (leftoverEl) {
     if (leftoverVal >= 8) leftoverEl.value = '8 Leftover SP → +1 RP or +100 pts Supply Limit';
     else if (leftoverVal >= 5) leftoverEl.value = '5 Leftover SP → +2 XP to Surviving Unit';
@@ -957,6 +994,7 @@ function importHordeBattleStatsToCrusade() {
   saveCrusadeState();
   renderHordeStatsAttachmentCard();
   updateMasterDossierPreview();
+  return true;
 }
 
 /**
@@ -974,10 +1012,32 @@ function detachHordeBattleStatsFromCrusade() {
 
 /**
  * Dumb UI renderer for the Attached Horde Battle Stats card.
+ * Hides the card and disables importing when the selected battle mode is not Horde Mode.
  */
 function renderHordeStatsAttachmentCard() {
+  if (typeof document === 'undefined') return;
   const card = document.getElementById('hordeStatsAttachCard');
   if (!card) return;
+
+  const modeEl = document.getElementById('dossierModeNode');
+  const currentMode = modeEl ? modeEl.value : (crusadeState.dossierModeNode || 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)');
+  if (!isHordeModeDossier(currentMode)) {
+    if (card.style) {
+      card.style.display = 'none';
+      card.style.borderColor = 'rgba(255,255,255,0.08)';
+      card.style.background = '#0b0d13';
+    }
+    card.innerHTML = `
+      <div style="font-size:0.82rem; color:var(--muted);">
+        Horde Battle Telemetry import is only available when reporting a Mode 1 Horde Mode battle.
+      </div>
+    `;
+    return;
+  }
+
+  if (card.style) {
+    card.style.display = 'block';
+  }
 
   const stats = crusadeState.attachedHordeStats;
   if (!stats) {
@@ -1036,7 +1096,7 @@ const crusadeExports = {
   renderSelectedVotannVaultPreview, attachVotannVaultToDossier, renderVotannTab,
   buildVotannSummaryLine, compileVotannDispatch, updateVotannDispatchPreview,
   transmitVotannDispatch, resetMasterDossierForm, updateDistantForceVisibility,
-  compileMasterDossier, readMasterDossierFormInputs, buildMasterDossierString,
+  isHordeModeDossier, compileMasterDossier, readMasterDossierFormInputs, buildMasterDossierString,
   updateMasterDossierPreview, transmitMasterBattleDossier, saveCrusadeState,
   initCrusadePage, importHordeBattleStatsToCrusade, detachHordeBattleStatsFromCrusade,
   renderHordeStatsAttachmentCard

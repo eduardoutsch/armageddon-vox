@@ -11,6 +11,19 @@ Headless browser E2E verification, cockpit controls, and multi-CP stratagem vali
 
 ````javascript
 
+  // Root README technical sections & AI involvement disclosure
+  assert.ok(rootReadme.includes('System Architecture'), 'README.md must include a System Architecture section');
+  assert.ok(rootReadme.includes('AI Involvement & Human-AI Collaboration'), 'README.md must disclose AI involvement at runtime and development time');
+  assert.ok(rootReadme.includes('Functional Core, Imperative Shell'), 'README.md must document the Functional Core / Dumb UI architecture');
+  assert.ok(rootReadme.includes('mulberry32'), 'README.md must document the deterministic mulberry32 PRNG engine');
+  assert.ok(rootReadme.includes('Web Audio API'), 'README.md must document the procedural Web Audio API synthesizer');
+  assert.ok(rootReadme.includes('vox_server_heartbeat'), 'README.md must document the Supabase RPC & live server heartbeat architecture');
+
+  // Bundles README technical context & AI ingestion explanation
+  assert.ok(bundlesReadme.includes('AI Context-Window Partitioning'), 'bundles/README.md must explain the AI context-window partitioning architecture');
+  assert.ok(bundlesReadme.includes('quadruple-backtick'), 'bundles/README.md must document the quadruple-backtick escaping mechanism');
+});
+
 test('UI Boundary: pages/spawner.html HUD bar keeps room info and cloud sync badge aligned on a single row without wrapping', () => {
   const spawnerHtml = readPage('pages/spawner.html');
   const css = readPage('css/style.css');
@@ -261,6 +274,19 @@ test('UI Boundary: pages/spawner.html awards strictly 2 SP per objective in Solo
   try {
     browser = await launchTestBrowser();
     const page = await browser.newPage();
+    await page.route(`http://localhost:${port}/**`, async (route) => {
+      let reqPath = new URL(route.request().url()).pathname;
+      if (reqPath === '/') reqPath = '/index.html';
+      const filePath = path.join(ROOT_DIR, reqPath);
+      if (fs.existsSync(filePath)) {
+        const contentType = filePath.endsWith('.html')
+          ? 'text/html'
+          : (filePath.endsWith('.js') ? 'application/javascript' : (filePath.endsWith('.css') ? 'text/css' : 'application/octet-stream'));
+        await route.fulfill({ status: 200, contentType, body: fs.readFileSync(filePath) });
+      } else {
+        await route.fulfill({ status: 404, body: 'Not found' });
+      }
+    });
 
     // 1. Initial load on spawner.html
     await page.goto(`http://localhost:${port}/pages/spawner.html`, { waitUntil: 'load' });

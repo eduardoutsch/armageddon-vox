@@ -475,6 +475,19 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
   try {
     browser = await launchTestBrowser();
     const page = await browser.newPage();
+    await page.route(`http://localhost:${port}/**`, async (route) => {
+      let reqPath = new URL(route.request().url()).pathname;
+      if (reqPath === '/') reqPath = '/index.html';
+      const filePath = path.join(ROOT_DIR, reqPath);
+      if (fs.existsSync(filePath)) {
+        const contentType = filePath.endsWith('.html')
+          ? 'text/html'
+          : (filePath.endsWith('.js') ? 'application/javascript' : (filePath.endsWith('.css') ? 'text/css' : 'application/octet-stream'));
+        await route.fulfill({ status: 200, contentType, body: fs.readFileSync(filePath) });
+      } else {
+        await route.fulfill({ status: 404, body: 'Not found' });
+      }
+    });
     page.on('pageerror', (err) => pageErrors.push(err.message));
 
     // 1. Initial load on vox.html
@@ -807,6 +820,19 @@ test('UI Boundary: pages/spawner.html awards strictly 2 SP per objective in Solo
   try {
     browser = await launchTestBrowser();
     const page = await browser.newPage();
+    await page.route(`http://localhost:${port}/**`, async (route) => {
+      let reqPath = new URL(route.request().url()).pathname;
+      if (reqPath === '/') reqPath = '/index.html';
+      const filePath = path.join(ROOT_DIR, reqPath);
+      if (fs.existsSync(filePath)) {
+        const contentType = filePath.endsWith('.html')
+          ? 'text/html'
+          : (filePath.endsWith('.js') ? 'application/javascript' : (filePath.endsWith('.css') ? 'text/css' : 'application/octet-stream'));
+        await route.fulfill({ status: 200, contentType, body: fs.readFileSync(filePath) });
+      } else {
+        await route.fulfill({ status: 404, body: 'Not found' });
+      }
+    });
 
     // 1. Initial load on spawner.html
     await page.goto(`http://localhost:${port}/pages/spawner.html`, { waitUntil: 'load' });

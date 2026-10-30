@@ -295,6 +295,16 @@ if (typeof module !== 'undefined' && module.exports) {
    * @param {number} baseSpCost - Base SP cost before doubling
    */
   function executeEnhancedResupplyPurchase(itemName, baseSpCost) {
+    const overrides = gRoot.RESUPPLY_OFFICIAL_OVERRIDES || {};
+    const override = overrides[itemName];
+    if (override && Array.isArray(override.tags)) {
+      const lockout = getMiseryLockoutReason(override.tags);
+      if (lockout) {
+        if (typeof alert === 'function') alert(lockout);
+        return;
+      }
+    }
+
     const isDouble = !!((typeof document !== 'undefined') && document.getElementById('doubleCostToggle')?.checked);
     const numCost = Number(baseSpCost) || 0;
     const finalCost = isDouble ? numCost * 2 : numCost;
@@ -333,8 +343,6 @@ if (typeof module !== 'undefined' && module.exports) {
       loseSP(finalCost, { isPurchase: true });
     }
 
-    const overrides = gRoot.RESUPPLY_OFFICIAL_OVERRIDES || {};
-    const override = overrides[itemName];
     if (override && override.autoEffect) {
       const eff = override.autoEffect;
       const adjCpFn = typeof gRoot.adjCP === 'function' ? gRoot.adjCP : (typeof adjCP === 'function' ? adjCP : null);

@@ -155,7 +155,7 @@ function restoreBriefingState() {
     var raw = typeof localStorage !== 'undefined' ? localStorage.getItem(BRIEFING_STORAGE_KEY) : null;
     if (raw) {
       var parsed = JSON.parse(raw);
-      briefingState = Object.assign({}, briefingState, parsed);
+      Object.assign(briefingState, parsed);
     }
   } catch (e) {
     console.warn('Could not restore briefing state:', e);

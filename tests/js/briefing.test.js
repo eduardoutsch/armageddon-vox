@@ -93,3 +93,51 @@ test('briefing pure: unlockTab and lockTab handle Gamma with dedicated gamma aud
   assert.equal(audioCalls.includes('poweroff:alpha'), false, 'lockTab(Gamma) must NOT invoke playTerminalPowerOff("alpha")');
 });
 
+test('briefing pure: selectSlider and selectAtlasNode update briefingState accurately', () => {
+  for (let s = -3; s <= 3; s++) {
+    briefingModule.selectSlider(s, false);
+    assert.equal(briefingModule.briefingState.shipSlider, s);
+  }
+
+  for (let n = 0; n <= 7; n++) {
+    briefingModule.selectAtlasNode(n, false);
+    assert.equal(briefingModule.briefingState.selectedNode, n);
+  }
+});
+
+test('briefing pure: restoreBriefingState honors URL hash and search query parameters over stored state', () => {
+  const mockStorage = {};
+  globalThis.localStorage = {
+    getItem: (k) => mockStorage[k] || null,
+    setItem: (k, v) => { mockStorage[k] = String(v); }
+  };
+
+  mockStorage[briefingModule.BRIEFING_STORAGE_KEY] = JSON.stringify({
+    activeDossier: 'alpha',
+    unlockedAlpha: true,
+    shipSlider: 1,
+    selectedNode: 4
+  });
+
+  // 1. URL hash #gamma takes precedence over stored 'alpha'
+  globalThis.window = {
+    location: { hash: '#gamma', search: '' },
+    VoxAudio: { setFactionTheme: () => {} }
+  };
+  briefingModule.restoreBriefingState();
+  assert.equal(briefingModule.briefingState.activeDossier, 'gamma');
+  assert.equal(briefingModule.briefingState.unlockedAlpha, true);
+  assert.equal(briefingModule.briefingState.selectedNode, 4);
+
+  // 2. URL search ?tab=atlas takes precedence when hash is empty
+  globalThis.window = {
+    location: { hash: '', search: '?tab=atlas' },
+    VoxAudio: { setFactionTheme: () => {} }
+  };
+  briefingModule.restoreBriefingState();
+  assert.equal(briefingModule.briefingState.activeDossier, 'atlas');
+
+  delete globalThis.localStorage;
+});
+
+

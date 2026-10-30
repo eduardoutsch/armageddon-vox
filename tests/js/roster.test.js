@@ -63,3 +63,21 @@ test('Roster: extractUniqueUnitTypes and formatTtsUnitList parse brackets and co
   assert.ok(checklist.includes('+++ TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES +++'));
   assert.ok(checklist.includes('[ ] Intercessors'));
 });
+
+test('Roster: compileNemesisDossier, normalizeUnitType, and formatTtsUnitList handle empty/fallback inputs cleanly', () => {
+  const fallbackDossier = compileNemesisDossier({});
+  assert.ok(fallbackDossier.includes('[Unspecified Hostile Entity]'));
+  assert.ok(fallbackDossier.includes('Slain a Player Warlord / Character in combat'));
+  assert.ok(fallbackDossier.includes('Survived engagement and demonstrated anomalous lethality.'));
+
+  assert.equal(normalizeUnitType(''), '');
+  assert.equal(normalizeUnitType(null), '');
+  assert.equal(normalizeUnitType('2D6 Termagants (Fleshborers)'), 'Termagants (Fleshborers)');
+
+  assert.deepEqual(deduplicateSimilarUnits([]), []);
+  assert.deepEqual(extractUniqueUnitTypes(null), []);
+
+  const emptyChecklist = formatTtsUnitList('Orks', []);
+  assert.ok(emptyChecklist.includes('+++ TABLETOP SIMULATOR (TTS) PREPARATION // ORKS +++'));
+  assert.ok(emptyChecklist.includes('Total Unique Unit Types Required: 0'));
+});

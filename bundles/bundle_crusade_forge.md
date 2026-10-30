@@ -124,7 +124,7 @@ function switchCrusadeTab(which, persist = true) {
 
 function adjScore(field, delta) {
   crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = document.getElementById(field);
+  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
   if (el) el.textContent = crusadeState[field];
   if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
@@ -157,9 +157,9 @@ function selectAllianceTree(alliance, persist = true) {
 
 // --- PURE RANDOM ROLLERS WITH CUSTOM WEB AUDIO SFX ---
 function rollRandomBattleTrait() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
-  const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
-  const uType = document.getElementById('traitUnitType')?.value || 'Infantry';
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
+  const poolKey = (typeof document !== 'undefined' ? document.getElementById('forgeSourcePool')?.value : '') || 'Armageddon';
+  const uType = (typeof document !== 'undefined' ? document.getElementById('traitUnitType')?.value : '') || 'Infantry';
   const traits = (typeof BATTLE_TRAIT_TABLES !== 'undefined') ? BATTLE_TRAIT_TABLES : (typeof window !== 'undefined' ? window.BATTLE_TRAIT_TABLES : {});
   const amTraits = (typeof ASTRA_MILITARUM_TRAIT_TABLES !== 'undefined') ? ASTRA_MILITARUM_TRAIT_TABLES : (typeof window !== 'undefined' ? window.ASTRA_MILITARUM_TRAIT_TABLES : {});
   const necTraits = (typeof NECRONS_TRAIT_TABLES !== 'undefined') ? NECRONS_TRAIT_TABLES : (typeof window !== 'undefined' ? window.NECRONS_TRAIT_TABLES : {});
@@ -178,8 +178,8 @@ function rollRandomBattleTrait() {
   };
 
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playForgeAnvil();
-    const box = document.getElementById('traitResultBox');
+    if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
+    const box = typeof document !== 'undefined' ? document.getElementById('traitResultBox') : null;
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge">D6: ${pick.d6}</span> <strong style="color:var(--gold);">${pick.name}</strong></div>
@@ -190,7 +190,7 @@ function rollRandomBattleTrait() {
 }
 
 function rollRandomWeaponMod() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
   const mods = (typeof WEAPON_MOD_TABLE !== 'undefined') ? WEAPON_MOD_TABLE : (typeof window !== 'undefined' ? window.WEAPON_MOD_TABLE : []);
   const idx1 = Math.floor(Math.random() * mods.length);
   let idx2 = Math.floor(Math.random() * mods.length);
@@ -208,8 +208,8 @@ function rollRandomWeaponMod() {
   };
 
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playForgeAnvil();
-    const box = document.getElementById('weaponResultBox');
+    if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
+    const box = typeof document !== 'undefined' ? document.getElementById('weaponResultBox') : null;
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge">D6: ${m1.d6} &amp; ${m2.d6}</span> <strong style="color:var(--blue);">${m1.name} + ${m2.name}</strong></div>
@@ -220,9 +220,9 @@ function rollRandomWeaponMod() {
 }
 
 function rollRandomRelic() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
-  const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
-  const tier = document.getElementById('relicTierSelect')?.value || 'Artificer';
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
+  const poolKey = (typeof document !== 'undefined' ? document.getElementById('forgeSourcePool')?.value : '') || 'Armageddon';
+  const tier = (typeof document !== 'undefined' ? document.getElementById('relicTierSelect')?.value : '') || 'Artificer';
   const relics = (typeof CRUSADE_RELIC_VAULT !== 'undefined') ? CRUSADE_RELIC_VAULT : (typeof window !== 'undefined' ? window.CRUSADE_RELIC_VAULT : {});
   const amRelics = (typeof ASTRA_MILITARUM_RELIC_VAULT !== 'undefined') ? ASTRA_MILITARUM_RELIC_VAULT : (typeof window !== 'undefined' ? window.ASTRA_MILITARUM_RELIC_VAULT : {});
   const necRelics = (typeof NECRONS_RELIC_VAULT !== 'undefined') ? NECRONS_RELIC_VAULT : (typeof window !== 'undefined' ? window.NECRONS_RELIC_VAULT : {});
@@ -242,8 +242,8 @@ function rollRandomRelic() {
   };
 
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playRelicChoir();
-    const box = document.getElementById('relicResultBox');
+    if (typeof window !== 'undefined' && window.VoxAudio?.playRelicChoir) window.VoxAudio.playRelicChoir();
+    const box = typeof document !== 'undefined' ? document.getElementById('relicResultBox') : null;
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--purple); color:#fff;">${tier.toUpperCase()}</span> <strong style="color:#d8b4fe;">${pick.name}</strong></div>
@@ -254,20 +254,20 @@ function rollRandomRelic() {
 }
 
 function rollOutOfActionTest() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
   const d6 = Math.floor(Math.random() * 6) + 1;
 
   setTimeout(() => {
-    const box = document.getElementById('scarResultBox');
+    const box = typeof document !== 'undefined' ? document.getElementById('scarResultBox') : null;
     if (!box) return;
     if (d6 === 1) {
-      if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playScarHazard();
+      if (typeof window !== 'undefined' && window.VoxAudio?.playScarHazard) window.VoxAudio.playScarHazard();
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--red); color:#fff;">D6: 1 (FAILED!)</span> <strong style="color:var(--red);">Out of Action Test Failed!</strong></div>
         <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">Choose <strong>Devastating Blow</strong> (-1 Battle Honour) OR click <strong>🎲 Roll Scar (D6)</strong> below to roll a Battle Scar!</div>
       `;
     } else {
-      if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playForgeAnvil();
+      if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--green); color:#000;">D6: ${d6} (PASSED)</span> <strong style="color:var(--green);">Unit Recovered Unscathed!</strong></div>
         <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">No Battle Scar suffered. Unit returns to Order of Battle at full strength.</div>
@@ -277,8 +277,8 @@ function rollOutOfActionTest() {
 }
 
 function rollRandomBattleScar() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
-  const poolKey = document.getElementById('forgeSourcePool')?.value || 'Armageddon';
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
+  const poolKey = (typeof document !== 'undefined' ? document.getElementById('forgeSourcePool')?.value : '') || 'Armageddon';
   const scars = (typeof BATTLE_SCAR_TABLE !== 'undefined') ? BATTLE_SCAR_TABLE : (typeof window !== 'undefined' ? window.BATTLE_SCAR_TABLE : []);
   const necScars = (typeof NECRON_BATTLE_SCAR_TABLE !== 'undefined') ? NECRON_BATTLE_SCAR_TABLE : (typeof window !== 'undefined' ? window.NECRON_BATTLE_SCAR_TABLE : []);
   const activeScarTable = poolKey === 'BetaCodex' ? necScars : scars;
@@ -292,8 +292,8 @@ function rollRandomBattleScar() {
   };
 
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playScarHazard();
-    const box = document.getElementById('scarResultBox');
+    if (typeof window !== 'undefined' && window.VoxAudio?.playScarHazard) window.VoxAudio.playScarHazard();
+    const box = typeof document !== 'undefined' ? document.getElementById('scarResultBox') : null;
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--red); color:#fff;">SCAR D6: ${pick.d6}</span> <strong style="color:var(--red);">${pick.name}</strong></div>
@@ -309,8 +309,8 @@ function attachRollToDossier(kind) {
     alert('Roll the dice on this card first before attaching it to the Master Dossier!');
     return;
   }
-  const unitName = (document.getElementById('rollerUnitName')?.value || '[Unnamed Unit]').trim();
-  const unitCtx = (document.getElementById('rollerUnitContext')?.value || 'Fielded in battle').trim();
+  const unitName = ((typeof document !== 'undefined' ? document.getElementById('rollerUnitName')?.value : '') || '[Unnamed Unit]').trim();
+  const unitCtx = ((typeof document !== 'undefined' ? document.getElementById('rollerUnitContext')?.value : '') || 'Fielded in battle').trim();
 
   crusadeState.queuedRolls.push({
     unit: unitName,
@@ -342,6 +342,7 @@ function clearQueuedRolls() {
 }
 
 function renderQueuedRolls() {
+  if (typeof document === 'undefined') return;
   const countEl = document.getElementById('queuedCountLabel');
   const box = document.getElementById('queuedRollsContainer');
   if (countEl) countEl.textContent = String(crusadeState.queuedRolls.length);
@@ -368,7 +369,7 @@ function renderQueuedRolls() {
 // =========================================================================
 function adjTourField(field, delta) {
   crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = document.getElementById(field);
+  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
   if (el) el.textContent = String(crusadeState[field]);
   if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
   updateStartOfTourPreview();
@@ -376,16 +377,16 @@ function adjTourField(field, delta) {
 }
 
 function rollNewTourQuotas() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
   const d6 = Math.floor(Math.random() * 6) + 1;
   const d3 = Math.floor(Math.random() * 3) + 1;
   crusadeState.tourBattlesRem = d6 + 4;
   crusadeState.tourWinsRem = d3 + 2;
 
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playForgeAnvil();
-    const bEl = document.getElementById('tourBattlesRem');
-    const wEl = document.getElementById('tourWinsRem');
+    if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
+    const bEl = typeof document !== 'undefined' ? document.getElementById('tourBattlesRem') : null;
+    const wEl = typeof document !== 'undefined' ? document.getElementById('tourWinsRem') : null;
     if (bEl) bEl.textContent = String(crusadeState.tourBattlesRem);
     if (wEl) wEl.textContent = String(crusadeState.tourWinsRem);
     if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
@@ -395,14 +396,14 @@ function rollNewTourQuotas() {
 }
 
 function rollVictoryCommendationPts() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
   const d3 = Math.floor(Math.random() * 3) + 1;
   crusadeState.commendationPts = (crusadeState.commendationPts || 0) + d3;
 
   setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playRelicChoir();
-    const cEl = document.getElementById('commendationPts');
-    const noticeEl = document.getElementById('commRollNotice');
+    if (typeof window !== 'undefined' && window.VoxAudio?.playRelicChoir) window.VoxAudio.playRelicChoir();
+    const cEl = typeof document !== 'undefined' ? document.getElementById('commendationPts') : null;
+    const noticeEl = typeof document !== 'undefined' ? document.getElementById('commRollNotice') : null;
     if (cEl) cEl.textContent = String(crusadeState.commendationPts);
     if (noticeEl) noticeEl.innerHTML = `<strong style="color:var(--green);">Rolled D3 = +${d3} Commendation Pts!</strong>`;
     if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
@@ -412,7 +413,7 @@ function rollVictoryCommendationPts() {
 }
 
 function toggleUpliftingPrimer() {
-  const cb = document.getElementById('upliftingPrimerToggle');
+  const cb = typeof document !== 'undefined' ? document.getElementById('upliftingPrimerToggle') : null;
   crusadeState.upliftingPrimer = !!(cb && cb.checked);
   renderLogisticsAllocator();
   if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
@@ -441,6 +442,7 @@ function adjLogisticsPt(catKey, delta) {
 }
 
 function renderLogisticsAllocator() {
+  if (typeof document === 'undefined') return;
   const grid = document.getElementById('logisticsAllocatorGrid');
   const label = document.getElementById('logisticsAllocatedLabel');
   const cb = document.getElementById('upliftingPrimerToggle');
@@ -600,11 +602,12 @@ function buildStartOfTourDossierString() {
     commendationPts: crusadeState.commendationPts,
     logistics: crusadeState.logistics,
     upliftingPrimer: crusadeState.upliftingPrimer,
-    notes: document.getElementById('startTourNotes')?.value || ''
+    notes: (typeof document !== 'undefined' ? document.getElementById('startTourNotes')?.value : '') || ''
   });
 }
 
 function updateStartOfTourPreview() {
+  if (typeof document === 'undefined') return;
   const box = document.getElementById('startOfTourPreviewBox') || document.getElementById('tourDispatchPreviewBox');
   if (box) {
     box.textContent = buildStartOfTourDossierString();

@@ -187,3 +187,27 @@ test('Spawn Rolling Regression: consecutive rollAllSpawnZones calls generate fre
   assert.ok(rollSnapshots.size > 1, `Expected multiple distinct roll signatures across 10 presses, got ${rollSnapshots.size}`);
 });
 
+test('Horde Battle Stats: compileHordeBattleStatsDossierSection handles null and empty/minimal stats gracefully', () => {
+  assert.equal(hordeStats.compileHordeBattleStatsDossierSection(null), '');
+  assert.equal(hordeStats.compileHordeBattleStatsDossierSection(undefined), '');
+
+  const minimalCompiled = hordeStats.compileHordeBattleStatsDossierSection({
+    hordeKills: 0,
+    spEarned: 0,
+    spSpent: 0,
+    leftoverSp: 0,
+    leftoverCp: 0,
+    stratagemsUsed: 0,
+    roundsPlayed: 1,
+    miseriesDrawn: [],
+    miseriesNullified: 0,
+    secondariesCompleted: [],
+    secondariesFailed: []
+  });
+  assert.ok(minimalCompiled.includes('• MISERY CARDS: 0 Drawn'));
+  assert.ok(minimalCompiled.includes('• SECONDARY MISSIONS: None Resolved'));
+  assert.ok(!minimalCompiled.includes('• CONFIDENTIAL DIRECTIVE:'));
+  assert.ok(!minimalCompiled.includes('• EXTRACTED FORTIFICATIONS:'));
+});
+
+

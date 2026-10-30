@@ -270,7 +270,7 @@ compileBundle(
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Quartermaster Matrix (Part 2)',
   'Crusade resource adjustments, harvest rollers, expedition fields, and master dossier compiler (`js/crusade.js`).',
-  [{ file: 'js/crusade.js', label: 'js/crusade.js (Part 2: Operations & Dispatch)', startLine: 551, endLine: 1000 }],
+  [{ file: 'js/crusade.js', label: 'js/crusade.js (Part 2: Operations & Dispatch)', startLine: 551, endLine: 1120 }],
   path.join(BUNDLES_DIR, 'bundle_crusade_matrix_part2.md')
 );
 
@@ -289,9 +289,9 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Horde Battle Stats & Crusade Telemetry Engine',
-  'After-action Horde battle telemetry tracking (kills, miseries, secondaries, SP economy) and Crusade Master Dossier compiler adapter (`js/horde-battle-stats.js`).',
-  ['js/horde-battle-stats.js'],
+  '📦 Fires of Armageddon // Bundle: Horde Battle Stats & Crusade Unit Tests',
+  'After-action Horde battle telemetry tracking (`js/horde-battle-stats.js`) and Crusade unit test suites (`tests/js/crusade.test.js`, `tests/js/crusade-data.test.js`, `tests/js/crusade-forge.test.js`).',
+  ['js/horde-battle-stats.js', 'tests/js/crusade.test.js', 'tests/js/crusade-data.test.js', 'tests/js/crusade-forge.test.js'],
   path.join(BUNDLES_DIR, 'bundle_horde_battle_stats.md')
 );
 
@@ -421,8 +421,8 @@ compileBundle(
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: UI Tests (Crusade Command & Tour of Duty)',
-  'Crusade tab orchestration, 3-way scoreboard, tour quotas, and narrative tree test suites (`tests/ui/crusade.test.js`, `tests/js/crusade.test.js`, `tests/js/horde-battle-stats.test.js`).',
-  ['tests/ui/crusade.test.js', 'tests/js/crusade.test.js', 'tests/js/horde-battle-stats.test.js'],
+  'Crusade tab orchestration, 3-way scoreboard, tour quotas, and Horde battle stats test suites (`tests/ui/crusade.test.js`, `tests/js/horde-battle-stats.test.js`).',
+  ['tests/ui/crusade.test.js', 'tests/js/horde-battle-stats.test.js'],
   path.join(BUNDLES_DIR, 'bundle_tests_ui_crusade.md')
 );
 
@@ -561,7 +561,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_tests_part2.md\`](bundle_tests_part2.md) | **Pages & Boundary Tests (Part 2: Headless Playwright E2E)** | \`tests/ui/pages.test.js\` (Lines 559-end) |
 | [\`bundle_tests_ui_overview.md\`](bundle_tests_ui_overview.md) | **UI Tests (Briefing & PvP)** | \`tests/ui/briefing.test.js\`, \`tests/ui/pvp.test.js\` |
 | [\`bundle_tests_ui_roster_rogue.md\`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | \`tests/ui/rogue.test.js\`, \`tests/ui/roster.test.js\` |
-| [\`bundle_tests_ui_crusade.md\`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | \`tests/ui/crusade.test.js\`, \`tests/js/crusade.test.js\` |
+| [\`bundle_tests_ui_crusade.md\`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | \`tests/ui/crusade.test.js\`, \`tests/js/horde-battle-stats.test.js\` |
 | [\`bundle_tests_ui_forge.md\`](bundle_tests_ui_forge.md) | **UI Tests (Munitorum Forge)** | \`tests/ui/crusade-forge.test.js\` |
 | [\`bundle_tests_ui_vox.md\`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal Part 1)** | \`tests/ui/vox.test.js\` (Lines 1-550) |
 | [\`bundle_tests_ui_vox_part2.md\`](bundle_tests_ui_vox_part2.md) | **UI Tests (Vox-Terminal Part 2)** | \`tests/ui/vox.test.js\` (Lines 551-end) |

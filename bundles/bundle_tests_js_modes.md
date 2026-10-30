@@ -109,6 +109,54 @@ test('briefing pure: unlockTab and lockTab handle Gamma with dedicated gamma aud
   assert.equal(audioCalls.includes('poweroff:alpha'), false, 'lockTab(Gamma) must NOT invoke playTerminalPowerOff("alpha")');
 });
 
+test('briefing pure: selectSlider and selectAtlasNode update briefingState accurately', () => {
+  for (let s = -3; s <= 3; s++) {
+    briefingModule.selectSlider(s, false);
+    assert.equal(briefingModule.briefingState.shipSlider, s);
+  }
+
+  for (let n = 0; n <= 7; n++) {
+    briefingModule.selectAtlasNode(n, false);
+    assert.equal(briefingModule.briefingState.selectedNode, n);
+  }
+});
+
+test('briefing pure: restoreBriefingState honors URL hash and search query parameters over stored state', () => {
+  const mockStorage = {};
+  globalThis.localStorage = {
+    getItem: (k) => mockStorage[k] || null,
+    setItem: (k, v) => { mockStorage[k] = String(v); }
+  };
+
+  mockStorage[briefingModule.BRIEFING_STORAGE_KEY] = JSON.stringify({
+    activeDossier: 'alpha',
+    unlockedAlpha: true,
+    shipSlider: 1,
+    selectedNode: 4
+  });
+
+  // 1. URL hash #gamma takes precedence over stored 'alpha'
+  globalThis.window = {
+    location: { hash: '#gamma', search: '' },
+    VoxAudio: { setFactionTheme: () => {} }
+  };
+  briefingModule.restoreBriefingState();
+  assert.equal(briefingModule.briefingState.activeDossier, 'gamma');
+  assert.equal(briefingModule.briefingState.unlockedAlpha, true);
+  assert.equal(briefingModule.briefingState.selectedNode, 4);
+
+  // 2. URL search ?tab=atlas takes precedence when hash is empty
+  globalThis.window = {
+    location: { hash: '', search: '?tab=atlas' },
+    VoxAudio: { setFactionTheme: () => {} }
+  };
+  briefingModule.restoreBriefingState();
+  assert.equal(briefingModule.briefingState.activeDossier, 'atlas');
+
+  delete globalThis.localStorage;
+});
+
+
 ````
 
 ---
@@ -165,6 +213,98 @@ test('pvp pure: compilePvpVultureReport generates accurate reports for both Alph
   assert.ok(betaReport.includes('3 SPts'));
   assert.ok(betaReport.includes('Folded Space'));
   assert.ok(betaReport.includes('Royal tomb sweeps'));
+});
+
+test('pvp pure: compilePvpVultureReport handles empty/default inputs and out-of-bounds hellscape indices', () => {
+  const defaultAlpha = pvpModule.compilePvpVultureReport();
+  assert.ok(defaultAlpha.includes('THE EXILE // SANCTUARY OF ASH'));
+  assert.ok(defaultAlpha.includes('3 SPts'));
+  assert.ok(defaultAlpha.includes('Folded Space // Intensity: MAJOR'));
+  assert.ok(defaultAlpha.includes('1v1 Ash Wastes clash concluded. Reporting 3rd Alliance Vulture Strategic Points to Campaign Master.'));
+
+  const defaultBeta = pvpModule.compilePvpVultureReport({
+    channel: 'beta',
+    hellscapeIdx: 99,
+    intensity: 'catastrophic'
+  });
+  assert.ok(defaultBeta.includes('LORD COMMANDER JUNEBUG'));
+  assert.ok(defaultBeta.includes('Folded Space // Intensity: CATASTROPHIC'));
+  assert.ok(defaultBeta.includes('Reporting 3rd Alliance Vulture Strategic Points to Tomb-Ship Master Matrix.'));
+});
+
+test('pvp boundary adapters: updateVulture, renderHellscape, rollWarpAnomaly, and transmitUnboundPing', () => {
+  const els = {
+    hellscapeSelect: { value: '1' },
+    hellscapeDesc: { innerHTML: '' },
+    warpIntensity: { value: 'catastrophic' },
+    anomalyResultBox: { innerHTML: '' },
+    vultureKillCheck: { checked: true },
+    vulturePts: { innerText: '', textContent: '' },
+    pvpReportSpBadge: { textContent: '' },
+    pvpReportChannel: { value: 'beta' },
+    pvpReportNotes: { value: 'Necron monoliths secured the ridge.' },
+    pvpVulturePreviewBox: { textContent: '', classList: { toggle: () => {} } },
+    unboundResult: { innerHTML: '' }
+  };
+
+  const store = {};
+  globalThis.localStorage = {
+    getItem: (k) => store[k] || null,
+    setItem: (k, v) => { store[k] = String(v); }
+  };
+  globalThis.document = {
+    getElementById: (id) => els[id] || null
+  };
+
+  let transmitted = null;
+  globalThis.window = {
+    VoxAudio: {
+      playClank: () => {},
+      playWarpSiren: () => {},
+      playAuspexLock: () => {},
+      transmitToVox: (chan, payload) => {
+        transmitted = { chan, payload };
+      }
+    }
+  };
+
+  pvpModule.renderHellscape(true);
+  assert.ok(els.hellscapeDesc.innerHTML.includes('Fractured Realm'));
+
+  pvpModule.updateVulture(true);
+  assert.equal(els.vulturePts.textContent, '4 SPts');
+  assert.equal(els.pvpReportSpBadge.textContent, '4 SPts');
+
+  pvpModule.rollWarpAnomaly();
+  assert.ok(
+    els.anomalyResultBox.innerHTML.includes('WARP SURGE!') ||
+    els.anomalyResultBox.innerHTML.includes('Reality Holds')
+  );
+
+  pvpModule.rollUnboundAdversary();
+  assert.ok(els.unboundResult.innerHTML.includes('transmitUnboundPing'));
+
+  // Test PL 4 Apex Anomaly ping on Beta vs PL 2 on Alpha
+  pvpModule.transmitUnboundPing(4, 'beta');
+  assert.equal(transmitted.chan, 'beta');
+  assert.ok(transmitted.payload.includes('POWER LEVEL 4 APEX ANOMALY DETECTED'));
+  assert.ok(transmitted.payload.includes('PHAERON JUNEBUG'));
+
+  pvpModule.transmitUnboundPing(2, 'alpha');
+  assert.equal(transmitted.chan, 'alpha');
+  assert.ok(transmitted.payload.includes('POWER LEVEL 2 UNBOUND ADVERSARY DETECTED'));
+  assert.ok(transmitted.payload.includes('THE EXILE'));
+
+  // Reset form
+  pvpModule.resetPvpVultureReportForm();
+  assert.equal(els.pvpReportChannel.value, 'alpha');
+  assert.equal(els.vultureKillCheck.checked, false);
+  assert.equal(els.pvpReportNotes.value, '');
+  assert.equal(els.vulturePts.textContent, '3 SPts');
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+  delete globalThis.window;
 });
 ````
 
@@ -226,6 +366,91 @@ test('rogue pure: compileRogueDossier formats battle report with planetary and a
   assert.ok(betaReport.includes('Chaos Victory'));
   assert.ok(betaReport.includes('+1 SPt to Desecrators'));
   assert.ok(!betaReport.includes('NOMINEE:'));
+});
+
+test('rogue pure: compileRogueDossier handles Xenos Victory, Contested fallback, and Beta nominee label', () => {
+  const xenosBeta = rogueModule.compileRogueDossier({
+    channel: 'beta',
+    combatants: 'Ork Speed Freeks vs Tyranid Vanguard',
+    outcome: 'Xenos Victory',
+    nominee: 'Deffkilla Wartrike',
+    notes: 'Xenos scavengers overran the eastern supply depot.'
+  });
+  assert.ok(xenosBeta.includes('+1 SPt to Marauders'));
+  assert.ok(xenosBeta.includes('• SPECIMEN TARGETING NOMINEE: Deffkilla Wartrike'));
+
+  const contestedDefault = rogueModule.compileRogueDossier({
+    outcome: 'Unrecognized Stalemate'
+  });
+  assert.ok(contestedDefault.includes('Auxiliary Forces (Unspecified Factions)'));
+  assert.ok(contestedDefault.includes('Zero SPt shift (Contested)'));
+});
+
+test('rogue state & adapters: setAiStep, nextAiStep, saveRogueState, restoreRogueState, and resetRogueDossierForm', () => {
+  const makeStepEl = () => ({
+    classList: {
+      active: false,
+      toggle(cls, force) { this.active = !!force; }
+    },
+    querySelector: () => ({ innerText: '' })
+  });
+
+  const els = {
+    aiStep0: makeStepEl(),
+    aiStep1: makeStepEl(),
+    aiStep2: makeStepEl(),
+    rogueReportChannel: { value: 'beta' },
+    rogueCombatants: { value: 'World Eaters vs Space Marines' },
+    rogueOutcome: { value: 'Chaos Victory' },
+    rogueNemesisNominee: { value: 'Eightbound Champion' },
+    rogueNotes: { value: 'Brutal melee clash.' },
+    rogueDossierPreviewBox: { textContent: '', classList: { toggle: () => {} } }
+  };
+
+  const store = {};
+  globalThis.localStorage = {
+    getItem: (k) => store[k] || null,
+    setItem: (k, v) => { store[k] = String(v); }
+  };
+  globalThis.document = {
+    getElementById: (id) => els[id] || null
+  };
+
+  let transmitted = null;
+  globalThis.window = {
+    VoxAudio: {
+      playClank: () => {},
+      transmitToVox: (chan, payload) => { transmitted = { chan, payload }; }
+    }
+  };
+
+  rogueModule.setAiStep(0);
+  assert.equal(rogueModule.getCurrentAiStep(), 0);
+  assert.equal(els.aiStep0.classList.active, true);
+
+  rogueModule.nextAiStep();
+  assert.equal(rogueModule.getCurrentAiStep(), 1);
+  assert.equal(els.aiStep1.classList.active, true);
+
+  rogueModule.nextAiStep();
+  assert.equal(rogueModule.getCurrentAiStep(), 2);
+
+  rogueModule.nextAiStep();
+  assert.equal(rogueModule.getCurrentAiStep(), 0, 'nextAiStep must wrap from 2 back to 0');
+
+  rogueModule.transmitRogueDossier();
+  assert.equal(transmitted.chan, 'beta');
+  assert.ok(transmitted.payload.includes('World Eaters vs Space Marines'));
+
+  rogueModule.resetRogueDossierForm();
+  assert.equal(els.rogueReportChannel.value, 'alpha');
+  assert.equal(els.rogueCombatants.value, '');
+  assert.equal(els.rogueOutcome.value, 'Imperium Victory');
+  assert.equal(els.rogueNemesisNominee.value, '');
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+  delete globalThis.window;
 });
 ````
 
@@ -298,6 +523,24 @@ test('Roster: extractUniqueUnitTypes and formatTtsUnitList parse brackets and co
   const checklist = formatTtsUnitList('Space Marines', types);
   assert.ok(checklist.includes('+++ TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES +++'));
   assert.ok(checklist.includes('[ ] Intercessors'));
+});
+
+test('Roster: compileNemesisDossier, normalizeUnitType, and formatTtsUnitList handle empty/fallback inputs cleanly', () => {
+  const fallbackDossier = compileNemesisDossier({});
+  assert.ok(fallbackDossier.includes('[Unspecified Hostile Entity]'));
+  assert.ok(fallbackDossier.includes('Slain a Player Warlord / Character in combat'));
+  assert.ok(fallbackDossier.includes('Survived engagement and demonstrated anomalous lethality.'));
+
+  assert.equal(normalizeUnitType(''), '');
+  assert.equal(normalizeUnitType(null), '');
+  assert.equal(normalizeUnitType('2D6 Termagants (Fleshborers)'), 'Termagants (Fleshborers)');
+
+  assert.deepEqual(deduplicateSimilarUnits([]), []);
+  assert.deepEqual(extractUniqueUnitTypes(null), []);
+
+  const emptyChecklist = formatTtsUnitList('Orks', []);
+  assert.ok(emptyChecklist.includes('+++ TABLETOP SIMULATOR (TTS) PREPARATION // ORKS +++'));
+  assert.ok(emptyChecklist.includes('Total Unique Unit Types Required: 0'));
 });
 ````
 
