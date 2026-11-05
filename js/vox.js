@@ -17,12 +17,15 @@ var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_K
 var SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
 var SESSION_AUTH_KEY = 'foa_vox_active_session_v1';
 
-const validChannels = ['alpha', 'beta', 'gamma'];
+var validChannels = ['alpha', 'beta', 'gamma'];
 var selectedChannel = 'alpha';
 var activePassphrase = null;
 var isChannelSealed = true;
 var pollTimer = null;
 var activeStreamTimers = [];
+var activeStreamFinishers = [];
+var pendingDirectStream = null;
+var pendingInterferenceStream = null;
 var showAllOlderMessages = false;
 var showAllOlderInterferences = false;
 
@@ -360,13 +363,37 @@ async function flushPendingDossierIfAny() {
 }
 
 function clearStreamTimers() {
-  activeStreamTimers.forEach(id => clearInterval(id));
+  activeStreamTimers.forEach(id => {
+    clearTimeout(id);
+    clearInterval(id);
+  });
   activeStreamTimers = [];
+  if (Array.isArray(activeStreamFinishers) && activeStreamFinishers.length > 0) {
+    const finishers = activeStreamFinishers.slice();
+    activeStreamFinishers = [];
+    finishers.forEach(fn => {
+      try { fn(); } catch (e) {}
+    });
+  }
+}
+
+function isDirectSubWindowActive() {
+  const subDirect = document.getElementById('subWinDirect');
+  const subInt = document.getElementById('subWinInterferences');
+  if (subDirect && subDirect.classList && subDirect.classList.contains('hidden')) {
+    return false;
+  }
+  if (subInt && subInt.classList && !subInt.classList.contains('hidden') && (!subDirect || !subDirect.classList)) {
+    return false;
+  }
+  return true;
 }
 
 // Freeze-proof elapsed-time teletype streamer (never stalls on background tab throttling or apostrophes)
 function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   if (!targetEl) return;
+  clearStreamTimers();
+
   const rawStr = String(fullString || '');
   if (!rawStr) {
     targetEl.textContent = '';
@@ -390,25 +417,51 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   const startTime = Date.now();
   const charsPerSecond = 85; // Fast Imperial cogitator speed (~11ms per char)
   let lastIdx = 0;
+  let timerId = null;
 
-  function finishStream() {
+  function finishStream(shouldScroll = true) {
+    if (timerId !== null) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
     targetEl.dataset.streaming = '0';
     if (isHtmlRedacted) {
       targetEl.innerHTML = formatRedactedHtml(rawStr);
     } else {
       targetEl.textContent = rawStr;
     }
-    const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
-    if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
+    if (shouldScroll) {
+      const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
+      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
+    }
   }
+
+  activeStreamFinishers.push(() => finishStream(false));
 
   // Allow clicking anywhere on a streaming message card to instantly finish typing it!
   targetEl.onclick = () => {
-    if (targetEl.dataset.streaming === '1') finishStream();
+    if (targetEl.dataset.streaming === '1') finishStream(true);
   };
 
   function step() {
     if (targetEl.dataset.streaming !== '1') return;
+
+    const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
+    if (
+      scrollParent &&
+      typeof targetEl.getBoundingClientRect === 'function' &&
+      typeof scrollParent.getBoundingClientRect === 'function'
+    ) {
+      const elRect = targetEl.getBoundingClientRect();
+      const parentRect = scrollParent.getBoundingClientRect();
+      if (parentRect.height > 0 && elRect.height > 0) {
+        const isVisible = elRect.bottom > parentRect.top && elRect.top < parentRect.bottom;
+        if (!isVisible) {
+          finishStream(false);
+          return;
+        }
+      }
+    }
 
     const elapsedMs = Date.now() - startTime;
     const targetIdx = Math.min(rawStr.length, Math.max(lastIdx + 1, Math.floor((elapsedMs / 1000) * charsPerSecond)));
@@ -425,15 +478,15 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
         window.VoxAudio.playTeletypeTick('incoming');
       }
 
-      const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
       if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
       lastIdx = targetIdx;
     }
 
     if (lastIdx < rawStr.length) {
-      setTimeout(step, 16);
+      timerId = setTimeout(step, 16);
+      activeStreamTimers.push(timerId);
     } else {
-      finishStream();
+      finishStream(true);
     }
   }
 
@@ -612,6 +665,25 @@ async function checkVoxServerStatus() {
   return isOnline;
 }
 
+function applyFocusedCardText(el, text, token, isFocused, isViewing, isRedacted) {
+  const safeText = text || '';
+  if (!seenTokens.has(token)) {
+    if (isFocused && isViewing) {
+      markTokenSeen(token);
+      streamTextIntoElement(el, safeText, isRedacted);
+      return;
+    }
+    if (isFocused && !isViewing) {
+      if (isRedacted) pendingInterferenceStream = { el, text: safeText, token };
+      else pendingDirectStream = { el, text: safeText, token };
+    } else {
+      markTokenSeen(token);
+    }
+  }
+  if (isRedacted) el.innerHTML = formatRedactedHtml(safeText);
+  else el.textContent = safeText;
+}
+
 async function refreshTerminal(forceScroll = false) {
   checkVoxServerStatus().catch(() => {});
   if (!activePassphrase) return;
@@ -627,8 +699,11 @@ async function refreshTerminal(forceScroll = false) {
     if (!dBox) return;
 
     syncSeenTokensFromStorage();
+    const viewingDirect = isDirectSubWindowActive();
+    const viewingInterferences = !viewingDirect;
 
     if (msgs.length === 0) {
+      pendingDirectStream = null;
       dBox.innerHTML = `<p style="color:#00ff88; text-align:center; margin-top:45px; opacity:0.7;">++ NO TRANSMISSIONS LOGGED ON THIS FREQUENCY YET ++<span class="crt-cursor"></span></p>`;
     } else {
       const totalCount = msgs.length;
@@ -638,6 +713,7 @@ async function refreshTerminal(forceScroll = false) {
       const stateSignature = `${showAllOlderMessages ? 'all' : 'recent'}_${visibleMsgs.map(m => `${m.id}:${m.status}`).join('|')}`;
       if (dBox.dataset.sig !== stateSignature) {
         clearStreamTimers();
+        pendingDirectStream = null;
         dBox.dataset.sig = stateSignature;
         dBox.innerHTML = '';
 
@@ -658,7 +734,9 @@ async function refreshTerminal(forceScroll = false) {
           dBox.appendChild(olderBar);
         }
 
-        visibleMsgs.forEach(m => {
+        visibleMsgs.forEach((m, idx) => {
+          const isLatestMsg = idx === visibleMsgs.length - 1;
+          const hasReply = Boolean(m.status === 'answered' && m.reply);
           const wrap = document.createElement('div');
           wrap.className = 'crt-exchange-wrap';
 
@@ -675,17 +753,10 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-q-body crt-msg-body"></div>
           `;
           const qBody = msgCard.querySelector('.crt-q-body');
-          const qToken = `q_${m.id}`;
-
-          if (!seenTokens.has(qToken)) {
-            markTokenSeen(qToken);
-            streamTextIntoElement(qBody, m.question || '', false);
-          } else {
-            qBody.textContent = m.question || '';
-          }
+          applyFocusedCardText(qBody, m.question, `q_${m.id}`, isLatestMsg && !hasReply && !showAllOlderMessages, viewingDirect, false);
           wrap.appendChild(msgCard);
 
-          if (m.status === 'answered' && m.reply) {
+          if (hasReply) {
             const { cardTitle, cleanBody } = extractDynamicReplyCardMeta(m.reply);
 
             const repCard = document.createElement('div');
@@ -701,14 +772,7 @@ async function refreshTerminal(forceScroll = false) {
               <div class="crt-r-body crt-msg-body"></div>
             `;
             const rBody = repCard.querySelector('.crt-r-body');
-            const rToken = `r_${m.id}`;
-
-            if (!seenTokens.has(rToken)) {
-              markTokenSeen(rToken);
-              streamTextIntoElement(rBody, cleanBody, false);
-            } else {
-              rBody.textContent = cleanBody;
-            }
+            applyFocusedCardText(rBody, cleanBody, `r_${m.id}`, isLatestMsg && !showAllOlderMessages, viewingDirect, false);
             wrap.appendChild(repCard);
           } else {
             const pend = document.createElement('div');
@@ -735,6 +799,7 @@ async function refreshTerminal(forceScroll = false) {
     if (!iBox) return;
 
     if (ints.length === 0) {
+      pendingInterferenceStream = null;
       iBox.innerHTML = `<p style="color:#fda4af; text-align:center; margin-top:45px; opacity:0.65;">++ NO PSYCHIC BLEED DETECTED IN THE IMMATERIUM ++</p>`;
     } else {
       const totalInts = ints.length;
@@ -743,6 +808,7 @@ async function refreshTerminal(forceScroll = false) {
 
       const intSig = `${showAllOlderInterferences ? 'all' : 'recent'}_${visibleInts.map(x => x.id).join('|')}`;
       if (iBox.dataset.sig !== intSig) {
+        pendingInterferenceStream = null;
         iBox.dataset.sig = intSig;
         iBox.innerHTML = '';
 
@@ -766,7 +832,8 @@ async function refreshTerminal(forceScroll = false) {
           iBox.appendChild(olderBar);
         }
 
-        visibleInts.forEach(ix => {
+        visibleInts.forEach((ix, idx) => {
+          const isLatestInt = idx === visibleInts.length - 1;
           const isBroadcast = isRogueSectorInterference(ix);
           const card = document.createElement('div');
           card.className = isBroadcast
@@ -786,13 +853,7 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-int-body crt-msg-body"></div>
           `;
           const bodyEl = card.querySelector('.crt-int-body');
-          const iToken = `int_${ix.id}`;
-          if (!seenTokens.has(iToken)) {
-            markTokenSeen(iToken);
-            streamTextIntoElement(bodyEl, ix.redacted_text || '', true);
-          } else {
-            bodyEl.innerHTML = formatRedactedHtml(ix.redacted_text || '');
-          }
+          applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt && !showAllOlderInterferences, viewingInterferences, true);
           iBox.appendChild(card);
         });
       }
@@ -827,6 +888,7 @@ async function transmitQuestion() {
 }
 
 function switchSubWindow(which) {
+  clearStreamTimers();
   const isDirect = which === 'direct';
   const subDirect = document.getElementById('subWinDirect');
   const subInt = document.getElementById('subWinInterferences');
@@ -836,12 +898,30 @@ function switchSubWindow(which) {
   if (subInt) subInt.classList.toggle('hidden', isDirect);
   if (btn1) btn1.classList.toggle('active', isDirect);
   if (btn2) btn2.classList.toggle('active', !isDirect);
+
+  if (isDirect && pendingDirectStream && !showAllOlderMessages) {
+    const { el, text, token } = pendingDirectStream;
+    pendingDirectStream = null;
+    if (!seenTokens.has(token)) {
+      markTokenSeen(token);
+      streamTextIntoElement(el, text, false);
+    }
+  } else if (!isDirect && pendingInterferenceStream && !showAllOlderInterferences) {
+    const { el, text, token } = pendingInterferenceStream;
+    pendingInterferenceStream = null;
+    if (!seenTokens.has(token)) {
+      markTokenSeen(token);
+      streamTextIntoElement(el, text, true);
+    }
+  }
 }
 
 function lockTerminal() {
   activePassphrase = null;
   showAllOlderMessages = false;
   showAllOlderInterferences = false;
+  pendingDirectStream = null;
+  pendingInterferenceStream = null;
   clearStreamTimers();
   if (pollTimer) clearInterval(pollTimer);
   try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (e) {}
@@ -908,92 +988,30 @@ async function initVoxTerminalPage() {
   await selectConduit(activeTheme === 'necron' ? 'beta' : 'alpha');
 }
 
-// Attach to window for browser global scope
-if (typeof window !== 'undefined') {
-  window.validChannels = validChannels;
-  window.SUPABASE_URL = SUPABASE_URL;
-  window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
-  window.SEEN_IDS_STORAGE_KEY = SEEN_IDS_STORAGE_KEY;
-  window.SESSION_AUTH_KEY = SESSION_AUTH_KEY;
-  window.toggleOlderMessages = toggleOlderMessages;
-  window.toggleOlderInterferences = toggleOlderInterferences;
-  window.syncSeenTokensFromStorage = syncSeenTokensFromStorage;
-  window.markTokenSeen = markTokenSeen;
-  window.rpcCall = rpcCall;
-  window.callRpc = callRpc;
-  window.checkPendingDossierBuffer = checkPendingDossierBuffer;
-  window.applyVoxFactionTheme = applyVoxFactionTheme;
-  window.selectConduit = selectConduit;
-  window.handleSealAction = handleSealAction;
-  window.flushPendingDossierIfAny = flushPendingDossierIfAny;
-  window.clearStreamTimers = clearStreamTimers;
-  window.streamTextIntoElement = streamTextIntoElement;
-  window.escapeHtml = escapeHtml;
-  window.formatRedactedHtml = formatRedactedHtml;
-  window.extractDynamicReplyCardMeta = extractDynamicReplyCardMeta;
-  window.formatTime = formatTime;
-  window.purgeVoxEntry = purgeVoxEntry;
-  window.isRogueSectorInterference = isRogueSectorInterference;
-  window.isVoxServerOnline = isVoxServerOnline;
-  window.checkVoxServerStatus = checkVoxServerStatus;
-  window.refreshTerminal = refreshTerminal;
-  window.transmitQuestion = transmitQuestion;
-  window.switchSubWindow = switchSubWindow;
-  window.lockTerminal = lockTerminal;
-  window.initVoxTerminalPage = initVoxTerminalPage;
+var voxExports = {
+  validChannels, SUPABASE_URL, SUPABASE_ANON_KEY, SEEN_IDS_STORAGE_KEY, SESSION_AUTH_KEY,
+  toggleOlderMessages, toggleOlderInterferences, syncSeenTokensFromStorage, markTokenSeen,
+  rpcCall, callRpc, checkPendingDossierBuffer, applyVoxFactionTheme, selectConduit,
+  handleSealAction, flushPendingDossierIfAny, clearStreamTimers, streamTextIntoElement,
+  escapeHtml, formatRedactedHtml, extractDynamicReplyCardMeta, formatTime, purgeVoxEntry,
+  isRogueSectorInterference, isVoxServerOnline, checkVoxServerStatus, refreshTerminal,
+  transmitQuestion, switchSubWindow, lockTerminal, initVoxTerminalPage
+};
 
+if (typeof window !== 'undefined') {
+  Object.assign(window, voxExports);
   window.addEventListener('DOMContentLoaded', initVoxTerminalPage);
   window.addEventListener('vox:page-swapped', () => {
     if (document.getElementById('authScreen') && document.getElementById('directMessagesBox')) {
       initVoxTerminalPage();
     } else {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-      if (serverStatusTimer) {
-        clearInterval(serverStatusTimer);
-        serverStatusTimer = null;
-      }
-      activeStreamTimers.forEach(t => clearTimeout(t));
-      activeStreamTimers = [];
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (serverStatusTimer) { clearInterval(serverStatusTimer); serverStatusTimer = null; }
+      clearStreamTimers();
     }
   });
 }
 
-// CommonJS export for Node test runners
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    validChannels,
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
-    SEEN_IDS_STORAGE_KEY,
-    SESSION_AUTH_KEY,
-    toggleOlderMessages,
-    toggleOlderInterferences,
-    syncSeenTokensFromStorage,
-    markTokenSeen,
-    rpcCall,
-    callRpc,
-    checkPendingDossierBuffer,
-    applyVoxFactionTheme,
-    selectConduit,
-    handleSealAction,
-    flushPendingDossierIfAny,
-    clearStreamTimers,
-    streamTextIntoElement,
-    escapeHtml,
-    formatRedactedHtml,
-    extractDynamicReplyCardMeta,
-    formatTime,
-    purgeVoxEntry,
-    isRogueSectorInterference,
-    isVoxServerOnline,
-    checkVoxServerStatus,
-    refreshTerminal,
-    transmitQuestion,
-    switchSubWindow,
-    lockTerminal,
-    initVoxTerminalPage
-  };
+  module.exports = voxExports;
 }
