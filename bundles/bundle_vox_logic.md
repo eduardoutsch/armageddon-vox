@@ -29,12 +29,15 @@ var SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.SUPABASE_ANON_K
 var SEEN_IDS_STORAGE_KEY = 'foa_vox_seen_ids_v1';
 var SESSION_AUTH_KEY = 'foa_vox_active_session_v1';
 
-const validChannels = ['alpha', 'beta', 'gamma'];
+var validChannels = ['alpha', 'beta', 'gamma'];
 var selectedChannel = 'alpha';
 var activePassphrase = null;
 var isChannelSealed = true;
 var pollTimer = null;
 var activeStreamTimers = [];
+var activeStreamFinishers = [];
+var pendingDirectStream = null;
+var pendingInterferenceStream = null;
 var showAllOlderMessages = false;
 var showAllOlderInterferences = false;
 
@@ -372,13 +375,37 @@ async function flushPendingDossierIfAny() {
 }
 
 function clearStreamTimers() {
-  activeStreamTimers.forEach(id => clearInterval(id));
+  activeStreamTimers.forEach(id => {
+    clearTimeout(id);
+    clearInterval(id);
+  });
   activeStreamTimers = [];
+  if (Array.isArray(activeStreamFinishers) && activeStreamFinishers.length > 0) {
+    const finishers = activeStreamFinishers.slice();
+    activeStreamFinishers = [];
+    finishers.forEach(fn => {
+      try { fn(); } catch (e) {}
+    });
+  }
+}
+
+function isDirectSubWindowActive() {
+  const subDirect = document.getElementById('subWinDirect');
+  const subInt = document.getElementById('subWinInterferences');
+  if (subDirect && subDirect.classList && subDirect.classList.contains('hidden')) {
+    return false;
+  }
+  if (subInt && subInt.classList && !subInt.classList.contains('hidden') && (!subDirect || !subDirect.classList)) {
+    return false;
+  }
+  return true;
 }
 
 // Freeze-proof elapsed-time teletype streamer (never stalls on background tab throttling or apostrophes)
 function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   if (!targetEl) return;
+  clearStreamTimers();
+
   const rawStr = String(fullString || '');
   if (!rawStr) {
     targetEl.textContent = '';
@@ -402,25 +429,51 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   const startTime = Date.now();
   const charsPerSecond = 85; // Fast Imperial cogitator speed (~11ms per char)
   let lastIdx = 0;
+  let timerId = null;
 
-  function finishStream() {
+  function finishStream(shouldScroll = true) {
+    if (timerId !== null) {
+      clearTimeout(timerId);
+      timerId = null;
+    }
     targetEl.dataset.streaming = '0';
     if (isHtmlRedacted) {
       targetEl.innerHTML = formatRedactedHtml(rawStr);
     } else {
       targetEl.textContent = rawStr;
     }
-    const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
-    if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
+    if (shouldScroll) {
+      const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
+      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
+    }
   }
+
+  activeStreamFinishers.push(() => finishStream(false));
 
   // Allow clicking anywhere on a streaming message card to instantly finish typing it!
   targetEl.onclick = () => {
-    if (targetEl.dataset.streaming === '1') finishStream();
+    if (targetEl.dataset.streaming === '1') finishStream(true);
   };
 
   function step() {
     if (targetEl.dataset.streaming !== '1') return;
+
+    const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
+    if (
+      scrollParent &&
+      typeof targetEl.getBoundingClientRect === 'function' &&
+      typeof scrollParent.getBoundingClientRect === 'function'
+    ) {
+      const elRect = targetEl.getBoundingClientRect();
+      const parentRect = scrollParent.getBoundingClientRect();
+      if (parentRect.height > 0 && elRect.height > 0) {
+        const isVisible = elRect.bottom > parentRect.top && elRect.top < parentRect.bottom;
+        if (!isVisible) {
+          finishStream(false);
+          return;
+        }
+      }
+    }
 
     const elapsedMs = Date.now() - startTime;
     const targetIdx = Math.min(rawStr.length, Math.max(lastIdx + 1, Math.floor((elapsedMs / 1000) * charsPerSecond)));
@@ -437,15 +490,15 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
         window.VoxAudio.playTeletypeTick('incoming');
       }
 
-      const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
       if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
       lastIdx = targetIdx;
     }
 
     if (lastIdx < rawStr.length) {
-      setTimeout(step, 16);
+      timerId = setTimeout(step, 16);
+      activeStreamTimers.push(timerId);
     } else {
-      finishStream();
+      finishStream(true);
     }
   }
 
@@ -457,57 +510,4 @@ function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str || '';
     return div.innerHTML;
-  }
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function formatRedactedHtml(raw) {
-  return escapeHtml(raw).replace(
-    /\[REDACTED\]/gi,
-    '<span class="censor-bar">▓▓REDACTED▓▓</span>'
-  );
-}
-
-/**
- * Dynamically extracts the speaker/card title from the first +++ ... +++ banner
- * (or [CARD_TITLE: ...]) of the Supabase reply, and strips that first line from
- * the body so the title appears cleanly at the top of the CRT card without repeating!
- */
-function extractDynamicReplyCardMeta(rawReply) {
-  const fallbackTitle = '++ CAMPAIGN MASTER // SEGMENTUM SOLAR COMMAND ++';
-  if (!rawReply || typeof rawReply !== 'string') {
-    return { cardTitle: fallbackTitle, cleanBody: rawReply || '' };
-  }
-
-  const trimmed = rawReply.trim();
-
-  // 1. Check for explicit [CARD_TITLE: ...] override if present
-  const explicitMatch = trimmed.match(/^\[CARD_TITLE:\s*([^\]]+)\]\s*\n?/i);
-  if (explicitMatch) {
-    return {
-      cardTitle: `++ ${explicitMatch[1].trim().toUpperCase()} ++`,
-      cleanBody: trimmed.slice(explicitMatch[0].length).trim()
-    };
-  }
-
-  // 2. Check if the first line is a canonical +++ HEADER BANNER +++
-  const bannerMatch = trimmed.match(/^\+{2,}\s*([^\n+]+?)\s*\+{2,}[ \t]*\n+/);
-  if (bannerMatch) {
-    return {
-      cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
-      cleanBody: trimmed.slice(bannerMatch[0].length).trim()
-    };
-  }
-
-  // 3. Fallback inference if +++ banner was mid-text
-  if (/ASHEN SPIRIT|MU-TH-UR|DECK 44/i.test(trimmed)) {
-    return {
-      cardTitle: '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++',
-      cleanBody: trimmed
-    };
 ````

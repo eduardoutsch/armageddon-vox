@@ -11,6 +11,59 @@ Real-time Teletype typewriter audio streaming, CRT message rendering, and interf
 
 ````javascript
   }
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatRedactedHtml(raw) {
+  return escapeHtml(raw).replace(
+    /\[REDACTED\]/gi,
+    '<span class="censor-bar">▓▓REDACTED▓▓</span>'
+  );
+}
+
+/**
+ * Dynamically extracts the speaker/card title from the first +++ ... +++ banner
+ * (or [CARD_TITLE: ...]) of the Supabase reply, and strips that first line from
+ * the body so the title appears cleanly at the top of the CRT card without repeating!
+ */
+function extractDynamicReplyCardMeta(rawReply) {
+  const fallbackTitle = '++ CAMPAIGN MASTER // SEGMENTUM SOLAR COMMAND ++';
+  if (!rawReply || typeof rawReply !== 'string') {
+    return { cardTitle: fallbackTitle, cleanBody: rawReply || '' };
+  }
+
+  const trimmed = rawReply.trim();
+
+  // 1. Check for explicit [CARD_TITLE: ...] override if present
+  const explicitMatch = trimmed.match(/^\[CARD_TITLE:\s*([^\]]+)\]\s*\n?/i);
+  if (explicitMatch) {
+    return {
+      cardTitle: `++ ${explicitMatch[1].trim().toUpperCase()} ++`,
+      cleanBody: trimmed.slice(explicitMatch[0].length).trim()
+    };
+  }
+
+  // 2. Check if the first line is a canonical +++ HEADER BANNER +++
+  const bannerMatch = trimmed.match(/^\+{2,}\s*([^\n+]+?)\s*\+{2,}[ \t]*\n+/);
+  if (bannerMatch) {
+    return {
+      cardTitle: `++ ${bannerMatch[1].trim().toUpperCase()} ++`,
+      cleanBody: trimmed.slice(bannerMatch[0].length).trim()
+    };
+  }
+
+  // 3. Fallback inference if +++ banner was mid-text
+  if (/ASHEN SPIRIT|MU-TH-UR|DECK 44/i.test(trimmed)) {
+    return {
+      cardTitle: '++ ASHEN SPIRIT LOGIC CORE // DECK 44 COGITATOR ++',
+      cleanBody: trimmed
+    };
+  }
 
   return { cardTitle: fallbackTitle, cleanBody: trimmed };
 }
@@ -124,6 +177,25 @@ async function checkVoxServerStatus() {
   return isOnline;
 }
 
+function applyFocusedCardText(el, text, token, isFocused, isViewing, isRedacted) {
+  const safeText = text || '';
+  if (!seenTokens.has(token)) {
+    if (isFocused && isViewing) {
+      markTokenSeen(token);
+      streamTextIntoElement(el, safeText, isRedacted);
+      return;
+    }
+    if (isFocused && !isViewing) {
+      if (isRedacted) pendingInterferenceStream = { el, text: safeText, token };
+      else pendingDirectStream = { el, text: safeText, token };
+    } else {
+      markTokenSeen(token);
+    }
+  }
+  if (isRedacted) el.innerHTML = formatRedactedHtml(safeText);
+  else el.textContent = safeText;
+}
+
 async function refreshTerminal(forceScroll = false) {
   checkVoxServerStatus().catch(() => {});
   if (!activePassphrase) return;
@@ -139,8 +211,11 @@ async function refreshTerminal(forceScroll = false) {
     if (!dBox) return;
 
     syncSeenTokensFromStorage();
+    const viewingDirect = isDirectSubWindowActive();
+    const viewingInterferences = !viewingDirect;
 
     if (msgs.length === 0) {
+      pendingDirectStream = null;
       dBox.innerHTML = `<p style="color:#00ff88; text-align:center; margin-top:45px; opacity:0.7;">++ NO TRANSMISSIONS LOGGED ON THIS FREQUENCY YET ++<span class="crt-cursor"></span></p>`;
     } else {
       const totalCount = msgs.length;
@@ -150,6 +225,7 @@ async function refreshTerminal(forceScroll = false) {
       const stateSignature = `${showAllOlderMessages ? 'all' : 'recent'}_${visibleMsgs.map(m => `${m.id}:${m.status}`).join('|')}`;
       if (dBox.dataset.sig !== stateSignature) {
         clearStreamTimers();
+        pendingDirectStream = null;
         dBox.dataset.sig = stateSignature;
         dBox.innerHTML = '';
 
@@ -170,7 +246,9 @@ async function refreshTerminal(forceScroll = false) {
           dBox.appendChild(olderBar);
         }
 
-        visibleMsgs.forEach(m => {
+        visibleMsgs.forEach((m, idx) => {
+          const isLatestMsg = idx === visibleMsgs.length - 1;
+          const hasReply = Boolean(m.status === 'answered' && m.reply);
           const wrap = document.createElement('div');
           wrap.className = 'crt-exchange-wrap';
 
@@ -187,17 +265,10 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-q-body crt-msg-body"></div>
           `;
           const qBody = msgCard.querySelector('.crt-q-body');
-          const qToken = `q_${m.id}`;
-
-          if (!seenTokens.has(qToken)) {
-            markTokenSeen(qToken);
-            streamTextIntoElement(qBody, m.question || '', false);
-          } else {
-            qBody.textContent = m.question || '';
-          }
+          applyFocusedCardText(qBody, m.question, `q_${m.id}`, isLatestMsg && !hasReply && !showAllOlderMessages, viewingDirect, false);
           wrap.appendChild(msgCard);
 
-          if (m.status === 'answered' && m.reply) {
+          if (hasReply) {
             const { cardTitle, cleanBody } = extractDynamicReplyCardMeta(m.reply);
 
             const repCard = document.createElement('div');
@@ -213,14 +284,7 @@ async function refreshTerminal(forceScroll = false) {
               <div class="crt-r-body crt-msg-body"></div>
             `;
             const rBody = repCard.querySelector('.crt-r-body');
-            const rToken = `r_${m.id}`;
-
-            if (!seenTokens.has(rToken)) {
-              markTokenSeen(rToken);
-              streamTextIntoElement(rBody, cleanBody, false);
-            } else {
-              rBody.textContent = cleanBody;
-            }
+            applyFocusedCardText(rBody, cleanBody, `r_${m.id}`, isLatestMsg && !showAllOlderMessages, viewingDirect, false);
             wrap.appendChild(repCard);
           } else {
             const pend = document.createElement('div');
@@ -247,6 +311,7 @@ async function refreshTerminal(forceScroll = false) {
     if (!iBox) return;
 
     if (ints.length === 0) {
+      pendingInterferenceStream = null;
       iBox.innerHTML = `<p style="color:#fda4af; text-align:center; margin-top:45px; opacity:0.65;">++ NO PSYCHIC BLEED DETECTED IN THE IMMATERIUM ++</p>`;
     } else {
       const totalInts = ints.length;
@@ -255,6 +320,7 @@ async function refreshTerminal(forceScroll = false) {
 
       const intSig = `${showAllOlderInterferences ? 'all' : 'recent'}_${visibleInts.map(x => x.id).join('|')}`;
       if (iBox.dataset.sig !== intSig) {
+        pendingInterferenceStream = null;
         iBox.dataset.sig = intSig;
         iBox.innerHTML = '';
 
@@ -278,7 +344,8 @@ async function refreshTerminal(forceScroll = false) {
           iBox.appendChild(olderBar);
         }
 
-        visibleInts.forEach(ix => {
+        visibleInts.forEach((ix, idx) => {
+          const isLatestInt = idx === visibleInts.length - 1;
           const isBroadcast = isRogueSectorInterference(ix);
           const card = document.createElement('div');
           card.className = isBroadcast
@@ -298,13 +365,7 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-int-body crt-msg-body"></div>
           `;
           const bodyEl = card.querySelector('.crt-int-body');
-          const iToken = `int_${ix.id}`;
-          if (!seenTokens.has(iToken)) {
-            markTokenSeen(iToken);
-            streamTextIntoElement(bodyEl, ix.redacted_text || '', true);
-          } else {
-            bodyEl.innerHTML = formatRedactedHtml(ix.redacted_text || '');
-          }
+          applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt && !showAllOlderInterferences, viewingInterferences, true);
           iBox.appendChild(card);
         });
       }
@@ -339,6 +400,7 @@ async function transmitQuestion() {
 }
 
 function switchSubWindow(which) {
+  clearStreamTimers();
   const isDirect = which === 'direct';
   const subDirect = document.getElementById('subWinDirect');
   const subInt = document.getElementById('subWinInterferences');
@@ -348,12 +410,30 @@ function switchSubWindow(which) {
   if (subInt) subInt.classList.toggle('hidden', isDirect);
   if (btn1) btn1.classList.toggle('active', isDirect);
   if (btn2) btn2.classList.toggle('active', !isDirect);
+
+  if (isDirect && pendingDirectStream && !showAllOlderMessages) {
+    const { el, text, token } = pendingDirectStream;
+    pendingDirectStream = null;
+    if (!seenTokens.has(token)) {
+      markTokenSeen(token);
+      streamTextIntoElement(el, text, false);
+    }
+  } else if (!isDirect && pendingInterferenceStream && !showAllOlderInterferences) {
+    const { el, text, token } = pendingInterferenceStream;
+    pendingInterferenceStream = null;
+    if (!seenTokens.has(token)) {
+      markTokenSeen(token);
+      streamTextIntoElement(el, text, true);
+    }
+  }
 }
 
 function lockTerminal() {
   activePassphrase = null;
   showAllOlderMessages = false;
   showAllOlderInterferences = false;
+  pendingDirectStream = null;
+  pendingInterferenceStream = null;
   clearStreamTimers();
   if (pollTimer) clearInterval(pollTimer);
   try { sessionStorage.removeItem(SESSION_AUTH_KEY); } catch (e) {}
@@ -420,93 +500,31 @@ async function initVoxTerminalPage() {
   await selectConduit(activeTheme === 'necron' ? 'beta' : 'alpha');
 }
 
-// Attach to window for browser global scope
-if (typeof window !== 'undefined') {
-  window.validChannels = validChannels;
-  window.SUPABASE_URL = SUPABASE_URL;
-  window.SUPABASE_ANON_KEY = SUPABASE_ANON_KEY;
-  window.SEEN_IDS_STORAGE_KEY = SEEN_IDS_STORAGE_KEY;
-  window.SESSION_AUTH_KEY = SESSION_AUTH_KEY;
-  window.toggleOlderMessages = toggleOlderMessages;
-  window.toggleOlderInterferences = toggleOlderInterferences;
-  window.syncSeenTokensFromStorage = syncSeenTokensFromStorage;
-  window.markTokenSeen = markTokenSeen;
-  window.rpcCall = rpcCall;
-  window.callRpc = callRpc;
-  window.checkPendingDossierBuffer = checkPendingDossierBuffer;
-  window.applyVoxFactionTheme = applyVoxFactionTheme;
-  window.selectConduit = selectConduit;
-  window.handleSealAction = handleSealAction;
-  window.flushPendingDossierIfAny = flushPendingDossierIfAny;
-  window.clearStreamTimers = clearStreamTimers;
-  window.streamTextIntoElement = streamTextIntoElement;
-  window.escapeHtml = escapeHtml;
-  window.formatRedactedHtml = formatRedactedHtml;
-  window.extractDynamicReplyCardMeta = extractDynamicReplyCardMeta;
-  window.formatTime = formatTime;
-  window.purgeVoxEntry = purgeVoxEntry;
-  window.isRogueSectorInterference = isRogueSectorInterference;
-  window.isVoxServerOnline = isVoxServerOnline;
-  window.checkVoxServerStatus = checkVoxServerStatus;
-  window.refreshTerminal = refreshTerminal;
-  window.transmitQuestion = transmitQuestion;
-  window.switchSubWindow = switchSubWindow;
-  window.lockTerminal = lockTerminal;
-  window.initVoxTerminalPage = initVoxTerminalPage;
+var voxExports = {
+  validChannels, SUPABASE_URL, SUPABASE_ANON_KEY, SEEN_IDS_STORAGE_KEY, SESSION_AUTH_KEY,
+  toggleOlderMessages, toggleOlderInterferences, syncSeenTokensFromStorage, markTokenSeen,
+  rpcCall, callRpc, checkPendingDossierBuffer, applyVoxFactionTheme, selectConduit,
+  handleSealAction, flushPendingDossierIfAny, clearStreamTimers, streamTextIntoElement,
+  escapeHtml, formatRedactedHtml, extractDynamicReplyCardMeta, formatTime, purgeVoxEntry,
+  isRogueSectorInterference, isVoxServerOnline, checkVoxServerStatus, refreshTerminal,
+  transmitQuestion, switchSubWindow, lockTerminal, initVoxTerminalPage
+};
 
+if (typeof window !== 'undefined') {
+  Object.assign(window, voxExports);
   window.addEventListener('DOMContentLoaded', initVoxTerminalPage);
   window.addEventListener('vox:page-swapped', () => {
     if (document.getElementById('authScreen') && document.getElementById('directMessagesBox')) {
       initVoxTerminalPage();
     } else {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
-      if (serverStatusTimer) {
-        clearInterval(serverStatusTimer);
-        serverStatusTimer = null;
-      }
-      activeStreamTimers.forEach(t => clearTimeout(t));
-      activeStreamTimers = [];
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      if (serverStatusTimer) { clearInterval(serverStatusTimer); serverStatusTimer = null; }
+      clearStreamTimers();
     }
   });
 }
 
-// CommonJS export for Node test runners
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    validChannels,
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
-    SEEN_IDS_STORAGE_KEY,
-    SESSION_AUTH_KEY,
-    toggleOlderMessages,
-    toggleOlderInterferences,
-    syncSeenTokensFromStorage,
-    markTokenSeen,
-    rpcCall,
-    callRpc,
-    checkPendingDossierBuffer,
-    applyVoxFactionTheme,
-    selectConduit,
-    handleSealAction,
-    flushPendingDossierIfAny,
-    clearStreamTimers,
-    streamTextIntoElement,
-    escapeHtml,
-    formatRedactedHtml,
-    extractDynamicReplyCardMeta,
-    formatTime,
-    purgeVoxEntry,
-    isRogueSectorInterference,
-    isVoxServerOnline,
-    checkVoxServerStatus,
-    refreshTerminal,
-    transmitQuestion,
-    switchSubWindow,
-    lockTerminal,
-    initVoxTerminalPage
-  };
+  module.exports = voxExports;
 }
 ````
