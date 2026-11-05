@@ -523,12 +523,13 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR 
   );
 
   const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
-  assert.equal(interceptCalls.length, 2, 'Rogue Sector intercept must be broadcast to BOTH alpha and beta');
-  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls.length, 3, 'Rogue Sector intercept must be broadcast to alpha, beta, and gamma');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta', 'gamma']);
   assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[2].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
-  assert.ok(logged.some(m => m.includes('ALPHA & BETA')));
+  assert.ok(logged.some(m => m.includes('ALPHA & BETA & GAMMA')));
 });
 
 test('processSingleMessage: triggers dual-channel intercept broadcast for ORBITAL AUGUR ARRAY / DISTANT SOLO HORDE report', async () => {
@@ -568,10 +569,11 @@ test('processSingleMessage: triggers dual-channel intercept broadcast for ORBITA
   );
 
   const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
-  assert.equal(interceptCalls.length, 2, 'Distant solo horde augur intercept must be broadcast to BOTH alpha and beta');
-  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls.length, 3, 'Distant solo horde augur intercept must be broadcast to alpha, beta, and gamma');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta', 'gamma']);
   assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[2].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
 });
 
@@ -612,10 +614,11 @@ test('processSingleMessage: triggers dual-channel intercept broadcast for DISTAN
   );
 
   const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
-  assert.equal(interceptCalls.length, 2, 'Distant warp-breach adversary intercept must be broadcast to BOTH alpha and beta');
-  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta']);
+  assert.equal(interceptCalls.length, 3, 'Distant warp-breach adversary intercept must be broadcast to alpha, beta, and gamma');
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['alpha', 'beta', 'gamma']);
   assert.equal(interceptCalls[0].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.equal(interceptCalls[1].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
+  assert.equal(interceptCalls[2].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
 });
 
@@ -693,11 +696,10 @@ test('processSingleMessage: dispatches prompt, awaits response, and patches Supa
   assert.ok(patchCall.body.reply.includes('Orders logged.'));
   assert.equal(patchCall.body.status, 'answered');
 
-  // Verify Supabase POST call for vox_interferences
-  const interceptCall = fetchCalls.find(c => c.url.includes('/rest/v1/vox_interferences'));
-  assert.ok(interceptCall, 'Must issue POST to vox_interferences endpoint');
-  assert.equal(interceptCall.body.target_channel, 'beta');
-  assert.ok(interceptCall.body.redacted_text.includes('[REDACTED]'));
+  // Verify Supabase POST calls for vox_interferences (routes to rival beta AND passive listener gamma)
+  const interceptCalls = fetchCalls.filter(c => c.url.includes('/rest/v1/vox_interferences'));
+  assert.deepEqual(interceptCalls.map(c => c.body.target_channel), ['beta', 'gamma'], 'Player interferences must arrive on rival channel and gamma Black-Ledger');
+  assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
 });
 
 test('processSingleMessage: late-arrival catcher captures pre-existing response without re-typing prompt', async () => {

@@ -657,7 +657,9 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       if (/target=["']?alpha/i.test(interceptAttrs)) destChannel = 'alpha';
       if (/target=["']?beta/i.test(interceptAttrs)) destChannel = 'beta';
 
-      const targetChannels = isDualBroadcast ? ['alpha', 'beta'] : [destChannel];
+      const targetChannels = isDualBroadcast
+        ? ['alpha', 'beta', 'gamma']
+        : (isSelfTest ? [destChannel] : Array.from(new Set([destChannel, 'gamma'])));
 
       const destOriginLabel = isDualBroadcast
         ? 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT'
