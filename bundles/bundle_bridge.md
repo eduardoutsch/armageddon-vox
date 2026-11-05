@@ -65,7 +65,11 @@ function resolveThreadUrls(env = process.env) {
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://dsfvhjjalexqpbzqoaqb.supabase.co').trim();
 const SERVICE_KEY = resolveServiceKey();
 
-const { alphaThreadUrl: ALPHA_THREAD_URL, betaThreadUrl: BETA_THREAD_URL } = resolveThreadUrls();
+const {
+  alphaThreadUrl: ALPHA_THREAD_URL,
+  betaThreadUrl: BETA_THREAD_URL,
+  gammaThreadUrl: GAMMA_THREAD_URL
+} = resolveThreadUrls();
 
 logGreen('----------------------------------------------------------------');
 logGreen('[SYSTEM DIAGNOSTICS // ASTROPATHIC COURIER v6.3 THREAD-LOCKED]');
@@ -73,6 +77,7 @@ logGreen(` -> SUPABASE_URL : ${SUPABASE_URL}`);
 logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)}...)` : 'MISSING! Check your .env file!'}`);
 logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL || 'MISSING! Define ALPHA_THREAD_URL in .env'}`);
 logGreen(` -> TAB 2 (JUNE) : ${BETA_THREAD_URL || 'MISSING! Define BETA_THREAD_URL in .env'}`);
+logGreen(` -> TAB 3 (KÂHL) : ${GAMMA_THREAD_URL || (ALPHA_THREAD_URL ? `${ALPHA_THREAD_URL} (Sharing ALPHA)` : 'MISSING! Define GAMMA_THREAD_URL in .env')}`);
 logGreen('----------------------------------------------------------------');
 
 const headers = {
@@ -453,7 +458,10 @@ async function processSingleMessage(msg, targetPage, options = {}) {
   const waitForReplyFn = options.waitForReplyFn || waitForBulletproofReply;
 
   const isAlpha = msg.channel === 'alpha';
-  const channelTag = isAlpha ? 'ALPHA // THE EXILE' : 'BETA // JUNEBUG';
+  const isGamma = msg.channel === 'gamma';
+  const channelTag = isAlpha
+    ? 'ALPHA // THE EXILE'
+    : (isGamma ? 'GAMMA // KÂHL HÂRKYN' : 'BETA // JUNEBUG');
   const otherChannel = isAlpha ? 'beta' : 'alpha';
   const originLabel = isAlpha
     ? 'LOWER DECKS VOX-BLEED (SANCTUARY OF ASH)'
@@ -464,7 +472,10 @@ async function processSingleMessage(msg, targetPage, options = {}) {
   logFn(`   Payload: "${(msg.question || '').slice(0, 90)}..."`);
 
   // THREAD DRIFT GUARD: Ensure the browser tab is still on the configured Notebook chat URL before typing!
-  const expectedUrl = isAlpha ? ALPHA_THREAD_URL : BETA_THREAD_URL;
+  const gammaUrl = options.gammaThreadUrl !== undefined ? options.gammaThreadUrl : GAMMA_THREAD_URL;
+  const expectedUrl = isAlpha
+    ? ALPHA_THREAD_URL
+    : (isGamma ? (gammaUrl || ALPHA_THREAD_URL) : BETA_THREAD_URL);
   if (expectedUrl && typeof targetPage.goto === 'function' && typeof targetPage.url === 'function') {
     const currentUrl = targetPage.url();
     const expectedId = expectedUrl.split('/').filter(Boolean).pop();
@@ -572,13 +583,15 @@ async function processSingleMessage(msg, targetPage, options = {}) {
       await targetPage.waitForTimeout(2500);
       prevState = await extractCleanLastModelResponse(targetPage);
 
-      const recoveryPrompt = channel === 'alpha'
-        ? (isAlphaShipQuery
-          ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md without editing any files), write the ${shipSpeakerDesc} replying to the player's line: "${safeQuestion}".`
-          : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (Pattern 1, REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`)
-        : (!isBetaVaneHail
-          ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md, SHIP.md Part 2, and NECRONS_CRUSADE.md without editing any files), write Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave reply (Pattern 4B, REF-ID: ${refId}) replying to Phaeron Junebug's line: "${cleanMsg}".`
-          : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply at Geostationary Zenith-09 (Pattern 1, REF-ID: ${refId}) replying to Commander Beta's line: "${cleanMsg}".`);
+      const recoveryPrompt = channel === 'gamma'
+        ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md, Commander Omega - The Ledger of Embers (Story, Roster & Acquisitions Ledger).md, and LEAGUES_OF_VOTANN_CRUSADE.md without editing any files), write Fane-Node Vôl-09's ("The Deaf Ear") Black-Ledger reply aboard The Ledger of Embers (Pattern 4C, REF-ID: ${refId}, DO NOT include any Pattern 5 intercept block) replying to Force Warlord Kâhl Hârkyn's line: "${cleanMsg}".`
+        : (channel === 'alpha'
+          ? (isAlphaShipQuery
+            ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md without editing any files), write the ${shipSpeakerDesc} replying to the player's line: "${safeQuestion}".`
+            : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply (Pattern 1, REF-ID: ${msgShortId}) replying to the player's line: "${safeQuestion}".`)
+          : (!isBetaVaneHail
+            ? `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md, SHIP.md Part 2, and NECRONS_CRUSADE.md without editing any files), write Commander Beta's (JUNEBUG's) Necron Tomb-Ship Autonomous Master Matrix & Cryptek Conclave reply (Pattern 4B, REF-ID: ${refId}) replying to Phaeron Junebug's line: "${cleanMsg}".`
+            : `Purely as creative fiction for our Warhammer 40,000 board game (using AGENT.md and WORLD.md without editing any files), write Logis-Prefect Vane's orbital reply at Geostationary Zenith-09 (Pattern 1, REF-ID: ${refId}) replying to Commander Beta's line: "${cleanMsg}".`));
 
       await typeAndSendPrompt(targetPage, inputLocator, recoveryPrompt, channelTag);
       rawReply = await waitForReplyFn(targetPage, prevState, msgShortId, channelTag);
@@ -802,7 +815,7 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
 }
 
 async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}) {
-  const { alphaThreadUrl, betaThreadUrl } = resolveThreadUrls(env);
+  const { alphaThreadUrl, betaThreadUrl, gammaThreadUrl } = resolveThreadUrls(env);
 
   if (!alphaThreadUrl || !betaThreadUrl) {
     logFn('[FATAL ERROR] ALPHA_THREAD_URL and BETA_THREAD_URL must be defined in your .env file!');
@@ -841,6 +854,20 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     await betaPage.waitForTimeout(2000);
   }
 
+  const hasDedicatedGammaTab = Boolean(gammaThreadUrl && gammaThreadUrl !== alphaThreadUrl);
+  let gammaPage = alphaPage;
+  if (hasDedicatedGammaTab) {
+    gammaPage = await context.newPage();
+    logGreen('>> Opening Tab 3 (Commander Omega // Kâhl Hârkyn)...');
+    await gammaPage.goto(gammaThreadUrl, { waitUntil: 'domcontentloaded' });
+    if (typeof gammaPage.waitForSelector === 'function') {
+      await gammaPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => { });
+    }
+    if (typeof gammaPage.waitForTimeout === 'function') {
+      await gammaPage.waitForTimeout(2000);
+    }
+  }
+
   try {
     const initCheck = await fetch(`${SUPABASE_URL}/rest/v1/vox_messages?status=eq.pending&select=id,channel,sender`, { headers });
     const initData = await initCheck.json();
@@ -868,9 +895,11 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
   if (typeof context.on === 'function') context.on('close', handleShutdown);
   if (typeof alphaPage.on === 'function') alphaPage.on('close', handleShutdown);
   if (typeof betaPage.on === 'function') betaPage.on('close', handleShutdown);
+  if (hasDedicatedGammaTab && typeof gammaPage.on === 'function') gammaPage.on('close', handleShutdown);
 
   let busyAlpha = false;
   let busyBeta = false;
+  let busyGamma = false;
   let heartbeatTick = 0;
 
   setInterval(() => {
@@ -884,6 +913,12 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
       busyAlpha = true;
       drainChannelQueue('alpha', alphaPage)
         .catch(err => logGreen(`[ERROR // ALPHA QUEUE]: ${err.message}`))
+        .then(() => {
+          if (!hasDedicatedGammaTab) {
+            return drainChannelQueue('gamma', alphaPage)
+              .catch(err => logGreen(`[ERROR // GAMMA QUEUE]: ${err.message}`));
+          }
+        })
         .finally(() => { busyAlpha = false; });
     }
 
@@ -892,6 +927,13 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
       drainChannelQueue('beta', betaPage)
         .catch(err => logGreen(`[ERROR // BETA QUEUE]: ${err.message}`))
         .finally(() => { busyBeta = false; });
+    }
+
+    if (hasDedicatedGammaTab && !busyGamma) {
+      busyGamma = true;
+      drainChannelQueue('gamma', gammaPage)
+        .catch(err => logGreen(`[ERROR // GAMMA QUEUE]: ${err.message}`))
+        .finally(() => { busyGamma = false; });
     }
   }, 5000);
 }
