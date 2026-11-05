@@ -916,18 +916,97 @@ test('vox: terminal does not retype already-seen messages upon login or refresh,
   mockElements.directMessagesBox.dataset.sig = '';
   await vox.refreshTerminal(false);
 
-  // m_brand_new should trigger the streaming teletype animation
+  // m_brand_new is answered, so only its reply (the latest card being looked at) triggers streaming; its question renders silently
   const wrapNew = mockElements.directMessagesBox.children[1];
   const qBodyNew = wrapNew.children[0].children[0];
-  assert.equal(qBodyNew.dataset.streaming, '1', 'Unseen new message MUST trigger streaming typing animation');
+  const rBodyNew = wrapNew.children[1].children[0];
+  assert.equal(qBodyNew.textContent, 'Incoming orbital breach!');
+  assert.equal(qBodyNew.dataset.streaming, undefined, 'Question above an already-present reply must render silently without streaming');
+  assert.equal(rBodyNew.dataset.streaming, '1', 'Only the newest visible reply card being looked at MUST trigger streaming typing animation');
 
   // 3. Re-render/subsequent terminal login: m_brand_new is now in seen tokens, so it does not stream again
   mockElements.directMessagesBox.dataset.sig = '';
   await vox.refreshTerminal(false);
 
   const wrapSubsequent = mockElements.directMessagesBox.children[1];
-  const qBodySubsequent = wrapSubsequent.children[0].children[0];
-  assert.equal(qBodySubsequent.dataset.streaming, undefined, 'Previously seen message must NOT retype on subsequent render or login');
+  const rBodySubsequent = wrapSubsequent.children[1].children[0];
+  assert.equal(rBodySubsequent.dataset.streaming, undefined, 'Previously seen message must NOT retype on subsequent render or login');
+});
+
+test('vox: terminal load only animates and plays sound for the single message currently being looked at, rendering all others silently', async () => {
+  localStore.clear();
+  sessionStore.clear();
+  const tokens = vox.getSeenTokens();
+  if (tokens) tokens.clear();
+
+  vox.switchSubWindow('direct');
+
+  mockMessages = [
+    { id: 'm_load_1', channel: 'alpha', sender: 'Commander', question: 'Q1', reply: 'Reply 1', status: 'answered' },
+    { id: 'm_load_2', channel: 'alpha', sender: 'Commander', question: 'Q2', reply: 'Reply 2', status: 'answered' },
+    { id: 'm_load_3', channel: 'alpha', sender: 'Commander', question: 'Q3', reply: 'Reply 3', status: 'answered' }
+  ];
+  mockInterferences = [
+    { id: 'int_load_1', target_channel: 'alpha', origin_hint: 'BLEED 1', redacted_text: 'Intercept 1 [REDACTED]' },
+    { id: 'int_load_2', target_channel: 'alpha', origin_hint: 'BLEED 2', redacted_text: 'Intercept 2 [REDACTED]' },
+    { id: 'int_load_3', target_channel: 'alpha', origin_hint: 'BLEED 3', redacted_text: 'Intercept 3 [REDACTED]' }
+  ];
+
+  tickEvents = [];
+  mockElements.directMessagesBox.dataset.sig = '';
+  mockElements.interferencesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  const [wrap1, wrap2, wrap3] = mockElements.directMessagesBox.children;
+  const qBody1 = wrap1.children[0].children[0];
+  const rBody1 = wrap1.children[1].children[0];
+  const qBody2 = wrap2.children[0].children[0];
+  const rBody2 = wrap2.children[1].children[0];
+  const qBody3 = wrap3.children[0].children[0];
+  const rBody3 = wrap3.children[1].children[0];
+
+  assert.equal(qBody1.dataset.streaming, undefined, 'Older message 1 question must render with no animation');
+  assert.equal(rBody1.dataset.streaming, undefined, 'Older message 1 reply must render with no animation');
+  assert.equal(qBody2.dataset.streaming, undefined, 'Older message 2 question must render with no animation');
+  assert.equal(rBody2.dataset.streaming, undefined, 'Older message 2 reply must render with no animation');
+  assert.equal(qBody3.dataset.streaming, undefined, 'Latest message question must render with no animation when reply is already present');
+  assert.equal(rBody3.dataset.streaming, '1', 'Only the single latest reply currently being looked at must animate');
+
+  // Hidden interferences sub-window must NOT animate any cards while looking at direct messages
+  const [intCard1, intCard2, intCard3] = mockElements.interferencesBox.children;
+  const intBody1 = intCard1.children[0];
+  const intBody2 = intCard2.children[0];
+  const intBody3 = intCard3.children[0];
+  assert.equal(intBody1.dataset.streaming, undefined, 'Hidden interference 1 must not animate');
+  assert.equal(intBody2.dataset.streaming, undefined, 'Hidden interference 2 must not animate');
+  assert.equal(intBody3.dataset.streaming, undefined, 'Hidden interference 3 must not animate while sub-window is hidden');
+
+  // Exactly 1 teletype audio tick must have fired on initial synchronous step (for rBody3 only, not 9 simultaneous streams)
+  assert.equal(tickEvents.length, 1, 'Must only play teletype sound for the 1 message currently being looked at');
+
+  // Switching to Interferences sub-window immediately finishes rBody3 and animates only the latest unseen interference (intBody3)
+  tickEvents = [];
+  vox.switchSubWindow('interferences');
+  assert.equal(rBody3.dataset.streaming, '0', 'Switching away from Direct Link must immediately finish its active stream');
+  assert.equal(rBody3.textContent, 'Reply 3');
+  assert.equal(intBody1.dataset.streaming, undefined, 'Older interference 1 must remain static');
+  assert.equal(intBody2.dataset.streaming, undefined, 'Older interference 2 must remain static');
+  assert.equal(intBody3.dataset.streaming, '1', 'Only the latest interference being looked at must animate upon opening Interferences');
+  assert.equal(tickEvents.length, 1, 'Must play teletype sound only for the single active interference');
+
+  // Switching back to Direct Link immediately finishes intBody3; when a pending question is the latest card, it animates
+  vox.switchSubWindow('direct');
+  assert.equal(intBody3.dataset.streaming, '0', 'Switching away from Interferences must immediately finish its active stream');
+
+  mockMessages.push({ id: 'm_load_4', channel: 'alpha', sender: 'Commander', question: 'Pending inquiry', reply: null, status: 'pending' });
+  tickEvents = [];
+  mockElements.directMessagesBox.dataset.sig = '';
+  await vox.refreshTerminal(false);
+
+  const wrap4 = mockElements.directMessagesBox.children[mockElements.directMessagesBox.children.length - 1];
+  const qBody4 = wrap4.children[0].children[0];
+  assert.equal(qBody4.dataset.streaming, '1', 'Unanswered latest question at bottom of Direct Link must animate');
+  assert.equal(tickEvents.length, 1);
 });
 
 
