@@ -927,4 +927,43 @@ test('resolveThreadUrls: resolves gammaUrl when GAMMA_THREAD_URL is configured',
   assert.equal(urls.alphaUrl, 'https://gemini.google.com/app/alpha');
   assert.equal(urls.betaUrl, 'https://gemini.google.com/app/beta');
   assert.equal(urls.gammaUrl, 'https://gemini.google.com/app/gamma');
+  assert.equal(urls.gammaThreadUrl, 'https://gemini.google.com/app/gamma');
 });
+
+test('processSingleMessage: channel=gamma logs GAMMA channelTag, guards against drift using GAMMA_THREAD_URL, and uses Fane-Node Vôl-09 self-heal recovery prompt on refusal', async () => {
+  const logged = [];
+  const gotoUrls = [];
+  const dispatchedPrompts = [];
+  let callCount = 0;
+
+  const mockPage = Object.assign(createMockPage({ onInsertText: (txt) => dispatchedPrompts.push(txt) }), {
+    url: () => 'https://gemini.google.com/app/drifted-wrong-thread',
+    goto: async (url) => { gotoUrls.push(url); },
+    waitForSelector: async () => {}
+  });
+
+  const gammaMsg = {
+    id: '99887766-gamma-drift',
+    channel: 'gamma',
+    sender: 'Kâhl Hârkyn',
+    question: 'Report current Raw Minerals and Expedition Total.'
+  };
+
+  const success = await processSingleMessage(gammaMsg, mockPage, {
+    fetchFn: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+    supabaseUrl: 'https://test.supabase.co',
+    serviceKey: 'valid_test_secret_key_123',
+    gammaThreadUrl: 'https://gemini.google.com/app/793dd9d2bd84ad35',
+    waitForReplyFn: async () => (++callCount === 1
+      ? '__GEMINI_REFUSAL__'
+      : 'REF-ID: 99887766\n+++ FANE-NODE VÔL-09 // BLACK-LEDGER ANCESTOR CORE +++\n• VAULT VERIFIED: 70 Raw Minerals logged.'),
+    logFn: (m) => logged.push(m)
+  });
+
+  assert.equal(success, true);
+  assert.ok(logged.some(m => m.includes('GAMMA // KÂHL HÂRKYN')), 'Must log GAMMA // KÂHL HÂRKYN channelTag for gamma messages');
+  assert.deepEqual(gotoUrls, ['https://gemini.google.com/app/793dd9d2bd84ad35'], 'Must snap drifted gamma tab back to expected gamma thread URL');
+  assert.equal(dispatchedPrompts.length, 2, 'Must send initial prompt and self-heal recovery prompt on refusal');
+  assert.ok(dispatchedPrompts[1].includes('Fane-Node Vôl-09') && dispatchedPrompts[1].includes('Commander Omega - The Ledger of Embers'));
+});
+
