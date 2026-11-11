@@ -97,3 +97,64 @@ function createTacticaDaemon(options = {}) {
     }
   }
 
+  function logCompletedSequence(seq) {
+    if (seq.kind === 'AUTO_DEFENDER') {
+      const prof = seq.defenseProfile;
+      const out = seq.outcome;
+      const fnpNote = prof.fnp ? `, FNP ${prof.fnp}+ (${out.fnpPassed} shrugged)` : '';
+      const deathNote = out.onDeathTriggers > 0 ? ` [${out.onDeathTriggers}x Shoot/Fight on Death!]` : '';
+      const gscNote = out.gscRespawnTriggered ? ' [GSC 5+ Respawn!]' : '';
+
+      if (out.unitDestroyed && liveState.hordeWarlord && liveState.hordeWarlord.name === seq.unitName) {
+        liveState.hordeWarlord.alive = false;
+      }
+      return appendEvent({
+        type: 'AUTO_DEFENDER',
+        summary: `${seq.unitName} [LCT Mat]: Save ${prof.saveTarget}+ (${out.savesPassed}/${seq.numWounds} saved${fnpNote}) -> ${out.modelsSlain} slain (${out.remainingModels} left).${deathNote}${gscNote}`,
+        details: { defenseProfile: prof, outcome: out }
+      });
+    }
+
+    if (seq.kind === 'HORDE_ATTACK') {
+      return appendEvent({
+        type: 'HORDE_ATTACK',
+        summary: `${seq.attackerName} -> ${seq.targetName} [LCT Mat]: ${seq.normalWounds} Wounds (AP ${seq.attackMods.apSigned}) + ${seq.devastatingMortalWounds} Mortal Wounds.`,
+        details: { normalWounds: seq.normalWounds, devastatingMortalWounds: seq.devastatingMortalWounds }
+      });
+    }
+    return null;
+  }
+
+  loadPersistedState();
+
+  function sendJson(res, status, payload) {
+    res.writeHead(status, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    });
+    res.end(JSON.stringify(payload));
+  }
+
+  function readJsonBody(req) {
+    return new Promise((resolve) => {
+      let buf = '';
+      req.on('data', c => { buf += c; });
+      req.on('end', () => {
+        if (!buf) return resolve({});
+        try { resolve(JSON.parse(buf)); } catch (e) { resolve({}); }
+      });
+    });
+  }
+
+  const server = http.createServer(async (req, res) => {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
+      });
+      return res.end();
+    }
+
