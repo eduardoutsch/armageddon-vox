@@ -129,11 +129,15 @@ const mockFetch = async (url, options = {}) => {
       json: async () => ({
         ok: true,
         horde_pool: {
-          b34: 'Cloud Gaunts 20',
-          b56: 'Cloud Warriors 5',
-          b79: 'Cloud Carnifex 2',
-          b10: 'Cloud Tyrant 1',
-          b13: 'Cloud Titan 1'
+          byFaction: {
+            'Space Marines': {
+              b34: 'Cloud Gaunts 20',
+              b56: 'Cloud Warriors 5',
+              b79: 'Cloud Carnifex 2',
+              b10: 'Cloud Tyrant 1',
+              b13: 'Cloud Titan 1'
+            }
+          }
         },
         nemesis_status: {
           nem1: 'deployed',
@@ -282,6 +286,7 @@ test('roster: transmitNemesisDossier triggers window.VoxAudio.transmitToVox with
 });
 
 test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
+  mockElements.bracketFactionPicker.value = 'Tyranids';
   mockElements.rosterPool34.value = '20 Termagants';
   mockElements.rosterPool56.value = '5 Tyranid Warriors';
   mockElements.rosterPool79.value = '1 Maleceptor';
@@ -295,14 +300,26 @@ test('roster: saveShelfBarracks persists custom pool to localStorage', () => {
   const saved = mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY);
   assert.ok(saved, 'Must persist custom shelf pool to localStorage');
   const pool = JSON.parse(saved);
-  assert.equal(pool.b34, '20 Termagants');
-  assert.equal(pool.b56, '5 Tyranid Warriors');
-  assert.equal(pool.b79, '1 Maleceptor');
-  assert.equal(pool.b10, '1 Tyrannofex');
-  assert.equal(pool.b13, '1 Hierophant Bio-Titan');
+  assert.equal(pool.b34, undefined, 'Must not spread flat b34..b13 keys on root');
+  assert.equal(pool.byFaction['Tyranids'].b34, '20 Termagants');
+  assert.equal(pool.byFaction['Tyranids'].b56, '5 Tyranid Warriors');
+  assert.equal(pool.byFaction['Tyranids'].b79, '1 Maleceptor');
+  assert.equal(pool.byFaction['Tyranids'].b10, '1 Tyrannofex');
+  assert.equal(pool.byFaction['Tyranids'].b13, '1 Hierophant Bio-Titan');
 });
 
 test('roster: renderFactionBracketTable displays faction rules and bracket units', () => {
+  mockLocalStorage.setItem(roster.CUSTOM_POOL_STORAGE_KEY, JSON.stringify({
+    byFaction: {
+      'Tyranids': {
+        b34: '10 Termagants',
+        b56: '5 Tyranid Warriors',
+        b79: '1 Screamer-Killer',
+        b10: '1 Norn Emissary',
+        b13: '1 Hierophant Bio-Titan'
+      }
+    }
+  }));
   mockElements.bracketFactionPicker.value = 'Tyranids';
   roster.renderFactionBracketTable();
 
@@ -310,12 +327,19 @@ test('roster: renderFactionBracketTable displays faction rules and bracket units
   assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Neurons Activated'));
   assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('10 Termagants'));
   assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('Norn Emissary'));
+
+  // Verify unconfigured faction renders empty warning with zero fallback
+  mockElements.bracketFactionPicker.value = 'Drukhari';
+  roster.renderFactionBracketTable();
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('⚠️ Horde Pool Empty for Drukhari'));
 });
 
 test('roster: saveRosterPageState and initRosterPage preserve and restore form and tab state', () => {
   mockLocalStorage.clear();
+  mockElements.bracketFactionPicker.value = 'Space Marines';
   mockLocalStorage.setItem(roster.ROSTER_STATE_KEY, JSON.stringify({
     activeRosterTab: 'unbound',
+    bracketFactionPicker: 'Space Marines',
     nemStatus1: 'slain',
     nemStatus2: 'deployed',
     nemReportChannel: 'beta',
