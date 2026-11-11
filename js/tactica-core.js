@@ -286,3 +286,77 @@
       ? Math.min(wpm, Number(opts.currentModelRemainingWounds))
       : wpm;
 
+    const seq = {
+      sequenceId,
+      kind: 'AUTO_DEFENDER',
+      unitName,
+      matSide,
+      numWounds,
+      damagePerWound,
+      mortalWounds,
+      startingModels,
+      startWounds,
+      defenseProfile,
+      stage: 'SAVES',
+      expectedDice: 0,
+      didOnDeath: false,
+      didRespawn: false,
+      nextCommand: null,
+      outcome: {
+        savesRolled: [],
+        savesPassed: 0,
+        unsavedWounds: 0,
+        fnpRolls: [],
+        fnpPassed: 0,
+        finalDamageInflicted: 0,
+        modelsSlain: 0,
+        remainingModels: startingModels,
+        currentModelRemainingWounds: startWounds,
+        unitDestroyed: false,
+        onDeathRolls: [],
+        onDeathTriggers: 0,
+        gscRespawnRoll: null,
+        gscRespawnTriggered: false
+      }
+    };
+
+    if (numWounds === 0) {
+      seq.stage = 'COMPLETE';
+      return seq;
+    }
+
+    if (!mortalWounds) {
+      seq.stage = 'SAVES';
+      seq.expectedDice = numWounds;
+      seq.nextCommand = buildLctCommand(
+        sequenceId,
+        'SAVES',
+        numWounds,
+        defenseProfile.saveTarget,
+        matSide,
+        `${unitName} — ${numWounds}x Saves (${defenseProfile.saveTarget}+)`
+      );
+      return seq;
+    }
+
+    seq.outcome.unsavedWounds = numWounds;
+    if (defenseProfile.fnp) {
+      const fnpCount = numWounds * damagePerWound;
+      seq.stage = 'FNP';
+      seq.expectedDice = fnpCount;
+      seq.nextCommand = buildLctCommand(
+        sequenceId,
+        'FNP',
+        fnpCount,
+        defenseProfile.fnp,
+        matSide,
+        `${unitName} — ${fnpCount}x Feel No Pain (${defenseProfile.fnp}+)`
+      );
+      return seq;
+    }
+
+    const alloc = applyDamagePacketsToModels([numWounds * damagePerWound], wpm, startingModels, startWounds, true);
+    Object.assign(seq.outcome, alloc, { unitDestroyed: alloc.remainingModels <= 0 });
+    return finalizeOrAdvancePostDamageStage(seq);
+  }
+
