@@ -344,6 +344,84 @@ test('resolveTacticaThreadUrl: strictly selects TACTICA_THREAD_URL and ignores A
   assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/YOUR_NEW_THREAD_ID_HERE'), false);
   assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/<your-tactica-thread-id>'), false);
   assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/tactica999'), true);
+  assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app'), true, 'Must accept bare https://gemini.google.com/app URL');
+  assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/'), true, 'Must accept bare https://gemini.google.com/app/ URL');
+});
+
+test('launchTacticaBrowserSession -> queryThread: clears editor and inserts promptText BEFORE dispatching ClipboardEvent paste so Ctrl+A + Backspace never deletes the screenshot', async () => {
+  const ops = [];
+  let evalSnapCall = 0;
+  const mockInput = {
+    click: async () => { ops.push('click-input'); }
+  };
+  const mockSendBtn = {
+    count: async () => 1,
+    isEnabled: async () => true,
+    click: async () => { ops.push('click-send'); }
+  };
+  const mockModelResponses = {
+    count: async () => 1
+  };
+  const mockPage = {
+    goto: async () => { ops.push('goto'); },
+    waitForSelector: async () => {},
+    waitForTimeout: async () => {},
+    url: () => 'https://gemini.google.com/app',
+    locator: (sel) => {
+      if (sel === 'model-response') return mockModelResponses;
+      if (sel.includes('send-button') || sel.includes('Send')) return mockSendBtn;
+      return { first: () => mockInput };
+    },
+    keyboard: {
+      press: async (k) => { ops.push(`key:${k}`); },
+      insertText: async (t) => { ops.push(`insertText:${t.slice(0, 12)}`); }
+    },
+    evaluate: async (fn, arg) => {
+      if (arg && arg.b64 !== undefined) {
+        ops.push('paste-image');
+        return undefined;
+      }
+      evalSnapCall += 1;
+      return {
+        count: 2,
+        text: '{"losBlocked":true,"revertSquadKey":"HORDE::1","blockedPairs":[],"spokenReply":"Blocked by ruin."}',
+        isGenerating: false
+      };
+    },
+    close: async () => {}
+  };
+  mockSendBtn.first = () => mockSendBtn;
+
+  const mockChromium = {
+    launchPersistentContext: async () => ({
+      pages: () => [mockPage],
+      newPage: async () => mockPage,
+      on: () => {},
+      close: async () => {}
+    })
+  };
+
+  const session = await launchTacticaBrowserSession('https://gemini.google.com/app', {
+    env: {},
+    baseDir: os.tmpdir(),
+    chromium: mockChromium
+  });
+  assert.ok(session, 'launchTacticaBrowserSession must accept bare https://gemini.google.com/app');
+
+  const reply = await session.queryThread('Verify LOS prompt', 'data:image/jpeg;base64,AAAA');
+  assert.ok(reply.includes('"losBlocked":true'));
+  assert.ok(evalSnapCall >= 2);
+
+  const ctrlAIdx = ops.indexOf('key:Control+A');
+  const backspaceIdx = ops.indexOf('key:Backspace');
+  const insertIdx = ops.findIndex(o => o.startsWith('insertText:'));
+  const pasteIdx = ops.indexOf('paste-image');
+  const sendIdx = ops.indexOf('click-send');
+
+  assert.ok(ctrlAIdx >= 0 && backspaceIdx > ctrlAIdx && insertIdx > backspaceIdx, 'Must clear editor and insert promptText');
+  assert.ok(pasteIdx > insertIdx, `ClipboardEvent paste (${pasteIdx}) MUST happen AFTER Ctrl+A/Backspace/insertText (${insertIdx}) so screenshot is not deleted`);
+  assert.ok(sendIdx > pasteIdx, `Send click (${sendIdx}) MUST happen AFTER ClipboardEvent paste (${pasteIdx})`);
+  await session.close();
 });
 
 test('resolveTacticaProfileDir & launchTacticaBrowserSession: strictly isolates chrome_tactica_profile from chrome_vox_profile so both terminals run concurrently without crashing', async () => {

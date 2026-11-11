@@ -254,6 +254,13 @@
         battleRound: updatedState.battleRound || 1,
         ...parsed.buff
       });
+      if (typeof fetch === 'function') {
+        fetch(`${DAEMON_URL}/session/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activePlayerBuffs: updatedState.activePlayerBuffs })
+        }).catch(() => {});
+      }
     }
 
     syncPlayerCpToSpawnerSession(updatedState.playerCp ?? 0, validation.countsForSecret20);
@@ -453,16 +460,24 @@
       exportTacticaToCrusade
     });
     if (typeof window.addEventListener === 'function') {
-      window.addEventListener('keydown', (e) => {
+      if (window._foaPttKeyDown && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('keydown', window._foaPttKeyDown);
+      }
+      if (window._foaPttKeyUp && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('keyup', window._foaPttKeyUp);
+      }
+      window._foaPttKeyDown = (e) => {
         if (typeof document !== 'undefined' && (document.getElementById('pttStatusPill') || document.getElementById('tacticaRoomLabel'))) {
           handlePttKeyDown(e);
         }
-      });
-      window.addEventListener('keyup', (e) => {
+      };
+      window._foaPttKeyUp = (e) => {
         if (isPttHeld || (typeof document !== 'undefined' && (document.getElementById('pttStatusPill') || document.getElementById('tacticaRoomLabel')))) {
           handlePttKeyUp(e);
         }
-      });
+      };
+      window.addEventListener('keydown', window._foaPttKeyDown);
+      window.addEventListener('keyup', window._foaPttKeyUp);
     }
   }
 

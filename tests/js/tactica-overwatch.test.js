@@ -136,3 +136,72 @@ test('speakOverwatchLine & triggerQuickStratagem: plays decoded /audio/speak MP3
     delete globalThis.fetch;
   }
 });
+
+test('SPA router safety: re-evaluating js/tactica-overwatch.js replaces _foaPttKeyDown/_foaPttKeyUp via removeEventListener without stacking SpeechRecognition instances', () => {
+  const overwatchCore = require(path.join(ROOT_DIR, 'js/tactica-overwatch-core.js'));
+  Object.assign(globalThis, overwatchCore);
+
+  const listeners = { keydown: new Set(), keyup: new Set() };
+  let removedKeyDown = 0;
+  let removedKeyUp = 0;
+  let recognitionInstances = 0;
+
+  class MockSpeechRecognition {
+    constructor() {
+      recognitionInstances += 1;
+    }
+    start() {}
+    stop() {}
+  }
+
+  const pttPill = {
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); },
+      remove(c) { this._s.delete(c); },
+      contains(c) { return this._s.has(c); }
+    },
+    textContent: ''
+  };
+
+  globalThis.document = {
+    getElementById: (id) => (id === 'pttStatusPill' ? pttPill : null)
+  };
+  globalThis.window = {
+    SpeechRecognition: MockSpeechRecognition,
+    addEventListener(type, fn) {
+      if (listeners[type]) listeners[type].add(fn);
+    },
+    removeEventListener(type, fn) {
+      if (type === 'keydown' && listeners.keydown.delete(fn)) removedKeyDown += 1;
+      if (type === 'keyup' && listeners.keyup.delete(fn)) removedKeyUp += 1;
+    }
+  };
+
+  const modPath = path.join(ROOT_DIR, 'js/tactica-overwatch.js');
+  try {
+    // Simulate navigating to tactica.html 3 times via vox-audio.js SPA router
+    for (let i = 0; i < 3; i++) {
+      delete require.cache[require.resolve(modPath)];
+      require(modPath);
+    }
+
+    assert.equal(typeof globalThis.window._foaPttKeyDown, 'function', 'Must store window._foaPttKeyDown');
+    assert.equal(typeof globalThis.window._foaPttKeyUp, 'function', 'Must store window._foaPttKeyUp');
+    assert.equal(removedKeyDown, 2, 'Must remove previous keydown listener before re-binding');
+    assert.equal(removedKeyUp, 2, 'Must remove previous keyup listener before re-binding');
+    assert.equal(listeners.keydown.size, 1, 'Strictly 1 keydown listener must remain active');
+    assert.equal(listeners.keyup.size, 1, 'Strictly 1 keyup listener must remain active');
+
+    for (const fn of listeners.keydown) {
+      fn({ code: 'Space', preventDefault() {}, target: { tagName: 'BODY' } });
+    }
+    assert.equal(recognitionInstances, 1, 'Pressing [Space] once after SPA swaps must start strictly 1 SpeechRecognition');
+    for (const fn of listeners.keyup) {
+      fn({ code: 'Space' });
+    }
+  } finally {
+    delete globalThis.document;
+    delete globalThis.window;
+  }
+});
