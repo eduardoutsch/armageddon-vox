@@ -555,3 +555,60 @@
     return { normalWounds, devastatingMortalWounds, ones, misses };
   }
 
+  /**
+   * Advances a Horde Attack sequence using settled pips from LCT's TTS dice mat.
+   */
+  function advanceHordeAttackRollSequence(prevSeq, rawDice = []) {
+    const seq = JSON.parse(JSON.stringify(prevSeq));
+    if (seq.stage === 'COMPLETE') return seq;
+
+    const dice = (Array.isArray(rawDice) ? rawDice : []).slice(0, seq.expectedDice).map(Number);
+    if (dice.length < seq.expectedDice) {
+      throw new Error(`Expected ${seq.expectedDice} dice from LCT mat for ${seq.stage}, got ${dice.length}`);
+    }
+
+    if (seq.stage === 'TAU_GLASSES') {
+      seq.attackMods = combatCore.resolveHordeAttackModifiers(
+        seq.attacker, seq.target, seq.weapon, seq.matchStateSnapshot,
+        { ...seq.context, tauGlassesPassed: dice[0] >= 4 }
+      );
+      const hitThresh = clamp(seq.attackMods.effectiveSkill - seq.attackMods.netHitMod, 2, 6);
+      seq.stage = 'HITS';
+      seq.expectedDice = seq.totalAttacks;
+      seq.nextCommand = buildLctCommand(seq.sequenceId, 'HITS', seq.totalAttacks, hitThresh, seq.matSide, `${seq.attackerName} — ${seq.totalAttacks}x Hits (${hitThresh}+)`);
+      return seq;
+    }
+
+    if (seq.stage === 'HITS' || seq.stage === 'HIT_REROLLS') {
+      const batch = evaluateHitDiceBatch(dice, seq.attackMods);
+      seq.hitsToWound += batch.normalHits;
+      seq.autoWounds += batch.autoWounds;
+
+      if (seq.stage === 'HITS') {
+        const rerollCount = seq.attackMods.rerollHits === 'ALL'
+          ? batch.misses
+          : (seq.attackMods.rerollHits === 'ONES' ? batch.ones : 0);
+        if (rerollCount > 0) {
+          const hitThresh = clamp(seq.attackMods.effectiveSkill - seq.attackMods.netHitMod, 2, 6);
+          seq.stage = 'HIT_REROLLS';
+          seq.expectedDice = rerollCount;
+          seq.nextCommand = buildLctCommand(seq.sequenceId, 'HIT_REROLLS', rerollCount, hitThresh, seq.matSide, `${seq.attackerName} — ${rerollCount}x Hit Re-rolls (${hitThresh}+)`);
+          return seq;
+        }
+      }
+
+      seq.normalWounds += seq.autoWounds;
+      if (seq.hitsToWound <= 0) {
+        seq.stage = 'COMPLETE';
+        seq.expectedDice = 0;
+        seq.nextCommand = null;
+        return seq;
+      }
+
+      const wndThresh = clamp(seq.attackMods.woundTarget - seq.attackMods.netWoundMod, 2, 6);
+      seq.stage = 'WOUNDS';
+      seq.expectedDice = seq.hitsToWound;
+      seq.nextCommand = buildLctCommand(seq.sequenceId, 'WOUNDS', seq.hitsToWound, wndThresh, seq.matSide, `${seq.attackerName} — ${seq.hitsToWound}x Wounds (${wndThresh}+)`);
+      return seq;
+    }
+
