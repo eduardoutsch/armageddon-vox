@@ -503,3 +503,63 @@
         moveCommand: null
       };
 
+      if (decl.autoSucceeded) {
+        decl.moveCommand = {
+          action: 'MOVE_UNIT',
+          squadKey: decl.squadKey,
+          guids: decl.guids,
+          targetX: decl.destX,
+          targetZ: decl.destZ,
+          facingY: decl.facingY
+        };
+      } else {
+        decl.lctCommand = {
+          action: 'LCT_MAT_ROLL',
+          rollId: `${seqId}:CHARGE_ROLL`,
+          sequenceId: seqId,
+          stage: 'CHARGE_ROLL',
+          matSide: 'RED',
+          count: 2,
+          threshold: minEdgeRollNeeded,
+          clearFirst: true,
+          label: `${h.name} -> ${closestEnemy.name} — 2D6 Charge (Need ${minEdgeRollNeeded}" after ${moveProf.chargeRollMod >= 0 ? '+' : ''}${moveProf.chargeRollMod} mod)`
+        };
+      }
+
+      declarations.push(decl);
+    }
+
+    return { declarations };
+  }
+
+  /**
+   * Resolves a settled `2D6` LCT mat Charge roll and emits `MOVE_UNIT` if Engagement Range (`<= 2.0"`) is reached.
+   *
+   * @param {object} chargeDecl - Charge declaration built by `planHordeCharges`.
+   * @param {number[]} [dice=[]] - Settled `2D6` pips from the LCT TTS Dice Mat.
+   * @returns {object} Resolved charge result with `succeeded` flag and optional `moveCommand`.
+   */
+  function resolveHordeChargeRoll(chargeDecl, dice = []) {
+    const d1 = Number(dice[0]) || 1;
+    const d2 = Number(dice[1]) || 1;
+    const modifiedTotal = Math.max(1, d1 + d2 + (Number(chargeDecl.chargeRollMod) || 0));
+    const succeeded = modifiedTotal >= chargeDecl.neededEdgeReachInches;
+
+    return {
+      ...chargeDecl,
+      diceRolled: [d1, d2],
+      modifiedTotal,
+      succeeded,
+      moveCommand: succeeded
+        ? {
+            action: 'MOVE_UNIT',
+            squadKey: chargeDecl.squadKey,
+            guids: chargeDecl.guids,
+            targetX: chargeDecl.destX,
+            targetZ: chargeDecl.destZ,
+            facingY: chargeDecl.facingY
+          }
+        : null
+    };
+  }
+
