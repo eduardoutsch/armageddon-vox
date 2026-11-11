@@ -354,64 +354,47 @@ function renderLogisticsAllocator() {
   const cb = _getForgeEl('upliftingPrimerToggle');
   if (!grid) return;
 
+  const vm = _forgeCore.deriveLogisticsViewModel(
+    crusadeState.logistics,
+    crusadeState.upliftingPrimer,
+    _resolveForgeCatalogs().logisticsCategories
+  );
   if (!crusadeState.logistics) {
     crusadeState.logistics = { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
   }
   if (cb) cb.checked = !!crusadeState.upliftingPrimer;
+  if (label) label.textContent = vm.allocatedLabel;
 
-  const maxTotal = crusadeState.upliftingPrimer ? 5 : 4;
-  const currentTotal = Object.values(crusadeState.logistics).reduce((a, b) => a + b, 0);
-  if (label) label.textContent = `${currentTotal} / ${maxTotal}`;
-
-  const categories = (typeof LOGISTICS_CATEGORIES !== 'undefined') ? LOGISTICS_CATEGORIES : (typeof window !== 'undefined' ? window.LOGISTICS_CATEGORIES : []);
-  grid.innerHTML = categories.map(cat => {
-    const pts = crusadeState.logistics[cat.key] || 0;
-    const stateClass = pts === 2 ? 'state-surplus' : (pts === 0 ? 'state-deficiency' : '');
-    const badgeHtml = pts === 2
-      ? `<span class="rule-tag" style="border-color:var(--green); color:var(--green);">🟢 SURPLUS (2 PTS)</span>`
-      : (pts === 1
-        ? `<span class="rule-tag" style="border-color:var(--muted); color:var(--muted);">⚪ STANDARD (1 PT)</span>`
-        : `<span class="rule-tag" style="border-color:var(--red); color:var(--red);">🔴 DEFICIENCY (0 PTS)</span>`);
-
-    const ruleText = pts === 2
-      ? `<span style="color:var(--green);">${cat.surplus}</span>`
-      : (pts === 1
-        ? `<span style="color:var(--muted);">Standard Munitorum allocation — no Surplus bonus or Deficiency penalty applies.</span>`
-        : `<span style="color:var(--red);">${cat.deficiency}</span>`);
-
-    return `
-      <div class="logistics-card ${stateClass}">
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;">
-          <strong style="color:#fff; font-size:0.9rem;">${cat.title}</strong>
-          ${badgeHtml}
-        </div>
-        <div class="hud-val-row" style="margin-bottom:8px;">
-          <button type="button" class="mini-btn" onclick="adjLogisticsPt('${cat.key}', -1)">−</button>
-          <span class="hud-num" style="color:var(--gold); font-size:1.2rem;">${pts} PT${pts === 1 ? '' : 'S'}</span>
-          <button type="button" class="mini-btn" onclick="adjLogisticsPt('${cat.key}', 1)">+</button>
-        </div>
-        <div style="font-size:0.8rem; line-height:1.45;">${ruleText}</div>
+  grid.innerHTML = vm.cards.map((card) => `
+    <div class="logistics-card ${card.stateClass}">
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;">
+        <strong style="color:#fff; font-size:0.9rem;">${card.title}</strong>
+        <span class="rule-tag" style="border-color:${card.badgeColor}; color:${card.badgeColor};">${card.statusBadge}</span>
       </div>
-    `;
-  }).join('');
+      <div class="hud-val-row" style="margin-bottom:8px;">
+        <button type="button" class="mini-btn" onclick="adjLogisticsPt('${card.key}', -1)">−</button>
+        <span class="hud-num" style="color:var(--gold); font-size:1.2rem;">${card.ptsLabel}</span>
+        <button type="button" class="mini-btn" onclick="adjLogisticsPt('${card.key}', 1)">+</button>
+      </div>
+      <div style="font-size:0.8rem; line-height:1.45;"><span style="color:${card.ruleColor};">${card.ruleText}</span></div>
+    </div>
+  `).join('');
 }
 
 function populateCommendationVault() {
-  const sel = document.getElementById('commendationSelect');
+  const sel = _getForgeEl('commendationSelect');
   if (!sel) return;
-  const vault = (typeof ASTRA_COMMENDATIONS_VAULT !== 'undefined') ? ASTRA_COMMENDATIONS_VAULT : (typeof window !== 'undefined' ? window.ASTRA_COMMENDATIONS_VAULT : []);
-  sel.innerHTML = vault.map(c =>
-    `<option value="${c.id}">${c.name} — [${c.type}]</option>`
-  ).join('');
+  const vault = _resolveForgeCatalogs().commendationsVault;
+  sel.innerHTML = vault.map((c) => `<option value="${c.id}">${c.name} — [${c.type}]</option>`).join('');
   renderSelectedCommendationPreview();
 }
 
 function renderSelectedCommendationPreview() {
-  const sel = document.getElementById('commendationSelect');
-  const box = document.getElementById('commendationPreviewBox');
+  const sel = _getForgeEl('commendationSelect');
+  const box = _getForgeEl('commendationPreviewBox');
   if (!sel || !box) return;
-  const vault = (typeof ASTRA_COMMENDATIONS_VAULT !== 'undefined') ? ASTRA_COMMENDATIONS_VAULT : (typeof window !== 'undefined' ? window.ASTRA_COMMENDATIONS_VAULT : []);
-  const pick = vault.find(c => c.id === sel.value) || vault[0];
+  const vault = _resolveForgeCatalogs().commendationsVault;
+  const pick = vault.find((c) => c.id === sel.value) || vault[0];
   if (!pick) return;
   box.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
@@ -423,7 +406,7 @@ function renderSelectedCommendationPreview() {
 }
 
 function attachCommendationToDossier() {
-  const sel = document.getElementById('commendationSelect');
+  const sel = _getForgeEl('commendationSelect');
   if (!sel) return;
   const vault = (typeof ASTRA_COMMENDATIONS_VAULT !== 'undefined') ? ASTRA_COMMENDATIONS_VAULT : (typeof window !== 'undefined' ? window.ASTRA_COMMENDATIONS_VAULT : []);
   const pick = vault.find(c => c.id === sel.value) || vault[0];
