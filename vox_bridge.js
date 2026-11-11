@@ -107,6 +107,12 @@ logGreen(` -> SERVICE_KEY  : ${SERVICE_KEY ? `LOADED (${SERVICE_KEY.slice(0, 14)
 logGreen(` -> TAB 1 (EXILE): ${ALPHA_THREAD_URL || 'MISSING! Define ALPHA_THREAD_URL in .env'}`);
 logGreen(` -> TAB 2 (JUNE) : ${BETA_THREAD_URL || 'MISSING! Define BETA_THREAD_URL in .env'}`);
 logGreen(` -> TAB 3 (KÂHL) : ${GAMMA_THREAD_URL || (ALPHA_THREAD_URL ? `${ALPHA_THREAD_URL} (Sharing ALPHA)` : 'MISSING! Define GAMMA_THREAD_URL in .env')}`);
+EXTRA_THREAD_URLS.forEach((ext, idx) => {
+  logGreen(` -> TAB ${idx + 4} (${ext.channel.toUpperCase()}): ${ext.url}`);
+});
+if (process.env.TACTICA_THREAD_URL) {
+  logGreen(' -> TACTICA_THREAD_URL: EXCLUDED (reserved strictly for tactica_daemon)');
+}
 logGreen('----------------------------------------------------------------');
 
 const headers = {
@@ -846,7 +852,7 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
 }
 
 async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}) {
-  const { alphaThreadUrl, betaThreadUrl, gammaThreadUrl } = resolveThreadUrls(env);
+  const { alphaThreadUrl, betaThreadUrl, gammaThreadUrl, extraThreadUrls } = resolveThreadUrls(env);
 
   if (!alphaThreadUrl || !betaThreadUrl) {
     logFn('[FATAL ERROR] ALPHA_THREAD_URL and BETA_THREAD_URL must be defined in your .env file!');
@@ -865,7 +871,11 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     viewport: { width: 1280, height: 860 }
   });
 
-  const alphaPage = context.pages()[0] || await context.newPage();
+  const existingPages = context.pages();
+  const alphaPage = existingPages[0] || await context.newPage();
+  for (let i = 1; i < existingPages.length; i++) {
+    await existingPages[i].close().catch(() => {});
+  }
   logGreen('>> Opening Tab 1 (Commander Alpha // The Exile)...');
   await alphaPage.goto(alphaThreadUrl, { waitUntil: 'domcontentloaded' });
   if (typeof alphaPage.waitForSelector === 'function') {
@@ -897,6 +907,18 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     if (typeof gammaPage.waitForTimeout === 'function') {
       await gammaPage.waitForTimeout(2000);
     }
+  }
+
+  const extraTabs = [];
+  for (const ext of extraThreadUrls) {
+    if (/YOUR_[A-Z0-9_]*HERE|<your-/i.test(ext.url)) continue;
+    const extPage = await context.newPage();
+    logGreen(`>> Opening Extra Vox Tab (${ext.channel.toUpperCase()})...`);
+    await extPage.goto(ext.url, { waitUntil: 'domcontentloaded' });
+    if (typeof extPage.waitForSelector === 'function') {
+      await extPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 20000 }).catch(() => { });
+    }
+    extraTabs.push({ channel: ext.channel, page: extPage, busy: false });
   }
 
   try {
@@ -965,6 +987,15 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
       drainChannelQueue('gamma', gammaPage)
         .catch(err => logGreen(`[ERROR // GAMMA QUEUE]: ${err.message}`))
         .finally(() => { busyGamma = false; });
+    }
+
+    for (const slot of extraTabs) {
+      if (!slot.busy) {
+        slot.busy = true;
+        drainChannelQueue(slot.channel, slot.page)
+          .catch(err => logGreen(`[ERROR // ${slot.channel.toUpperCase()} QUEUE]: ${err.message}`))
+          .finally(() => { slot.busy = false; });
+      }
     }
   }, 5000);
 }
