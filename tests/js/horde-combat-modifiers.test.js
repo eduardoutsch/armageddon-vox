@@ -302,3 +302,47 @@ test('Edge cases: Tau Glasses, Officer Aura, Custodes/CSM/Aeldari/Drukhari/Tyran
   );
   assert.equal(aeldariShot.apPenetration, 2);
 
+  // Space Marines reroll 1s, Custodes Lethal Hits, CSM charge +1A, Drukhari melee AP, Tyranids +1S, Chaos Knights vs Battle-shocked
+  const smShot = resolveHordeAttackModifiers({}, { toughness: 4 }, { type: 'ranged', skill: 3 }, { factionName: 'Space Marines' });
+  assert.equal(smShot.rerollHits, 'ONES');
+
+  const custodesMelee = resolveHordeAttackModifiers({}, { toughness: 4 }, { type: 'melee', skill: 2 }, { factionName: 'Adeptus Custodes' });
+  assert.ok(custodesMelee.keywords.includes('LETHAL HITS'));
+
+  const csmCharge = resolveHordeAttackModifiers({ chargedThisTurn: true }, { toughness: 4 }, { type: 'melee', skill: 3 }, { factionName: 'Chaos Space Marines' });
+  assert.equal(csmCharge.attacksMod, 1);
+
+  const drukhariMelee = resolveHordeAttackModifiers({}, { toughness: 4 }, { type: 'melee', skill: 3, ap: -1 }, { factionName: 'Drukhari' });
+  assert.equal(drukhariMelee.apPenetration, 2);
+
+  const nidsMelee = resolveHordeAttackModifiers({}, { toughness: 4 }, { type: 'melee', skill: 4, strength: 4 }, { factionName: 'Tyranids' });
+  assert.equal(nidsMelee.effectiveStrength, 5);
+
+  const ckVsShocked = resolveHordeAttackModifiers({}, { toughness: 4, battleShocked: true }, { type: 'ranged', skill: 3 }, { factionName: 'Chaos Knights' });
+  assert.equal(ckVsShocked.netHitMod, 1);
+  assert.equal(ckVsShocked.netWoundMod, 1);
+
+  // Imperial Knights 6+ FNP, Misery #19 Fog of War + Gone to Ground 12" cap, and Mortal Wounds RNG path
+  const knightDef = resolveHordeDefenseProfile(
+    { save: 3, invuln: 5, woundsPerModel: 12, keywords: ['VEHICLE', 'TITANIC'] },
+    { type: 'ranged', strength: 12, ap: -3 },
+    { factionName: 'Imperial Knights', activeMiseries: [{ id: 19 }] },
+    { isGoneToGround: true }
+  );
+  assert.equal(knightDef.fnp, 6);
+  assert.equal(knightDef.hasStealth, true);
+  assert.equal(knightDef.maxVisibleRangeInches, 12);
+
+  const mwOutcome = resolveAutoDefenderRolls(knightDef, {
+    numWounds: 2,
+    damagePerWound: 1,
+    mortalWounds: true,
+    startingModels: 1,
+    currentModelRemainingWounds: 12,
+    rng: () => 0.95 // rolls 6s on FNP
+  });
+  assert.equal(mwOutcome.savesRolled.length, 0, 'Mortal wounds bypass normal saves');
+  assert.equal(mwOutcome.fnpPassed, 2);
+  assert.equal(mwOutcome.finalDamageInflicted, 0);
+});
+
