@@ -460,7 +460,7 @@ function buildStartOfTourDossierString() {
 
 function updateStartOfTourPreview() {
   if (typeof document === 'undefined') return;
-  const box = document.getElementById('startOfTourPreviewBox') || document.getElementById('tourDispatchPreviewBox');
+  const box = _getForgeEl('startOfTourPreviewBox') || _getForgeEl('tourDispatchPreviewBox');
   if (box) {
     box.textContent = buildStartOfTourDossierString();
     if (box.classList && typeof box.classList.toggle === 'function') {
@@ -472,44 +472,44 @@ function updateStartOfTourPreview() {
 
 function transmitStartOfTourDossier() {
   const payload = buildStartOfTourDossierString();
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-    window.VoxAudio.transmitToVox('alpha', payload);
-  }
+  _getVoxAudio()?.transmitToVox?.('alpha', payload);
 }
 
-// Attach to window for browser global scope
+const crusadeForgeExports = {
+  crusadeState,
+  lastRolledItem,
+  switchCrusadeTab,
+  adjScore,
+  selectAllianceTree,
+  rollRandomBattleTrait,
+  rollRandomWeaponMod,
+  rollRandomRelic,
+  rollOutOfActionTest,
+  rollRandomBattleScar,
+  attachRollToDossier,
+  removeQueuedRoll,
+  clearQueuedRolls,
+  renderQueuedRolls,
+  adjTourField,
+  rollNewTourQuotas,
+  rollVictoryCommendationPts,
+  toggleUpliftingPrimer,
+  adjLogisticsPt,
+  renderLogisticsAllocator,
+  populateCommendationVault,
+  renderSelectedCommendationPreview,
+  attachCommendationToDossier,
+  buildLogisticsSummaryLine,
+  compileTourDispatch,
+  buildStartOfTourDossierString,
+  updateStartOfTourPreview,
+  transmitStartOfTourDossier
+};
+
 if (typeof window !== 'undefined') {
-  window.crusadeState = crusadeState;
-  window.lastRolledItem = lastRolledItem;
-  window.switchCrusadeTab = switchCrusadeTab;
-  window.adjScore = adjScore;
-  window.selectAllianceTree = selectAllianceTree;
-  window.rollRandomBattleTrait = rollRandomBattleTrait;
-  window.rollRandomWeaponMod = rollRandomWeaponMod;
-  window.rollRandomRelic = rollRandomRelic;
-  window.rollOutOfActionTest = rollOutOfActionTest;
-  window.rollRandomBattleScar = rollRandomBattleScar;
-  window.attachRollToDossier = attachRollToDossier;
-  window.removeQueuedRoll = removeQueuedRoll;
-  window.clearQueuedRolls = clearQueuedRolls;
-  window.renderQueuedRolls = renderQueuedRolls;
-  window.adjTourField = adjTourField;
-  window.rollNewTourQuotas = rollNewTourQuotas;
-  window.rollVictoryCommendationPts = rollVictoryCommendationPts;
-  window.toggleUpliftingPrimer = toggleUpliftingPrimer;
-  window.adjLogisticsPt = adjLogisticsPt;
-  window.renderLogisticsAllocator = renderLogisticsAllocator;
-  window.populateCommendationVault = populateCommendationVault;
-  window.renderSelectedCommendationPreview = renderSelectedCommendationPreview;
-  window.attachCommendationToDossier = attachCommendationToDossier;
-  window.buildLogisticsSummaryLine = buildLogisticsSummaryLine;
-  window.compileTourDispatch = compileTourDispatch;
-  window.buildStartOfTourDossierString = buildStartOfTourDossierString;
-  window.updateStartOfTourPreview = updateStartOfTourPreview;
-  window.transmitStartOfTourDossier = transmitStartOfTourDossier;
+  Object.assign(window, crusadeForgeExports);
 }
 
-// CommonJS export for Node test runners
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     crusadeState,
