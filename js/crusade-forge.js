@@ -1,60 +1,20 @@
 /**
- * Fires of Armageddon // Crusade Tactical Forge & Tour of Duty
- * Handles Tab 1 (Scoreboard & Branching Alliance Trees), Tab 2 (Tactical Forge Rollers & Queued Items),
+ * @fileoverview Crusade Tactical Forge & Tour of Duty Humble View Controller (MVVM Shell).
+ * Projects explicit Crusade state (`State -> UI`) and forwards DOM user intents (`Event -> Core -> State`)
+ * for Tab 1 (Scoreboard & Branching Alliance Trees), Tab 2 (Quartermaster Forge Rollers & Roll Queue),
  * and Tab 3 (Astra Militarum Tour of Duty & Munitorum Logistics Allocator).
+ * All pure game rules, RNG math, ViewModel derivation, and dispatch formatting live in `js/crusade-core.js`.
  */
 
-var crusadeState = {
-  activeTab: 'board',
-  selectedTree: 'Gatebreakers',
-  alphaSP: 0,
-  alphaCP: 0,
-  alphaCacheCount: 0,
-  betaSP: 0,
-  betaCP: 0,
-  betaCacheCount: 0,
-  hordeSP: 1,
-  hordeCP: 0,
-  queuedRolls: [],
-  // Astra Militarum Tour of Duty & Logistics State
-  tourBattlesRem: 0,
-  tourWinsRem: 0,
-  commendationPts: 0,
-  toursCompletedCount: 0,
-  upliftingPrimer: false,
-  logistics: {
-    lexmechanicus: 1,
-    materiel: 2,
-    tithePool: 0,
-    morale: 1
-  },
-  // Necrons Tomb World Awakening Matrix State
-  tombAgendasCompleted: 0,
-  tombAwakeningCycles: 0,
-  powerReservesAllocated: false,
-  tombSystems: {
-    command: 1,
-    reanimation: 1,
-    translocation: 0
-  },
-  // Leagues of Votann Kindred Expeditions & Resource Vault State
-  votann: {
-    rawMinerals: 0,
-    biomatter: 0,
-    energySources: 0,
-    galacticIntel: 0,
-    rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
-    expBacking: 'Lean Operation (Free // Max 5 Battles)',
-    expGoal: 'Farstryd Exploration (Prospecting 2+ XP in 3+ Battles → +3 XP Character & 1 Free Mining Outpost)',
-    expContract: 'Mining — Extraction: Minerals (60+ Raw Minerals → +1 Rare Raw Mineral)',
-    expBattles: 0,
-    expWins: 0,
-    expeditionsCompleted: 0,
-    goalProgress: 0,
-    expTotals: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 },
-    assets: {}
-  }
-};
+var _forgeCore = (typeof CrusadeCore !== 'undefined' && CrusadeCore)
+  ? CrusadeCore
+  : (typeof require === 'function' ? require('./crusade-core.js') : null);
+
+var _forgeData = (typeof require === 'function' && typeof BATTLE_TRAIT_TABLES === 'undefined')
+  ? (function () { try { return require('./crusade-data.js'); } catch (_) { return {}; } })()
+  : {};
+
+var crusadeState = _forgeCore.createInitialCrusadeState();
 
 var lastRolledItem = {
   trait: null,
