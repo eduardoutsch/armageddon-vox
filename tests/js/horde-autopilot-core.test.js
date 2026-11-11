@@ -157,3 +157,67 @@ test('selectHordeShootingTargets: enforces [ANTI-X], [PRECISION], [MELTA], Hidde
     ]
   };
 
+  const playerScreen = {
+    squadKey: 'PLAYER::Screen',
+    guid: 'p_screen',
+    name: 'Krieg Guardsmen',
+    side: 'PLAYER',
+    pos: { x: 0, z: 8 },
+    keywords: ['INFANTRY'],
+    models: [{ guid: 'p_screen', pos: { x: 0, z: 8 }, radiusInches: 0.5 }]
+  };
+  const playerCommand = {
+    squadKey: 'PLAYER::Command',
+    guid: 'p_cmd',
+    name: 'Marshal Command Squad',
+    side: 'PLAYER',
+    pos: { x: 0, z: 12 },
+    keywords: ['INFANTRY', 'CHARACTER'],
+    models: [{ guid: 'p_cmd', pos: { x: 0, z: 12 }, radiusInches: 0.5 }]
+  };
+  const playerTank = {
+    squadKey: 'PLAYER::Tank',
+    guid: 'p_tank',
+    name: 'Leman Russ',
+    side: 'PLAYER',
+    pos: { x: 0, z: 15 },
+    keywords: ['VEHICLE', 'IMPERIUM'],
+    models: [{ guid: 'p_tank', pos: { x: 0, z: 15 }, radiusInches: 1.5 }]
+  };
+  const hiddenScouts = {
+    squadKey: 'PLAYER::Scouts',
+    guid: 'p_scouts',
+    name: 'Hidden Stalkers',
+    side: 'PLAYER',
+    isHidden: true,
+    pos: { x: 0, z: 18 },
+    keywords: ['INFANTRY'],
+    models: [{ guid: 'p_scouts', pos: { x: 0, z: 18 }, radiusInches: 0.5 }]
+  };
+
+  const assignments = selectHordeShootingTargets(
+    { units: [shooter, playerScreen, playerCommand, playerTank, hiddenScouts], objectives: [] },
+    { factionName: 'Chaos Space Marines', activeMiseryIds: [] }
+  );
+
+  const byWeapon = Object.fromEntries(assignments.map(a => [a.weapon.name, a.targetName]));
+  assert.equal(byWeapon['Haywire Cannon'], 'Leman Russ', '[ANTI-VEHICLE] must prioritize closest VEHICLE');
+  assert.equal(byWeapon['Sniper Rifle'], 'Marshal Command Squad', '[PRECISION] must prioritize closest CHARACTER unit');
+  assert.equal(byWeapon['Multi-melta'], 'Leman Russ', '[MELTA] must prioritize closest non-INFANTRY/non-SWARM');
+  assert.equal(byWeapon['Autocannon'], 'Krieg Guardsmen', 'Standard weapon targets closest visible Player unit');
+
+  // Verify Hidden 15" cap blocks targeting Hidden Stalkers at ~16.87" when they are the only enemy
+  const stealthCheck = selectHordeShootingTargets(
+    { units: [shooter, hiddenScouts], objectives: [] },
+    { factionName: 'Chaos Space Marines', activeMiseryIds: [] }
+  );
+  assert.equal(stealthCheck.length, 0, 'Hidden unit >15" away cannot be targeted by ranged attacks');
+
+  // Misery #28 (They Fly Now) ignores terrain visibility & overrides Hidden cap
+  const flyOverride = selectHordeShootingTargets(
+    { units: [shooter, hiddenScouts], objectives: [] },
+    { factionName: 'Chaos Space Marines', activeMiseryIds: [28] }
+  );
+  assert.ok(flyOverride.length > 0, 'Misery #28 ignores terrain visibility');
+});
+
