@@ -705,3 +705,43 @@
       }
     }
 
+    if (forts.has('FORT_TRENCH') && context.whollyWithinTrench) {
+      meleeStrengthMod += FORTIFICATION_COMBAT_MODS.FORT_TRENCH.playerMeleeStrengthMod;
+      meleeApImprove += FORTIFICATION_COMBAT_MODS.FORT_TRENCH.playerMeleeApImprove;
+    }
+    if (forts.has('FORT_AMMO') && context.whollyWithinAmmo) {
+      FORTIFICATION_COMBAT_MODS.FORT_AMMO.playerRangedKeywords.forEach(k => rangedKeywords.add(k));
+    }
+    if (forts.has('FORT_SHIELD') && context.whollyWithinShield && context.attackerOutsideShield) {
+      rangedDefenseFnp = FORTIFICATION_COMBAT_MODS.FORT_SHIELD.playerVsOutsideRangedFnp;
+    }
+
+    return {
+      effectiveMove,
+      advanceRollMod,
+      chargeRollMod,
+      stratagemsLocked,
+      battleShockAutoFail,
+      forceRerollHitSixes,
+      rangedStrengthMod,
+      rangedApImprove,
+      rangedKeywords: Array.from(rangedKeywords),
+      meleeStrengthMod,
+      meleeApImprove,
+      rangedDefenseFnp
+    };
+  }
+
+  return {
+    HORDE_FACTION_COMBAT_MODS,
+    MISERY_COMBAT_MODS,
+    FORTIFICATION_COMBAT_MODS,
+    calculateWoundTarget,
+    resolveHordeMovementProfile,
+    resolveHordeAttackModifiers,
+    resolveHordeDefenseProfile,
+    resolveAutoDefenderRolls,
+    resolvePlayerModifiers
+  };
+});
+
