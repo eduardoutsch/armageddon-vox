@@ -22,6 +22,10 @@
     ? { measureEdgeToEdgeInches }
     : (typeof require === 'function' ? require('./tts-telemetry-core.js') : {});
 
+  const deepStrikeCore = (typeof partitionWavesByDeepStrikeEligibility === 'function')
+    ? { partitionWavesByDeepStrikeEligibility, planDeepStrikeIngressDrops }
+    : (typeof require === 'function' ? require('./horde-deepstrike-core.js') : {});
+
   const spawnerCore = (typeof parseSpawnWaveSpec === 'function')
     ? {
         parseSpawnWaveSpec,
@@ -144,15 +148,31 @@
    * @param {Array<object>} [spawnZoneAnchors=[]] - Optional custom `{ zone, x, z, facingY }` overrides.
    * @returns {{commands: Array<object>, summary: string}}
    */
-  function planWaveSpawnCommands(zoneSpawns = [], spawnZoneAnchors = []) {
+  function planWaveSpawnCommands(zoneSpawns = [], spawnZoneAnchors = [], options = {}) {
     if (!Array.isArray(zoneSpawns) || zoneSpawns.length === 0) {
-      return { commands: [], summary: 'No active zone spawns to deploy.' };
+      return { commands: [], queuedReserves: [], summary: 'No active zone spawns to deploy.' };
     }
 
-    const totalZones = zoneSpawns.length;
+    let workingSpawns = zoneSpawns;
+    let queuedReserves = [];
+    const hasPincer = zoneSpawns.some(z => z && (z.isPincerManeuver || z.zone === 'PINCER'));
+    if (
+      (options.battleRound !== undefined || hasPincer) &&
+      typeof deepStrikeCore.partitionWavesByDeepStrikeEligibility === 'function'
+    ) {
+      const part = deepStrikeCore.partitionWavesByDeepStrikeEligibility(zoneSpawns, {
+        battleRound: options.battleRound ?? 1,
+        shelfTemplates: options.shelfTemplates || [],
+        spawnZoneAnchors
+      });
+      workingSpawns = part.immediateZoneSpawns;
+      queuedReserves = part.reserveEntries;
+    }
+
+    const totalZones = workingSpawns.length;
     const commands = [];
 
-    zoneSpawns.forEach((z, idx) => {
+    workingSpawns.forEach((z, idx) => {
       if (!z || z.bracketKey === 'NONE') return;
       let parsedUnits = Array.isArray(z.parsedWave) && z.parsedWave.length > 0 ? z.parsedWave : [];
       if (parsedUnits.length === 0 && Array.isArray(z.units) && typeof spawnerCore.parseSpawnWaveSpec === 'function') {
@@ -215,9 +235,13 @@
       });
     });
 
+    const reserveNote = queuedReserves.length > 0
+      ? ` + ${queuedReserves.length} Deep Strike Reserve unit(s) held for Step 2 Ingress.`
+      : '';
     return {
       commands,
-      summary: `Queued ${commands.length} Spawn Zone wave drop(s) for LCT Staging Shelf.`
+      queuedReserves,
+      summary: `Queued ${commands.length} Spawn Zone wave drop(s) for LCT Staging Shelf.${reserveNote}`
     };
   }
 
@@ -264,6 +288,17 @@
         y: Number(m.pos?.y) || 1.1,
         z: Number(m.pos?.z) || 0
       }));
+
+      if (u.didIngressThisTurn === true) {
+        plans.push({
+          squadKey: u.squadKey || u.name,
+          unitName: u.name,
+          guids: u.guids || originModels.map(m => m.guid),
+          status: 'INGRESSED_HOLD',
+          originModels
+        });
+        continue;
+      }
 
       // Check if already Engaged (<= 2.0" horizontal)
       let closestPlayer = null;
@@ -382,7 +417,15 @@
       });
     }
 
-    return { plans, commands };
+    const reserves = options.hordeReserves || matchState.hordeReserves || [];
+    let ingressDrops = [];
+    if (reserves.length > 0 && typeof deepStrikeCore.planDeepStrikeIngressDrops === 'function') {
+      const ingressRes = deepStrikeCore.planDeepStrikeIngressDrops(reserves, boardTelemetry, options);
+      ingressDrops = ingressRes.drops;
+      commands.push(...ingressRes.commands);
+    }
+
+    return { plans, commands, ingressDrops };
   }
 
   /**
