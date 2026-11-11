@@ -414,6 +414,15 @@ Pure Functional Core combat modifiers, 23 Horde faction rules, 36 Misery deck mo
       if (isRanged && m.hordeRangedIgnoreCover) ignoreCover = true;
     }
 
+    // 3. Targeted Player defensive buffs (Smokescreen -1 to Hit, Stealth, Void Armour / Armour of Contempt AP worsen)
+    const defenderHitMod = context.targetHitMod !== undefined
+      ? (Number(context.targetHitMod) || 0)
+      : ((Number(target.hitMod) || 0) + (isRanged && target.hasStealth ? -1 : 0));
+    rawHitMod += defenderHitMod;
+    const defenderWorsenAp = context.targetWorsenAp !== undefined
+      ? (Number(context.targetWorsenAp) || 0)
+      : (Number(target.worsenAp) || 0);
+
     const dgDebuff = (facMod.enemyToughnessMod && (context.within6OfDeathGuard ?? isMelee))
       ? facMod.enemyToughnessMod
       : 0;
@@ -421,7 +430,7 @@ Pure Functional Core combat modifiers, 23 Horde faction rules, 36 Misery deck mo
     const effectiveStrength = Math.max(1, (Number(weapon.strength) || 4) + strengthMod);
     const baseSkill = Number(weapon.skill) || 4;
     const effectiveSkill = clamp(baseSkill - skillImprove, 2, 6);
-    const apPenetration = normalizeApPenetration(weapon.ap) + apImprove;
+    const apPenetration = Math.max(0, normalizeApPenetration(weapon.ap) + apImprove - defenderWorsenAp);
 
     return {
       effectiveSkill,

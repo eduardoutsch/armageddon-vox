@@ -284,6 +284,16 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
     return daemonOnline;
   }
 
+  function pruneClientBuffs() {
+    if (typeof pruneExpiredPlayerBuffs === 'function') {
+      clientState.activePlayerBuffs = pruneExpiredPlayerBuffs(
+        clientState.activePlayerBuffs,
+        clientState.battleRound,
+        clientState.phase
+      );
+    }
+  }
+
   /**
    * Synchronizes Room Code, Round, Faction, CP/SP, and active Misery cards from Mode 1 Spawner `localStorage`.
    */
@@ -293,9 +303,12 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
       const raw = localStorage.getItem('foa_horde_session_v1');
       if (raw) {
         const s = JSON.parse(raw);
+        const nextRound = Math.max(1, Number(s.battleRound) || 1);
+        const roundChanged = nextRound !== Number(clientState.battleRound);
         const patch = {
           roomCode: s.seed || clientState.roomCode,
-          battleRound: Math.max(1, Number(s.battleRound) || 1),
+          battleRound: nextRound,
+          ...(roundChanged ? { phase: 'COMMAND_SPAWN' } : {}),
           factionName: s.activeHordeFactionName || clientState.factionName,
           playerCp: s.cp !== undefined ? Number(s.cp) : clientState.playerCp,
           playerSp: s.sp !== undefined ? Number(s.sp) : clientState.playerSp,
@@ -303,6 +316,10 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
           zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : []
         };
         Object.assign(clientState, patch);
+        pruneClientBuffs();
+        if (roundChanged) {
+          patch.activePlayerBuffs = clientState.activePlayerBuffs;
+        }
         try {
           const res = await daemonRequest('/session/sync', 'POST', patch);
           daemonOnline = true;
@@ -317,9 +334,10 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
   }
 
   async function setConsolePhaseAndTrigger(phase, reactionTrigger = null) {
-    const rndEl = document.getElementById('tacticaRoundSelect');
+    const rndEl = typeof document !== 'undefined' ? document.getElementById('tacticaRoundSelect') : null;
     if (rndEl && rndEl.value) clientState.battleRound = Number(rndEl.value) || clientState.battleRound;
     clientState.phase = phase;
+    pruneClientBuffs();
     const summary = `Entered ${phase} (Round ${clientState.battleRound}).`;
 
     try {
@@ -575,6 +593,8 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
    */
   async function triggerAutopilotSpawnWaves() {
     setHordeTurnStep(1);
+    clientState.phase = 'COMMAND_SPAWN';
+    pruneClientBuffs();
     let plan;
     try {
       const res = await daemonRequest('/autopilot/spawn-waves', 'POST', { zoneSpawns: clientState.zoneSpawns });
@@ -596,6 +616,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
   async function triggerAutopilotMovement() {
     setHordeTurnStep(2);
     clientState.phase = 'HORDE_MOVEMENT';
+    pruneClientBuffs();
     let plans = [];
     try {
       const res = await daemonRequest('/autopilot/plan-movement', 'POST', {});
@@ -661,6 +682,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
   async function triggerAutopilotShooting() {
     setHordeTurnStep(3);
     clientState.phase = 'HORDE_SHOOTING';
+    pruneClientBuffs();
     let assignments = [];
     try {
       const res = await daemonRequest('/autopilot/select-shooting', 'POST', {});
@@ -686,19 +708,36 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
   }
 
   /**
-   * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`).
+   * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`),
+   * applying any active Player Stratagem defensive buffs (such as Smokescreen `-1` to Hit) for the target.
    */
   async function fireAutopilotWeaponOnMat(idx) {
     const asgn = (clientState.lastShootingAssignments || [])[idx];
     if (!asgn) return null;
     const units = clientState.boardTelemetry?.units || [];
     const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
+    const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
+      ? resolvePlayerUnitDefensiveBuffs(asgn.targetName, clientState.activePlayerBuffs, clientState.battleRound, clientState.phase)
+      : { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
+    const baseTarget = asgn.target || { toughness: 4 };
+    const targetWithBuffs = {
+      ...baseTarget,
+      hitMod: (Number(baseTarget.hitMod) || 0) + unitBuff.hitMod,
+      worsenAp: (Number(baseTarget.worsenAp) || 0) + unitBuff.worsenAp,
+      hasCover: Boolean(baseTarget.hasCover || unitBuff.cover),
+      invuln: unitBuff.invuln6 ? Math.min(Number(baseTarget.invuln) || 7, 6) : (baseTarget.invuln || null)
+    };
     const payload = {
       attackerName: asgn.attackerName,
       targetName: asgn.targetName,
       attacker,
-      target: asgn.target || { toughness: 4 },
-      weapon: asgn.weapon
+      target: targetWithBuffs,
+      weapon: asgn.weapon,
+      context: {
+        targetHitMod: targetWithBuffs.hitMod,
+        targetWorsenAp: targetWithBuffs.worsenAp,
+        targetHasCover: targetWithBuffs.hasCover
+      }
     };
     try {
       const res = await daemonRequest('/combat/attack-request', 'POST', payload);
@@ -719,6 +758,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
   async function triggerAutopilotCharges() {
     setHordeTurnStep(4);
     clientState.phase = 'HORDE_CHARGE';
+    pruneClientBuffs();
     let declarations = [];
     try {
       const res = await daemonRequest('/autopilot/declare-charges', 'POST', {});
@@ -750,6 +790,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
   async function triggerAutopilotConsolidate() {
     setHordeTurnStep(4);
     clientState.phase = 'HORDE_FIGHT';
+    pruneClientBuffs();
     let moves = [];
     try {
       const res = await daemonRequest('/autopilot/consolidate', 'POST', {});
@@ -809,10 +850,18 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
       initTacticaPage
     });
     if (typeof window.addEventListener === 'function') {
-      window.addEventListener('DOMContentLoaded', initTacticaPage);
-      window.addEventListener('vox:page-swapped', () => {
+      if (window._foaTacticaInit && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('DOMContentLoaded', window._foaTacticaInit);
+      }
+      if (window._foaTacticaSwapped && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('vox:page-swapped', window._foaTacticaSwapped);
+      }
+      window._foaTacticaInit = initTacticaPage;
+      window._foaTacticaSwapped = () => {
         if (typeof document !== 'undefined' && document.getElementById('tacticaChronicleBox')) initTacticaPage();
-      });
+      };
+      window.addEventListener('DOMContentLoaded', window._foaTacticaInit);
+      window.addEventListener('vox:page-swapped', window._foaTacticaSwapped);
     }
   }
 

@@ -258,24 +258,37 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
     }
 
     const updatedState = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : state;
+    const durationScope = String(parsed.durationScope || 'PHASE').toUpperCase() === 'ROUND' ? 'ROUND' : 'PHASE';
     if (parsed.buff) {
       if (!Array.isArray(updatedState.activePlayerBuffs)) updatedState.activePlayerBuffs = [];
-      updatedState.activePlayerBuffs.push({
-        stratName: parsed.stratName,
-        targetUnit: resolvedTarget,
-        battleRound: updatedState.battleRound || 1,
-        ...parsed.buff
-      });
+      const buffEntry = typeof createPlayerStratagemBuff === 'function'
+        ? createPlayerStratagemBuff({ ...parsed, resolvedTarget, durationScope }, updatedState)
+        : {
+            stratName: parsed.stratName,
+            targetUnit: resolvedTarget,
+            durationScope,
+            battleRound: updatedState.battleRound || 1,
+            ...parsed.buff
+          };
+      updatedState.activePlayerBuffs.push(buffEntry);
+      if (typeof fetch === 'function') {
+        fetch(`${DAEMON_URL}/session/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ activePlayerBuffs: updatedState.activePlayerBuffs })
+        }).catch(() => {});
+      }
     }
 
     syncPlayerCpToSpawnerSession(updatedState.playerCp ?? 0, validation.countsForSecret20);
 
+    const durationLabel = durationScope === 'ROUND' ? '1 Round / Until Next Turn' : 'This Phase';
     const cpSpeech = cost === 1 ? 'One Command Point deducted.' : `${cost} Command Points deducted.`;
     if (outBox) {
-      outBox.innerHTML = `<strong style="color:var(--gold);">⚡ Stratagem Active:</strong> ${actionLabel} (-${cost} CP)`;
+      outBox.innerHTML = `<strong style="color:var(--gold);">⚡ Stratagem Active:</strong> ${actionLabel} (-${cost} CP • ${durationLabel})`;
     }
     speakOverwatchLine(`${actionLabel} active. ${cpSpeech}`);
-    return { ...parsed, resolvedTarget, rejected: false };
+    return { ...parsed, durationScope, resolvedTarget, rejected: false };
   }
 
   async function dispatchSpokenOrTypedCommand(rawTranscript) {
@@ -323,8 +336,10 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
       : (document.getElementById('quickStratNameInput')?.value || '').trim();
     if (!rawName) return null;
     const target = (document.getElementById('quickStratTargetSelect')?.value || '').trim();
+    const duration = (document.getElementById('quickStratDurationSelect')?.value || 'PHASE').toUpperCase();
     const targetClause = target ? ` on ${target}` : '';
-    const cmd = `Stratagem ${rawName}${targetClause} - ${Number(cpCost) || 0}cp`;
+    const durationClause = duration === 'ROUND' ? ' for the round' : '';
+    const cmd = `Stratagem ${rawName}${targetClause}${durationClause} - ${Number(cpCost) || 0}cp`;
     return dispatchSpokenOrTypedCommand(cmd);
   }
 
@@ -465,16 +480,24 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
       exportTacticaToCrusade
     });
     if (typeof window.addEventListener === 'function') {
-      window.addEventListener('keydown', (e) => {
+      if (window._foaPttKeyDown && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('keydown', window._foaPttKeyDown);
+      }
+      if (window._foaPttKeyUp && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('keyup', window._foaPttKeyUp);
+      }
+      window._foaPttKeyDown = (e) => {
         if (typeof document !== 'undefined' && (document.getElementById('pttStatusPill') || document.getElementById('tacticaRoomLabel'))) {
           handlePttKeyDown(e);
         }
-      });
-      window.addEventListener('keyup', (e) => {
+      };
+      window._foaPttKeyUp = (e) => {
         if (isPttHeld || (typeof document !== 'undefined' && (document.getElementById('pttStatusPill') || document.getElementById('tacticaRoomLabel')))) {
           handlePttKeyUp(e);
         }
-      });
+      };
+      window.addEventListener('keydown', window._foaPttKeyDown);
+      window.addEventListener('keyup', window._foaPttKeyUp);
     }
   }
 

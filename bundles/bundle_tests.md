@@ -248,7 +248,10 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_tactica_core.md', check: 'js/tactica-core.js' },
     { file: 'bundle_tactica_daemon.md', check: 'tactica_daemon.js' },
     { file: 'bundle_tts_bridge.md', check: 'js/tts-telemetry-core.js' },
+    { file: 'bundle_tts_lua_beacon.md', check: 'tts/lct_horde_bridge.lua' },
+    { file: 'bundle_tests_tactica_daemon.md', check: 'tests/tactica_daemon.test.js' },
     { file: 'bundle_tests_tts_tactica.md', check: 'tests/js/tts-telemetry-core.test.js' },
+    { file: 'bundle_tests_tactica_overwatch.md', check: 'tests/js/tactica-overwatch.test.js' },
     { file: 'bundle_horde_autopilot.md', check: 'js/horde-autopilot-core.js' },
     { file: 'bundle_tactica_overwatch.md', check: 'js/tactica-overwatch-core.js' },
     { file: 'bundle_tactica_overwatch_shell.md', check: 'js/tactica-overwatch.js' },
@@ -572,7 +575,4 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     assert.equal(isTabNemesisVisible, true, 'Tab 1 panel must restore visibility on re-visited page');
 
     // Filter out potential 401 Supabase unauthenticated RPC noise
-    const syntaxErrors = pageErrors.filter((e) => !e.includes('401'));
-    assert.deepEqual(syntaxErrors, [], 'Must encounter 0 page errors or syntax errors during seamless navigation');
-  } finally {
 ````

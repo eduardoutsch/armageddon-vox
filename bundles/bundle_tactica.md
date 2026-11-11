@@ -160,6 +160,10 @@ Sticky Command Bar, 3-mode progressive panels (Horde Turn, Attack Horde, End Mat
           <select id="quickStratTargetSelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;">
             <option value="">(Any / Untargeted)</option>
           </select>
+          <select id="quickStratDurationSelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;" title="99% of Stratagems last 1 Phase; select 1 Round for buffs lasting until your next Shooting phase / turn">
+            <option value="PHASE">This Phase</option>
+            <option value="ROUND">1 Round (Until Next Turn)</option>
+          </select>
           <button type="button" class="btn-ghost btn-sm" onclick="triggerQuickStratagem(0)">0 CP</button>
           <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(1)">1 CP</button>
           <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(2)">2 CP</button>
@@ -345,6 +349,7 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(html.includes('href="spawner.html"'), 'Sticky bar must include href="spawner.html" return button');
   assert.ok(html.includes('id="pttStatusPill"'), 'Sticky bar must include #pttStatusPill');
   assert.ok(html.includes('id="tacticaModeHorde"') && html.includes('id="tacticaModePlayer"') && html.includes('id="tacticaModeExport"'), 'Must include 3-mode progressive panels');
+  assert.ok(html.includes('id="quickStratDurationSelect"'), 'Quick Stratagem drawer must include phase vs round duration selector');
   assert.ok(html.includes('id="tacticaBoardDrawer"') && html.includes('id="tacticaChronicleDrawer"'), 'Must include collapsed bottom utility drawers');
   assert.ok(html.includes('<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">'), 'Must link favicon');
   assert.ok(html.includes('<script src="../js/spawner.js"></script>'), 'Must link spawner.js');
@@ -421,7 +426,7 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     'hordeStepBtn1', 'hordeStepBtn2', 'hordeStepBtn3', 'hordeStepBtn4',
     'tacticaLosBar', 'tacticaHordeTargetChips', 'tacticaUnitCountSummary',
     'tacticaLatestLogSummary', 'tacticaPendingRollStrip', 'quickStratTargetSelect',
-    'quickStratNameInput', 'quickStratCategorySelect', 'quickStratCoreSelect'
+    'quickStratNameInput', 'quickStratCategorySelect', 'quickStratCoreSelect', 'quickStratDurationSelect'
   ].forEach(id => { els[id] = makeEl(); });
 
   els.defUnitName.value = 'Necron Warriors';
@@ -640,8 +645,77 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.equal(tactica.getTacticaClientState().playerCp, 2, 'Vocal stratagem must deduct 1 CP');
   assert.ok(els.tacticaChronicleBox.innerHTML.includes('Void Armour on Einhyr Hearthguard'), 'Must fuzzy-match scanned PLAYER unit name into chronicle');
   const syncedSession = JSON.parse(store.get('foa_horde_session_v1'));
-  assert.equal(syncedSession.cp, 2, 'Updated CP must sync back to foa_horde_session_v1');
+  assert.equal(syncedSession.cp, 2, 'Updated CP must deduct 1 CP into foa_horde_session_v1');
   assert.equal(syncedSession.stratCount, 1, '1+ CP Stratagem must increment stratCount for Secret #20');
+
+  // Vocal Smokescreen (-1 to Hit, PHASE default) worsens Horde LCT Mat Hit threshold (3+ -> 4+)
+  // during HORDE_SHOOTING, then expires immediately in the SAME Round when advancing to HORDE_CHARGE!
+  tactica.getTacticaClientState().playerCp = 3;
+  tactica.getTacticaClientState().boardTelemetry.units = [
+    {
+      squadKey: 'HORDE::Armiger Helverin',
+      name: 'Armiger Helverin',
+      side: 'HORDE',
+      modelCount: 1,
+      pos: { x: 0, z: 12 },
+      models: [{ guid: 'helv1', pos: { x: 0, z: 12 }, radiusInches: 1.95 }],
+      weapons: [{ name: 'Armiger autocannon', type: 'ranged', rangeInches: 48, attacks: 4, skill: 3, strength: 9, ap: -1, damage: 3, keywords: [] }]
+    },
+    {
+      squadKey: 'PLAYER::Einhyr Hearthguard',
+      name: 'Einhyr Hearthguard',
+      side: 'PLAYER',
+      modelCount: 5,
+      toughness: 6,
+      save: 2,
+      pos: { x: 0, z: -4 },
+      models: [{ guid: 'hg1', pos: { x: 0, z: -4 }, radiusInches: 0.78 }]
+    }
+  ];
+  await tactica.setConsolePhaseAndTrigger('HORDE_MOVEMENT');
+  await overwatch.dispatchSpokenOrTypedCommand('Smokescreen on Hearthguard - 1cp');
+  await tactica.triggerAutopilotShooting();
+  const smokeSeq = await tactica.fireAutopilotWeaponOnMat(0);
+  assert.ok(smokeSeq && smokeSeq.nextCommand, 'Must queue LCT mat Hit roll for Armiger Helverin -> Einhyr Hearthguard');
+  assert.equal(smokeSeq.nextCommand.threshold, 4, 'Smokescreen (-1 to Hit) must worsen Armiger Helverin BS 3+ to 4+ on LCT mat');
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  // Advancing to HORDE_CHARGE in the SAME Round 2 must expire PHASE-scoped Smokescreen immediately!
+  await tactica.setConsolePhaseAndTrigger('HORDE_CHARGE');
+  assert.equal(
+    (tactica.getTacticaClientState().activePlayerBuffs || []).length,
+    0,
+    '99% PHASE-scoped Smokescreen must expire as soon as HORDE_SHOOTING ends (entering HORDE_CHARGE in same round)'
+  );
+
+  // Round-oriented ("until next shooting phase") -1 to Hit buff declared in Round 2 PLAYER_TURN
+  // must survive into Round 3 HORDE_SHOOTING (4+) and expire when Round 3 reaches PLAYER_TURN!
+  await tactica.setConsolePhaseAndTrigger('PLAYER_TURN');
+  await overwatch.dispatchSpokenOrTypedCommand('Smokescreen on Hearthguard until next shooting phase - 1cp');
+  assert.equal((tactica.getTacticaClientState().activePlayerBuffs || []).length, 1);
+
+  els.tacticaRoundSelect.value = '3';
+  await tactica.setConsolePhaseAndTrigger('COMMAND_SPAWN');
+  assert.equal(
+    (tactica.getTacticaClientState().activePlayerBuffs || []).length,
+    1,
+    'ROUND-scoped ("until next shooting phase") buff declared in R2 PLAYER_TURN must survive advancing into Round 3'
+  );
+  await tactica.triggerAutopilotShooting();
+  const r3ProtectedSeq = await tactica.fireAutopilotWeaponOnMat(0);
+  assert.equal(r3ProtectedSeq.nextCommand.threshold, 4, 'Round-scoped buff from R2 PLAYER_TURN must worsen R3 Horde Shooting from 3+ to 4+');
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  // Entering Round 3 PLAYER_TURN expires the "until next shooting phase" buff so subsequent shooting returns to 3+
+  await tactica.setConsolePhaseAndTrigger('PLAYER_TURN');
+  assert.equal(
+    (tactica.getTacticaClientState().activePlayerBuffs || []).length,
+    0,
+    'ROUND-scoped ("until next shooting phase") buff must expire once Round 3 enters PLAYER_TURN'
+  );
+  await tactica.triggerAutopilotShooting();
+  const freshRoundSeq = await tactica.fireAutopilotWeaponOnMat(0);
+  assert.equal(freshRoundSeq.nextCommand.threshold, 3, 'After Round 3 PLAYER_TURN expires buff, BS 3+ must roll 3+ on LCT mat');
 
   delete globalThis.localStorage;
   delete globalThis.document;
