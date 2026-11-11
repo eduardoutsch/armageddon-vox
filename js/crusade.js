@@ -411,58 +411,44 @@ function attachVotannVaultToDossier() {
 function renderVotannTab() {
   if (typeof document === 'undefined') return;
   const v = ensureVotannState();
-  ['rawMinerals', 'biomatter', 'energySources', 'galacticIntel'].forEach(k => {
-    const rEl = document.getElementById('votRes_' + k);
-    const rareEl = document.getElementById('votRare_' + k);
+  const vm = _matrixCore.deriveVotannTabViewModel(v, _resolveMatrixCatalogs().votannAssets);
+
+  ['rawMinerals', 'biomatter', 'energySources', 'galacticIntel'].forEach((k) => {
+    const rEl = _getMatrixEl('votRes_' + k);
+    const rareEl = _getMatrixEl('votRare_' + k);
     if (rEl) rEl.textContent = String(v[k] || 0);
     if (rareEl) rareEl.textContent = String(v.rare?.[k] || 0);
   });
-  const maxB = v.expBacking.includes('6') ? 6 : (v.expBacking.includes('7') ? 7 : 5);
-  const bLbl = document.getElementById('votExpBattlesLabel');
-  const wLbl = document.getElementById('votExpWinsLabel');
-  if (bLbl) bLbl.textContent = `${v.expBattles || 0} / ${maxB}`;
-  if (wLbl) wLbl.textContent = String(v.expWins || 0);
 
-  const gp = Math.min(3, Math.max(0, v.goalProgress || 0));
-  const gpLabel = document.getElementById('votGoalProgressLabel');
-  if (gpLabel) gpLabel.textContent = `${gp} / 3`;
-  const gpPips = document.getElementById('votGoalPips');
-  if (gpPips) {
-    gpPips.innerHTML = [0, 1, 2].map(i => i < gp ? '🟡' : '⚪').join(' ');
-  }
+  const bLbl = _getMatrixEl('votExpBattlesLabel');
+  const wLbl = _getMatrixEl('votExpWinsLabel');
+  if (bLbl) bLbl.textContent = vm.battlesLabel;
+  if (wLbl) wLbl.textContent = vm.winsLabel;
 
-  const expTot = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
-  const expTotEl = document.getElementById('votExpTotalsDisplay');
-  if (expTotEl) {
-    expTotEl.textContent = `Minerals: ${expTot.rawMinerals || 0} | Biomatter: ${expTot.biomatter || 0} | Energy: ${expTot.energySources || 0} | Intel: ${expTot.galacticIntel || 0}${expTot.rare ? ` | Rare: ${expTot.rare}` : ''}`;
-  }
+  const gpLabel = _getMatrixEl('votGoalProgressLabel');
+  if (gpLabel) gpLabel.textContent = vm.goalProgressLabel;
+  const gpPips = _getMatrixEl('votGoalPips');
+  if (gpPips) gpPips.innerHTML = vm.goalPipsText;
 
-  const grid = document.getElementById('votannAssetsGrid');
-  const assetsCatalog = (typeof VOTANN_KINDRED_ASSETS !== 'undefined') ? VOTANN_KINDRED_ASSETS : (typeof window !== 'undefined' ? window.VOTANN_KINDRED_ASSETS : []);
-  let activeCount = 0;
+  const expTotEl = _getMatrixEl('votExpTotalsDisplay');
+  if (expTotEl) expTotEl.textContent = vm.expTotalsText;
+
+  const grid = _getMatrixEl('votannAssetsGrid');
   if (grid) {
-    grid.innerHTML = (assetsCatalog || []).map(a => {
-      const st = v.assets[a.key] || 'Locked';
-      if (st === 'Active' || st === 'Upgraded') activeCount++;
-      const badgeColor = st === 'Upgraded' ? 'var(--green)' : (st === 'Active' ? 'var(--gold)' : (st === 'Inactive' ? 'var(--red)' : 'var(--muted)'));
-      return `
-        <div class="logistics-card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><strong style="color:#fff; font-size:0.88rem;">${a.title}</strong><button type="button" class="mini-btn" style="width:auto; padding:2px 8px; border-color:${badgeColor}; color:${badgeColor};" onclick="cycleVotannAssetState('${a.key}')">${st.toUpperCase()}</button></div>
-          <div style="font-size:0.74rem; color:var(--muted); margin-bottom:4px;">Cost: ${a.cost} | Upg: ${a.upgCost}</div>
-          <div style="font-size:0.79rem; color:var(--text);">${st === 'Upgraded' ? a.upgDesc : a.baseDesc}</div>
-        </div>`;
-    }).join('');
+    grid.innerHTML = vm.cards.map((card) => `
+      <div class="logistics-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;"><strong style="color:#fff; font-size:0.88rem;">${card.title}</strong><button type="button" class="mini-btn" style="width:auto; padding:2px 8px; border-color:${card.badgeColor}; color:${card.badgeColor};" onclick="cycleVotannAssetState('${card.key}')">${card.status.toUpperCase()}</button></div>
+        <div style="font-size:0.74rem; color:var(--muted); margin-bottom:4px;">${card.costLine}</div>
+        <div style="font-size:0.79rem; color:var(--text);">${card.desc}</div>
+      </div>`).join('');
   }
-  const cEl = document.getElementById('votActiveAssetsCount');
-  if (cEl) cEl.textContent = String(activeCount);
+  const cEl = _getMatrixEl('votActiveAssetsCount');
+  if (cEl) cEl.textContent = String(vm.activeAssetsCount);
   updateVotannDispatchPreview();
 }
 
 function buildVotannSummaryLine() {
-  const v = ensureVotannState();
-  const r = v.rare || {};
-  const tot = v.expTotals || {};
-  return `Charter: ${v.expBacking || 'Lean'} (${v.expBattles || 0} Battles, ${v.expWins || 0} Wins, Goal: ${v.goalProgress || 0}/3) | Exp Total: M:${tot.rawMinerals || 0} B:${tot.biomatter || 0} E:${tot.energySources || 0} I:${tot.galacticIntel || 0} | Vault: M:${v.rawMinerals || 0} B:${v.biomatter || 0} E:${v.energySources || 0} I:${v.galacticIntel || 0} (Rare: M:${r.rawMinerals || 0}, B:${r.biomatter || 0}, E:${r.energySources || 0}, I:${r.galacticIntel || 0})`;
+  return _matrixCore.formatVotannSummaryLine(ensureVotannState());
 }
 
 function compileVotannDispatch(input = {}) {
