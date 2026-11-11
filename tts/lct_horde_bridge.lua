@@ -15,33 +15,44 @@ local LCT_MAT_BOUNDS = {
 }
 
 function onLoad()
+    local rot = self.getRotation()
+    self.setRotation({ x = 0, y = rot.y, z = 0 }) -- Force upright so buttons never render under the felt
     self.setName("📡 LCT Horde Autopilot Beacon")
     buildBeaconButtons()
+    buildContextMenu()
     Wait.time(pollTacticaDaemon, 0.5, -1)
     printToAll("+++ LCT ORBITAL AUSPEX & DICE-MAT BRIDGE ONLINE [127.0.0.1:3030] +++", {0.2, 1.0, 0.5})
+end
+
+function buildContextMenu()
+    self.clearContextMenu()
+    self.addContextMenuItem("Scan LCT Board", function() pushBoardTelemetry() end)
+    self.addContextMenuItem("Tag Selected PLAYER", function(playerColor) tagSelectionAsPlayer(self, playerColor) end)
+    self.addContextMenuItem("Tag Selected HORDE", function(playerColor) tagSelectionAsHorde(self, playerColor) end)
+    self.addContextMenuItem("Tag Selected TEMPLATE", function(playerColor) tagSelectionAsTemplate(self, playerColor) end)
 end
 
 function buildBeaconButtons()
     self.clearButtons()
     self.createButton({
         click_function = "pushBoardTelemetry", function_owner = self,
-        label = "📡 Scan LCT Board", position = {0, 0.3, -0.8},
-        width = 1100, height = 280, font_size = 120, color = {0.1, 0.32, 0.22}, font_color = {0.8, 1, 0.85}
+        label = "📡 Scan LCT Board", position = {0, 0.65, -1.5},
+        width = 1300, height = 300, font_size = 120, color = {0.1, 0.32, 0.22}, font_color = {0.8, 1, 0.85}
     })
     self.createButton({
         click_function = "tagSelectionAsPlayer", function_owner = self,
-        label = "🛡️ Tag Selected PLAYER", position = {-0.9, 0.3, 0.1},
-        width = 1050, height = 250, font_size = 95, color = {0.12, 0.24, 0.45}, font_color = {1, 1, 1}
+        label = "🛡️ Tag Selected PLAYER", position = {0, 0.65, -0.5},
+        width = 1300, height = 280, font_size = 105, color = {0.12, 0.24, 0.45}, font_color = {1, 1, 1}
     })
     self.createButton({
         click_function = "tagSelectionAsHorde", function_owner = self,
-        label = "🧟 Tag Selected HORDE", position = {0.9, 0.3, 0.1},
-        width = 1050, height = 250, font_size = 95, color = {0.45, 0.12, 0.15}, font_color = {1, 1, 1}
+        label = "🧟 Tag Selected HORDE", position = {0, 0.65, 0.5},
+        width = 1300, height = 280, font_size = 105, color = {0.45, 0.12, 0.15}, font_color = {1, 1, 1}
     })
     self.createButton({
         click_function = "togglePoller", function_owner = self,
-        label = "🔄 Poll: ON", position = {0, 0.3, 0.9},
-        width = 900, height = 240, font_size = 100, color = {0.18, 0.18, 0.22}, font_color = {0.95, 0.8, 0.3}
+        label = "🔄 Poll: ON", position = {0, 0.65, 1.5},
+        width = 1100, height = 260, font_size = 105, color = {0.18, 0.18, 0.22}, font_color = {0.95, 0.8, 0.3}
     })
 end
 
@@ -53,6 +64,7 @@ end
 function tagSelectionAsPlayer(_, playerColor)
     for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
         obj.removeTag("HORDE")
+        obj.removeTag("HORDE_TEMPLATE")
         obj.addTag("PLAYER")
     end
     broadcastToAll("🛡️ Tagged selected models as PLAYER.", {0.4, 0.75, 1})
@@ -62,45 +74,93 @@ end
 function tagSelectionAsHorde(_, playerColor)
     for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
         obj.removeTag("PLAYER")
+        obj.removeTag("HORDE_TEMPLATE")
         obj.addTag("HORDE")
     end
     broadcastToAll("🧟 Tagged selected models as HORDE.", {1, 0.45, 0.45})
     pushBoardTelemetry()
 end
 
--- Scans all miniatures and objectives on the LCT map and posts raw metadata to /tts/telemetry
-function pushBoardTelemetry()
-    local objectsPayload = {}
-    for _, obj in ipairs(getAllObjects()) do
-        if obj ~= self and not obj.isSmoothMoving() then
-            local name = obj.getName() or ""
-            local lname = string.lower(name)
-            local size = obj.getBoundsNormalized().size
-            local isObjMarker = obj.hasTag("OBJECTIVE") or string.find(lname, "^objective") or string.find(lname, "^obj ")
-            local isMini = (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or string.find(name, "%d+/%d+"))
-                           and size.x > 0.3 and size.x < 12 and size.z < 12
+function tagSelectionAsTemplate(_, playerColor)
+    for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
+        obj.removeTag("PLAYER")
+        obj.removeTag("HORDE")
+        obj.addTag("HORDE_TEMPLATE")
+    end
+    broadcastToAll("📦 Tagged selected models as off-board HORDE_TEMPLATE.", {0.95, 0.8, 0.3})
+    pushBoardTelemetry()
+end
 
-            if isObjMarker or isMini then
-                local pos = obj.getPosition()
-                local tags = obj.getTags()
-                if isObjMarker then table.insert(tags, "OBJECTIVE") end
-                table.insert(objectsPayload, {
-                    guid = obj.getGUID(),
-                    name = name,
-                    description = obj.getDescription() or "",
-                    gmNotes = obj.getGMNotes() or "",
-                    tags = tags,
-                    pos = { x = pos.x, y = pos.y, z = pos.z },
-                    bounds = { x = size.x, y = size.y, z = size.z }
-                })
+-- Detects LCT's central 44"x60" (or 60"x44") battlemat bounds around (0,0)
+function detectPlaymatBounds()
+    for _, obj in ipairs(getAllObjects()) do
+        local p = obj.getPosition()
+        if math.abs(p.x) < 4 and math.abs(p.z) < 4 then
+            local s = obj.getBoundsNormalized().size
+            if (math.abs(s.x - 44) < 3 and math.abs(s.z - 60) < 3) or (math.abs(s.x - 60) < 3 and math.abs(s.z - 44) < 3) then
+                return { minX = p.x - s.x * 0.5 - 0.5, maxX = p.x + s.x * 0.5 + 0.5, minZ = p.z - s.z * 0.5 - 0.5, maxZ = p.z + s.z * 0.5 + 0.5 }
+            end
+        end
+    end
+    return { minX = -22.5, maxX = 22.5, minZ = -30.5, maxZ = 30.5 }
+end
+
+function executeSetUnitSide(cmd)
+    local side = string.upper(cmd.side or "PLAYER")
+    for _, guid in ipairs(cmd.guids or {}) do
+        local obj = getObjectFromGUID(guid)
+        if obj then
+            obj.removeTag("PLAYER")
+            obj.removeTag("HORDE")
+            obj.removeTag("HORDE_TEMPLATE")
+            obj.addTag(side)
+        end
+    end
+    pushBoardTelemetry()
+end
+
+-- Scans all miniatures and objectives inside LCT's playmat bounds and posts raw metadata to /tts/telemetry
+function pushBoardTelemetry()
+    local matBounds = detectPlaymatBounds()
+    local objectsPayload = {}
+
+    for _, obj in ipairs(getAllObjects()) do
+        if obj ~= self and obj.interactable ~= false and not obj.isSmoothMoving() then
+            local pos = obj.getPosition()
+            local inMat = pos.x >= matBounds.minX and pos.x <= matBounds.maxX
+                      and pos.z >= matBounds.minZ and pos.z <= matBounds.maxZ
+
+            if inMat and not obj.hasTag("HORDE_TEMPLATE") then
+                local name = obj.getName() or ""
+                local lname = string.lower(name)
+                local size = obj.getBoundsNormalized().size
+                local isSecChip = string.find(lname, "secured") or string.find(lname, "camera") or string.find(lname, "dice cam")
+                local isObjMarker = not isSecChip and (obj.hasTag("OBJECTIVE") or string.match(lname, "^objective%s*%d*$") or string.match(lname, "^obj%s*%d+$"))
+                local isMini = not isSecChip and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER"))
+                               and size.x > 0.3 and size.x < 12 and size.z < 12
+
+                if isObjMarker or isMini then
+                    local tags = obj.getTags()
+                    if isObjMarker then table.insert(tags, "OBJECTIVE") end
+                    table.insert(objectsPayload, {
+                        guid = obj.getGUID(),
+                        name = name,
+                        locked = obj.getLock(),
+                        description = obj.getDescription() or "",
+                        gmNotes = obj.getGMNotes() or "",
+                        tags = tags,
+                        pos = { x = pos.x, y = pos.y, z = pos.z },
+                        bounds = { x = size.x, y = size.y, z = size.z }
+                    })
+                end
             end
         end
     end
 
-    local body = JSON.encode({ objects = objectsPayload })
+    local body = JSON.encode({ playmatBounds = matBounds, objects = objectsPayload })
     WebRequest.custom(BRIDGE_URL .. "/tts/telemetry", "POST", true, body, { ["Content-Type"] = "application/json" }, function(res)
         if not res.is_error then
-            printToAll("📡 LCT Telemetry Synced (" .. #objectsPayload .. " tabletop objects).", {0.4, 0.95, 0.7})
+            printToAll("📡 LCT Playmat Synced (" .. #objectsPayload .. " on-board objects).", {0.4, 0.95, 0.7})
         end
     end)
 end
@@ -124,6 +184,8 @@ function pollTacticaDaemon()
             executeRevertMove(cmd)
         elseif cmd.action == "SPAWN_GHOST_RING" then
             spawnGhostRing(cmd)
+        elseif cmd.action == "SET_UNIT_SIDE" then
+            executeSetUnitSide(cmd)
         end
     end)
 end
@@ -279,13 +341,14 @@ function executeSquadMove(guids, targetX, targetZ, facingY)
     Wait.time(pushBoardTelemetry, 1.4)
 end
 
--- Finds an off-board or HORDE_TEMPLATE miniature matching templateName for wave cloning
+-- Finds an off-board (outside detectPlaymatBounds()) or HORDE_TEMPLATE miniature matching templateName for wave cloning
 function findShelfTemplateModel(templateName)
     local targetLower = string.lower(templateName or "")
+    local matBounds = detectPlaymatBounds()
     for _, obj in ipairs(getAllObjects()) do
         if obj ~= self then
             local p = obj.getPosition()
-            local isOffBoard = math.abs(p.x) > 32 or math.abs(p.z) > 24
+            local isOffBoard = p.x < matBounds.minX or p.x > matBounds.maxX or p.z < matBounds.minZ or p.z > matBounds.maxZ
             if obj.hasTag("HORDE_TEMPLATE") or isOffBoard then
                 local clean = string.lower(string.gsub(obj.getName() or "", "^%s*%d+/%d+%s*", ""))
                 if clean == targetLower or string.find(clean, targetLower, 1, true) then
