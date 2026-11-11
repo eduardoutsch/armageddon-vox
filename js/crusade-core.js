@@ -114,3 +114,65 @@ var CrusadeCore = (function () {
     return Math.max(0, (Number(current) || 0) + (Number(delta) || 0));
   }
 
+  /**
+   * Creates a clean Leagues of Votann Kindred Expedition & Vault state object.
+   */
+  function createInitialVotannState(overrides = {}) {
+    const base = {
+      rawMinerals: 0,
+      biomatter: 0,
+      energySources: 0,
+      galacticIntel: 0,
+      rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
+      expBacking: 'Lean Operation (Free // Max 5 Battles)',
+      expGoal: 'Farstryd Exploration (Prospecting 2+ XP in 3+ Battles → +3 XP Character & 1 Free Mining Outpost)',
+      expContract: 'Mining — Extraction: Minerals (60+ Raw Minerals → +1 Rare Raw Mineral)',
+      expBattles: 0,
+      expWins: 0,
+      expeditionsCompleted: 0,
+      goalProgress: 0,
+      expTotals: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 },
+      assets: {}
+    };
+    if (!overrides || typeof overrides !== 'object') return base;
+    return {
+      ...base,
+      ...overrides,
+      rare: { ...base.rare, ...(overrides.rare || {}) },
+      expTotals: { ...base.expTotals, ...(overrides.expTotals || {}) },
+      assets: { ...base.assets, ...(overrides.assets || {}) }
+    };
+  }
+
+  /**
+   * Creates the canonical Mode 5 Crusade Quartermaster state model.
+   */
+  function createInitialCrusadeState(overrides = {}) {
+    const base = {
+      activeTab: 'board',
+      selectedTree: 'Gatebreakers',
+      alphaSP: 0,
+      alphaCP: 0,
+      alphaCacheCount: 0,
+      betaSP: 0,
+      betaCP: 0,
+      betaCacheCount: 0,
+      hordeSP: 1,
+      hordeCP: 0,
+      queuedRolls: [],
+      tourBattlesRem: 0,
+      tourWinsRem: 0,
+      commendationPts: 0,
+      toursCompletedCount: 0,
+      upliftingPrimer: false,
+      logistics: { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 },
+      tombAgendasCompleted: 0,
+      tombAwakeningCycles: 0,
+      powerReservesAllocated: false,
+      tombSystems: { command: 1, reanimation: 1, translocation: 0 },
+      votann: createInitialVotannState(),
+      attachedHordeStats: null
+    };
+    return hydrateCrusadeState(base, overrides);
+  }
+
