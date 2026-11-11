@@ -109,3 +109,51 @@ test('planHordeMovementPhase & buildMoveRevertCommand: stops outside 2" Engageme
   assert.deepEqual(revertCmd.models[0], { guid: 'b1', x: 0, y: 1.1, z: 20 });
   assert.equal(buildMoveRevertCommand(null), null);
 
+  // Verify close unit stops > 2.0" outside Engagement Range on a Normal Move
+  const closeBoard = {
+    objectives: [],
+    units: [
+      {
+        squadKey: 'HORDE::Gaunts',
+        name: 'Hormagaunts',
+        side: 'HORDE',
+        modelCount: 1,
+        move: 10,
+        pos: { x: 0, z: 6 },
+        keywords: ['INFANTRY'],
+        weapons: [{ name: 'Claws', type: 'melee', rangeInches: 0, keywords: [] }],
+        models: [{ guid: 'g1', pos: { x: 0, y: 1, z: 6 }, radiusInches: 0.5 }]
+      },
+      {
+        squadKey: 'PLAYER::Tank',
+        name: 'Rogal Dorn',
+        side: 'PLAYER',
+        modelCount: 1,
+        pos: { x: 0, z: 0 },
+        keywords: ['VEHICLE'],
+        models: [{ guid: 't1', pos: { x: 0, y: 1, z: 0 }, radiusInches: 1.5 }]
+      }
+    ]
+  };
+  const closeRes = planHordeMovementPhase(closeBoard, { factionName: 'Tyranids', activeMiseryIds: [] });
+  assert.ok(closeRes.plans[0].targetZ >= 4.05, 'Must stop outside 2.0" edge-to-edge Engagement Range (radii 0.5 + 1.5 + 2.1 buffer)');
+});
+
+test('selectHordeShootingTargets: enforces [ANTI-X], [PRECISION], [MELTA], Hidden 15" / Gone to Ground 12" & LOS blocks', () => {
+  const shooter = {
+    squadKey: 'HORDE::Shooter',
+    guid: 'h_shoot',
+    name: 'Chaos Havocs',
+    side: 'HORDE',
+    modelCount: 1,
+    pos: { x: 0, z: 0 },
+    keywords: ['INFANTRY'],
+    models: [{ guid: 'h_shoot', pos: { x: 0, z: 0 }, radiusInches: 0.63 }],
+    weapons: [
+      { name: 'Haywire Cannon', type: 'ranged', rangeInches: 24, attacks: 2, skill: 3, strength: 6, ap: -1, damage: 2, keywords: ['ANTI-VEHICLE 4+'] },
+      { name: 'Sniper Rifle', type: 'ranged', rangeInches: 36, attacks: 1, skill: 3, strength: 5, ap: -2, damage: 3, keywords: ['PRECISION'] },
+      { name: 'Multi-melta', type: 'ranged', rangeInches: 18, attacks: 2, attacksMod: 0, skill: 4, strength: 9, ap: -4, damage: 'D6', keywords: ['MELTA 2'] },
+      { name: 'Autocannon', type: 'ranged', rangeInches: 36, attacks: 2, skill: 4, strength: 9, ap: -1, damage: 3, keywords: [] }
+    ]
+  };
+
