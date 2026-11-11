@@ -390,3 +390,61 @@
           const pairKey = `${attacker.squadKey || attacker.name}->${target.squadKey || target.name}`;
           if (blockedSet.has(pairKey)) continue;
 
+          const dist = squadEdgeDistance(attacker, target);
+          if (dist > range) continue;
+
+          // 11th Edition Hidden (15") & Gone to Ground (12") visibility caps
+          if (!ignoreTerrainVis) {
+            if (target.isGoneToGround && dist > 12.0) continue;
+            if (target.isHidden && dist > 15.0) continue;
+          }
+
+          const mods = combatCore.resolveHordeAttackModifiers(attacker, target, baseWeapon, matchState);
+          if (attacker.advancedThisTurn && !miseryIds.includes(1) && matchState.factionName !== "Emperor's Children") {
+            if (!mods.keywords.includes('ASSAULT')) continue;
+          }
+
+          candidates.push({ target, dist, mods });
+        }
+
+        if (candidates.length === 0) continue;
+        candidates.sort((a, b) => a.dist - b.dist);
+
+        const effectiveKws = candidates[0].mods.keywords || normalizeKwList(baseWeapon.keywords);
+        const antiTargetKw = extractAntiKeyword(effectiveKws);
+        const hasPrecision = effectiveKws.includes('PRECISION');
+        const hasMelta = effectiveKws.some(k => k.startsWith('MELTA'));
+
+        let chosen = null;
+        if (antiTargetKw) {
+          chosen = candidates.find(c => normalizeKwList(c.target.keywords).includes(antiTargetKw));
+        }
+        if (!chosen && hasPrecision) {
+          chosen = candidates.find(c => {
+            const tk = normalizeKwList(c.target.keywords);
+            return tk.includes('CHARACTER') || tk.includes('LEADER') || Boolean(c.target.hasLeader);
+          });
+        }
+        if (!chosen && hasMelta) {
+          chosen = candidates.find(c => {
+            const tk = normalizeKwList(c.target.keywords);
+            return !tk.includes('INFANTRY') && !tk.includes('SWARM');
+          });
+        }
+        if (!chosen) chosen = candidates[0];
+
+        assignments.push({
+          attackerKey: attacker.squadKey || attacker.name,
+          attackerName: attacker.name,
+          targetKey: chosen.target.squadKey || chosen.target.name,
+          targetName: chosen.target.name,
+          distanceInches: chosen.dist,
+          target: chosen.target,
+          weapon: baseWeapon
+        });
+      }
+    }
+
+    return assignments;
+  }
+
