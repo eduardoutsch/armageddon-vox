@@ -414,3 +414,53 @@
       seq.outcome.fnpRolls = dice;
       seq.outcome.fnpPassed = dice.filter(d => d >= prof.fnp).length;
 
+      if (seq.mortalWounds) {
+        const unshrugged = dice.length - seq.outcome.fnpPassed;
+        const alloc = applyDamagePacketsToModels([unshrugged], wpm, seq.startingModels, seq.startWounds, true);
+        Object.assign(seq.outcome, alloc, { unitDestroyed: alloc.remainingModels <= 0 });
+      } else {
+        const packets = [];
+        for (let w = 0; w < seq.outcome.unsavedWounds; w++) {
+          const slice = dice.slice(w * seq.damagePerWound, (w + 1) * seq.damagePerWound);
+          packets.push(slice.filter(d => d < prof.fnp).length);
+        }
+        const alloc = applyDamagePacketsToModels(packets, wpm, seq.startingModels, seq.startWounds, false);
+        Object.assign(seq.outcome, alloc, { unitDestroyed: alloc.remainingModels <= 0 });
+      }
+      return finalizeOrAdvancePostDamageStage(seq);
+    }
+
+    if (seq.stage === 'ON_DEATH') {
+      seq.didOnDeath = true;
+      seq.outcome.onDeathRolls = dice;
+      seq.outcome.onDeathTriggers = dice.filter(d => d >= prof.shootOrFightOnDeathThreshold).length;
+      return finalizeOrAdvancePostDamageStage(seq);
+    }
+
+    if (seq.stage === 'GSC_RESPAWN') {
+      seq.didRespawn = true;
+      seq.outcome.gscRespawnRoll = dice[0];
+      seq.outcome.gscRespawnTriggered = dice[0] >= prof.gscRespawnThreshold;
+      return finalizeOrAdvancePostDamageStage(seq);
+    }
+
+    return seq;
+  }
+
+  /**
+   * Initializes a deterministic multi-stage LCT dice-mat sequence for Horde Shooting/Melee Attacks.
+   */
+  function createHordeAttackRollSequence(request = {}, matchState = {}) {
+    const sequenceId = request.sequenceId || `atk_${Number(matchState.seqCounter) || 0}`;
+    const attackerName = String(request.attackerName || 'Horde Attacker').trim();
+    const targetName = String(request.targetName || 'Player Unit').trim();
+    const matSide = request.matSide || 'RED';
+    const weapon = request.weapon || {};
+    const attackMods = combatCore.resolveHordeAttackModifiers(
+      request.attacker || {},
+      request.target || {},
+      weapon,
+      matchState,
+      request.context || {}
+    );
+
