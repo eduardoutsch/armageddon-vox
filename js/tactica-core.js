@@ -240,3 +240,49 @@
       return seq;
     }
 
+    if (!seq.didRespawn && out.unitDestroyed && prof.gscRespawnThreshold) {
+      seq.stage = 'GSC_RESPAWN';
+      seq.expectedDice = 1;
+      seq.nextCommand = buildLctCommand(
+        seq.sequenceId,
+        'GSC_RESPAWN',
+        1,
+        prof.gscRespawnThreshold,
+        seq.matSide,
+        `${seq.unitName} — 1x GSC Cult Ambush Respawn (${prof.gscRespawnThreshold}+)`
+      );
+      return seq;
+    }
+
+    seq.stage = 'COMPLETE';
+    seq.expectedDice = 0;
+    seq.nextCommand = null;
+    return seq;
+  }
+
+  /**
+   * Initializes a deterministic multi-stage LCT dice-mat sequence for Horde Defense
+   * (`SAVES` -> `FNP` -> `ON_DEATH` -> `GSC_RESPAWN` -> `COMPLETE`).
+   */
+  function createDefenseRollSequence(request = {}, matchState = {}) {
+    const sequenceId = request.sequenceId || `def_${Number(matchState.seqCounter) || 0}`;
+    const unitName = String(request.unitName || 'Horde Unit').trim();
+    const matSide = request.matSide || 'RED';
+    const opts = request.options || {};
+    const numWounds = Math.max(0, Number(opts.numWounds) || 0);
+    const damagePerWound = Math.max(1, Number(opts.damagePerWound) || 1);
+    const mortalWounds = Boolean(opts.mortalWounds);
+
+    const defenseProfile = combatCore.resolveHordeDefenseProfile(
+      request.defender || {},
+      request.incomingAttack || {},
+      matchState,
+      request.context || {}
+    );
+
+    const wpm = defenseProfile.woundsPerModel || 1;
+    const startingModels = Math.max(1, Number(opts.startingModels) || 1);
+    const startWounds = opts.currentModelRemainingWounds
+      ? Math.min(wpm, Number(opts.currentModelRemainingWounds))
+      : wpm;
+
