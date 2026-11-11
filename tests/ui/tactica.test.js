@@ -39,6 +39,8 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(luaSrc.includes('buildContextMenu') && luaSrc.includes('addContextMenuItem') && luaSrc.includes('tagSelectionAsTemplate'), 'Lua beacon must register right-click context menu items including HORDE_TEMPLATE');
   assert.ok(luaSrc.includes('detectPlaymatBounds') && luaSrc.includes('playmatBounds'), 'Lua beacon must auto-detect LCT 44"x60" playmat bounds');
   assert.ok(luaSrc.includes('SET_UNIT_SIDE') && luaSrc.includes('executeSetUnitSide'), 'Lua beacon must support browser-driven SET_UNIT_SIDE command');
+  assert.ok(luaSrc.includes('linkSelectionAsSquad') && luaSrc.includes('SQUAD:WAVE_') && luaSrc.includes('colorTint'), 'Lua beacon must stamp SQUAD tags on waves/manual links and export colorTint');
+  assert.ok(luaSrc.includes('DISEMBARK_CARGO') && luaSrc.includes('EMBARKED:'), 'Lua beacon must support EMBARKED cargo tags and DISEMBARK_CARGO 3" drop');
 
   const spawnerHtml = fs.readFileSync(path.join(ROOT_DIR, 'pages/spawner.html'), 'utf8');
   assert.ok(spawnerHtml.includes('tactica.html'), 'spawner.html must link to pages/tactica.html');
@@ -383,6 +385,45 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   await tactica.triggerAutopilotShooting();
   const freshRoundSeq = await tactica.fireAutopilotWeaponOnMat(0);
   assert.equal(freshRoundSeq.nextCommand.threshold, 3, 'After Round 3 PLAYER_TURN expires buff, BS 3+ must roll 3+ on LCT mat');
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  // MVVM Humble View: Embarked Transport badge + 1-click Disembark (3") action
+  tactica.getTacticaClientState().boardTelemetry.units = [
+    {
+      squadKey: 'HORDE::Corvus Blackstar',
+      guid: 'corvus-mvvm-1',
+      name: 'Corvus Blackstar',
+      side: 'HORDE',
+      modelCount: 1,
+      save: 3,
+      pos: { x: 4, z: 14 },
+      models: [{ guid: 'corvus-mvvm-1', pos: { x: 4, z: 14 }, radiusInches: 2.0 }],
+      embarkedCargo: [
+        { count: 5, templateName: 'Kill Team' },
+        { count: 1, templateName: 'Watch Master' }
+      ],
+      embarkedSummary: '5x Kill Team + 1x Watch Master'
+    }
+  ];
+  await tactica.refreshDaemonState();
+  assert.ok(
+    els.tacticaTelemetryBox.innerHTML.includes('🚌 Embarked: 5x Kill Team + 1x Watch Master'),
+    'Humble View must render Embarked cargo summary from ViewModel'
+  );
+  assert.ok(
+    els.tacticaTelemetryBox.innerHTML.includes('disembarkTelemetryTransport(0)'),
+    'Humble View must expose 1-click Disembark button when canDisembark is true'
+  );
+  assert.equal(typeof tactica.disembarkTelemetryTransport, 'function');
+  const disembarkRes = await tactica.disembarkTelemetryTransport(0);
+  assert.ok(disembarkRes && disembarkRes.action === 'DISEMBARK_CARGO');
+  assert.deepEqual(tactica.getTacticaClientState().boardTelemetry.units[0].embarkedCargo, []);
+  assert.equal(
+    els.tacticaTelemetryBox.innerHTML.includes('disembarkTelemetryTransport(0)'),
+    false,
+    'Disembark button must disappear once cargo has disembarked'
+  );
+  assert.ok(els.tacticaChronicleBox.innerHTML.includes('Disembarked 5x Kill Team + 1x Watch Master'));
 
   delete globalThis.localStorage;
   delete globalThis.document;

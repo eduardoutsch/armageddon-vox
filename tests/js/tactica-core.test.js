@@ -14,6 +14,7 @@ const {
   createPlayerStratagemBuff,
   pruneExpiredPlayerBuffs,
   resolvePlayerUnitDefensiveBuffs,
+  selectTelemetryRowViewModels,
   formatChronicleEntry,
   detectPlayerReactionWindow,
   assignHordeWarlordIfEligible,
@@ -308,4 +309,52 @@ test('createPlayerStratagemBuff, pruneExpiredPlayerBuffs & resolvePlayerUnitDefe
   assert.equal(nextTurnBuffs.length, 1, 'Must also protect through R3 HORDE_FIGHT before Player Turn begins');
   nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'PLAYER_TURN');
   assert.equal(nextTurnBuffs.length, 0, 'Must expire once Round 3 reaches PLAYER_TURN ("your next turn / shooting phase")');
+});
+
+test('selectTelemetryRowViewModels: pure MVVM selector projects unit badges, save brackets, and Embarked Transport actions without DOM', () => {
+  assert.equal(typeof selectTelemetryRowViewModels, 'function');
+  assert.deepEqual(selectTelemetryRowViewModels(null), []);
+
+  const vms = selectTelemetryRowViewModels([
+    {
+      squadKey: 'HORDE::Corvus Blackstar',
+      name: 'Corvus Blackstar',
+      side: 'HORDE',
+      modelCount: 1,
+      save: 3,
+      closestObjective: { name: 'Obj 2', distanceInches: 4.5 },
+      closestEnemy: { name: 'Hearthkyn Warriors #1', distanceInches: 9.2 },
+      embarkedCargo: [
+        { count: 5, templateName: 'Kill Team' },
+        { count: 1, templateName: 'Watch Master' }
+      ],
+      embarkedSummary: '5x Kill Team + 1x Watch Master'
+    },
+    {
+      squadKey: 'PLAYER::Hearthkyn Warriors #1',
+      name: 'Hearthkyn Warriors #1',
+      side: 'PLAYER',
+      modelCount: 10,
+      save: 4,
+      invuln: 5,
+      fnp: 6,
+      embarkedCargo: []
+    }
+  ]);
+
+  assert.equal(vms.length, 2);
+  assert.equal(vms[0].side, 'HORDE');
+  assert.equal(vms[0].sideBadgeClass, 'red');
+  assert.equal(vms[0].statsBracketText, '[x1 • Sv 3+]');
+  assert.equal(vms[0].hasEmbarkedCargo, true);
+  assert.equal(vms[0].embarkedBadgeText, '🚌 Embarked: 5x Kill Team + 1x Watch Master');
+  assert.equal(vms[0].canDisembark, true);
+  assert.equal(vms[0].canLoadAutoDefender, true);
+
+  assert.equal(vms[1].side, 'PLAYER');
+  assert.equal(vms[1].sideBadgeClass, 'blue');
+  assert.equal(vms[1].statsBracketText, '[x10 • Sv 4+/5++/FNP 6+]');
+  assert.equal(vms[1].hasEmbarkedCargo, false);
+  assert.equal(vms[1].canDisembark, false);
+  assert.equal(vms[1].canLoadAutoDefender, false);
 });

@@ -114,12 +114,15 @@
     if (!box || !seq || seq.kind !== 'AUTO_DEFENDER') return;
     const prof = seq.defenseProfile;
     const out = seq.outcome;
+    const matchedUnit = (clientState.boardTelemetry?.units || []).find(u => u.name === seq.unitName);
+    const emergencyCargo = out.unitDestroyed && matchedUnit?.embarkedSummary ? matchedUnit.embarkedSummary : null;
     box.innerHTML = `
       <strong>${seq.unitName}</strong> • Save: <strong>${prof.saveTarget}+</strong> (${out.savesPassed}/${seq.numWounds} saved)
       ${prof.fnp ? ` • <strong>FNP ${prof.fnp}+</strong> (${out.fnpPassed} shrugged)` : ''}
       • Slain: <strong style="color:var(--red);">${out.modelsSlain}</strong> • Remaining: <strong>${out.remainingModels}</strong>
       ${out.onDeathTriggers > 0 ? `<br><span style="color:var(--gold);">⚡ Misery #30: ${out.onDeathTriggers} model(s) Shoot/Fight on Death!</span>` : ''}
       ${out.gscRespawnTriggered ? `<br><span style="color:var(--purple);">♻️ GSC 5+ Respawn Triggered!</span>` : ''}
+      ${emergencyCargo ? `<br><span style="color:var(--gold);">🚌 Transport Destroyed! Disembark [${emergencyCargo}] within 3" (roll D6 per model: 1 = 1 MW).</span>` : ''}
     `;
   }
 
@@ -211,30 +214,26 @@
 
     const telBox = document.getElementById('tacticaTelemetryBox');
     if (telBox) {
-      if (units.length === 0) {
+      const rowVms = typeof selectTelemetryRowViewModels === 'function'
+        ? selectTelemetryRowViewModels(units)
+        : [];
+      if (rowVms.length === 0) {
         telBox.innerHTML = '<div style="color:var(--muted); font-style:italic;">No LCT tabletop scan received yet. Click [📡 Scan LCT Board] on your TTS Beacon token or request a scan above.</div>';
       } else {
-        telBox.innerHTML = units.map((u, idx) => {
-          const nearObj = u.closestObjective ? `${u.closestObjective.name} (${u.closestObjective.distanceInches}")` : 'None';
-          const nearEnemy = u.closestEnemy ? `${u.closestEnemy.name} (${u.closestEnemy.distanceInches}")` : 'None';
-          const sideBadge = u.side === 'PLAYER' ? '<span class="badge blue">PLAYER</span>' : '<span class="badge red">HORDE</span>';
-          const flipBtn = `<button type="button" class="btn-ghost btn-sm" onclick="toggleTelemetryUnitSide(${idx})">⇄ Flip Side</button>`;
-          const loadBtn = u.side !== 'PLAYER'
-            ? `<button type="button" class="btn-ghost btn-sm" onclick="selectTelemetryUnitForDefense(${idx})">🎯 Load into Auto-Defender</button>`
-            : '';
-          return `
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
-              <div>
-                ${sideBadge} <strong>${u.name}</strong> [x${u.modelCount || 1} • Sv ${u.save || 4}+${u.invuln ? `/${u.invuln}++` : ''}${u.fnp ? `/FNP ${u.fnp}+` : ''}]
-                <span style="color:#94a3b8;">• Obj: ${nearObj} • Nearest Enemy: ${nearEnemy}</span>
-              </div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                ${flipBtn}
-                ${loadBtn}
-              </div>
+        telBox.innerHTML = rowVms.map(vm => `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
+            <div>
+              <span class="badge ${vm.sideBadgeClass}">${vm.side}</span> <strong>${vm.name}</strong> ${vm.statsBracketText}
+              ${vm.hasEmbarkedCargo ? `<span class="badge gold" style="margin-left:4px;">${vm.embarkedBadgeText}</span>` : ''}
+              <span style="color:#94a3b8;">${vm.proximityText}</span>
             </div>
-          `;
-        }).join('');
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="btn-ghost btn-sm" onclick="toggleTelemetryUnitSide(${vm.index})">⇄ Flip Side</button>
+              ${vm.canDisembark ? `<button type="button" class="btn-gold btn-sm" onclick="disembarkTelemetryTransport(${vm.index})">⏏️ Disembark (3")</button>` : ''}
+              ${vm.canLoadAutoDefender ? `<button type="button" class="btn-ghost btn-sm" onclick="selectTelemetryUnitForDefense(${vm.index})">🎯 Load into Auto-Defender</button>` : ''}
+            </div>
+          </div>
+        `).join('');
       }
     }
 
@@ -570,6 +569,50 @@
     return (clientState.boardTelemetry?.units || [])[idx] || u;
   }
 
+  /**
+   * Forwards user intent to disembark all passenger units (`[10 Kasrkin]` or `[5 + Leader]`)
+   * wholly within `3"` of a Transport miniature via `POST /autopilot/disembark` with offline fallback.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Disembark command descriptor or `null` when invalid.
+   */
+  async function disembarkTelemetryTransport(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || !Array.isArray(u.embarkedCargo) || u.embarkedCargo.length === 0) return null;
+
+    let cmd = null;
+    try {
+      const res = await daemonRequest('/autopilot/disembark', 'POST', {
+        squadKey: u.squadKey,
+        transportGuid: u.guid,
+        unitIndex: idx
+      });
+      daemonOnline = true;
+      cmd = res.command;
+      if (Array.isArray(res.units) && clientState.boardTelemetry) {
+        clientState.boardTelemetry.units = res.units;
+      } else {
+        u.embarkedCargo = [];
+        u.embarkedSummary = null;
+      }
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      daemonOnline = false;
+      cmd = typeof buildDisembarkWaveCommand === 'function' ? buildDisembarkWaveCommand(u) : null;
+      if (!cmd) return null;
+      u.embarkedCargo = [];
+      u.embarkedSummary = null;
+      localChronicle.push(formatChronicleEntry({ type: 'DISEMBARK', summary: cmd.summary }, clientState));
+    }
+
+    if (cmd) {
+      setAutopilotHtml(`<strong>🚌 Transport Disembark:</strong> ${cmd.summary}`);
+    }
+    renderTacticaConsole();
+    return cmd;
+  }
+
   function setAutopilotHtml(html) {
     if (typeof document === 'undefined') return;
     const box = document.getElementById('tacticaAutopilotBox');
@@ -828,6 +871,7 @@
       requestTtsBoardScan,
       selectTelemetryUnitForDefense,
       toggleTelemetryUnitSide,
+      disembarkTelemetryTransport,
       triggerAutopilotSpawnWaves,
       triggerAutopilotMovement,
       revertAutopilotSquadMove,
@@ -871,6 +915,7 @@
     requestTtsBoardScan,
     selectTelemetryUnitForDefense,
     toggleTelemetryUnitSide,
+    disembarkTelemetryTransport,
     triggerAutopilotSpawnWaves,
     triggerAutopilotMovement,
     revertAutopilotSquadMove,

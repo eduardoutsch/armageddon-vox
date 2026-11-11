@@ -122,6 +122,7 @@
       lastShootingAssignments: Array.isArray(overrides.lastShootingAssignments) ? [...overrides.lastShootingAssignments] : [],
       losBlockedPairs: Array.isArray(overrides.losBlockedPairs) ? [...overrides.losBlockedPairs] : [],
       boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [] },
+      squadGuidRegistry: (overrides.squadGuidRegistry && typeof overrides.squadGuidRegistry === 'object') ? { ...overrides.squadGuidRegistry } : {},
       lastDiceResult: overrides.lastDiceResult || null,
       seqCounter: Number(overrides.seqCounter) || 0
     };
@@ -884,6 +885,46 @@
     return lines.join('\n');
   }
 
+  /**
+   * Pure MVVM ViewModel selector projecting normalized tabletop telemetry units into declarative,
+   * display-ready row ViewModels for the Humble View (`js/tactica.js`) with zero DOM dependencies.
+   *
+   * @param {Array<object>} [units=[]] - Scanned tabletop units from `state.boardTelemetry.units`.
+   * @returns {Array<object>} Declarative row ViewModels.
+   */
+  function selectTelemetryRowViewModels(units = []) {
+    if (!Array.isArray(units)) return [];
+    return units.map((u, index) => {
+      const isPlayer = String(u?.side || '').toUpperCase() === 'PLAYER';
+      const savePart = `Sv ${u?.save || 4}+${u?.invuln ? `/${u.invuln}++` : ''}${u?.fnp ? `/FNP ${u.fnp}+` : ''}`;
+      const modelCount = Number(u?.modelCount) || 1;
+      const cargo = Array.isArray(u?.embarkedCargo) ? u.embarkedCargo : [];
+      const embarkedSummary = u?.embarkedSummary || (cargo.length > 0
+        ? cargo.map(c => `${Math.max(1, Number(c.count) || 1)}x ${c.templateName}`).join(' + ')
+        : null);
+      const nearObj = u?.closestObjective
+        ? `${u.closestObjective.name} (${u.closestObjective.distanceInches}")`
+        : 'None';
+      const nearEnemy = u?.closestEnemy
+        ? `${u.closestEnemy.name} (${u.closestEnemy.distanceInches}")`
+        : 'None';
+
+      return {
+        index,
+        squadKey: u?.squadKey || `${isPlayer ? 'PLAYER' : 'HORDE'}::${u?.name || 'Unit'}`,
+        side: isPlayer ? 'PLAYER' : 'HORDE',
+        sideBadgeClass: isPlayer ? 'blue' : 'red',
+        name: u?.name || 'Unknown Unit',
+        statsBracketText: `[x${modelCount} • ${savePart}]`,
+        proximityText: `• Obj: ${nearObj} • Nearest Enemy: ${nearEnemy}`,
+        hasEmbarkedCargo: Boolean(embarkedSummary),
+        embarkedBadgeText: embarkedSummary ? `🚌 Embarked: ${embarkedSummary}` : '',
+        canDisembark: cargo.length > 0,
+        canLoadAutoDefender: !isPlayer
+      };
+    });
+  }
+
   return {
     TACTICA_PHASES,
     PHASE_ORDER_INDEX,
@@ -891,6 +932,7 @@
     createInitialTacticaState,
     createPlayerStratagemBuff,
     pruneExpiredPlayerBuffs,
+    selectTelemetryRowViewModels,
     formatChronicleEntry,
     detectPlayerReactionWindow,
     assignHordeWarlordIfEligible,

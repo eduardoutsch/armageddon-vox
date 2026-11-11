@@ -23,8 +23,27 @@
     : (typeof require === 'function' ? require('./tts-telemetry-core.js') : {});
 
   const spawnerCore = (typeof parseSpawnWaveSpec === 'function')
-    ? { parseSpawnWaveSpec }
+    ? {
+        parseSpawnWaveSpec,
+        normalizeEmbarkedUnits: typeof normalizeEmbarkedUnits === 'function' ? normalizeEmbarkedUnits : null
+      }
     : (typeof require === 'function' ? require('./spawner.js') : {});
+
+  const STANDALONE_HULL_PATTERN = /\b(knight|armiger|wardog|carnifex|dreadnought|tank|rhino|chimera|impulsor|raider|trukk|land\s+raider|monolith|baneblade|blackstar|valkyrie)\b/i;
+
+  function normalizeCargoList(rawEmbarked) {
+    if (!rawEmbarked) return [];
+    if (typeof spawnerCore.normalizeEmbarkedUnits === 'function') {
+      return spawnerCore.normalizeEmbarkedUnits(rawEmbarked);
+    }
+    const arr = Array.isArray(rawEmbarked) ? rawEmbarked : [rawEmbarked];
+    return arr
+      .filter(item => item && item.templateName)
+      .map(item => ({
+        count: Math.max(1, Number(item.count) || 1),
+        templateName: String(item.templateName).trim()
+      }));
+  }
 
   /**
    * Normalizes an array of datasheet or weapon keywords to trimmed uppercase tokens.
@@ -149,17 +168,50 @@
         facingY: 180
       };
 
+      const normalizedWaveUnits = parsedUnits.map(u => {
+        const count = Math.max(1, Number(u.count) || 1);
+        const embarkedUnits = normalizeCargoList(u.embarkedUnits || u.embarked);
+        const embarkedSpec = embarkedUnits.map(c => `${c.count} ${c.templateName}`).join(' + ');
+        return {
+          templateName: u.templateName,
+          count,
+          embarked: u.embarked || null,
+          embarkedUnits,
+          embarkedSpec,
+          attachedGroup: null
+        };
+      });
+
+      let groupSeq = 0;
+      for (let i = 0; i < normalizedWaveUnits.length; i++) {
+        if (normalizedWaveUnits[i].attachedGroup) continue;
+        groupSeq += 1;
+        const groupId = `Z${zoneNum}_G${groupSeq}`;
+        normalizedWaveUnits[i].attachedGroup = groupId;
+
+        const cur = normalizedWaveUnits[i];
+        const next = normalizedWaveUnits[i + 1];
+        const canAttachLeader =
+          next &&
+          cur.count >= 2 &&
+          next.count === 1 &&
+          cur.embarkedUnits.length === 0 &&
+          next.embarkedUnits.length === 0 &&
+          !STANDALONE_HULL_PATTERN.test(cur.templateName) &&
+          !STANDALONE_HULL_PATTERN.test(next.templateName);
+
+        if (canAttachLeader) {
+          next.attachedGroup = groupId;
+        }
+      }
+
       commands.push({
         action: 'SPAWN_WAVE',
         zone: zoneNum,
         targetX: anchor.x,
         targetZ: anchor.z,
         facingY: anchor.facingY ?? 180,
-        units: parsedUnits.map(u => ({
-          templateName: u.templateName,
-          count: Math.max(1, Number(u.count) || 1),
-          embarked: u.embarked || null
-        }))
+        units: normalizedWaveUnits
       });
     });
 
@@ -629,8 +681,51 @@
     return { mode: 'HOLD', targetName: null, moveCommand: null };
   }
 
+  /**
+   * Builds a deterministic `DISEMBARK_CARGO` TTS command placing all embarked passenger units
+   * (`[10 Kasrkin]` or `[5 Kill Team + 1 Watch Master]`) wholly within `3"` of the Transport hull
+   * under a shared `SQUAD:DISEMBARK_<guid>` tag so `Bodyguard + Leader` cargo emerges as 1 Attached Unit.
+   *
+   * @param {object|null} transportUnit - Scanned tabletop Transport record carrying `embarkedCargo`.
+   * @param {object} [options={}] - Optional `{ towardPos, facingY }` overrides.
+   * @returns {object|null} Deterministic `DISEMBARK_CARGO` command or `null` when empty.
+   */
+  function buildDisembarkWaveCommand(transportUnit, options = {}) {
+    if (!transportUnit || typeof transportUnit !== 'object') return null;
+    const cargo = normalizeCargoList(transportUnit.embarkedCargo || transportUnit.embarkedUnits || transportUnit.embarked);
+    if (cargo.length === 0) return null;
+
+    const tx = Number(transportUnit.pos?.x) || 0;
+    const tz = Number(transportUnit.pos?.z) || 0;
+    const hullRadius = Number(transportUnit.models?.[0]?.radiusInches) || 1.5;
+    const isPlayer = String(transportUnit.side || 'HORDE').toUpperCase() === 'PLAYER';
+    const goalPos = options.towardPos || { x: 0, z: isPlayer ? 4 : -4 };
+    const dropDist = Number((hullRadius + 1.45).toFixed(2));
+    const step = stepTowardPoint({ x: tx, z: tz }, goalPos, dropDist, 0);
+    const hasMoved = Math.hypot(step.x - tx, step.z - tz) > 0.1;
+    const targetX = hasMoved ? step.x : tx;
+    const targetZ = hasMoved ? step.z : Number((tz + (isPlayer ? dropDist : -dropDist)).toFixed(2));
+    const safeGuid = String(transportUnit.guid || transportUnit.name || 'T1').replace(/\s+/g, '_');
+    const cargoSummary = cargo.map(c => `${c.count}x ${c.templateName}`).join(' + ');
+
+    return {
+      action: 'DISEMBARK_CARGO',
+      transportGuid: transportUnit.guid || null,
+      transportSquadKey: transportUnit.squadKey || null,
+      transportName: transportUnit.name || 'Transport',
+      side: isPlayer ? 'PLAYER' : 'HORDE',
+      squadTag: `SQUAD:DISEMBARK_${safeGuid}`,
+      targetX,
+      targetZ,
+      facingY: options.facingY ?? (isPlayer ? 0 : 180),
+      units: cargo,
+      summary: `Disembarked ${cargoSummary} within 3" of ${transportUnit.name || 'Transport'}.`
+    };
+  }
+
   return {
     planWaveSpawnCommands,
+    buildDisembarkWaveCommand,
     planHordeMovementPhase,
     buildMoveRevertCommand,
     selectHordeShootingTargets,

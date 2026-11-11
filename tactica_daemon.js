@@ -31,6 +31,7 @@ const {
 const { normalizeTtsBoardScan } = require('./js/tts-telemetry-core.js');
 const {
   planWaveSpawnCommands,
+  buildDisembarkWaveCommand,
   planHordeMovementPhase,
   buildMoveRevertCommand,
   selectHordeShootingTargets,
@@ -471,7 +472,14 @@ function createTacticaDaemon(options = {}) {
     if (req.method === 'POST' && urlPath === '/session/sync') {
       const body = await readJsonBody(req);
       const roundOrPhaseChanged = body.battleRound !== undefined || body.phase !== undefined;
-      if (body.roomCode !== undefined) liveState.roomCode = String(body.roomCode).trim().toUpperCase();
+      if (body.roomCode !== undefined) {
+        const nextRoom = String(body.roomCode).trim().toUpperCase();
+        if (nextRoom && nextRoom !== liveState.roomCode) {
+          liveState.boardTelemetry = { updatedAt: null, units: [], objectives: [] };
+          liveState.squadGuidRegistry = {};
+        }
+        liveState.roomCode = nextRoom;
+      }
       if (body.battleRound !== undefined) liveState.battleRound = Number(body.battleRound);
       if (body.phase !== undefined) liveState.phase = body.phase;
       if (roundOrPhaseChanged) {
@@ -614,8 +622,17 @@ function createTacticaDaemon(options = {}) {
       units.forEach(u => {
         if (u.squadKey === body.squadKey || (guids.length > 0 && u.guids?.some(g => guids.includes(g)))) {
           u.side = nextSide;
+          u.squadKey = `${nextSide}::${u.name}`;
         }
       });
+      if (liveState.squadGuidRegistry && typeof liveState.squadGuidRegistry === 'object') {
+        guids.forEach(g => {
+          if (liveState.squadGuidRegistry[g]) {
+            liveState.squadGuidRegistry[g].side = nextSide;
+            liveState.squadGuidRegistry[g].squadKey = `${nextSide}::${liveState.squadGuidRegistry[g].name}`;
+          }
+        });
+      }
       cmdCounter += 1;
       ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'SET_UNIT_SIDE', side: nextSide, guids });
       savePersistedState();
@@ -628,9 +645,14 @@ function createTacticaDaemon(options = {}) {
       let objectives = Array.isArray(body.objectives) ? body.objectives : [];
 
       if (Array.isArray(body.objects)) {
-        const normalized = normalizeTtsBoardScan(body, { hordeFactionName: liveState.factionName });
+        const normalized = normalizeTtsBoardScan(body, {
+          hordeFactionName: liveState.factionName,
+          previousUnits: liveState.boardTelemetry?.units || [],
+          guidRegistry: liveState.squadGuidRegistry || {}
+        });
         units = normalized.units;
         objectives = normalized.objectives;
+        liveState.squadGuidRegistry = normalized.guidRegistry || {};
       }
 
       liveState.boardTelemetry = { updatedAt: Date.now(), units, objectives };
@@ -662,6 +684,30 @@ function createTacticaDaemon(options = {}) {
       });
       const entry = appendEvent({ type: 'SPAWN_WAVE', summary: resPlan.summary });
       return sendJson(res, 200, { ok: true, ...resPlan, entry, queueLength: ttsCommandQueue.length });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/disembark') {
+      const body = await readJsonBody(req);
+      const units = liveState.boardTelemetry?.units || [];
+      const targetTransport = body.transportUnit ||
+        units.find(u =>
+          (body.squadKey && u.squadKey === body.squadKey) ||
+          (body.transportGuid && u.guid === body.transportGuid)
+        ) ||
+        (Number.isInteger(body.unitIndex) ? units[body.unitIndex] : null);
+
+      const cmd = buildDisembarkWaveCommand(targetTransport, body);
+      if (!cmd) {
+        return sendJson(res, 400, { ok: false, error: 'No embarked cargo to disembark' });
+      }
+      if (targetTransport && units.includes(targetTransport)) {
+        targetTransport.embarkedCargo = [];
+        targetTransport.embarkedSummary = null;
+      }
+      cmdCounter += 1;
+      ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...cmd });
+      const entry = appendEvent({ type: 'DISEMBARK', summary: cmd.summary });
+      return sendJson(res, 200, { ok: true, command: cmd, units, entry, queueLength: ttsCommandQueue.length });
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/plan-movement') {

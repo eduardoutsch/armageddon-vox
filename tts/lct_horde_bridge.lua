@@ -29,6 +29,7 @@ function buildContextMenu()
     self.addContextMenuItem("Scan LCT Board", function() pushBoardTelemetry() end)
     self.addContextMenuItem("Tag Selected PLAYER", function(playerColor) tagSelectionAsPlayer(self, playerColor) end)
     self.addContextMenuItem("Tag Selected HORDE", function(playerColor) tagSelectionAsHorde(self, playerColor) end)
+    self.addContextMenuItem("Link Selected as Squad", function(playerColor) linkSelectionAsSquad(self, playerColor) end)
     self.addContextMenuItem("Tag Selected TEMPLATE", function(playerColor) tagSelectionAsTemplate(self, playerColor) end)
 end
 
@@ -91,6 +92,20 @@ function tagSelectionAsTemplate(_, playerColor)
     pushBoardTelemetry()
 end
 
+function linkSelectionAsSquad(_, playerColor)
+    local selected = Player[playerColor].getSelectedObjects()
+    if #selected == 0 then return end
+    local sqTag = "SQUAD:" .. string.sub(selected[1].getGUID(), 1, 6) .. "_" .. tostring(math.floor(os.clock() * 100))
+    for _, obj in ipairs(selected) do
+        for _, t in ipairs(obj.getTags()) do
+            if string.sub(string.upper(t), 1, 6) == "SQUAD:" then obj.removeTag(t) end
+        end
+        obj.addTag(sqTag)
+    end
+    broadcastToAll("🔗 Linked " .. #selected .. " selected models into permanent Squad (" .. sqTag .. ").", {0.4, 0.95, 0.7})
+    pushBoardTelemetry()
+end
+
 -- Detects LCT's central 44"x60" (or 60"x44") battlemat bounds around (0,0)
 function detectPlaymatBounds()
     for _, obj in ipairs(getAllObjects()) do
@@ -142,6 +157,20 @@ function pushBoardTelemetry()
                 if isObjMarker or isMini then
                     local tags = obj.getTags()
                     if isObjMarker then table.insert(tags, "OBJECTIVE") end
+                    local c = obj.getColorTint() or { r = 1, g = 1, b = 1 }
+                    local tintHex = string.format("#%02x%02x%02x",
+                        math.min(255, math.max(0, math.floor((c.r or 1) * 255 + 0.5))),
+                        math.min(255, math.max(0, math.floor((c.g or 1) * 255 + 0.5))),
+                        math.min(255, math.max(0, math.floor((c.b or 1) * 255 + 0.5)))
+                    )
+                    local ysUnitId = nil
+                    pcall(function()
+                        ysUnitId = obj.getVar("unitID") or obj.getVar("squadID")
+                        if not ysUnitId then
+                            local ud = obj.getVar("unitData")
+                            if type(ud) == "table" then ysUnitId = ud.unitID or ud.id or ud.uuid end
+                        end
+                    end)
                     table.insert(objectsPayload, {
                         guid = obj.getGUID(),
                         name = name,
@@ -149,6 +178,8 @@ function pushBoardTelemetry()
                         description = obj.getDescription() or "",
                         gmNotes = obj.getGMNotes() or "",
                         tags = tags,
+                        colorTint = tintHex,
+                        squadId = ysUnitId and tostring(ysUnitId) or nil,
                         pos = { x = pos.x, y = pos.y, z = pos.z },
                         bounds = { x = size.x, y = size.y, z = size.z }
                     })
@@ -180,6 +211,8 @@ function pollTacticaDaemon()
             executeSquadMove(cmd.guids or {}, cmd.targetX, cmd.targetZ, cmd.facingY)
         elseif cmd.action == "SPAWN_WAVE" then
             executeSpawnWave(cmd)
+        elseif cmd.action == "DISEMBARK_CARGO" then
+            executeDisembarkCargo(cmd)
         elseif cmd.action == "REVERT_MOVE" then
             executeRevertMove(cmd)
         elseif cmd.action == "SPAWN_GHOST_RING" then
@@ -362,10 +395,23 @@ end
 
 function executeSpawnWave(cmd)
     local offsetGroup = 0
-    for _, u in ipairs(cmd.units or {}) do
+    local prevAttachedGroup = nil
+    local anchorByGroup = {}
+    for uIdx, u in ipairs(cmd.units or {}) do
+        local grpKey = u.attachedGroup or tostring(uIdx)
+        if grpKey ~= prevAttachedGroup and prevAttachedGroup ~= nil then
+            offsetGroup = offsetGroup + 4.0
+        end
+        prevAttachedGroup = grpKey
+
         local tmpl = findShelfTemplateModel(u.templateName)
-        local cx = (tonumber(cmd.targetX) or 0) + offsetGroup
-        local cz = tonumber(cmd.targetZ) or 19.5
+        local isLeaderFollowup = (anchorByGroup[grpKey] ~= nil)
+        local baseAnchorX = anchorByGroup[grpKey] or ((tonumber(cmd.targetX) or 0) + offsetGroup)
+        anchorByGroup[grpKey] = baseAnchorX
+        local cx = isLeaderFollowup and (baseAnchorX + 1.4) or baseAnchorX
+        local cz = isLeaderFollowup and ((tonumber(cmd.targetZ) or 19.5) - 1.2) or (tonumber(cmd.targetZ) or 19.5)
+        local waveSquadTag = "SQUAD:WAVE_" .. tostring(cmd.id or cmd.zone or "Z") .. "_" .. tostring(grpKey)
+
         if tmpl then
             local count = math.max(1, tonumber(u.count) or 1)
             for i = 1, count do
@@ -380,6 +426,10 @@ function executeSpawnWave(cmd)
                 local cloned = tmpl.clone({ position = { x = cx + ox, y = y + 0.5, z = cz + oz } })
                 cloned.removeTag("HORDE_TEMPLATE")
                 cloned.addTag("HORDE")
+                cloned.addTag(waveSquadTag)
+                if u.embarkedSpec and tostring(u.embarkedSpec) ~= "" then
+                    cloned.addTag("EMBARKED:" .. tostring(u.embarkedSpec))
+                end
                 cloned.setLock(false)
                 if cmd.facingY then cloned.setRotation({ x = 0, y = cmd.facingY, z = 0 }) end
             end
@@ -387,9 +437,61 @@ function executeSpawnWave(cmd)
         else
             spawnGhostRing({ targetX = cx, targetZ = cz, label = "Missing Shelf Template: " .. tostring(u.count) .. "x " .. tostring(u.templateName) })
         end
-        offsetGroup = offsetGroup + 4.0
     end
     Wait.time(pushBoardTelemetry, 1.5)
+end
+
+function executeDisembarkCargo(cmd)
+    if cmd.transportGuid then
+        local transObj = getObjectFromGUID(cmd.transportGuid)
+        if transObj then
+            for _, t in ipairs(transObj.getTags()) do
+                if string.find(string.upper(t), "^EMBARKED:") then
+                    transObj.removeTag(t)
+                end
+            end
+        end
+    end
+
+    local cx = tonumber(cmd.targetX) or 0
+    local cz = tonumber(cmd.targetZ) or 0
+    local sideTag = (string.upper(cmd.side or "HORDE") == "PLAYER") and "PLAYER" or "HORDE"
+    local sharedSquadTag = cmd.squadTag or ("SQUAD:DISEMBARK_" .. tostring(cmd.transportGuid or "T1"))
+    local modelIdx = 0
+    local totalModels = 0
+    for _, u in ipairs(cmd.units or {}) do
+        totalModels = totalModels + math.max(1, tonumber(u.count) or 1)
+    end
+
+    for _, u in ipairs(cmd.units or {}) do
+        local tmpl = findShelfTemplateModel(u.templateName)
+        local count = math.max(1, tonumber(u.count) or 1)
+        if tmpl then
+            for _ = 1, count do
+                modelIdx = modelIdx + 1
+                local ox, oz = 0, 0
+                if totalModels > 1 and modelIdx > 1 then
+                    local ang = ((modelIdx - 2) / (totalModels - 1)) * (2 * math.pi)
+                    local rad = (modelIdx <= 7) and 1.25 or 2.2
+                    ox = math.cos(ang) * rad
+                    oz = math.sin(ang) * rad
+                end
+                local y = getSurfaceY(cx + ox, cz + oz, 0.5)
+                local cloned = tmpl.clone({ position = { x = cx + ox, y = y + 0.5, z = cz + oz } })
+                cloned.removeTag("HORDE_TEMPLATE")
+                cloned.removeTag("PLAYER")
+                cloned.removeTag("HORDE")
+                cloned.addTag(sideTag)
+                cloned.addTag(sharedSquadTag)
+                cloned.setLock(false)
+                if cmd.facingY then cloned.setRotation({ x = 0, y = cmd.facingY, z = 0 }) end
+            end
+        else
+            spawnGhostRing({ targetX = cx, targetZ = cz, label = "Disembark: " .. tostring(count) .. "x " .. tostring(u.templateName) })
+        end
+    end
+    printToAll("🚌 " .. tostring(cmd.summary or "Disembarked passengers within 3\"."), {0.95, 0.8, 0.3})
+    Wait.time(pushBoardTelemetry, 1.4)
 end
 
 function executeRevertMove(cmd)

@@ -10,6 +10,7 @@ const path = require('node:path');
 
 const {
   planWaveSpawnCommands,
+  buildDisembarkWaveCommand,
   planHordeMovementPhase,
   buildMoveRevertCommand,
   selectHordeShootingTargets,
@@ -306,4 +307,68 @@ test('planConsolidationMove: enforces 11th Edition 3-Tier Consolidation priority
   const hold = planConsolidationMove(mover, [], []);
   assert.equal(hold.mode, 'HOLD');
 });
+
+test('planWaveSpawnCommands & buildDisembarkWaveCommand: links Bodyguard + Leader waves, preserves [5 + Leader] Transport cargo, and disembarks within 3"', () => {
+  const wavePlan = planWaveSpawnCommands([
+    {
+      zone: 1,
+      bracketKey: '7-9',
+      units: ['5 Kill Team + 1 Watch Master']
+    },
+    {
+      zone: 2,
+      bracketKey: '10-12',
+      units: ['1 Corvus Blackstar [5 Kill Team + 1 Watch Master]']
+    }
+  ]);
+
+  assert.equal(wavePlan.commands.length, 2);
+  const footCmd = wavePlan.commands[0];
+  assert.equal(footCmd.units.length, 2);
+  assert.ok(footCmd.units[0].attachedGroup, 'Bodyguard in + combo must receive an attachedGroup ID');
+  assert.equal(
+    footCmd.units[0].attachedGroup,
+    footCmd.units[1].attachedGroup,
+    '5 Kill Team + 1 Watch Master must share the same attachedGroup so they spawn as 1 Attached Unit'
+  );
+
+  const transportCmd = wavePlan.commands[1];
+  assert.equal(transportCmd.units.length, 1);
+  assert.equal(transportCmd.units[0].templateName, 'Corvus Blackstar');
+  assert.deepEqual(transportCmd.units[0].embarkedUnits, [
+    { count: 5, templateName: 'Kill Team' },
+    { count: 1, templateName: 'Watch Master' }
+  ]);
+  assert.equal(transportCmd.units[0].embarkedSpec, '5 Kill Team + 1 Watch Master');
+
+  // Disembark cargo within 3" of Transport hull
+  assert.equal(typeof buildDisembarkWaveCommand, 'function');
+  assert.equal(buildDisembarkWaveCommand(null), null);
+  assert.equal(buildDisembarkWaveCommand({ name: 'Empty Rhino', embarkedCargo: [] }), null);
+
+  const scannedTransport = {
+    squadKey: 'HORDE::Corvus Blackstar',
+    guid: 'corvus-01',
+    name: 'Corvus Blackstar',
+    side: 'HORDE',
+    pos: { x: 6, z: 12 },
+    models: [{ guid: 'corvus-01', pos: { x: 6, z: 12 }, radiusInches: 2.0 }],
+    embarkedCargo: [
+      { count: 5, templateName: 'Kill Team' },
+      { count: 1, templateName: 'Watch Master' }
+    ]
+  };
+
+  const disembarkCmd = buildDisembarkWaveCommand(scannedTransport);
+  assert.equal(disembarkCmd.action, 'DISEMBARK_CARGO');
+  assert.equal(disembarkCmd.transportGuid, 'corvus-01');
+  assert.equal(disembarkCmd.squadTag, 'SQUAD:DISEMBARK_corvus-01');
+  assert.equal(disembarkCmd.units.length, 2);
+
+  // Verify disembark center is within 3.0" of Transport hull edge (center-to-center <= hullRadius + 2.5")
+  const centerDist = Math.hypot(disembarkCmd.targetX - 6, disembarkCmd.targetZ - 12);
+  const edgeFromHull = Math.max(0, centerDist - 2.0 - 0.63);
+  assert.ok(edgeFromHull <= 3.0, `Disembark anchor must place models within 3" of Transport hull (got ${edgeFromHull}")`);
+});
+
 
