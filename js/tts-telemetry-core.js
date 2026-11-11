@@ -111,3 +111,61 @@
     return null;
   }
 
+  /**
+   * Parses a Yellowscribe or ForceOrg TTS model description into structured 11th Ed stats & weapons.
+   *
+   * @param {string} [description=''] - TTS object `getDescription()` string.
+   * @param {string} [gmNotes=''] - TTS object `getGMNotes()` string.
+   * @returns {object} Normalized datasheet profile (`move`, `toughness`, `save`, `invuln`, `fnp`, `weapons`, etc.).
+   */
+  function parseDatasheetFromTts(description = '', gmNotes = '') {
+    const clean = stripTtsMarkup(`${description || ''}\n${gmNotes || ''}`);
+    const lines = clean.split('\n').map(l => l.trim()).filter(Boolean);
+
+    let move = 6;
+    let toughness = 4;
+    let save = 4;
+    let invuln = null;
+    let fnp = null;
+    let woundsPerModel = 1;
+    let leadership = 7;
+    let oc = 1;
+    let scoutsInches = 0;
+    const keywords = new Set();
+    const weapons = [];
+
+    // 1. Inline labeled statline (M: 6" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2)
+    const inlineStats = clean.match(/M:?\s*(\d+)"?[\s|]+T:?\s*(\d+)[\s|]+Sv:?\s*(\d)\+[\s|]+W:?\s*(\d+)[\s|]+Ld:?\s*(\d+)\+?[\s|]+OC:?\s*(\d+)/i);
+    if (inlineStats) {
+      move = parseInt(inlineStats[1], 10);
+      toughness = parseInt(inlineStats[2], 10);
+      save = parseInt(inlineStats[3], 10);
+      woundsPerModel = parseInt(inlineStats[4], 10);
+      leadership = parseInt(inlineStats[5], 10);
+      oc = parseInt(inlineStats[6], 10);
+    }
+
+    // 2. Two-line tabular Yellowscribe statline
+    for (let i = 0; i < lines.length - 1; i++) {
+      if (/^M\s+T\s+Sv\s+W\s+Ld\s+OC\b/i.test(lines[i])) {
+        const vals = lines[i + 1].match(/(\d+)"?\s+(\d+)\s+(\d)\+\s+(\d+)\s+(\d+)\+?\s+(\d+)/);
+        if (vals) {
+          move = parseInt(vals[1], 10);
+          toughness = parseInt(vals[2], 10);
+          save = parseInt(vals[3], 10);
+          woundsPerModel = parseInt(vals[4], 10);
+          leadership = parseInt(vals[5], 10);
+          oc = parseInt(vals[6], 10);
+        }
+      }
+    }
+
+    const invMatch = clean.match(/(?:Invulnerable Save|Invuln|Inv):?\s*(\d)\+|\b(\d)\+\+/i);
+    if (invMatch) invuln = parseInt(invMatch[1] || invMatch[2], 10);
+
+    const fnpMatch = clean.match(/(?:Feel No Pain|FNP):?\s*(\d)\+/i);
+    if (fnpMatch) fnp = parseInt(fnpMatch[1], 10);
+
+    const scoutMatch = clean.match(/Scouts\s+(\d+)"/i);
+    if (scoutMatch) scoutsInches = parseInt(scoutMatch[1], 10);
+
