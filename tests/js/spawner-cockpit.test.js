@@ -254,3 +254,35 @@ test('Spawner Cockpit: Misery #7 wrapper does NOT append a duplicate 3D6 roll ba
   delete globalThis.document;
   delete globalThis.window;
 });
+
+test('Spawner Cockpit: rollPincerManeuverExtraSpawn persists rolled Pincer unit onto currentZoneSpawns for Tactica sync', () => {
+  const cockpit = require('../../js/spawner-cockpit.js');
+  let saved = false;
+  globalThis.currentZoneSpawns = [];
+  globalThis.saveSessionState = () => { saved = true; };
+  globalThis.getBracketInfo = () => ({ key: '7-9', label: 'Bracket [7–9]', pts: '176–300 pts' });
+  globalThis.pickSyncedUnitFromBracket = () => '5 Chaos Terminators';
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'spawnResultsContainer') return { insertAdjacentHTML: () => {} };
+      return null;
+    },
+    querySelectorAll: () => []
+  };
+  globalThis.window = { state: { battleRound: 2, activeMiseries: [{ id: 13 }] } };
+
+  cockpit.rollPincerManeuverExtraSpawn();
+
+  assert.equal(globalThis.currentZoneSpawns.length, 1);
+  assert.equal(globalThis.currentZoneSpawns[0].zone, 'PINCER');
+  assert.equal(globalThis.currentZoneSpawns[0].isPincerManeuver, true);
+  assert.deepEqual(globalThis.currentZoneSpawns[0].units, ['5 Chaos Terminators']);
+  assert.equal(saved, true);
+
+  delete globalThis.currentZoneSpawns;
+  delete globalThis.saveSessionState;
+  delete globalThis.getBracketInfo;
+  delete globalThis.pickSyncedUnitFromBracket;
+  delete globalThis.document;
+  delete globalThis.window;
+});

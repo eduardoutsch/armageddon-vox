@@ -321,6 +321,23 @@
       const container = document.getElementById('spawnResultsContainer');
       if (container) container.insertAdjacentHTML('afterbegin', cardHtml);
     }
+    if (bInfo.key !== 'NONE') {
+      const spawnsArr = (typeof currentZoneSpawns !== 'undefined' && Array.isArray(currentZoneSpawns))
+        ? currentZoneSpawns
+        : (Array.isArray(gRoot.currentZoneSpawns) ? gRoot.currentZoneSpawns : null);
+      if (spawnsArr) {
+        spawnsArr.push({
+          zone: 'PINCER',
+          isPincerManeuver: true,
+          bracketKey: bInfo.key,
+          bracketLabel: bInfo.label,
+          pts: bInfo.pts,
+          units: [unitName]
+        });
+        if (typeof saveSessionState === 'function') saveSessionState();
+        else if (typeof gRoot.saveSessionState === 'function') gRoot.saveSessionState();
+      }
+    }
     mirrorSpawnerToCockpit();
   }
 

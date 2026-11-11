@@ -168,6 +168,7 @@
 
     const scoutMatch = clean.match(/Scouts\s+(\d+)"/i);
     if (scoutMatch) scoutsInches = parseInt(scoutMatch[1], 10);
+    const hasDeepStrike = /\bDeep\s+Strike\b/i.test(clean);
 
     for (const line of lines) {
       const kwLine = line.match(/^(?:Faction\s+)?Keywords:\s*(.+)$/i);
@@ -189,6 +190,7 @@
       leadership,
       oc,
       scoutsInches,
+      hasDeepStrike,
       keywords: Array.from(keywords),
       weapons
     };
@@ -531,6 +533,8 @@
       leadership: primaryDs.leadership,
       oc: primaryDs.oc,
       scoutsInches: primaryDs.scoutsInches,
+      hasDeepStrike: entries.every(e => Boolean(e.ds.hasDeepStrike)),
+      didIngressThisTurn: entries.some(e => Boolean(e.didIngressThisTurn)),
       keywords: unionKeywords,
       weapons: Array.from(weaponMap.values()),
       embarkedCargo,
@@ -711,6 +715,7 @@
         ds,
         explicitSquadToken: extractExplicitSquadToken(obj),
         embarkedCargo: extractEmbarkedCargo(obj),
+        didIngressThisTurn: Boolean(obj.didIngressThisTurn || tags.includes('DEEP_STRUCK')),
         rawSquadId: obj.squadId ? String(obj.squadId).trim() : null,
         colorTintKey: normalizeColorTintKey(obj.colorTint)
       });
@@ -936,7 +941,16 @@
       u.closestEnemy = closestEnemy;
     }
 
-    return { units, objectives, guidRegistry: updatedGuidRegistry };
+    const shelfTemplates = (Array.isArray(rawScan.shelfTemplates) ? rawScan.shelfTemplates : []).map(t => {
+      const ds = parseDatasheetFromTts(t.description, t.gmNotes);
+      return {
+        name: parseModelNameAndWounds(stripTtsMarkup(t.name || '')).baseName,
+        hasDeepStrike: Boolean(t.hasDeepStrike || ds.hasDeepStrike),
+        radiusInches: inferBaseRadiusInches(t)
+      };
+    });
+
+    return { units, objectives, guidRegistry: updatedGuidRegistry, shelfTemplates };
   }
 
   return {

@@ -696,6 +696,19 @@ test('normalizeTtsBoardScan: manages 5-man vs 10-man same-type squads, [5 + Lead
   assert.equal(loneLeader.save, 2, 'Standalone Watch Master now uses its own 2+ Save');
   assert.equal(loneLeader.invuln, 4, 'Standalone Watch Master now exposes its 4++ Invulnerable Save');
   assert.equal(loneLeader.move, 7, 'Standalone Watch Master regains its full 7" Move');
+
+  // Deep Strike datasheet detection & shelfTemplates normalization
+  const dsTermie = parseDatasheetFromTts('M: 5" T: 5 Sv: 2+ W: 3 Ld: 6+ OC: 1\nAbilities: Deep Strike, Teleport Homer\nKeywords: Infantry, Terminator');
+  assert.equal(dsTermie.hasDeepStrike, true);
+  const shelfScan = normalizeTtsBoardScan({
+    objects: [],
+    shelfTemplates: [
+      { name: '3/3 Terminator Squad', description: 'M: 5" T: 5 Sv: 2+ W: 3\nAbilities: Deep Strike', bounds: { x: 1.57, y: 2.0, z: 1.57 } }
+    ]
+  });
+  assert.equal(shelfScan.shelfTemplates.length, 1);
+  assert.equal(shelfScan.shelfTemplates[0].name, 'Terminator Squad');
+  assert.equal(shelfScan.shelfTemplates[0].hasDeepStrike, true);
 });
 
 
