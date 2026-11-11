@@ -596,3 +596,47 @@
       };
     }
 
+    // Mode 2: Engaging Consolidation (unengaged, but 3" move reaches <= 2.0" Engagement Range -> dist <= 5.0")
+    if (closestEnemy && minEnemyD <= 5.0) {
+      const eRadius = closestEnemy.models?.[0]?.radiusInches || 0.63;
+      const step = stepTowardPoint(unit.pos || { x: 0, z: 0 }, closestEnemy.pos || { x: 0, z: 0 }, 3.0, uRadius + eRadius + 0.25);
+      return {
+        mode: 'ENGAGING',
+        targetName: closestEnemy.name,
+        moveCommand: { action: 'MOVE_UNIT', guids, targetX: step.x, targetZ: step.z, facingY: step.facingY }
+      };
+    }
+
+    // Mode 3: Objective Consolidation (within 6.0" edge-to-edge so 3" move reaches <= 3.0" Objective range)
+    let closestObj = null;
+    let minObjD = Infinity;
+    for (const o of objectives) {
+      const d = squadEdgeDistance(unit, o);
+      if (d < minObjD) {
+        minObjD = d;
+        closestObj = o;
+      }
+    }
+    if (closestObj && minObjD <= 6.0) {
+      const step = stepTowardPoint(unit.pos || { x: 0, z: 0 }, closestObj.pos || { x: 0, z: 0 }, 3.0, 0);
+      return {
+        mode: 'OBJECTIVE',
+        targetName: closestObj.name,
+        moveCommand: { action: 'MOVE_UNIT', guids, targetX: step.x, targetZ: step.z, facingY: step.facingY }
+      };
+    }
+
+    return { mode: 'HOLD', targetName: null, moveCommand: null };
+  }
+
+  return {
+    planWaveSpawnCommands,
+    planHordeMovementPhase,
+    buildMoveRevertCommand,
+    selectHordeShootingTargets,
+    planHordeCharges,
+    resolveHordeChargeRoll,
+    planConsolidationMove
+  };
+});
+
