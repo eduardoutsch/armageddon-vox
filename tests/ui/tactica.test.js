@@ -180,3 +180,58 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.equal(els.defUnitName.value, 'Skorpekh Destroyers');
   assert.equal(els.defInSpawnCheck.checked, true);
 
+  await tactica.triggerAutopilotSpawnWaves();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Queued 1 Spawn Zone wave drop'));
+
+  await tactica.triggerAutopilotMovement();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Revert Move (No LOS)'));
+  await tactica.revertAutopilotSquadMove(0);
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Reverted'));
+
+  await tactica.triggerAutopilotShooting();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Roll Attack on LCT Mat'));
+  await tactica.fireAutopilotWeaponOnMat(0);
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('HITS'));
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  await tactica.triggerAutopilotCharges();
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('CHARGE_ROLL'));
+  els.tacticaManualPipsInput.value = '5, 6';
+  await tactica.submitSettledMatPips();
+  assert.equal(tactica.getTacticaClientState().pendingChargeDecl, null);
+
+  await tactica.triggerAutopilotConsolidate();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Skorpekh Destroyers'));
+
+  // Step 6 Overwatch voice command dispatch, 6+ Intrusion Vox ping & Mode 5 Crusade export
+  await tactica.setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT');
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), false);
+  await overwatch.dispatchSpokenOrTypedCommand('Pass window and hold CP');
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), true);
+
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Monolith'] }
+  ];
+  overwatch.syncOverwatchAlertsFromState();
+  assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  overwatch.pingIntrusionFromTactica(1, 'Bracket [13+]', 'alpha');
+  assert.ok(voxQueued && voxQueued.chan === 'alpha' && voxQueued.text.includes('EMERGENCY AUSPEX PING'));
+
+  const crusadeSnap = overwatch.exportTacticaToCrusade();
+  assert.ok(crusadeSnap && crusadeSnap.roomSeed === 'ASHEN-11');
+  assert.ok(store.has('foa_horde_battle_stats_v1'), 'Must write foa_horde_battle_stats_v1 to localStorage');
+  assert.equal(els.tacticaCrusadeExportNotice.classList.contains('hidden'), false);
+
+  assert.equal(overwatch.toggleOverwatchVoiceOutput(), false);
+  assert.equal(els.btnToggleOverwatchTts.textContent.includes('MUTE'), true);
+  assert.equal(overwatch.startPushToTalkMic(), false);
+  assert.equal(await overwatch.toggleTtsScreenCapture(), false);
+  await overwatch.dispatchSpokenOrTypedCommand('Can Skorpekh see Cadians behind central ruin?');
+  assert.ok(els.overwatchVerdictBox.innerHTML.includes('offline'));
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+  delete globalThis.window;
+  delete globalThis.fetch;
+});
+
