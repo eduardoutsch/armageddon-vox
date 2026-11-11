@@ -458,8 +458,8 @@ compileBundle(
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Pages & Boundary Tests (Part 2: Headless Playwright E2E)',
-  'Headless browser E2E verification, cockpit controls, and multi-CP stratagem validation (`tests/ui/pages.test.js` lines 559 to end).',
-  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 559-1100)', startLine: 559, endLine: 1100 }],
+  'Headless browser E2E verification, cockpit controls, and multi-CP stratagem validation (`tests/ui/pages.test.js` lines 566 to end).',
+  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)', startLine: 566, endLine: 1100 }],
   path.join(BUNDLES_DIR, 'bundle_tests_part2.md')
 );
 
@@ -513,16 +513,22 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Tests (Spawner Subsystems & UI Flow)',
-  'Deterministic unit and Playwright UI tests for spawner cards, cockpit telemetry, resupply table, and threat rules (`tests/js/spawner*.test.js`, `tests/ui/spawner.test.js`).',
+  '📦 Fires of Armageddon // Bundle: Unit Tests (Spawner Subsystems)',
+  'Deterministic unit tests for spawner cards, cockpit telemetry, resupply table, and threat rules (`tests/js/spawner*.test.js`).',
   [
     'tests/js/spawner.test.js',
     'tests/js/spawner-cards.test.js',
     'tests/js/spawner-cockpit.test.js',
-    'tests/js/spawner-resupply.test.js',
-    'tests/ui/spawner.test.js'
+    'tests/js/spawner-resupply.test.js'
   ],
   path.join(BUNDLES_DIR, 'bundle_tests_js_spawner.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Tests (Mode 1 Spawner UI & Combat Modifiers)',
+  'Headless Playwright UI integration tests for Mode 1 Horde Spawner and unit tests for Horde Combat Modifiers (`tests/ui/spawner.test.js`, `tests/js/horde-combat-modifiers.test.js`).',
+  ['tests/ui/spawner.test.js', 'tests/js/horde-combat-modifiers.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tests_ui_spawner.md')
 );
 
 compileBundle(
@@ -537,10 +543,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Unit Tests (App Engine & Wave Mechanics)',
-  'Unit test suite for app engine state, wave generation, and threat escalation (`tests/js/app.test.js`).',
-  ['tests/js/app.test.js'],
+  '📦 Fires of Armageddon // Bundle: Unit Tests (App Engine Part 1: State, Economy & Pools)',
+  'Unit test suite for app engine state, session persistence, resource economy, and byFaction shelf pools (`tests/js/app.test.js` lines 1 to 519).',
+  [{ file: 'tests/js/app.test.js', label: 'tests/js/app.test.js (Part 1: State, Economy & Pools, Lines 1-519)', startLine: 1, endLine: 519 }],
   path.join(BUNDLES_DIR, 'bundle_tests_js_app.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Unit Tests (App Engine Part 2: Intrusions, Spawns & Cloud Sync)',
+  'Unit test suite for Warp-Breach intrusions, wave spawning, and real-time Supabase co-op synchronization (`tests/js/app.test.js` lines 520 to end).',
+  [{ file: 'tests/js/app.test.js', label: 'tests/js/app.test.js (Part 2: Intrusions, Spawns & Cloud Sync, Lines 520-end)', startLine: 520, endLine: 1200 }],
+  path.join(BUNDLES_DIR, 'bundle_tests_js_app_part2.md')
 );
 
 compileBundle(
@@ -585,6 +598,13 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_spawner_cards.md\`](bundle_spawner_cards.md) | **Threat Cards & Audio FX** | \`js/spawner-cards.js\` |
 | [\`bundle_spawner_cockpit.md\`](bundle_spawner_cockpit.md) | **Spawner Cockpit & Telemetry** | \`js/spawner-cockpit.js\` |
 | [\`bundle_spawner_engine.md\`](bundle_spawner_engine.md) | **Spawner Engine & Resupply** | \`js/spawner.js\`, \`js/spawner-resupply.js\` |
+| [\`bundle_horde_combat.md\`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | \`js/horde-combat-modifiers.js\` |
+| [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (View & UI)** | \`pages/tactica.html\`, \`js/tactica.js\` |
+| [\`bundle_tactica_core.md\`](bundle_tactica_core.md) | **In-Match LCT Tactical Functional Core** | \`js/tactica-core.js\`, \`tests/js/tactica-core.test.js\` |
+| [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Integration Tests** | \`tactica_daemon.js\`, \`tests/tactica_daemon.test.js\` |
+| [\`bundle_tts_bridge.md\`](bundle_tts_bridge.md) | **LCT TTS Orbital Auspex & Telemetry** | \`js/tts-telemetry-core.js\`, \`tts/lct_horde_bridge.lua\`, \`tests/js/tts-telemetry-core.test.js\` |
+| [\`bundle_horde_autopilot.md\`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | \`js/horde-autopilot-core.js\`, \`tests/js/horde-autopilot-core.test.js\` |
+| [\`bundle_tactica_overwatch.md\`](bundle_tactica_overwatch.md) | **Live Screen/Mic Overwatch & Crusade Handoff** | \`js/tactica-overwatch-core.js\`, \`js/tactica-overwatch.js\`, \`tests/js/tactica-overwatch-core.test.js\`, \`tests/ui/tactica.test.js\` |
 | [\`bundle_data_rng.md\`](bundle_data_rng.md) | **Data Schemas & Seeded RNG** | \`js/data.js\`, \`js/rng.js\` |
 | [\`bundle_app_part1.md\`](bundle_app_part1.md) | **App Engine (State & Factions)** | \`js/app.js\` (Lines 1-700) |
 | [\`bundle_app_part2.md\`](bundle_app_part2.md) | **App Engine (Waves & Escalation)** | \`js/app.js\` (Lines 701-1400) |
@@ -601,9 +621,10 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_roster_logic.md\`](bundle_roster_logic.md) | **Mode 4: Threat Matrix Logic** | \`js/roster.js\` |
 | [\`bundle_crusade.md\`](bundle_crusade.md) | **Mode 5: Crusade Command (Page)** | \`pages/crusade.html\` |
 | [\`bundle_crusade_css.md\`](bundle_crusade_css.md) | **Mode 5: Crusade Stylesheet** | \`css/crusade.css\` |
-| [\`bundle_crusade_matrix.md\`](bundle_crusade_matrix.md) | **Mode 5: Crusade Matrix (Part 1)** | \`js/crusade.js\` (Lines 1-550) |
-| [\`bundle_crusade_matrix_part2.md\`](bundle_crusade_matrix_part2.md) | **Mode 5: Crusade Matrix (Part 2)** | \`js/crusade.js\` (Lines 551-end) |
-| [\`bundle_crusade_forge.md\`](bundle_crusade_forge.md) | **Mode 5: Munitorum Forge & Dossier** | \`js/crusade-forge.js\` |
+| [\`bundle_crusade_core.md\`](bundle_crusade_core.md) | **Mode 5: Crusade Pure Functional Core** | \`js/crusade-core.js\` |
+| [\`bundle_crusade_matrix.md\`](bundle_crusade_matrix.md) | **Mode 5: Crusade Matrix Shell (Part 1)** | \`js/crusade.js\` (Lines 1-405) |
+| [\`bundle_crusade_matrix_part2.md\`](bundle_crusade_matrix_part2.md) | **Mode 5: Crusade Matrix Shell (Part 2)** | \`js/crusade.js\` (Lines 406-end) |
+| [\`bundle_crusade_forge.md\`](bundle_crusade_forge.md) | **Mode 5: Munitorum Forge Shell & Core Tests** | \`js/crusade-forge.js\`, \`tests/js/crusade-core.test.js\` |
 | [\`bundle_crusade_data.md\`](bundle_crusade_data.md) | **Mode 5: Crusade Upgrade Tables** | \`js/crusade-data.js\` |
 | [\`bundle_vox.md\`](bundle_vox.md) | **Mode 7: CRT Vox-Terminal (Page)** | \`pages/vox.html\`, \`css/vox.css\` |
 | [\`bundle_vox_logic.md\`](bundle_vox_logic.md) | **Mode 7: Vox-Terminal (Part 1)** | \`js/vox.js\` (Lines 1-500) |
@@ -624,9 +645,11 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_tests_ui_vox.md\`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal Part 1)** | \`tests/ui/vox.test.js\` (Lines 1-550) |
 | [\`bundle_tests_ui_vox_part2.md\`](bundle_tests_ui_vox_part2.md) | **UI Tests (Vox-Terminal Part 2)** | \`tests/ui/vox.test.js\` (Lines 551-end) |
 | [\`bundle_tests_bridge.md\`](bundle_tests_bridge.md) | **Courier Bridge Tests** | \`tests/vox_bridge.test.js\` |
-| [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Tests (Spawner Subsystems & UI Flow)** | \`tests/js/spawner*.test.js\`, \`tests/ui/spawner.test.js\` |
+| [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | \`tests/js/spawner*.test.js\` |
+| [\`bundle_tests_ui_spawner.md\`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner UI & Combat Mods)** | \`tests/ui/spawner.test.js\`, \`tests/js/horde-combat-modifiers.test.js\` |
 | [\`bundle_tests_js_core.md\`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | \`tests/js/data.test.js\`, \`tests/js/rng.test.js\`, \`tests/js/vox-audio.test.js\` |
-| [\`bundle_tests_js_app.md\`](bundle_tests_js_app.md) | **Unit Tests (App Engine)** | \`tests/js/app.test.js\` |
+| [\`bundle_tests_js_app.md\`](bundle_tests_js_app.md) | **Unit Tests (App Engine Part 1)** | \`tests/js/app.test.js\` (Lines 1-519) |
+| [\`bundle_tests_js_app_part2.md\`](bundle_tests_js_app_part2.md) | **Unit Tests (App Engine Part 2)** | \`tests/js/app.test.js\` (Lines 520-end) |
 | [\`bundle_tests_js_modes.md\`](bundle_tests_js_modes.md) | **Unit Tests (Game Modes 2-7)** | \`tests/js/briefing.test.js\`, \`tests/js/pvp.test.js\`, \`tests/js/rogue.test.js\`, \`tests/js/roster.test.js\`, \`tests/js/vox.test.js\` |
 `;
 
