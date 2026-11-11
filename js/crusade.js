@@ -726,32 +726,26 @@ function renderHordeStatsAttachmentCard() {
       card.style.borderColor = 'rgba(255,255,255,0.08)';
       card.style.background = '#0b0d13';
     }
-    card.innerHTML = `
-      <div style="font-size:0.82rem; color:var(--muted);">
-        Horde Battle Telemetry import is only available when reporting a Mode 1 Horde Mode battle.
-      </div>
-    `;
+    card.innerHTML = `<div style="font-size:0.82rem; color:var(--muted);">Horde Battle Telemetry import is only available when reporting a Mode 1 Horde Mode battle.</div>`;
     return;
   }
 
-  if (card.style) {
-    card.style.display = 'block';
-  }
-
+  if (card.style) card.style.display = 'block';
   const stats = crusadeState.attachedHordeStats;
   if (!stats) {
-    const hasSaved = (typeof loadHordeBattleStats === 'function') && loadHordeBattleStats() !== null;
-    card.style.borderColor = 'rgba(255,255,255,0.15)';
-    card.style.background = '#0b0d13';
+    const loader = typeof loadHordeBattleStats === 'function' ? loadHordeBattleStats : _loadHordeBattleStats;
+    const hasSaved = loader && loader() !== null;
+    if (card.style) {
+      card.style.borderColor = 'rgba(255,255,255,0.15)';
+      card.style.background = '#0b0d13';
+    }
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div>
           <span class="hud-label" style="display:block; color:var(--muted);">ATTACHED HORDE BATTLE TELEMETRY</span>
           <span style="font-size:0.84rem; color:#94a3b8;">No Horde Battle Telemetry attached to this dossier.</span>
         </div>
-        <button type="button" class="btn-gold btn-sm" onclick="importHordeBattleStatsToCrusade()">
-          📥 Import Latest Horde Battle Stats
-        </button>
+        <button type="button" class="btn-gold btn-sm" onclick="importHordeBattleStatsToCrusade()">📥 Import Latest Horde Battle Stats</button>
       </div>
       ${hasSaved ? '<div style="margin-top:6px; font-size:0.75rem; color:var(--green);">⚡ Saved battle telemetry detected in local cogitator memory.</div>' : ''}
     `;
@@ -762,16 +756,15 @@ function renderHordeStatsAttachmentCard() {
   const misCount = Array.isArray(stats.miseriesDrawn) ? stats.miseriesDrawn.length : 0;
   const secComp = Array.isArray(stats.secondariesCompleted) ? stats.secondariesCompleted.length : 0;
   const secFail = Array.isArray(stats.secondariesFailed) ? stats.secondariesFailed.length : 0;
-  const faction = stats.hordeFaction || 'Horde Enemy';
-  const mode = stats.gameMode || 'CO-OP';
-
-  card.style.borderColor = 'var(--gold)';
-  card.style.background = 'rgba(217,119,6,0.08)';
+  if (card.style) {
+    card.style.borderColor = 'var(--gold)';
+    card.style.background = 'rgba(217,119,6,0.08)';
+  }
   card.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
       <div style="display:flex; align-items:center; gap:8px;">
         <span class="badge gold">📎 TELEMETRY ATTACHED</span>
-        <strong style="color:#fff; font-size:0.9rem;">${faction} (${mode})</strong>
+        <strong style="color:#fff; font-size:0.9rem;">${stats.hordeFaction || 'Horde Enemy'} (${stats.gameMode || 'CO-OP'})</strong>
       </div>
       <div style="display:flex; gap:6px;">
         <button type="button" class="btn-ghost btn-sm" onclick="importHordeBattleStatsToCrusade()" title="Re-sync latest stats">🔄 Re-sync</button>
