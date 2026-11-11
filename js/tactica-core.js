@@ -134,3 +134,52 @@
     };
   }
 
+  /**
+   * Evaluates whether a Player reaction window should pause Horde execution,
+   * checking available CP, minimum round rules, and Misery #22 (Comms Jammed).
+   */
+  function detectPlayerReactionWindow(triggerKey, state = {}) {
+    const def = REACTION_WINDOW_DEFS[triggerKey];
+    if (!def) return { open: false, reason: 'Unknown trigger window.' };
+
+    const miseryIds = Array.isArray(state.activeMiseryIds) ? state.activeMiseryIds.map(Number) : [];
+    if (miseryIds.includes(22)) {
+      return { open: false, reason: 'Blocked by Misery #22 (Comms Jammed).' };
+    }
+
+    const cp = Number(state.playerCp) || 0;
+    const round = Number(state.battleRound) || 1;
+    if (cp <= 0) return { open: false, reason: '0 CP remaining.' };
+
+    const eligible = def.options.filter(opt => opt.cpCost <= cp && (!opt.minRound || round >= opt.minRound));
+    if (eligible.length === 0) return { open: false, reason: 'No eligible Stratagems for current CP/Round.' };
+
+    return { open: true, triggerKey, title: def.title, playerCp: cp, eligibleStratagems: eligible };
+  }
+
+  /**
+   * Designates the first spawned Horde CHARACTER as the Horde Warlord and preserves
+   * that lock across subsequent waves (per Horde Mode Secondary / Warlord rules).
+   */
+  function assignHordeWarlordIfEligible(currentWarlord, units = [], currentRound = 1) {
+    if (currentWarlord && currentWarlord.name) return { warlord: currentWarlord, newlyAssigned: false };
+    if (!Array.isArray(units)) return { warlord: null, newlyAssigned: false };
+
+    for (const u of units) {
+      if (!u || String(u.side || 'HORDE').toUpperCase() === 'PLAYER') continue;
+      const kws = Array.isArray(u.keywords) ? u.keywords.map(k => String(k).toUpperCase()) : [];
+      if (u.isCharacter || kws.includes('CHARACTER')) {
+        return {
+          warlord: {
+            guid: u.guid || u.id || null,
+            name: String(u.name || 'Horde Character').trim(),
+            roundSpawned: Number(currentRound) || 1,
+            alive: u.alive !== false
+          },
+          newlyAssigned: true
+        };
+      }
+    }
+    return { warlord: null, newlyAssigned: false };
+  }
+
