@@ -533,60 +533,41 @@ function compileMasterDossier(input = {}) {
       ? buildLogisticsSummaryLine()
       : _matrixCore.formatLogisticsSummaryLine(crusadeState, _resolveMatrixCatalogs().logisticsCategories);
   }
-
-  lines.push(
-    `------------------------------------------------`,
-    upgradeSectionTitle,
-    unitLines,
-    `------------------------------------------------`,
-    `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
-    `------------------------------------------------`,
-    closingRequest
-  );
-
-  return lines.join('\n');
+  return _matrixCore.compileMasterDossier(enriched, { formatHordeTelemetry: compiler });
 }
 
-/**
- * Humble View (Dumb UI) input reader: extracts current Master Dossier form fields
- * from the DOM into a plain data object.
- *
- * @returns {object} Plain input snapshot for compileMasterDossier.
- */
 function readMasterDossierFormInputs() {
-  const forts = [];
-  if (document.getElementById('fortHosp')?.checked) forts.push('Field Hospital (Auto-Pass OOA)');
-  if (document.getElementById('fortAmmo')?.checked) forts.push('Ammo Dump (Free Weapon Mod)');
-  if (document.getElementById('fortTrench')?.checked) forts.push('War Trench (+1 XP Infantry)');
-  if (document.getElementById('fortFob')?.checked) forts.push('FOB (+1 SPt & +1 Hegemony)');
+  const fortDefs = [
+    ['fortHosp', 'Field Hospital (Auto-Pass OOA)'],
+    ['fortAmmo', 'Ammo Dump (Free Weapon Mod)'],
+    ['fortTrench', 'War Trench (+1 XP Infantry)'],
+    ['fortFob', 'FOB (+1 SPt & +1 Hegemony)']
+  ];
+  const fortifications = fortDefs
+    .filter(([id]) => _getMatrixEl(id)?.checked)
+    .map(([, label]) => label);
 
-  const modeNode = document.getElementById('dossierModeNode')?.value || '';
-  const isHorde = isHordeModeDossier(modeNode);
-
+  const modeNode = _getMatrixEl('dossierModeNode')?.value || '';
   return {
-    channel: document.getElementById('dossierChannel')?.value || 'alpha',
+    channel: _getMatrixEl('dossierChannel')?.value || 'alpha',
     modeNode,
-    outcome: document.getElementById('dossierOutcome')?.value || '',
-    secretCode: document.getElementById('dossierSecretCode')?.value || '',
-    secretTag: document.getElementById('dossierSecretTag')?.value || '',
-    leftoverSp: document.getElementById('dossierLeftoverSp')?.value || '0 Leftover SP',
-    battleNotes: document.getElementById('dossierBattleNotes')?.value || '',
-    distantForce: document.getElementById('dossierDistantForce')?.value || '',
-    fortifications: forts,
+    outcome: _getMatrixEl('dossierOutcome')?.value || '',
+    secretCode: _getMatrixEl('dossierSecretCode')?.value || '',
+    secretTag: _getMatrixEl('dossierSecretTag')?.value || '',
+    leftoverSp: _getMatrixEl('dossierLeftoverSp')?.value || '0 Leftover SP',
+    battleNotes: _getMatrixEl('dossierBattleNotes')?.value || '',
+    distantForce: _getMatrixEl('dossierDistantForce')?.value || '',
+    fortifications,
     queuedRolls: Array.isArray(crusadeState.queuedRolls) ? crusadeState.queuedRolls : [],
-    hordeBattleStats: isHorde ? (crusadeState.attachedHordeStats || null) : null,
-    logisticsSummary: typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : null,
-    tombSummary: typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : null,
-    votannSummary: typeof buildVotannSummaryLine === 'function' ? buildVotannSummaryLine() : null
+    hordeBattleStats: isHordeModeDossier(modeNode) ? (crusadeState.attachedHordeStats || null) : null,
+    logisticsSummary: typeof buildLogisticsSummaryLine === 'function'
+      ? buildLogisticsSummaryLine()
+      : _matrixCore.formatLogisticsSummaryLine(crusadeState, _resolveMatrixCatalogs().logisticsCategories),
+    tombSummary: buildTombMatrixSummaryLine(),
+    votannSummary: buildVotannSummaryLine()
   };
 }
 
-/**
- * Compiles the Master Post-Battle & Unit Progression Dossier string for Mode 1 (Horde)
- * and Mode 2 (1v1 PvP) Crusade engagements, delegating to the pure compileMasterDossier core.
- *
- * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
- */
 function buildMasterDossierString() {
   return compileMasterDossier(readMasterDossierFormInputs());
 }
@@ -594,7 +575,7 @@ function buildMasterDossierString() {
 function updateMasterDossierPreview() {
   if (typeof document === 'undefined') return;
   updateDistantForceVisibility();
-  const modeNode = document.getElementById('dossierModeNode')?.value || '';
+  const modeNode = _getMatrixEl('dossierModeNode')?.value || '';
   if (modeNode && !isHordeModeDossier(modeNode) && crusadeState.attachedHordeStats) {
     crusadeState.attachedHordeStats = null;
   }
