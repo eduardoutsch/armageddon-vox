@@ -225,3 +225,54 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     const pollRev = await (await fetch(`${url1}/tts/poll`)).json();
     assert.equal(pollRev.action, 'REVERT_MOVE');
 
+    // Autopilot declare-charges -> queues 2D6 LCT_MAT_ROLL -> settled [6, 5] enqueues MOVE_UNIT
+    const chg = await postJson(url1, '/autopilot/declare-charges', {});
+    assert.equal(chg.declarations.length, 1);
+    const pollChgRoll = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(pollChgRoll.action, 'LCT_MAT_ROLL');
+    assert.equal(pollChgRoll.stage, 'CHARGE_ROLL');
+    const chgSettled = await postJson(url1, '/tts/dice-result', {
+      sequenceId: pollChgRoll.sequenceId,
+      dice: [6, 5]
+    });
+    assert.equal(chgSettled.chargeResult.succeeded, true);
+    const pollChgMove = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(pollChgMove.action, 'MOVE_UNIT');
+
+    const cons = await postJson(url1, '/autopilot/consolidate', {});
+    assert.equal(cons.ok, true);
+    assert.equal(cons.moves.length, 1);
+
+    // Overwatch LOS Check -> auto-enqueues REVERT_MOVE & filters blockedPairs from subsequent shooting!
+    const losRes = await postJson(url1, '/overwatch/los-check', {
+      transcript: 'Can Overlord see Krieg behind solid ruin?',
+      imageBase64: 'data:image/jpeg;base64,AAAA'
+    });
+    assert.equal(losRes.mode, 'gemini-vision');
+    assert.equal(losRes.verdict.losBlocked, true);
+    const pollLosRevert = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(pollLosRevert.action, 'REVERT_MOVE');
+
+    const shtAfterBlock = await postJson(url1, '/autopilot/select-shooting', {});
+    assert.equal(shtAfterBlock.assignments.length, 0, 'losBlockedPairs must filter out blocked HORDE::Overlord->PLAYER::Krieg');
+
+    const notFound = await fetch(`${url1}/unknown`);
+    assert.equal(notFound.status, 404);
+  } finally {
+    await daemon1.stop();
+  }
+
+  // 2. Restart daemon on same folder -> zero memory loss
+  const daemon2 = createTacticaDaemon({ logDir: tmpDir });
+  const port2 = await daemon2.start(0);
+  const url2 = `http://127.0.0.1:${port2}`;
+  try {
+    const compiled = await postJson(url2, '/chronicle/compile', { channel: 'alpha' });
+    assert.ok(compiled.report.includes('Necron Warriors'));
+    assert.ok(compiled.report.includes('Technomancer'));
+  } finally {
+    await daemon2.stop();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
