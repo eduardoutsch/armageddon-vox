@@ -515,3 +515,43 @@
     let ones = 0;
     let misses = 0;
 
+    for (const d of dice) {
+      if (d === 6) {
+        if (hasLethal) autoWounds += 1;
+        else normalHits += 1;
+        if (hasSustained) normalHits += 1;
+      } else if (d === 1) {
+        ones += 1;
+        misses += 1;
+      } else if (d + mods.netHitMod >= mods.effectiveSkill) {
+        normalHits += 1;
+      } else {
+        misses += 1;
+      }
+    }
+    return { normalHits, autoWounds, ones, misses };
+  }
+
+  function evaluateWoundDiceBatch(dice, mods) {
+    const hasDevastating = (mods.keywords || []).includes('DEVASTATING WOUNDS');
+    let normalWounds = 0;
+    let devastatingMortalWounds = 0;
+    let ones = 0;
+    let misses = 0;
+
+    for (const d of dice) {
+      if (d === 6) {
+        if (hasDevastating) devastatingMortalWounds += 1;
+        else normalWounds += 1;
+      } else if (d === 1) {
+        ones += 1;
+        misses += 1;
+      } else if (d + mods.netWoundMod >= mods.woundTarget) {
+        normalWounds += 1;
+      } else {
+        misses += 1;
+      }
+    }
+    return { normalWounds, devastatingMortalWounds, ones, misses };
+  }
+
