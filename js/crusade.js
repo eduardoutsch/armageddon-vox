@@ -68,20 +68,16 @@ function _resolveMatrixCatalogs() {
 // TAB 4: NECRONS TOMB WORLD AWAKENING MATRIX & DYNASTIC VAULT ADAPTERS
 // =============================================================================
 function adjTombField(field, delta) {
-  crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
+  crusadeState[field] = _matrixCore.clampCounter(crusadeState[field], delta);
+  const el = _getMatrixEl(field);
   if (el) el.textContent = String(crusadeState[field]);
   updateMasterDossierPreview();
   updateTombAwakeningPreview();
   saveCrusadeState();
 }
 
-/**
- * Toggles the Power Reserves Allocated Requisition (1 RP), expanding the Tomb World
- * Awakening Matrix capacity from 3 points to 4 points.
- */
 function togglePowerReserves() {
-  const cb = typeof document !== 'undefined' ? document.getElementById('powerReservesToggle') : null;
+  const cb = _getMatrixEl('powerReservesToggle');
   crusadeState.powerReservesAllocated = !!(cb && cb.checked);
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
@@ -89,59 +85,33 @@ function togglePowerReserves() {
   saveCrusadeState();
 }
 
-/**
- * Allocates or deallocates an Awakening Point in one of the three Tomb World Systems
- * (command, reanimation, translocation), enforcing per-system [0..3] bounds and
- * total Tomb Matrix capacity (3 standard, 4 with Power Reserves Allocated).
- *
- * @param {string} sysKey - System key ('command' | 'reanimation' | 'translocation').
- * @param {number} delta - Signed point adjustment (+1 or -1).
- */
 function adjTombSystemPt(sysKey, delta) {
-  if (!crusadeState.tombSystems) {
-    crusadeState.tombSystems = { command: 1, reanimation: 1, translocation: 0 };
-  }
-  const maxTotal = crusadeState.powerReservesAllocated ? 4 : 3;
-  const currentTotal = Object.values(crusadeState.tombSystems).reduce((a, b) => a + b, 0);
-  const currVal = crusadeState.tombSystems[sysKey] || 0;
-  const nextVal = currVal + delta;
-
-  if (nextVal < 0 || nextVal > 3) return;
-  if (delta > 0 && currentTotal >= maxTotal) return;
-
-  crusadeState.tombSystems[sysKey] = nextVal;
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playClank('card');
+  const res = _matrixCore.allocateTombSystemPoint(
+    crusadeState.tombSystems,
+    crusadeState.powerReservesAllocated,
+    sysKey,
+    delta
+  );
+  if (!res.changed) return;
+  crusadeState.tombSystems = res.tombSystems;
+  _getMatrixVox()?.playClank?.('card');
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
   updateTombAwakeningPreview();
   saveCrusadeState();
 }
 
-/**
- * Rolls 1D3 when a Necron Master System Ability is expended in battle, unassigning
- * that many Awakening Points across the active Tomb World Systems and incrementing
- * the Awakening Cycles counter.
- */
 function rollMasterSystemReset() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
-  if (!crusadeState.tombSystems) {
-    crusadeState.tombSystems = { command: 1, reanimation: 1, translocation: 0 };
-  }
-  const d3 = Math.floor(Math.random() * 3) + 1;
-  let toDeduct = d3;
-  const order = ['translocation', 'reanimation', 'command'];
-  for (const key of order) {
-    while (toDeduct > 0 && (crusadeState.tombSystems[key] || 0) > 0) {
-      crusadeState.tombSystems[key] -= 1;
-      toDeduct -= 1;
-    }
-  }
-  crusadeState.tombAwakeningCycles = (crusadeState.tombAwakeningCycles || 0) + 1;
-  const cycEl = typeof document !== 'undefined' ? document.getElementById('tombAwakeningCycles') : null;
+  _getMatrixVox()?.playDiceClatter?.();
+  const res = _matrixCore.applyMasterSystemDrain(crusadeState.tombSystems, crusadeState.tombAwakeningCycles);
+  crusadeState.tombSystems = res.tombSystems;
+  crusadeState.tombAwakeningCycles = res.tombAwakeningCycles;
+
+  const cycEl = _getMatrixEl('tombAwakeningCycles');
   if (cycEl) cycEl.textContent = String(crusadeState.tombAwakeningCycles);
-  const noticeEl = typeof document !== 'undefined' ? document.getElementById('tombResetNotice') : null;
+  const noticeEl = _getMatrixEl('tombResetNotice');
   if (noticeEl) {
-    noticeEl.innerHTML = `<strong style="color:var(--red);">Master System Surge! Rolled D3 = −${d3} Awakening Pt(s) Reset!</strong>`;
+    noticeEl.innerHTML = `<strong style="color:var(--red);">Master System Surge! Rolled D3 = −${res.drainTarget} Awakening Pt(s) Reset!</strong>`;
   }
 
   renderTombAwakeningMatrix();
@@ -149,8 +119,8 @@ function rollMasterSystemReset() {
   updateTombAwakeningPreview();
   saveCrusadeState();
 
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playScarHazard();
+  _scheduleMatrixEffect(() => {
+    _getMatrixVox()?.playScarHazard?.();
   }, 240);
 }
 
