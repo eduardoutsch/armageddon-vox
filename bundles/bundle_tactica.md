@@ -317,6 +317,7 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
           const nearObj = u.closestObjective ? `${u.closestObjective.name} (${u.closestObjective.distanceInches}")` : 'None';
           const nearEnemy = u.closestEnemy ? `${u.closestEnemy.name} (${u.closestEnemy.distanceInches}")` : 'None';
           const sideBadge = u.side === 'PLAYER' ? '<span class="badge blue">PLAYER</span>' : '<span class="badge red">HORDE</span>';
+          const flipBtn = `<button type="button" class="btn-ghost btn-sm" onclick="toggleTelemetryUnitSide(${idx})">⇄ Flip Side</button>`;
           const loadBtn = u.side !== 'PLAYER'
             ? `<button type="button" class="btn-ghost btn-sm" onclick="selectTelemetryUnitForDefense(${idx})">🎯 Load into Auto-Defender</button>`
             : '';
@@ -326,7 +327,10 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
                 ${sideBadge} <strong>${u.name}</strong> [x${u.modelCount || 1} • Sv ${u.save || 4}+${u.invuln ? `/${u.invuln}++` : ''}${u.fnp ? `/FNP ${u.fnp}+` : ''}]
                 <span style="color:#94a3b8;">• Obj: ${nearObj} • Nearest Enemy: ${nearEnemy}</span>
               </div>
-              ${loadBtn}
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                ${flipBtn}
+                ${loadBtn}
+              </div>
             </div>
           `;
         }).join('');
@@ -610,6 +614,39 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
     return u;
   }
 
+  /**
+   * Flips a scanned squad's allegiance (`PLAYER` <-> `HORDE`) in both browser telemetry state and TTS tags
+   * via `POST /tts/set-side`, falling back cleanly to local state updates when offline.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Updated squad entry or `null` when out of bounds.
+   */
+  async function toggleTelemetryUnitSide(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u) return null;
+    const nextSide = u.side === 'PLAYER' ? 'HORDE' : 'PLAYER';
+    const payload = {
+      squadKey: u.squadKey,
+      guids: Array.isArray(u.guids) ? u.guids : (u.guid ? [u.guid] : []),
+      side: nextSide
+    };
+    try {
+      const res = await daemonRequest('/tts/set-side', 'POST', payload);
+      daemonOnline = true;
+      if (Array.isArray(res.units) && clientState.boardTelemetry) {
+        clientState.boardTelemetry.units = res.units;
+      } else {
+        u.side = nextSide;
+      }
+    } catch (e) {
+      daemonOnline = false;
+      u.side = nextSide;
+    }
+    renderTacticaConsole();
+    return (clientState.boardTelemetry?.units || [])[idx] || u;
+  }
+
   function setAutopilotHtml(html) {
     if (typeof document === 'undefined') return;
     const box = document.getElementById('tacticaAutopilotBox');
@@ -834,6 +871,7 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
       sendCompiledReportToVox,
       requestTtsBoardScan,
       selectTelemetryUnitForDefense,
+      toggleTelemetryUnitSide,
       triggerAutopilotSpawnWaves,
       triggerAutopilotMovement,
       revertAutopilotSquadMove,
@@ -865,6 +903,7 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
     sendCompiledReportToVox,
     requestTtsBoardScan,
     selectTelemetryUnitForDefense,
+    toggleTelemetryUnitSide,
     triggerAutopilotSpawnWaves,
     triggerAutopilotMovement,
     revertAutopilotSquadMove,

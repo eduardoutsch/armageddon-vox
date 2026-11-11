@@ -528,4 +528,5 @@ test('app: transmitHordeIntrusionPing formats emergency intrusion payload and tr
   assert.ok(transmittedPayload.includes('MUNITORUM PERIMETER AUGUR [THE EXILE // 044TH KRIEG]'));
   assert.ok(transmittedPayload.includes('REQUEST FOR CAMPAIGN MASTER'));
 });
+
 ````

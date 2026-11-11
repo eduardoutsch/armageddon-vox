@@ -1,11 +1,10 @@
 # 📦 Fires of Armageddon // Bundle: LCT TTS Orbital Auspex Beacon & Telemetry Core
 
-Pure Yellowscribe/ForceOrg BBCode datasheet parser, 2D edge-to-edge tabletop inch geometry, non-invasive LCT Beacon token Lua script, and unit tests (`js/tts-telemetry-core.js`, `tts/lct_horde_bridge.lua`, `tests/js/tts-telemetry-core.test.js`).
+Pure Yellowscribe/ForceOrg BBCode datasheet parser, prop/terrain blacklist, deployed PLAYER army auto-detection, 2D edge-to-edge tabletop inch geometry, and non-invasive LCT Beacon token Lua script (`js/tts-telemetry-core.js`, `tts/lct_horde_bridge.lua`).
 
 ## 📑 Table of Contents
 - [js/tts-telemetry-core.js](#file-jsttstelemetrycorejs)
 - [tts/lct_horde_bridge.lua](#file-ttslcthordebridgelua)
-- [tests/js/tts-telemetry-core.test.js](#file-testsjsttstelemetrycoretestjs)
 
 ---
 
@@ -239,44 +238,144 @@ Pure Yellowscribe/ForceOrg BBCode datasheet parser, 2D edge-to-edge tabletop inc
     return zones.some(zn => x >= zn.minX && x <= zn.maxX && z >= zn.minZ && z <= zn.maxZ);
   }
 
-  function inferSide(obj) {
+  /**
+   * Declarative prop/terrain name blacklist rejecting LCT cameras, Objective Secured chips,
+   * ruins, clocks, and table helpers unless explicitly tagged `PLAYER` or `HORDE`.
+   */
+  const PROP_NAME_BLACKLIST = /\b(dice\s*cam(?:era)?|camera|objective\s+secured|tower|ruin|wall|container|crate|barricade|statue|tree|woods|crater|clock|scoreboard|mat|table|zone|helper|ruler)\b/i;
+
+  /**
+   * Verifies that an untagged TTS object carries genuine Yellowscribe/ForceOrg datasheet text
+   * (`M/T/Sv/W`, `Keywords:`, weapon table rows, or `current/max` wound counters) so locked terrain
+   * and decorative table props never pollute tactical telemetry.
+   *
+   * @param {string} [description=''] - TTS object description.
+   * @param {string} [gmNotes=''] - TTS object GMNotes.
+   * @param {string} [cleanName=''] - Markup-stripped object name.
+   * @returns {boolean} True when the object matches a real 40k datasheet signature.
+   */
+  function hasDatasheetSignature(description = '', gmNotes = '', cleanName = '') {
+    if (/^\(?(\d+)\s*\/\s*(\d+)\)?\s+.+|.+\s+\(?(\d+)\s*\/\s*(\d+)\)?$/.test(cleanName)) return true;
+    const combined = stripTtsMarkup(`${description || ''}\n${gmNotes || ''}`);
+    if (!combined) return false;
+    return (
+      /\bM:?\s*\d+"?[\s|]+T:?\s*\d+/i.test(combined) ||
+      /\bM\s+T\s+Sv\s+W\s+Ld\s+OC\b/i.test(combined) ||
+      /\b(?:Faction\s+)?Keywords:\s*\S+/i.test(combined) ||
+      /\|\s*(?:Melee|\d+")\s*\|/i.test(combined)
+    );
+  }
+
+  /**
+   * Declarative lookup mapping Mode 1 Horde faction names to Yellowscribe/ForceOrg faction keyword tokens
+   * so pre-deployed untagged armies on the LCT battlemat auto-classify as `PLAYER` vs `HORDE`.
+   */
+  const HORDE_FACTION_ALIASES = {
+    'Space Marines': ['ADEPTUS ASTARTES'],
+    'Imperial Agents': ['AGENTS OF THE IMPERIUM', 'IMPERIAL AGENTS'],
+    'Astra Militarum': ['ASTRA MILITARUM'],
+    'Imperial Knights': ['IMPERIAL KNIGHTS', 'QUESTORIS', 'ARMIGER', 'DOMINUS'],
+    'Chaos Daemons': ['LEGIONES DAEMONICA'],
+    'Chaos Knights': ['CHAOS KNIGHTS', 'WAR DOG', 'ABHORRENT'],
+    'Chaos Space Marines': ['HERETIC ASTARTES'],
+    "Emperor's Children": ["EMPEROR'S CHILDREN", 'EMPERORS CHILDREN'],
+    'Aeldari': ['AELDARI', 'ASURYANI'],
+    "T'au Empire": ["T'AU EMPIRE", 'TAU EMPIRE'],
+    'Leagues of Votann': ['LEAGUES OF VOTANN', 'VOTANN'],
+    'Tyranids': ['TYRANIDS', 'GREAT DEVOURER']
+  };
+
+  /**
+   * Resolves a squad's allegiance (`PLAYER` vs `HORDE`) from explicit TTS tags first, then by comparing
+   * parsed Yellowscribe faction keywords against `options.hordeFactionName`.
+   *
+   * @param {object} obj - Raw TTS object descriptor.
+   * @param {string[]} [dsKeywords=[]] - Uppercase datasheet keywords from `parseDatasheetFromTts()`.
+   * @param {object} [options={}] - Normalization options (`hordeFactionName`).
+   * @returns {'PLAYER'|'HORDE'} Resolved tabletop side.
+   */
+  function inferSide(obj, dsKeywords = [], options = {}) {
     const tags = Array.isArray(obj.tags) ? obj.tags.map(t => String(t).toUpperCase()) : [];
     if (tags.includes('PLAYER') || String(obj.side || '').toUpperCase() === 'PLAYER') return 'PLAYER';
     if (tags.includes('HORDE') || String(obj.side || '').toUpperCase() === 'HORDE') return 'HORDE';
+
+    const hordeFac = String(options.hordeFactionName || '').trim();
+    if (hordeFac && dsKeywords.length > 0) {
+      const expectedTokens = [hordeFac.toUpperCase(), ...(HORDE_FACTION_ALIASES[hordeFac] || [])];
+      const matchesHorde = expectedTokens.some(tok => dsKeywords.some(kw => kw.includes(tok)));
+      return matchesHorde ? 'HORDE' : 'PLAYER';
+    }
     return 'HORDE';
   }
 
   /**
-   * Converts a raw TTS `getAllObjects()` snapshot into grouped squads, parsed datasheets & exact distances.
+   * Converts a raw TTS `getAllObjects()` snapshot into grouped squads, parsed datasheets & exact distances,
+   * filtering out off-mat reserves, `HORDE_TEMPLATE` shelf clones, and non-datasheet LCT props/terrain.
+   *
+   * @param {object} [rawScan={}] - Raw telemetry payload (`objects`, `playmatBounds`, `spawnZones`).
+   * @param {object} [options={}] - Optional `{ hordeFactionName, playmatBounds }` context.
+   * @returns {{units: object[], objectives: object[]}} Normalized tabletop telemetry.
    */
-  function normalizeTtsBoardScan(rawScan = {}) {
+  function normalizeTtsBoardScan(rawScan = {}, options = {}) {
     const rawObjects = Array.isArray(rawScan.objects) ? rawScan.objects : [];
     const spawnZones = Array.isArray(rawScan.spawnZones) ? rawScan.spawnZones : [];
+    const playmatBounds = rawScan.playmatBounds || options.playmatBounds || null;
     const objectives = [];
     const squadBuckets = new Map();
 
     for (const obj of rawObjects) {
       if (!obj || !obj.name) continue;
       const cleanName = stripTtsMarkup(obj.name);
+      if (!cleanName) continue;
       const tags = Array.isArray(obj.tags) ? obj.tags.map(t => String(t).toUpperCase()) : [];
 
-      if (tags.includes('OBJECTIVE') || /^obj(?:ective)?\b/i.test(cleanName)) {
+      if (tags.includes('HORDE_TEMPLATE')) continue;
+
+      const pos = obj.pos || { x: 0, y: 0, z: 0 };
+      if (playmatBounds) {
+        const px = Number(pos.x) || 0;
+        const pz = Number(pos.z) || 0;
+        if (
+          px < playmatBounds.minX ||
+          px > playmatBounds.maxX ||
+          pz < playmatBounds.minZ ||
+          pz > playmatBounds.maxZ
+        ) {
+          continue;
+        }
+      }
+
+      const explicitSide = String(obj.side || '').toUpperCase();
+      const hasExplicitSide =
+        tags.includes('PLAYER') ||
+        tags.includes('HORDE') ||
+        explicitSide === 'PLAYER' ||
+        explicitSide === 'HORDE';
+
+      if (!hasExplicitSide && PROP_NAME_BLACKLIST.test(cleanName)) continue;
+
+      if (tags.includes('OBJECTIVE') || /^(?:objective(?:\s+marker)?|obj)(?:\s*#?\d+)?$/i.test(cleanName)) {
         objectives.push({
           guid: obj.guid || null,
           name: cleanName,
-          pos: obj.pos || { x: 0, y: 0, z: 0 },
+          pos,
           radiusInches: inferBaseRadiusInches({ baseDiameterMm: 40, bounds: obj.bounds })
         });
         continue;
       }
 
-      const side = inferSide(obj);
+      if (!hasExplicitSide) {
+        if (obj.locked === true) continue;
+        if (!hasDatasheetSignature(obj.description, obj.gmNotes, cleanName)) continue;
+      }
+
+      const ds = parseDatasheetFromTts(obj.description, obj.gmNotes);
+      const side = inferSide(obj, ds.keywords, options);
       const parsedName = parseModelNameAndWounds(cleanName);
       const squadKey = obj.squadId || `${side}::${parsedName.baseName}`;
       const radiusInches = inferBaseRadiusInches(obj);
 
       if (!squadBuckets.has(squadKey)) {
-        const ds = parseDatasheetFromTts(obj.description, obj.gmNotes);
         squadBuckets.set(squadKey, {
           squadKey,
           guid: obj.guid || null,
@@ -307,7 +406,7 @@ Pure Yellowscribe/ForceOrg BBCode datasheet parser, 2D edge-to-edge tabletop inc
       bucket.totalRemainingWounds += curW;
       bucket.models.push({
         guid: obj.guid,
-        pos: obj.pos || { x: 0, y: 0, z: 0 },
+        pos,
         radiusInches,
         currentWounds: curW
       });
@@ -368,6 +467,8 @@ Pure Yellowscribe/ForceOrg BBCode datasheet parser, 2D edge-to-edge tabletop inc
     stripTtsMarkup,
     parseModelNameAndWounds,
     parseDatasheetFromTts,
+    hasDatasheetSignature,
+    inferSide,
     inferBaseRadiusInches,
     measureEdgeToEdgeInches,
     normalizeTtsBoardScan
@@ -398,33 +499,44 @@ local LCT_MAT_BOUNDS = {
 }
 
 function onLoad()
+    local rot = self.getRotation()
+    self.setRotation({ x = 0, y = rot.y, z = 0 }) -- Force upright so buttons never render under the felt
     self.setName("📡 LCT Horde Autopilot Beacon")
     buildBeaconButtons()
+    buildContextMenu()
     Wait.time(pollTacticaDaemon, 0.5, -1)
     printToAll("+++ LCT ORBITAL AUSPEX & DICE-MAT BRIDGE ONLINE [127.0.0.1:3030] +++", {0.2, 1.0, 0.5})
+end
+
+function buildContextMenu()
+    self.clearContextMenu()
+    self.addContextMenuItem("Scan LCT Board", function() pushBoardTelemetry() end)
+    self.addContextMenuItem("Tag Selected PLAYER", function(playerColor) tagSelectionAsPlayer(self, playerColor) end)
+    self.addContextMenuItem("Tag Selected HORDE", function(playerColor) tagSelectionAsHorde(self, playerColor) end)
+    self.addContextMenuItem("Tag Selected TEMPLATE", function(playerColor) tagSelectionAsTemplate(self, playerColor) end)
 end
 
 function buildBeaconButtons()
     self.clearButtons()
     self.createButton({
         click_function = "pushBoardTelemetry", function_owner = self,
-        label = "📡 Scan LCT Board", position = {0, 0.3, -0.8},
-        width = 1100, height = 280, font_size = 120, color = {0.1, 0.32, 0.22}, font_color = {0.8, 1, 0.85}
+        label = "📡 Scan LCT Board", position = {0, 0.65, -1.5},
+        width = 1300, height = 300, font_size = 120, color = {0.1, 0.32, 0.22}, font_color = {0.8, 1, 0.85}
     })
     self.createButton({
         click_function = "tagSelectionAsPlayer", function_owner = self,
-        label = "🛡️ Tag Selected PLAYER", position = {-0.9, 0.3, 0.1},
-        width = 1050, height = 250, font_size = 95, color = {0.12, 0.24, 0.45}, font_color = {1, 1, 1}
+        label = "🛡️ Tag Selected PLAYER", position = {0, 0.65, -0.5},
+        width = 1300, height = 280, font_size = 105, color = {0.12, 0.24, 0.45}, font_color = {1, 1, 1}
     })
     self.createButton({
         click_function = "tagSelectionAsHorde", function_owner = self,
-        label = "🧟 Tag Selected HORDE", position = {0.9, 0.3, 0.1},
-        width = 1050, height = 250, font_size = 95, color = {0.45, 0.12, 0.15}, font_color = {1, 1, 1}
+        label = "🧟 Tag Selected HORDE", position = {0, 0.65, 0.5},
+        width = 1300, height = 280, font_size = 105, color = {0.45, 0.12, 0.15}, font_color = {1, 1, 1}
     })
     self.createButton({
         click_function = "togglePoller", function_owner = self,
-        label = "🔄 Poll: ON", position = {0, 0.3, 0.9},
-        width = 900, height = 240, font_size = 100, color = {0.18, 0.18, 0.22}, font_color = {0.95, 0.8, 0.3}
+        label = "🔄 Poll: ON", position = {0, 0.65, 1.5},
+        width = 1100, height = 260, font_size = 105, color = {0.18, 0.18, 0.22}, font_color = {0.95, 0.8, 0.3}
     })
 end
 
@@ -436,6 +548,7 @@ end
 function tagSelectionAsPlayer(_, playerColor)
     for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
         obj.removeTag("HORDE")
+        obj.removeTag("HORDE_TEMPLATE")
         obj.addTag("PLAYER")
     end
     broadcastToAll("🛡️ Tagged selected models as PLAYER.", {0.4, 0.75, 1})
@@ -445,45 +558,93 @@ end
 function tagSelectionAsHorde(_, playerColor)
     for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
         obj.removeTag("PLAYER")
+        obj.removeTag("HORDE_TEMPLATE")
         obj.addTag("HORDE")
     end
     broadcastToAll("🧟 Tagged selected models as HORDE.", {1, 0.45, 0.45})
     pushBoardTelemetry()
 end
 
--- Scans all miniatures and objectives on the LCT map and posts raw metadata to /tts/telemetry
-function pushBoardTelemetry()
-    local objectsPayload = {}
-    for _, obj in ipairs(getAllObjects()) do
-        if obj ~= self and not obj.isSmoothMoving() then
-            local name = obj.getName() or ""
-            local lname = string.lower(name)
-            local size = obj.getBoundsNormalized().size
-            local isObjMarker = obj.hasTag("OBJECTIVE") or string.find(lname, "^objective") or string.find(lname, "^obj ")
-            local isMini = (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or string.find(name, "%d+/%d+"))
-                           and size.x > 0.3 and size.x < 12 and size.z < 12
+function tagSelectionAsTemplate(_, playerColor)
+    for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
+        obj.removeTag("PLAYER")
+        obj.removeTag("HORDE")
+        obj.addTag("HORDE_TEMPLATE")
+    end
+    broadcastToAll("📦 Tagged selected models as off-board HORDE_TEMPLATE.", {0.95, 0.8, 0.3})
+    pushBoardTelemetry()
+end
 
-            if isObjMarker or isMini then
-                local pos = obj.getPosition()
-                local tags = obj.getTags()
-                if isObjMarker then table.insert(tags, "OBJECTIVE") end
-                table.insert(objectsPayload, {
-                    guid = obj.getGUID(),
-                    name = name,
-                    description = obj.getDescription() or "",
-                    gmNotes = obj.getGMNotes() or "",
-                    tags = tags,
-                    pos = { x = pos.x, y = pos.y, z = pos.z },
-                    bounds = { x = size.x, y = size.y, z = size.z }
-                })
+-- Detects LCT's central 44"x60" (or 60"x44") battlemat bounds around (0,0)
+function detectPlaymatBounds()
+    for _, obj in ipairs(getAllObjects()) do
+        local p = obj.getPosition()
+        if math.abs(p.x) < 4 and math.abs(p.z) < 4 then
+            local s = obj.getBoundsNormalized().size
+            if (math.abs(s.x - 44) < 3 and math.abs(s.z - 60) < 3) or (math.abs(s.x - 60) < 3 and math.abs(s.z - 44) < 3) then
+                return { minX = p.x - s.x * 0.5 - 0.5, maxX = p.x + s.x * 0.5 + 0.5, minZ = p.z - s.z * 0.5 - 0.5, maxZ = p.z + s.z * 0.5 + 0.5 }
+            end
+        end
+    end
+    return { minX = -22.5, maxX = 22.5, minZ = -30.5, maxZ = 30.5 }
+end
+
+function executeSetUnitSide(cmd)
+    local side = string.upper(cmd.side or "PLAYER")
+    for _, guid in ipairs(cmd.guids or {}) do
+        local obj = getObjectFromGUID(guid)
+        if obj then
+            obj.removeTag("PLAYER")
+            obj.removeTag("HORDE")
+            obj.removeTag("HORDE_TEMPLATE")
+            obj.addTag(side)
+        end
+    end
+    pushBoardTelemetry()
+end
+
+-- Scans all miniatures and objectives inside LCT's playmat bounds and posts raw metadata to /tts/telemetry
+function pushBoardTelemetry()
+    local matBounds = detectPlaymatBounds()
+    local objectsPayload = {}
+
+    for _, obj in ipairs(getAllObjects()) do
+        if obj ~= self and obj.interactable ~= false and not obj.isSmoothMoving() then
+            local pos = obj.getPosition()
+            local inMat = pos.x >= matBounds.minX and pos.x <= matBounds.maxX
+                      and pos.z >= matBounds.minZ and pos.z <= matBounds.maxZ
+
+            if inMat and not obj.hasTag("HORDE_TEMPLATE") then
+                local name = obj.getName() or ""
+                local lname = string.lower(name)
+                local size = obj.getBoundsNormalized().size
+                local isSecChip = string.find(lname, "secured") or string.find(lname, "camera") or string.find(lname, "dice cam")
+                local isObjMarker = not isSecChip and (obj.hasTag("OBJECTIVE") or string.match(lname, "^objective%s*%d*$") or string.match(lname, "^obj%s*%d+$"))
+                local isMini = not isSecChip and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER"))
+                               and size.x > 0.3 and size.x < 12 and size.z < 12
+
+                if isObjMarker or isMini then
+                    local tags = obj.getTags()
+                    if isObjMarker then table.insert(tags, "OBJECTIVE") end
+                    table.insert(objectsPayload, {
+                        guid = obj.getGUID(),
+                        name = name,
+                        locked = obj.getLock(),
+                        description = obj.getDescription() or "",
+                        gmNotes = obj.getGMNotes() or "",
+                        tags = tags,
+                        pos = { x = pos.x, y = pos.y, z = pos.z },
+                        bounds = { x = size.x, y = size.y, z = size.z }
+                    })
+                end
             end
         end
     end
 
-    local body = JSON.encode({ objects = objectsPayload })
+    local body = JSON.encode({ playmatBounds = matBounds, objects = objectsPayload })
     WebRequest.custom(BRIDGE_URL .. "/tts/telemetry", "POST", true, body, { ["Content-Type"] = "application/json" }, function(res)
         if not res.is_error then
-            printToAll("📡 LCT Telemetry Synced (" .. #objectsPayload .. " tabletop objects).", {0.4, 0.95, 0.7})
+            printToAll("📡 LCT Playmat Synced (" .. #objectsPayload .. " on-board objects).", {0.4, 0.95, 0.7})
         end
     end)
 end
@@ -507,6 +668,8 @@ function pollTacticaDaemon()
             executeRevertMove(cmd)
         elseif cmd.action == "SPAWN_GHOST_RING" then
             spawnGhostRing(cmd)
+        elseif cmd.action == "SET_UNIT_SIDE" then
+            executeSetUnitSide(cmd)
         end
     end)
 end
@@ -662,13 +825,14 @@ function executeSquadMove(guids, targetX, targetZ, facingY)
     Wait.time(pushBoardTelemetry, 1.4)
 end
 
--- Finds an off-board or HORDE_TEMPLATE miniature matching templateName for wave cloning
+-- Finds an off-board (outside detectPlaymatBounds()) or HORDE_TEMPLATE miniature matching templateName for wave cloning
 function findShelfTemplateModel(templateName)
     local targetLower = string.lower(templateName or "")
+    local matBounds = detectPlaymatBounds()
     for _, obj in ipairs(getAllObjects()) do
         if obj ~= self then
             local p = obj.getPosition()
-            local isOffBoard = math.abs(p.x) > 32 or math.abs(p.z) > 24
+            local isOffBoard = p.x < matBounds.minX or p.x > matBounds.maxX or p.z < matBounds.minZ or p.z > matBounds.maxZ
             if obj.hasTag("HORDE_TEMPLATE") or isOffBoard then
                 local clean = string.lower(string.gsub(obj.getName() or "", "^%s*%d+/%d+%s*", ""))
                 if clean == targetLower or string.find(clean, targetLower, 1, true) then
@@ -735,169 +899,5 @@ function spawnGhostRing(cmd)
     ring.setLock(true)
 end
 
-
-````
-
----
-
-## File: `tests/js/tts-telemetry-core.test.js` <a id="file-testsjsttstelemetrycoretestjs"></a>
-
-````javascript
-/**
- * @fileoverview Unit tests for js/tts-telemetry-core.js pure TTS BBCode stripper,
- * Yellowscribe/ForceOrg datasheet parser, and 2D edge-to-edge tabletop geometry.
- */
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const {
-  stripTtsMarkup,
-  parseModelNameAndWounds,
-  parseDatasheetFromTts,
-  inferBaseRadiusInches,
-  measureEdgeToEdgeInches,
-  normalizeTtsBoardScan
-} = require('../../js/tts-telemetry-core.js');
-
-test('stripTtsMarkup: removes TTS BBCode & hex color tags while preserving 40k [KEYWORD] brackets', () => {
-  assert.equal(stripTtsMarkup(''), '');
-  const raw = '[b][c6c930]Gauss flayer[-][/b] [00ff88ff][LETHAL HITS, RAPID FIRE 1][-]';
-  const clean = stripTtsMarkup(raw);
-  assert.equal(clean, 'Gauss flayer [LETHAL HITS, RAPID FIRE 1]');
-});
-
-test('parseModelNameAndWounds: extracts current/max wounds from prefix or suffix counters', () => {
-  assert.deepEqual(parseModelNameAndWounds(''), {
-    baseName: 'Unknown Model',
-    currentWounds: null,
-    maxWounds: null
-  });
-  assert.deepEqual(parseModelNameAndWounds('8/10 Screamer-Killer'), {
-    baseName: 'Screamer-Killer',
-    currentWounds: 8,
-    maxWounds: 10
-  });
-  assert.deepEqual(parseModelNameAndWounds('[b]Necron Warriors[/b] (1/1)'), {
-    baseName: 'Necron Warriors',
-    currentWounds: 1,
-    maxWounds: 1
-  });
-  assert.deepEqual(parseModelNameAndWounds('Overlord'), {
-    baseName: 'Overlord',
-    currentWounds: null,
-    maxWounds: null
-  });
-});
-
-test('parseDatasheetFromTts: parses tabular & inline Yellowscribe/ForceOrg stats, saves, keywords, and weapons', () => {
-  const yellowscribeDesc = `
-    [b][f5b041]M    T   Sv   W   Ld   OC[-][/b]
-    8"   9   3+   10  6+   3
-    [c6c930]Invulnerable Save:[-] 4+
-    [c6c930]Abilities:[-] Scouts 6", Deadly Demise D3, Feel No Pain 5+
-    [b]Ranged Weapons[/b]
-    Bio-plasmic scream | 18" | D6+3 | 4+ | 8 | -2 | 1 | [ASSAULT, BLAST]
-    [b]Melee Weapons[/b]
-    Screamer-killer talons | Melee | 10 | 3+ | 10 | -2 | 3 | [LETHAL HITS]
-    [b]Keywords:[/b] Monster, Character, Great Devourer, Screamer-Killer
-  `;
-
-  const ds = parseDatasheetFromTts(yellowscribeDesc);
-  assert.equal(ds.move, 8);
-  assert.equal(ds.toughness, 9);
-  assert.equal(ds.save, 3);
-  assert.equal(ds.invuln, 4);
-  assert.equal(ds.fnp, 5);
-  assert.equal(ds.woundsPerModel, 10);
-  assert.equal(ds.leadership, 6);
-  assert.equal(ds.oc, 3);
-  assert.equal(ds.scoutsInches, 6);
-  assert.ok(ds.keywords.includes('MONSTER') && ds.keywords.includes('CHARACTER'));
-
-  assert.equal(ds.weapons.length, 2);
-  assert.equal(ds.weapons[0].name, 'Bio-plasmic scream');
-  assert.equal(ds.weapons[0].type, 'ranged');
-  assert.equal(ds.weapons[0].rangeInches, 18);
-  assert.equal(ds.weapons[0].attacks, 'D6+3');
-  assert.equal(ds.weapons[0].skill, 4);
-  assert.equal(ds.weapons[0].strength, 8);
-  assert.equal(ds.weapons[0].ap, -2);
-  assert.equal(ds.weapons[0].damage, '1');
-  assert.ok(ds.weapons[0].keywords.includes('ASSAULT') && ds.weapons[0].keywords.includes('BLAST'));
-
-  assert.equal(ds.weapons[1].type, 'melee');
-  assert.equal(ds.weapons[1].strength, 10);
-  assert.ok(ds.weapons[1].keywords.includes('LETHAL HITS'));
-
-  // Inline labeled weapon & shorthand 5++ invuln
-  const inlineDs = parseDatasheetFromTts(
-    'M: 6" T: 4 Sv: 3+ W: 2 Ld: 6+ OC: 2\n5++\nBolt rifle - Range: 24" A: 2 BS: 3+ S: 4 AP: -1 D: 1 [HEAVY]\nFaction Keywords: Adeptus Astartes'
-  );
-  assert.equal(inlineDs.invuln, 5);
-  assert.equal(inlineDs.weapons.length, 1);
-  assert.equal(inlineDs.weapons[0].name, 'Bolt rifle');
-  assert.equal(inlineDs.weapons[0].attacks, 2);
-  assert.ok(inlineDs.weapons[0].keywords.includes('HEAVY'));
-});
-
-test('measureEdgeToEdgeInches: subtracts 2D base radii from horizontal XZ distance', () => {
-  assert.equal(inferBaseRadiusInches(), 0.63);
-  // 32mm base (~1.26" diameter -> 0.63" radius) vs 40mm objective (~1.57" diameter -> 0.787" radius)
-  const r32 = inferBaseRadiusInches({ baseDiameterMm: 32 });
-  const r40 = inferBaseRadiusInches({ baseDiameterMm: 40 });
-  const dist = measureEdgeToEdgeInches({ x: 0, y: 1, z: 0 }, r32, { x: 5, y: 4, z: 0 }, r40);
-  // Vertical Y difference (1 vs 4) ignored in 2D horizontal distance; 5.0 - 0.63 - 0.787 = ~3.58"
-  assert.ok(Math.abs(dist - (5 - r32 - r40)) < 0.02);
-
-  // Overlapping bases clamp at 0"
-  assert.equal(measureEdgeToEdgeInches({ x: 0, z: 0 }, 1.0, { x: 0.5, z: 0 }, 1.0), 0);
-});
-
-test('normalizeTtsBoardScan: groups squad models, detects Spawn Zones, and computes closest enemy & objective inches', () => {
-  const rawScan = {
-    spawnZones: [{ id: 1, minX: -12, maxX: 12, minZ: 14, maxZ: 22 }],
-    objects: [
-      { guid: 'obj1', name: 'Objective 1', pos: { x: 0, y: 1, z: 0 }, bounds: { x: 1.57, y: 0.1, z: 1.57 } },
-      {
-        guid: 'h1',
-        name: '1/1 Necron Warriors',
-        tags: ['HORDE'],
-        pos: { x: 0, y: 1, z: 16 },
-        bounds: { x: 1.26, y: 1.5, z: 1.26 },
-        description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry, Battleline'
-      },
-      {
-        guid: 'h2',
-        name: '1/1 Necron Warriors',
-        tags: ['HORDE'],
-        pos: { x: 1.3, y: 1, z: 16 },
-        bounds: { x: 1.26, y: 1.5, z: 1.26 },
-        description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry, Battleline'
-      },
-      {
-        guid: 'p1',
-        name: '14/14 Leman Russ Vanquisher',
-        tags: ['PLAYER'],
-        pos: { x: 0, y: 1, z: -4 },
-        bounds: { x: 3.0, y: 2.2, z: 4.5 },
-        description: 'M: 10" T: 11 Sv: 2+ W: 14 Ld: 7+ OC: 3\nKeywords: Vehicle, Imperium'
-      }
-    ]
-  };
-
-  const res = normalizeTtsBoardScan(rawScan);
-  assert.equal(res.objectives.length, 1);
-  assert.equal(res.units.length, 2, 'Two Necron Warrior models must group into 1 squad');
-
-  const warriors = res.units.find(u => u.name === 'Necron Warriors');
-  assert.ok(warriors);
-  assert.equal(warriors.side, 'HORDE');
-  assert.equal(warriors.modelCount, 2);
-  assert.equal(warriors.inSpawnZone, true);
-  assert.equal(warriors.save, 4);
-  assert.ok(warriors.closestEnemy && warriors.closestEnemy.name === 'Leman Russ Vanquisher');
-  assert.ok(warriors.closestEnemy.distanceInches > 17 && warriors.closestEnemy.distanceInches < 19);
-  assert.ok(warriors.closestObjective && warriors.closestObjective.name === 'Objective 1');
-});
 
 ````

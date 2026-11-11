@@ -247,6 +247,7 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_tactica_core.md', check: 'js/tactica-core.js' },
     { file: 'bundle_tactica_daemon.md', check: 'tactica_daemon.js' },
     { file: 'bundle_tts_bridge.md', check: 'js/tts-telemetry-core.js' },
+    { file: 'bundle_tests_tts_tactica.md', check: 'tests/js/tts-telemetry-core.test.js' },
     { file: 'bundle_horde_autopilot.md', check: 'js/horde-autopilot-core.js' },
     { file: 'bundle_tactica_overwatch.md', check: 'js/tactica-overwatch-core.js' },
     { file: 'bundle_vox.md', check: 'pages/vox.html' },
@@ -574,5 +575,4 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
   } finally {
     if (browser) await browser.close();
     server.close();
-  }
 ````

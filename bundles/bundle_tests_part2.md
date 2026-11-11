@@ -11,6 +11,7 @@ Headless browser E2E verification, cockpit controls, and LCT Tactica Daemon inte
 ## File: `tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)` <a id="file-testsuipagestestjspart2headlessplaywrighte2elines5661100"></a>
 
 ````javascript
+  }
 });
 
 test('Documentation Boundary: README.md and bundles/README.md provide technical architecture deep-dives and explicit AI involvement disclosures', () => {
@@ -751,6 +752,35 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
 
     const shtAfterBlock = await postJson(url1, '/autopilot/select-shooting', {});
     assert.equal(shtAfterBlock.assignments.length, 0, 'losBlockedPairs must filter out blocked HORDE::Overlord->PLAYER::Krieg');
+
+    // Sync Imperial Knights faction, verify /tts/telemetry auto-detects Votann as PLAYER & rejects props/off-board, then flip side via /tts/set-side
+    await postJson(url1, '/session/sync', { factionName: 'Imperial Knights' });
+    const telFaction = await postJson(url1, '/tts/telemetry', {
+      playmatBounds: { minX: -22.5, maxX: 22.5, minZ: -30.5, maxZ: 30.5 },
+      objects: [
+        { guid: 'cam1', name: 'Blue dice camera', locked: true, pos: { x: 5, y: 2, z: 5 }, bounds: { x: 1, y: 1, z: 1 } },
+        { guid: 'gork1', name: '18/18 Gorkanaut', tags: ['HORDE'], pos: { x: -45, y: 1, z: 60 }, bounds: { x: 5, y: 6, z: 5 }, description: 'M: 8" T: 12 Sv: 3+ W: 18 Ld: 7+ OC: 8\nKeywords: Vehicle, Orks' },
+        { guid: 'vot1', name: 'Hearthkyn Warriors', locked: false, pos: { x: 0, y: 1, z: -8 }, bounds: { x: 1.1, y: 1.4, z: 1.1 }, description: 'M: 5" T: 5 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry, Leagues of Votann' },
+        { guid: 'arm1', name: '12/12 Armiger Warglaive', locked: false, pos: { x: 0, y: 1, z: 12 }, bounds: { x: 3.9, y: 4.5, z: 3.9 }, description: 'M: 12" T: 10 Sv: 3+ W: 12 Ld: 7+ OC: 8\nKeywords: Vehicle, Walker, Armiger' }
+      ]
+    });
+    assert.equal(telFaction.trackedUnits, 2);
+    const votUnit = telFaction.units.find(u => u.name === 'Hearthkyn Warriors');
+    const armUnit = telFaction.units.find(u => u.name === 'Armiger Warglaive');
+    assert.equal(votUnit.side, 'PLAYER');
+    assert.equal(armUnit.side, 'HORDE');
+
+    const flipped = await postJson(url1, '/tts/set-side', {
+      squadKey: votUnit.squadKey,
+      guids: votUnit.guids,
+      side: 'HORDE'
+    });
+    assert.equal(flipped.ok, true);
+    assert.equal(flipped.units.find(u => u.name === 'Hearthkyn Warriors').side, 'HORDE');
+    const pollSetSide = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(pollSetSide.action, 'SET_UNIT_SIDE');
+    assert.equal(pollSetSide.side, 'HORDE');
+    assert.deepEqual(pollSetSide.guids, ['vot1']);
 
     const notFound = await fetch(`${url1}/unknown`);
     assert.equal(notFound.status, 404);

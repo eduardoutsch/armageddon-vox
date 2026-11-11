@@ -330,6 +330,10 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(luaSrc.includes('/tts/telemetry'), 'Lua beacon must post to /tts/telemetry');
   assert.ok(luaSrc.includes('/tts/dice-result'), 'Lua beacon must post settled dice to /tts/dice-result');
   assert.ok(luaSrc.includes('SPAWN_WAVE') && luaSrc.includes('REVERT_MOVE') && luaSrc.includes('SPAWN_GHOST_RING'), 'Lua beacon must support SPAWN_WAVE, REVERT_MOVE & SPAWN_GHOST_RING');
+  assert.ok(luaSrc.includes('self.setRotation({ x = 0, y = rot.y, z = 0 })'), 'Lua beacon must force upright rotation on load');
+  assert.ok(luaSrc.includes('buildContextMenu') && luaSrc.includes('addContextMenuItem') && luaSrc.includes('tagSelectionAsTemplate'), 'Lua beacon must register right-click context menu items including HORDE_TEMPLATE');
+  assert.ok(luaSrc.includes('detectPlaymatBounds') && luaSrc.includes('playmatBounds'), 'Lua beacon must auto-detect LCT 44"x60" playmat bounds');
+  assert.ok(luaSrc.includes('SET_UNIT_SIDE') && luaSrc.includes('executeSetUnitSide'), 'Lua beacon must support browser-driven SET_UNIT_SIDE command');
 
   const spawnerHtml = fs.readFileSync(path.join(ROOT_DIR, 'pages/spawner.html'), 'utf8');
   assert.ok(spawnerHtml.includes('tactica.html'), 'spawner.html must link to pages/tactica.html');
@@ -476,9 +480,20 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   ];
   await tactica.requestTtsBoardScan();
   assert.ok(els.tacticaTelemetryBox.innerHTML.includes('Skorpekh Destroyers'));
+  assert.ok(
+    els.tacticaTelemetryBox.innerHTML.includes('onclick="toggleTelemetryUnitSide(0)"') &&
+    els.tacticaTelemetryBox.innerHTML.includes('⇄ Flip Side'),
+    'Each telemetry row must render a 1-click ⇄ Flip Side button'
+  );
   tactica.selectTelemetryUnitForDefense(0);
   assert.equal(els.defUnitName.value, 'Skorpekh Destroyers');
   assert.equal(els.defInSpawnCheck.checked, true);
+
+  // Flip unit side HORDE -> PLAYER and back PLAYER -> HORDE
+  await tactica.toggleTelemetryUnitSide(0);
+  assert.equal(tactica.getTacticaClientState().boardTelemetry.units[0].side, 'PLAYER');
+  await tactica.toggleTelemetryUnitSide(0);
+  assert.equal(tactica.getTacticaClientState().boardTelemetry.units[0].side, 'HORDE');
 
   await tactica.triggerAutopilotSpawnWaves();
   assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Queued 1 Spawn Zone wave drop'));

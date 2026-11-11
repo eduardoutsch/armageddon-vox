@@ -28,7 +28,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_tactica.md`](bundle_tactica.md) | **In-Match LCT Tactical Console (View & UI)** | `pages/tactica.html`, `js/tactica.js` |
 | [`bundle_tactica_core.md`](bundle_tactica_core.md) | **In-Match LCT Tactical Functional Core** | `js/tactica-core.js`, `tests/js/tactica-core.test.js` |
 | [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe** | `tactica_daemon.js` |
-| [`bundle_tts_bridge.md`](bundle_tts_bridge.md) | **LCT TTS Orbital Auspex & Telemetry** | `js/tts-telemetry-core.js`, `tts/lct_horde_bridge.lua`, `tests/js/tts-telemetry-core.test.js` |
+| [`bundle_tts_bridge.md`](bundle_tts_bridge.md) | **LCT TTS Orbital Auspex & Telemetry** | `js/tts-telemetry-core.js`, `tts/lct_horde_bridge.lua` |
 | [`bundle_horde_autopilot.md`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | `js/horde-autopilot-core.js`, `tests/js/horde-autopilot-core.test.js` |
 | [`bundle_tactica_overwatch.md`](bundle_tactica_overwatch.md) | **Live Screen/Mic Overwatch & Crusade Handoff** | `js/tactica-overwatch-core.js`, `js/tactica-overwatch.js`, `tests/js/tactica-overwatch-core.test.js` |
 | [`bundle_data_rng.md`](bundle_data_rng.md) | **Data Schemas & Seeded RNG** | `js/data.js`, `js/rng.js` |
@@ -75,6 +75,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_tests_bridge_part2.md`](bundle_tests_bridge_part2.md) | **Courier Bridge Tests (Part 2)** | `tests/vox_bridge.test.js` (Lines 523-end) |
 | [`bundle_tests_js_spawner.md`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | `tests/js/spawner*.test.js` |
 | [`bundle_tests_ui_spawner.md`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner, Tactica UI & Combat Mods)** | `tests/ui/spawner.test.js`, `tests/ui/tactica.test.js`, `tests/js/horde-combat-modifiers.test.js` |
+| [`bundle_tests_tts_tactica.md`](bundle_tests_tts_tactica.md) | **Unit Tests (TTS Telemetry & Tactica Console)** | `tests/js/tts-telemetry-core.test.js`, `tests/js/tactica.test.js` |
 | [`bundle_tests_js_core.md`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | `tests/js/data.test.js`, `tests/js/rng.test.js`, `tests/js/vox-audio.test.js` |
 | [`bundle_tests_js_app.md`](bundle_tests_js_app.md) | **Unit Tests (App Engine Part 1)** | `tests/js/app.test.js` (Lines 1-519) |
 | [`bundle_tests_js_app_part2.md`](bundle_tests_js_app_part2.md) | **Unit Tests (App Engine Part 2)** | `tests/js/app.test.js` (Lines 520-end) |
