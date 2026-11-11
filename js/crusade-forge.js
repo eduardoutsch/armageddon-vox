@@ -72,58 +72,42 @@ function _syncPostForgeChange() {
  */
 function switchCrusadeTab(which, persist = true) {
   crusadeState.activeTab = which;
-  const tabBoard = document.getElementById('cruTabBoard');
-  const tabForge = document.getElementById('cruTabForge');
-  const tabTour = document.getElementById('cruTabTour');
-  const tabTomb = document.getElementById('cruTabTomb');
-  const tabVotann = document.getElementById('cruTabVotann');
-  if (tabBoard) tabBoard.classList.toggle('hidden', which !== 'board');
-  if (tabForge) tabForge.classList.toggle('hidden', which !== 'forge');
-  if (tabTour) tabTour.classList.toggle('hidden', which !== 'tour');
-  if (tabTomb) tabTomb.classList.toggle('hidden', which !== 'tomb');
-  if (tabVotann) tabVotann.classList.toggle('hidden', which !== 'votann');
+  Object.entries(_forgeCore.CRUSADE_TAB_DESCRIPTORS).forEach(([tabKey, desc]) => {
+    const panel = _getForgeEl(desc.panelId);
+    const btn = _getForgeEl(desc.buttonId);
+    if (panel) panel.classList.toggle('hidden', tabKey !== which);
+    if (btn) btn.classList.toggle('active', tabKey === which);
+  });
 
-  const btn1 = document.getElementById('cruTabBtn1');
-  const btn2 = document.getElementById('cruTabBtn2');
-  const btn3 = document.getElementById('cruTabBtn3');
-  const btn4 = document.getElementById('cruTabBtn4');
-  const btn5 = document.getElementById('cruTabBtn5');
-  if (btn1) btn1.classList.toggle('active', which === 'board');
-  if (btn2) btn2.classList.toggle('active', which === 'forge');
-  if (btn3) btn3.classList.toggle('active', which === 'tour');
-  if (btn4) btn4.classList.toggle('active', which === 'tomb');
-  if (btn5) btn5.classList.toggle('active', which === 'votann');
-
-  // Keep faction tabs fixed to their faction color:
-  // Tab 3 (Tour of Duty) = Militarum, Tab 4 (Tomb World) = Necron, Tab 5 (Kindred Expeditions) = Votann
-  if (document.body && document.body.classList) {
-    if (which === 'tour') {
-      document.body.classList.add('theme-militarum');
-      document.body.classList.remove('theme-necron');
-      document.body.classList.remove('theme-votann');
-    } else if (which === 'tomb') {
-      document.body.classList.add('theme-necron');
-      document.body.classList.remove('theme-militarum');
-      document.body.classList.remove('theme-votann');
-    } else if (which === 'votann') {
-      document.body.classList.add('theme-votann');
-      document.body.classList.remove('theme-necron');
-      document.body.classList.remove('theme-militarum');
-    } else if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.syncFactionTheme === 'function') {
-      window.VoxAudio.syncFactionTheme();
+  if (typeof document !== 'undefined' && document.body && document.body.classList) {
+    const activeDesc = _forgeCore.CRUSADE_TAB_DESCRIPTORS[which];
+    if (activeDesc && activeDesc.bodyThemeClass) {
+      _forgeCore.FACTION_THEME_CLASSES.forEach((cls) => {
+        if (cls === activeDesc.bodyThemeClass) document.body.classList.add(cls);
+        else document.body.classList.remove(cls);
+      });
+    } else {
+      const audio = _getVoxAudio();
+      if (audio && typeof audio.syncFactionTheme === 'function') audio.syncFactionTheme();
     }
   }
 
   if (persist && typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
+/**
+ * Updates an Alliance Strategic or Campaign Point counter via `CrusadeCore.clampCounter`.
+ */
 function adjScore(field, delta) {
-  crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
+  crusadeState[field] = _forgeCore.clampCounter(crusadeState[field], delta);
+  const el = _getForgeEl(field);
   if (el) el.textContent = crusadeState[field];
   if (typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
+/**
+ * Renders the selected Alliance narrative tree phases idempotently into `#allianceTreeBox`.
+ */
 function selectAllianceTree(alliance, persist = true) {
   crusadeState.selectedTree = alliance;
   const btnGate = document.getElementById('treeBtnGate');
