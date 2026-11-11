@@ -452,23 +452,6 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   function step() {
     if (targetEl.dataset.streaming !== '1') return;
 
-    const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
-    if (
-      scrollParent &&
-      typeof targetEl.getBoundingClientRect === 'function' &&
-      typeof scrollParent.getBoundingClientRect === 'function'
-    ) {
-      const elRect = targetEl.getBoundingClientRect();
-      const parentRect = scrollParent.getBoundingClientRect();
-      if (parentRect.height > 0 && elRect.height > 0) {
-        const isVisible = elRect.bottom > parentRect.top && elRect.top < parentRect.bottom;
-        if (!isVisible) {
-          finishStream();
-          return;
-        }
-      }
-    }
-
     const elapsedMs = Date.now() - startTime;
     const targetIdx = Math.min(rawStr.length, Math.max(lastIdx + 1, Math.floor((elapsedMs / 1000) * charsPerSecond)));
 
@@ -786,7 +769,7 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-q-body crt-msg-body"></div>
           `;
           const qBody = msgCard.querySelector('.crt-q-body');
-          applyFocusedCardText(qBody, m.question, `q_${m.id}`, isLatestMsg && !hasReply && !showAllOlderMessages, viewingDirect, false);
+          applyFocusedCardText(qBody, m.question, `q_${m.id}`, isLatestMsg && !hasReply, viewingDirect, false);
           wrap.appendChild(msgCard);
 
           if (hasReply) {
@@ -805,7 +788,7 @@ async function refreshTerminal(forceScroll = false) {
               <div class="crt-r-body crt-msg-body"></div>
             `;
             const rBody = repCard.querySelector('.crt-r-body');
-            applyFocusedCardText(rBody, cleanBody, `r_${m.id}`, isLatestMsg && !showAllOlderMessages, viewingDirect, false);
+            applyFocusedCardText(rBody, cleanBody, `r_${m.id}`, isLatestMsg, viewingDirect, false);
             wrap.appendChild(repCard);
           } else {
             const pend = document.createElement('div');
@@ -894,7 +877,7 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-int-body crt-msg-body"></div>
           `;
           const bodyEl = card.querySelector('.crt-int-body');
-          applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt && !showAllOlderInterferences, viewingInterferences, true);
+          applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt, viewingInterferences, true);
           iBox.appendChild(card);
         });
 
@@ -948,14 +931,14 @@ function switchSubWindow(which) {
   if (btn1) btn1.classList.toggle('active', isDirect);
   if (btn2) btn2.classList.toggle('active', !isDirect);
 
-  if (isDirect && pendingDirectStream && !showAllOlderMessages) {
+  if (isDirect && pendingDirectStream) {
     const { el, text, token } = pendingDirectStream;
     pendingDirectStream = null;
     if (!seenTokens.has(token)) {
       markTokenSeen(token);
       streamTextIntoElement(el, text, false);
     }
-  } else if (!isDirect && pendingInterferenceStream && !showAllOlderInterferences) {
+  } else if (!isDirect && pendingInterferenceStream) {
     const { el, text, token } = pendingInterferenceStream;
     pendingInterferenceStream = null;
     if (!seenTokens.has(token)) {
