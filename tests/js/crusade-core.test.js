@@ -120,3 +120,67 @@ test('Pure Forge Rollers: deterministic traits, distinct 2xD6 weapon mods, relic
   assert.equal(entry.name, traitPick.name);
 });
 
+test('Astra Militarum Tour & Logistics Core: quota rollers, capacity clamping, ViewModel & pure dispatch', () => {
+  const quotas = core.rollTourQuotaValues(makeSeqRng([0.5, 0.99]));
+  assert.equal(quotas.bRoll, 4);
+  assert.equal(quotas.tourBattlesRem, 8);
+  assert.equal(quotas.wRoll, 3);
+  assert.equal(quotas.tourWinsRem, 5);
+
+  const comm = core.rollCommendationPointsGain(2, () => 0.7);
+  assert.equal(comm.gain, 3);
+  assert.equal(comm.commendationPts, 5);
+
+  // Capacity clamping
+  const startLog = { lexmechanicus: 2, materiel: 1, tithePool: 1, morale: 0 };
+  const blocked = core.allocateLogisticsPoint(startLog, false, 'morale', 1);
+  assert.equal(blocked.changed, false);
+  assert.equal(blocked.allocated, 4);
+
+  const allowedWithPrimer = core.allocateLogisticsPoint(startLog, true, 'morale', 1);
+  assert.equal(allowedWithPrimer.changed, true);
+  assert.equal(allowedWithPrimer.logistics.morale, 1);
+  assert.equal(allowedWithPrimer.allocated, 5);
+
+  const vm = core.deriveLogisticsViewModel(startLog, false, crusadeData.LOGISTICS_CATEGORIES);
+  assert.equal(vm.allocatedLabel, '4 / 4');
+  assert.equal(vm.cards.length, 4);
+  assert.equal(vm.cards[0].statusBadge, '🟢 SURPLUS (2 PTS)');
+  assert.equal(vm.cards[3].statusBadge, '🔴 DEFICIENCY (0 PTS)');
+
+  const dispatch = core.compileTourDispatch({
+    tourBattlesRem: 8,
+    tourWinsRem: 5,
+    commendationPts: 5,
+    logistics: startLog,
+    upliftingPrimer: false,
+    notes: 'Hold Hades Hive.'
+  });
+  assert.ok(dispatch.includes('8 Battles Required // 5 Victories Required'));
+  assert.ok(dispatch.includes('Hold Hades Hive.'));
+});
+
+test('Necron Tomb Matrix Core: system point allocation, deterministic D3 drain order, ViewModel & pure dispatch', () => {
+  const startSys = { command: 2, reanimation: 1, translocation: 0 };
+  const blocked = core.allocateTombSystemPoint(startSys, false, 'translocation', 1);
+  assert.equal(blocked.changed, false);
+
+  const expanded = core.allocateTombSystemPoint(startSys, true, 'translocation', 1);
+  assert.equal(expanded.changed, true);
+  assert.equal(expanded.tombSystems.translocation, 1);
+
+  // Drain 2 points (rng=0.5 -> D3=2) drains translocation (1->0) then reanimation (1->0), leaving command=2
+  const drained = core.applyMasterSystemDrain(expanded.tombSystems, 1, () => 0.5);
+  assert.equal(drained.drainTarget, 2);
+  assert.equal(drained.drained, 2);
+  assert.deepEqual(drained.tombSystems, { command: 2, reanimation: 0, translocation: 0 });
+  assert.equal(drained.tombAwakeningCycles, 2);
+
+  const vmOnline = core.deriveTombMatrixViewModel(startSys, false, crusadeData.TOMB_WORLD_SYSTEMS);
+  assert.equal(vmOnline.allocatedLabel, '3 / 3');
+  assert.ok(vmOnline.masterStatusLabel.includes('MASTER ONLINE'));
+
+  const vmDormant = core.deriveTombMatrixViewModel({ command: 0, reanimation: 0, translocation: 0 }, false, crusadeData.TOMB_WORLD_SYSTEMS);
+  assert.ok(vmDormant.masterStatusLabel.includes('DORMANT STASIS'));
+});
+
