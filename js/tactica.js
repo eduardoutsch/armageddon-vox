@@ -105,3 +105,60 @@
       }
     }
 
+    const telBox = document.getElementById('tacticaTelemetryBox');
+    if (telBox) {
+      const units = clientState.boardTelemetry?.units || [];
+      if (units.length === 0) {
+        telBox.innerHTML = '<div style="color:var(--muted); font-style:italic;">No LCT tabletop scan received yet. Click [📡 Scan LCT Board] on your TTS Beacon token or request a scan above.</div>';
+      } else {
+        telBox.innerHTML = units.map((u, idx) => {
+          const nearObj = u.closestObjective ? `${u.closestObjective.name} (${u.closestObjective.distanceInches}")` : 'None';
+          const nearEnemy = u.closestEnemy ? `${u.closestEnemy.name} (${u.closestEnemy.distanceInches}")` : 'None';
+          const sideBadge = u.side === 'PLAYER' ? '<span class="badge blue">PLAYER</span>' : '<span class="badge red">HORDE</span>';
+          const loadBtn = u.side !== 'PLAYER'
+            ? `<button type="button" class="btn-ghost btn-sm" onclick="selectTelemetryUnitForDefense(${idx})">🎯 Load into Auto-Defender</button>`
+            : '';
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
+              <div>
+                ${sideBadge} <strong>${u.name}</strong> [x${u.modelCount || 1} • Sv ${u.save || 4}+${u.invuln ? `/${u.invuln}++` : ''}${u.fnp ? `/FNP ${u.fnp}+` : ''}]
+                <span style="color:#94a3b8;">• Obj: ${nearObj} • Nearest Enemy: ${nearEnemy}</span>
+              </div>
+              ${loadBtn}
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    const box = document.getElementById('tacticaChronicleBox');
+    if (box) {
+      box.innerHTML = localChronicle.length === 0
+        ? '<div style="color:var(--muted); font-style:italic;">No match events logged yet.</div>'
+        : localChronicle.slice(-40).map(e =>
+          `<div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
+            <strong style="color:var(--gold);">[R${e.battleRound} • ${e.phase}]</strong> <span style="color:#94a3b8;">(${e.type})</span> ${e.summary}
+          </div>`
+        ).join('');
+    }
+
+    if (typeof window !== 'undefined' && typeof window.syncOverwatchAlertsFromState === 'function') {
+      window.syncOverwatchAlertsFromState();
+    }
+  }
+
+  async function refreshDaemonState() {
+    try {
+      const data = await daemonRequest('/state', 'GET');
+      daemonOnline = true;
+      clientState = data.state;
+      localChronicle = data.chronicle || [];
+      const qEl = document.getElementById('tacticaQueueLabel');
+      if (qEl) qEl.textContent = `${data.ttsQueueLength || 0} Queued`;
+    } catch (e) {
+      daemonOnline = false;
+    }
+    renderTacticaConsole();
+    return daemonOnline;
+  }
+
