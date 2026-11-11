@@ -184,3 +184,45 @@ test('Necron Tomb Matrix Core: system point allocation, deterministic D3 drain o
   assert.ok(vmDormant.masterStatusLabel.includes('DORMANT STASIS'));
 });
 
+test('Leagues of Votann Core: harvest multipliers + asset bonuses, rare check, asset cycling & pure dispatch', () => {
+  const votann = core.createInitialVotannState({
+    assets: { outpost1: 'Active', outpost2: 'Upgraded', biorecyc: 'Active' }
+  });
+
+  // Roll D6=1 (Raw Minerals) at Strike Force (mult=2: 2D6 with 4 and 5 -> 9 * 10 = 90) + Outpost1(+20) + Outpost2(+30) = 140, plus +20 Biomatter from biorecyc
+  const harvestMinerals = core.calculateVotannHarvest(votann, 2, makeSeqRng([0.0, 0.6, 0.8]));
+  assert.equal(harvestMinerals.targetKey, 'rawMinerals');
+  assert.equal(harvestMinerals.baseAmount, 90);
+  assert.equal(harvestMinerals.mineralBonus, 50);
+  assert.equal(harvestMinerals.finalGain, 140);
+  assert.equal(harvestMinerals.bioBonus, 20);
+  assert.equal(harvestMinerals.votann.rawMinerals, 140);
+  assert.equal(harvestMinerals.votann.biomatter, 20);
+  assert.equal(harvestMinerals.votann.expTotals.rawMinerals, 140);
+  assert.equal(harvestMinerals.votann.expTotals.biomatter, 20);
+
+  // Roll D6=2 (Biomatter, rng=0.2) at Combat Patrol (mult=0.5: D6=4 -> 4 * 5 = 20); biorecyc does NOT double-trigger when rolling Biomatter directly
+  const harvestBio = core.calculateVotannHarvest(harvestMinerals.votann, 0.5, makeSeqRng([0.2, 0.6]));
+  assert.equal(harvestBio.targetKey, 'biomatter');
+  assert.equal(harvestBio.baseAmount, 20);
+  assert.equal(harvestBio.bioBonus, 0);
+  assert.equal(harvestBio.finalGain, 20);
+  assert.equal(harvestBio.votann.biomatter, 40);
+
+  // Rare check: 0.9 -> D6=6 (success), 0.7 -> D6=5 (fail)
+  assert.deepEqual(core.evaluateVotannRareRoll(() => 0.9), { d6: 6, success: true });
+  assert.deepEqual(core.evaluateVotannRareRoll(() => 0.7), { d6: 5, success: false });
+
+  // Asset state cycle
+  assert.equal(core.nextVotannAssetState('Locked'), 'Active');
+  assert.equal(core.nextVotannAssetState('Active'), 'Upgraded');
+  assert.equal(core.nextVotannAssetState('Upgraded'), 'Inactive');
+  assert.equal(core.nextVotannAssetState('Inactive'), 'Locked');
+
+  // Expedition reset on completion
+  const completed = core.adjustVotannExpeditionField(harvestBio.votann, 'expeditionsCompleted', 1).votann;
+  assert.equal(completed.expeditionsCompleted, 1);
+  assert.equal(completed.expTotals.rawMinerals, 0);
+  assert.equal(completed.rawMinerals, 140, 'Fundamental vault persists when expedition resets');
+});
+
