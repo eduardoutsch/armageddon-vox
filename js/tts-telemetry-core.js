@@ -296,8 +296,93 @@
   }
 
   /**
+   * Maximum edge-to-edge distance (2" unit coherency + 4" base/casualty slack) before same-named
+   * miniature models split into independent squads (`#1`, `#2`) instead of merging across the board.
+   */
+  const MAX_COHERENCY_CLUSTER_INCHES = 6.0;
+
+  /**
+   * Pure single-linkage connected-components partitioner: groups same-datasheet models whose bases
+   * form a coherent chain within `maxEdgeInches`, while splitting distant duplicate squads (`> 6"`
+   * away from every model in another cluster) regardless of TTS `getAllObjects()` iteration order.
+   *
+   * @param {Array<object>} [models=[]] - Candidate model entries with `pos` and `radiusInches`.
+   * @param {number} [maxEdgeInches=MAX_COHERENCY_CLUSTER_INCHES] - Max edge-to-edge link distance.
+   * @returns {Array<Array<object>>} Ordered array of spatial model clusters.
+   */
+  function clusterModelsByCoherency(models = [], maxEdgeInches = MAX_COHERENCY_CLUSTER_INCHES) {
+    if (!Array.isArray(models) || models.length === 0) return [];
+    if (models.length === 1) return [[models[0]]];
+
+    const visited = new Array(models.length).fill(false);
+    const clusters = [];
+
+    for (let i = 0; i < models.length; i++) {
+      if (visited[i]) continue;
+      visited[i] = true;
+      const queue = [i];
+      const cluster = [];
+
+      while (queue.length > 0) {
+        const curIdx = queue.shift();
+        const cur = models[curIdx];
+        cluster.push(cur);
+
+        for (let j = 0; j < models.length; j++) {
+          if (visited[j]) continue;
+          const dist = measureEdgeToEdgeInches(cur.pos, cur.radiusInches, models[j].pos, models[j].radiusInches);
+          if (dist <= maxEdgeInches) {
+            visited[j] = true;
+            queue.push(j);
+          }
+        }
+      }
+      clusters.push(cluster);
+    }
+    return clusters;
+  }
+
+  function buildSquadRecord(squadKey, unitName, side, entries) {
+    const primaryDs = entries.find(e => e.ds.weapons.length > 0 || e.ds.keywords.length > 0)?.ds || entries[0].ds;
+    const woundsPerModel = entries[0].maxWounds || primaryDs.woundsPerModel || 1;
+    const models = entries.map(e => {
+      const curW = e.currentWounds !== null ? e.currentWounds : woundsPerModel;
+      return {
+        guid: e.guid,
+        pos: e.pos,
+        radiusInches: e.radiusInches,
+        currentWounds: curW
+      };
+    });
+    const totalRemainingWounds = models.reduce((acc, m) => acc + m.currentWounds, 0);
+
+    return {
+      squadKey,
+      guid: entries[0].guid || null,
+      guids: entries.map(e => e.guid),
+      name: unitName,
+      side,
+      modelCount: models.length,
+      totalRemainingWounds,
+      woundsPerModel,
+      move: primaryDs.move,
+      toughness: primaryDs.toughness,
+      save: primaryDs.save,
+      invuln: primaryDs.invuln,
+      fnp: primaryDs.fnp,
+      leadership: primaryDs.leadership,
+      oc: primaryDs.oc,
+      scoutsInches: primaryDs.scoutsInches,
+      keywords: primaryDs.keywords,
+      weapons: primaryDs.weapons,
+      models
+    };
+  }
+
+  /**
    * Converts a raw TTS `getAllObjects()` snapshot into grouped squads, parsed datasheets & exact distances,
-   * filtering out off-mat reserves, `HORDE_TEMPLATE` shelf clones, and non-datasheet LCT props/terrain.
+   * filtering out off-mat reserves, `HORDE_TEMPLATE` shelf clones, and non-datasheet LCT props/terrain,
+   * and splitting duplicate-datasheet units (`> 6"` apart) into independent `#1`, `#2` squads.
    *
    * @param {object} [rawScan={}] - Raw telemetry payload (`objects`, `playmatBounds`, `spawnZones`).
    * @param {object} [options={}] - Optional `{ hordeFactionName, playmatBounds }` context.
@@ -308,7 +393,8 @@
     const spawnZones = Array.isArray(rawScan.spawnZones) ? rawScan.spawnZones : [];
     const playmatBounds = rawScan.playmatBounds || options.playmatBounds || null;
     const objectives = [];
-    const squadBuckets = new Map();
+    const explicitBuckets = new Map();
+    const nameGroups = new Map();
 
     for (const obj of rawObjects) {
       if (!obj || !obj.name) continue;
@@ -359,47 +445,47 @@
       const ds = parseDatasheetFromTts(obj.description, obj.gmNotes);
       const side = inferSide(obj, ds.keywords, options);
       const parsedName = parseModelNameAndWounds(cleanName);
-      const squadKey = obj.squadId || `${side}::${parsedName.baseName}`;
       const radiusInches = inferBaseRadiusInches(obj);
-
-      if (!squadBuckets.has(squadKey)) {
-        squadBuckets.set(squadKey, {
-          squadKey,
-          guid: obj.guid || null,
-          guids: [],
-          name: parsedName.baseName,
-          side,
-          modelCount: 0,
-          totalRemainingWounds: 0,
-          woundsPerModel: parsedName.maxWounds || ds.woundsPerModel || 1,
-          move: ds.move,
-          toughness: ds.toughness,
-          save: ds.save,
-          invuln: ds.invuln,
-          fnp: ds.fnp,
-          leadership: ds.leadership,
-          oc: ds.oc,
-          scoutsInches: ds.scoutsInches,
-          keywords: ds.keywords,
-          weapons: ds.weapons,
-          models: []
-        });
-      }
-
-      const bucket = squadBuckets.get(squadKey);
-      bucket.guids.push(obj.guid);
-      bucket.modelCount += 1;
-      const curW = parsedName.currentWounds !== null ? parsedName.currentWounds : bucket.woundsPerModel;
-      bucket.totalRemainingWounds += curW;
-      bucket.models.push({
+      const entry = {
         guid: obj.guid,
         pos,
         radiusInches,
-        currentWounds: curW
-      });
+        currentWounds: parsedName.currentWounds,
+        maxWounds: parsedName.maxWounds,
+        baseName: parsedName.baseName,
+        side,
+        ds
+      };
+
+      if (obj.squadId) {
+        if (!explicitBuckets.has(obj.squadId)) explicitBuckets.set(obj.squadId, []);
+        explicitBuckets.get(obj.squadId).push(entry);
+      } else {
+        const groupKey = `${side}::${parsedName.baseName}`;
+        if (!nameGroups.has(groupKey)) nameGroups.set(groupKey, []);
+        nameGroups.get(groupKey).push(entry);
+      }
     }
 
-    const units = Array.from(squadBuckets.values()).map(u => {
+    const rawSquads = [];
+    for (const [squadId, entries] of explicitBuckets.entries()) {
+      rawSquads.push(buildSquadRecord(squadId, entries[0].baseName, entries[0].side, entries));
+    }
+    for (const [, entries] of nameGroups.entries()) {
+      const baseName = entries[0].baseName;
+      const side = entries[0].side;
+      const clusters = clusterModelsByCoherency(entries, MAX_COHERENCY_CLUSTER_INCHES);
+      if (clusters.length === 1) {
+        rawSquads.push(buildSquadRecord(`${side}::${baseName}`, baseName, side, clusters[0]));
+      } else {
+        clusters.forEach((cluster, idx) => {
+          const numberedName = `${baseName} #${idx + 1}`;
+          rawSquads.push(buildSquadRecord(`${side}::${numberedName}`, numberedName, side, cluster));
+        });
+      }
+    }
+
+    const units = rawSquads.map(u => {
       const sumX = u.models.reduce((acc, m) => acc + (Number(m.pos.x) || 0), 0);
       const sumZ = u.models.reduce((acc, m) => acc + (Number(m.pos.z) || 0), 0);
       const center = {
@@ -451,6 +537,7 @@
   }
 
   return {
+    MAX_COHERENCY_CLUSTER_INCHES,
     stripTtsMarkup,
     parseModelNameAndWounds,
     parseDatasheetFromTts,
@@ -458,6 +545,7 @@
     inferSide,
     inferBaseRadiusInches,
     measureEdgeToEdgeInches,
+    clusterModelsByCoherency,
     normalizeTtsBoardScan
   };
 });

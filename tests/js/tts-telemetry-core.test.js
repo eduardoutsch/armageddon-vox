@@ -299,3 +299,69 @@ test('normalizeTtsBoardScan: rejects LCT cameras, locked Tower, Objective Secure
   assert.equal(warglaive.side, 'HORDE', 'Armiger Warglaive must match Imperial Knights alias and resolve to HORDE');
 });
 
+test('normalizeTtsBoardScan: splits duplicate-datasheet models >6" edge-to-edge apart into #1/#2 squads while keeping coherent lines unified', () => {
+  const rawScan = {
+    objects: [
+      // Two separate PLAYER Theyn leaders on opposite flanks (20" apart)
+      {
+        guid: 'theyn-west',
+        name: 'Theyn',
+        tags: ['PLAYER'],
+        pos: { x: -12, y: 1, z: -14 },
+        bounds: { x: 1.1, y: 1.4, z: 1.1 },
+        description: 'M: 5" T: 5 Sv: 4+ W: 2 Ld: 7+ OC: 2\nKeywords: Infantry, Leagues of Votann'
+      },
+      {
+        guid: 'theyn-east',
+        name: 'Theyn',
+        tags: ['PLAYER'],
+        pos: { x: 12, y: 1, z: -14 },
+        bounds: { x: 1.1, y: 1.4, z: 1.1 },
+        description: 'M: 5" T: 5 Sv: 4+ W: 2 Ld: 7+ OC: 2\nKeywords: Infantry, Leagues of Votann'
+      },
+      // Two separate HORDE Armiger Helverin waves > 6" edge-to-edge apart
+      {
+        guid: 'helv-1',
+        name: '12/12 Armiger Helverin',
+        tags: ['HORDE'],
+        pos: { x: -10, y: 1, z: 16 },
+        bounds: { x: 3.9, y: 4.5, z: 3.9 },
+        description: 'M: 12" T: 10 Sv: 3+ W: 12 Ld: 7+ OC: 8\nKeywords: Vehicle, Walker, Armiger'
+      },
+      {
+        guid: 'helv-2',
+        name: '12/12 Armiger Helverin',
+        tags: ['HORDE'],
+        pos: { x: 10, y: 1, z: 16 },
+        bounds: { x: 3.9, y: 4.5, z: 3.9 },
+        description: 'M: 12" T: 10 Sv: 3+ W: 12 Ld: 7+ OC: 8\nKeywords: Vehicle, Walker, Armiger'
+      },
+      // Out-of-order 4-model Necron Warrior chain spanning 9" end-to-end, but each neighbor <= 3" apart
+      { guid: 'nw-a', name: '1/1 Necron Warriors', tags: ['HORDE'], pos: { x: 0, y: 1, z: 4 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry' },
+      { guid: 'nw-d', name: '1/1 Necron Warriors', tags: ['HORDE'], pos: { x: 9, y: 1, z: 4 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry' },
+      { guid: 'nw-b', name: '1/1 Necron Warriors', tags: ['HORDE'], pos: { x: 3, y: 1, z: 4 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry' },
+      { guid: 'nw-c', name: '1/1 Necron Warriors', tags: ['HORDE'], pos: { x: 6, y: 1, z: 4 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry' }
+    ]
+  };
+
+  const res = normalizeTtsBoardScan(rawScan);
+  const theyn1 = res.units.find(u => u.name === 'Theyn #1');
+  const theyn2 = res.units.find(u => u.name === 'Theyn #2');
+  assert.ok(theyn1 && theyn2, 'Distant duplicate Theyn models must split into Theyn #1 and Theyn #2');
+  assert.equal(theyn1.modelCount, 1);
+  assert.equal(theyn2.modelCount, 1);
+  assert.equal(theyn1.pos.x, -12, 'Theyn #1 must keep its true West flank centroid, not float at 0');
+  assert.equal(theyn2.pos.x, 12, 'Theyn #2 must keep its true East flank centroid, not float at 0');
+  assert.notEqual(theyn1.squadKey, theyn2.squadKey);
+
+  const helv1 = res.units.find(u => u.name === 'Armiger Helverin #1');
+  const helv2 = res.units.find(u => u.name === 'Armiger Helverin #2');
+  assert.ok(helv1 && helv2, 'Separate Armiger Helverin waves >6" apart must split into #1 and #2');
+  assert.equal(helv1.pos.x, -10);
+  assert.equal(helv2.pos.x, 10);
+
+  const warriors = res.units.find(u => u.name === 'Necron Warriors');
+  assert.ok(warriors, 'Coherent 4-model line (even out-of-order and >6" end-to-end) must remain 1 un-numbered squad');
+  assert.equal(warriors.modelCount, 4);
+});
+
