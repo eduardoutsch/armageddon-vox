@@ -24,6 +24,8 @@ function getLang(filePath) {
       return 'css';
     case '.js':
       return 'javascript';
+    case '.lua':
+      return 'lua';
     default:
       if (filePath.endsWith('.gitignore')) return 'gitignore';
       return 'text';
@@ -128,6 +130,55 @@ compileBundle(
   'Core wave calculation routines, quota enforcement, and authoritative Munitorum Resupply tables (`js/spawner.js`, `js/spawner-resupply.js`).',
   ['js/spawner.js', 'js/spawner-resupply.js'],
   path.join(BUNDLES_DIR, 'bundle_spawner_engine.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Horde Combat Modifiers & Auto-Defender Core',
+  'Pure Functional Core combat modifiers, 23 Horde faction rules, 36 Misery deck modifiers, fortifications, and Auto-Defender resolvers (`js/horde-combat-modifiers.js`).',
+  ['js/horde-combat-modifiers.js'],
+  path.join(BUNDLES_DIR, 'bundle_horde_combat.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (View & Controller)',
+  'In-Match Tactical Console view and imperative UI controller bridging Mode 1 session storage and LCT dice-mat rolls (`pages/tactica.html`, `js/tactica.js`).',
+  ['pages/tactica.html', 'js/tactica.js'],
+  path.join(BUNDLES_DIR, 'bundle_tactica.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Functional Core',
+  'Pure Functional Core LCT dice-mat multi-stage state machines, reaction window detector, Horde Warlord tracker, Round 1–6 chronicle compiler, and unit tests (`js/tactica-core.js`, `tests/js/tactica-core.test.js`).',
+  ['js/tactica-core.js', 'tests/js/tactica-core.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tactica_core.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Test Suites',
+  'Zero-dependency local HTTP LCT TTS dice-mat queue, Horde Autopilot & Overwatch Vision LOS routes, append-only JSONL chronicle scribe, and daemon integration tests (`tactica_daemon.js`, `tests/tactica_daemon.test.js`).',
+  ['tactica_daemon.js', 'tests/tactica_daemon.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tactica_daemon.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: LCT TTS Orbital Auspex Beacon & Telemetry Core',
+  'Pure Yellowscribe/ForceOrg BBCode datasheet parser, 2D edge-to-edge tabletop inch geometry, non-invasive LCT Beacon token Lua script, and unit tests (`js/tts-telemetry-core.js`, `tts/lct_horde_bridge.lua`, `tests/js/tts-telemetry-core.test.js`).',
+  ['js/tts-telemetry-core.js', 'tts/lct_horde_bridge.lua', 'tests/js/tts-telemetry-core.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tts_bridge.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Deterministic Horde Autopilot Core & Tests',
+  'Pure Horde Autopilot wave spawning, obstacle-aware Movement/Advance vectors, pre-Overwatch LOS revert snapshots, keyword-driven shooting priority, LCT 2D6 charges, 11th Ed 3-tier consolidation, and unit tests (`js/horde-autopilot-core.js`, `tests/js/horde-autopilot-core.test.js`).',
+  ['js/horde-autopilot-core.js', 'tests/js/horde-autopilot-core.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_horde_autopilot.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Live Screen & Mic Overwatch Referee & Crusade Handoff',
+  'Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers, 6+ Warp-Breach Intrusion alerts, Mode 5 Crusade snapshot compiler, browser screen/mic shell, and test suites (`js/tactica-overwatch-core.js`, `js/tactica-overwatch.js`, `tests/js/tactica-overwatch-core.test.js`, `tests/ui/tactica.test.js`).',
+  ['js/tactica-overwatch-core.js', 'js/tactica-overwatch.js', 'tests/js/tactica-overwatch-core.test.js', 'tests/ui/tactica.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tactica_overwatch.md')
 );
 
 // ============================================================================
@@ -261,23 +312,30 @@ compileBundle(
 );
 
 compileBundle(
+  '📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Pure Functional Core & ViewModels',
+  'Pure Functional Core state schemas, hydrators, RNG-injectable upgrade/resource rollers, declarative channel lookup tables, faction sub-matrix ViewModels, and DOM-free Astropathic Dossier compilers (`js/crusade-core.js`).',
+  ['js/crusade-core.js'],
+  path.join(BUNDLES_DIR, 'bundle_crusade_core.md')
+);
+
+compileBundle(
   '📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Quartermaster Matrix (Part 1)',
-  'Crusade tab orchestration, 3-way score tracking, tour quotas, and state persistence (`js/crusade.js`).',
-  [{ file: 'js/crusade.js', label: 'js/crusade.js (Part 1: State & Tabs)', startLine: 1, endLine: 550 }],
+  'Humble View UI adapters for Necron Tomb World Awakening Matrix, Dynastic Vault, and Leagues of Votann resource prospecting (`js/crusade.js` lines 1 to 405).',
+  [{ file: 'js/crusade.js', label: 'js/crusade.js (Part 1: Tomb Matrix & Votann Vaults, Lines 1-405)', startLine: 1, endLine: 405 }],
   path.join(BUNDLES_DIR, 'bundle_crusade_matrix.md')
 );
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Mode 5 - Crusade Quartermaster Matrix (Part 2)',
-  'Crusade resource adjustments, harvest rollers, expedition fields, and master dossier compiler (`js/crusade.js`).',
-  [{ file: 'js/crusade.js', label: 'js/crusade.js (Part 2: Operations & Dispatch)', startLine: 551, endLine: 1120 }],
+  'Humble View UI adapters for Votann Expeditions, Master Dossier compilation/transmission, Horde Battle Telemetry attachment, and state persistence (`js/crusade.js` lines 406 to end).',
+  [{ file: 'js/crusade.js', label: 'js/crusade.js (Part 2: Dossier Shell & Persistence, Lines 406-end)', startLine: 406, endLine: 900 }],
   path.join(BUNDLES_DIR, 'bundle_crusade_matrix_part2.md')
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Mode 5 - Munitorum Forge & Dossier Compiler',
-  'Random upgrade rollers (Traits, Mods, Relics, Scars) and Master Post-Battle Dossier text compiler (`js/crusade-forge.js`).',
-  ['js/crusade-forge.js'],
+  '📦 Fires of Armageddon // Bundle: Mode 5 - Munitorum Forge Shell & Crusade Core Unit Tests',
+  'Humble View UI adapters for Scoreboard, Quartermaster Forge rollers, and Astra Militarum Tour of Duty (`js/crusade-forge.js`) plus pure Crusade Core unit tests (`tests/js/crusade-core.test.js`).',
+  ['js/crusade-forge.js', 'tests/js/crusade-core.test.js'],
   path.join(BUNDLES_DIR, 'bundle_crusade_forge.md')
 );
 
@@ -393,8 +451,8 @@ compileBundle(
 // ============================================================================
 compileBundle(
   '📦 Fires of Armageddon // Bundle: Pages & Boundary Tests (Part 1: UI & Bundles)',
-  'Automated UI boundary verification, bundle integrity checks, and cross-tab persistence test suite (`tests/ui/pages.test.js` lines 1 to 558).',
-  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 1: UI & Bundles, Lines 1-558)', startLine: 1, endLine: 558 }],
+  'Automated UI boundary verification, bundle integrity checks, and cross-tab persistence test suite (`tests/ui/pages.test.js` lines 1 to 565).',
+  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 1: UI & Bundles, Lines 1-565)', startLine: 1, endLine: 565 }],
   path.join(BUNDLES_DIR, 'bundle_tests.md')
 );
 
