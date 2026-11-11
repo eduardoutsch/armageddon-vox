@@ -1,35 +1,72 @@
 /**
- * Fires of Armageddon // Crusade Command & Master Dossier Engine
- * Handles Tab 4 (Necrons Tomb World Awakening Matrix & Dynastic Vault),
- * Master Post-Battle Dossier compilation & Astropathic Vox transmissions,
- * and page lifecycle persistence.
+ * @fileoverview Crusade Command & Master Dossier Humble View Controller (MVVM Shell).
+ * Projects explicit Crusade state (`State -> UI`) and forwards DOM user intents (`Event -> Core -> State`)
+ * for Tab 4 (Necrons Tomb World Awakening Matrix & Dynastic Vault), Tab 5 (Leagues of Votann
+ * Kindred Expeditions & Resource Vault), Tab 2 Master Post-Battle Dossier compilation/transmission,
+ * Mode 1 Horde Battle Telemetry attachment, and localStorage persistence.
+ * All pure game rules, RNG math, ViewModel derivation, and dossier compilers live in `js/crusade-core.js`.
  */
 
-let _compileHordeBattleStatsDossierSection = typeof compileHordeBattleStatsDossierSection === 'function' ? compileHordeBattleStatsDossierSection : null;
+var _matrixCore = (typeof CrusadeCore !== 'undefined' && CrusadeCore)
+  ? CrusadeCore
+  : (typeof require === 'function' ? require('./crusade-core.js') : null);
+
+var _matrixData = (typeof require === 'function' && typeof TOMB_WORLD_SYSTEMS === 'undefined')
+  ? (function () { try { return require('./crusade-data.js'); } catch (_) { return {}; } })()
+  : {};
+
+let _compileHordeBattleStatsDossierSection = typeof compileHordeBattleStatsDossierSection === 'function'
+  ? compileHordeBattleStatsDossierSection
+  : null;
 let _loadHordeBattleStats = typeof loadHordeBattleStats === 'function' ? loadHordeBattleStats : null;
+
 if (typeof require === 'function') {
   try {
     const hStats = require('./horde-battle-stats.js');
-    if (hStats?.compileHordeBattleStatsDossierSection) _compileHordeBattleStatsDossierSection = hStats.compileHordeBattleStatsDossierSection;
+    if (hStats?.compileHordeBattleStatsDossierSection) {
+      _compileHordeBattleStatsDossierSection = hStats.compileHordeBattleStatsDossierSection;
+    }
     if (hStats?.loadHordeBattleStats) _loadHordeBattleStats = hStats.loadHordeBattleStats;
-  } catch (e) {}
+  } catch (_) {}
   if (typeof crusadeState === 'undefined') {
     try {
       const forge = require('./crusade-forge.js');
-      if (forge && forge.crusadeState) {
-        global.crusadeState = forge.crusadeState;
-      }
-    } catch (e) {}
+      if (forge && forge.crusadeState) global.crusadeState = forge.crusadeState;
+    } catch (_) {}
   }
 }
 
-/**
- * Adjusts numeric Tomb World Awakening counters (tombAgendasCompleted, tombAwakeningCycles),
- * clamping at zero and synchronizing previews and storage.
- *
- * @param {string} field - State key to adjust.
- * @param {number} delta - Signed increment or decrement.
- */
+function _getMatrixEl(id) {
+  return typeof document !== 'undefined' ? document.getElementById(id) : null;
+}
+
+function _getMatrixVox() {
+  return (typeof window !== 'undefined' && window.VoxAudio) ? window.VoxAudio : null;
+}
+
+function _scheduleMatrixEffect(callback, delayMs) {
+  if (typeof setTimeout !== 'function') {
+    callback();
+    return;
+  }
+  const handle = setTimeout(callback, delayMs);
+  if (handle && typeof handle.unref === 'function') handle.unref();
+}
+
+function _resolveMatrixCatalogs() {
+  const win = typeof window !== 'undefined' ? window : {};
+  return {
+    logisticsCategories: (typeof LOGISTICS_CATEGORIES !== 'undefined' ? LOGISTICS_CATEGORIES : win.LOGISTICS_CATEGORIES) || _matrixData.LOGISTICS_CATEGORIES || [],
+    tombSystems: (typeof TOMB_WORLD_SYSTEMS !== 'undefined' ? TOMB_WORLD_SYSTEMS : win.TOMB_WORLD_SYSTEMS) || _matrixData.TOMB_WORLD_SYSTEMS || [],
+    necronVault: (typeof NECRON_DYNASTIC_VAULT !== 'undefined' ? NECRON_DYNASTIC_VAULT : win.NECRON_DYNASTIC_VAULT) || _matrixData.NECRON_DYNASTIC_VAULT || [],
+    votannAssets: (typeof VOTANN_KINDRED_ASSETS !== 'undefined' ? VOTANN_KINDRED_ASSETS : win.VOTANN_KINDRED_ASSETS) || _matrixData.VOTANN_KINDRED_ASSETS || [],
+    votannVault: (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined' ? VOTANN_VAULT_PROTOCOLS : win.VOTANN_VAULT_PROTOCOLS) || _matrixData.VOTANN_VAULT_PROTOCOLS || []
+  };
+}
+
+// =============================================================================
+// TAB 4: NECRONS TOMB WORLD AWAKENING MATRIX & DYNASTIC VAULT ADAPTERS
+// =============================================================================
 function adjTombField(field, delta) {
   crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
   const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
