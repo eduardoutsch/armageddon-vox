@@ -110,18 +110,16 @@ function adjScore(field, delta) {
  */
 function selectAllianceTree(alliance, persist = true) {
   crusadeState.selectedTree = alliance;
-  const btnGate = document.getElementById('treeBtnGate');
-  const btnDes = document.getElementById('treeBtnDes');
-  const btnMar = document.getElementById('treeBtnMar');
-  if (btnGate) btnGate.classList.toggle('active', alliance === 'Gatebreakers');
-  if (btnDes) btnDes.classList.toggle('active', alliance === 'Desecrators');
-  if (btnMar) btnMar.classList.toggle('active', alliance === 'Marauders');
+  Object.entries(_forgeCore.ALLIANCE_TREE_BUTTON_MAP).forEach(([treeKey, btnId]) => {
+    const btn = _getForgeEl(btnId);
+    if (btn) btn.classList.toggle('active', treeKey === alliance);
+  });
 
-  const trees = (typeof ALLIANCE_TREES !== 'undefined') ? ALLIANCE_TREES : (typeof window !== 'undefined' ? window.ALLIANCE_TREES : {});
+  const trees = _resolveForgeCatalogs().allianceTrees;
   const phases = trees[alliance] || trees.Gatebreakers || [];
-  const box = document.getElementById('allianceTreeBox');
+  const box = _getForgeEl('allianceTreeBox');
   if (box) {
-    box.innerHTML = phases.map(p => `
+    box.innerHTML = phases.map((p) => `
       <div class="card" style="background:#0b0d13; margin-bottom:10px;">
         <div style="font-weight:800; color:var(--gold); font-size:0.95rem; margin-bottom:4px;">${p.phase}</div>
         <div style="font-size:0.86rem; color:#fff; margin-bottom:8px;"><strong>Narrative Goal:</strong> ${p.goal}</div>
@@ -134,31 +132,19 @@ function selectAllianceTree(alliance, persist = true) {
   if (persist && typeof saveCrusadeState === 'function') saveCrusadeState();
 }
 
-// --- PURE RANDOM ROLLERS WITH CUSTOM WEB AUDIO SFX ---
+// =============================================================================
+// QUARTERMASTER FORGE ROLLER ADAPTERS (SHELL -> PURE CORE -> UI)
+// =============================================================================
 function rollRandomBattleTrait() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const poolKey = (typeof document !== 'undefined' ? document.getElementById('forgeSourcePool')?.value : '') || 'Armageddon';
-  const uType = (typeof document !== 'undefined' ? document.getElementById('traitUnitType')?.value : '') || 'Infantry';
-  const traits = (typeof BATTLE_TRAIT_TABLES !== 'undefined') ? BATTLE_TRAIT_TABLES : (typeof window !== 'undefined' ? window.BATTLE_TRAIT_TABLES : {});
-  const amTraits = (typeof ASTRA_MILITARUM_TRAIT_TABLES !== 'undefined') ? ASTRA_MILITARUM_TRAIT_TABLES : (typeof window !== 'undefined' ? window.ASTRA_MILITARUM_TRAIT_TABLES : {});
-  const necTraits = (typeof NECRONS_TRAIT_TABLES !== 'undefined') ? NECRONS_TRAIT_TABLES : (typeof window !== 'undefined' ? window.NECRONS_TRAIT_TABLES : {});
-  const votTraits = (typeof VOTANN_TRAIT_TABLES !== 'undefined') ? VOTANN_TRAIT_TABLES : (typeof window !== 'undefined' ? window.VOTANN_TRAIT_TABLES : {});
+  _getVoxAudio()?.playDiceClatter?.();
+  const poolKey = _getForgeEl('forgeSourcePool')?.value || 'Armageddon';
+  const uType = _getForgeEl('traitUnitType')?.value || 'Infantry';
+  const pick = _forgeCore.rollBattleTraitPick(poolKey, uType, _resolveForgeCatalogs());
+  lastRolledItem.trait = { category: pick.category, roll: pick.roll, name: pick.name, desc: pick.desc };
 
-  const activePool = poolKey === 'AlphaCodex'
-    ? amTraits
-    : (poolKey === 'BetaCodex' ? necTraits : (poolKey === 'GammaCodex' ? votTraits : traits));
-  const table = activePool[uType] || activePool.Infantry || traits.Infantry || [];
-  const pick = table[Math.floor(Math.random() * table.length)] || { d6: 1, name: 'Default Trait', desc: 'No trait found' };
-  lastRolledItem.trait = {
-    category: `Battle Trait (${uType})`,
-    roll: `D6 = ${pick.d6}`,
-    name: pick.name,
-    desc: pick.desc
-  };
-
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
-    const box = typeof document !== 'undefined' ? document.getElementById('traitResultBox') : null;
+  _scheduleForgeReveal(() => {
+    _getVoxAudio()?.playForgeAnvil?.();
+    const box = _getForgeEl('traitResultBox');
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge">D6: ${pick.d6}</span> <strong style="color:var(--gold);">${pick.name}</strong></div>
@@ -169,22 +155,9 @@ function rollRandomBattleTrait() {
 }
 
 function rollRandomWeaponMod() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const mods = (typeof WEAPON_MOD_TABLE !== 'undefined') ? WEAPON_MOD_TABLE : (typeof window !== 'undefined' ? window.WEAPON_MOD_TABLE : []);
-  const idx1 = Math.floor(Math.random() * mods.length);
-  let idx2 = Math.floor(Math.random() * mods.length);
-  while (idx2 === idx1 && mods.length > 1) {
-    idx2 = Math.floor(Math.random() * mods.length);
-  }
-  const m1 = mods[idx1] || { d6: 1, name: 'Brutal', desc: '+1 Strength' };
-  const m2 = mods[idx2] || { d6: 2, name: 'Master-Worked', desc: '+1 Damage' };
-
-  lastRolledItem.weapon = {
-    category: `Weapon Modification (2x D6)`,
-    roll: `D6 = ${m1.d6} & ${m2.d6}`,
-    name: `${m1.name} + ${m2.name}`,
-    desc: `[${m1.name}: ${m1.desc}] + [${m2.name}: ${m2.desc}]`
-  };
+  _getVoxAudio()?.playDiceClatter?.();
+  const result = _forgeCore.rollWeaponModPair(_resolveForgeCatalogs().weaponMods);
+  lastRolledItem.weapon = { category: result.category, roll: result.roll, name: result.name, desc: result.desc };
 
   setTimeout(() => {
     if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
