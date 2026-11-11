@@ -190,17 +190,14 @@ var activeRosterTab = 'nemesis';
 
   function getFactionPoolFromStore(facName) {
     const root = getStoredPoolRoot();
-    if (root.byFaction && root.byFaction[facName]) {
-      return root.byFaction[facName];
-    }
-    // Legacy flat-object support (only if byFaction hasn't been created yet)
-    if (!root.byFaction && (root.b34 || root.b56 || root.b79 || root.b10 || root.b13)) {
+    if (facName && root.byFaction && root.byFaction[facName]) {
+      const fp = root.byFaction[facName];
       return {
-        b34: root.b34 || '',
-        b56: root.b56 || '',
-        b79: root.b79 || '',
-        b10: root.b10 || '',
-        b13: root.b13 || ''
+        b34: fp.b34 || '',
+        b56: fp.b56 || '',
+        b79: fp.b79 || '',
+        b10: fp.b10 || '',
+        b13: fp.b13 || ''
       };
     }
     return { b34: '', b56: '', b79: '', b10: '', b13: '' };
@@ -240,13 +237,10 @@ var activeRosterTab = 'nemesis';
     };
 
     const root = getStoredPoolRoot();
-    const byFaction = root.byFaction || {};
+    const byFaction = { ...(root.byFaction || {}) };
     byFaction[facName] = currentInputs;
 
-    const poolObj = {
-      ...currentInputs,
-      byFaction
-    };
+    const poolObj = { byFaction };
 
     try {
       if (typeof localStorage !== 'undefined') {
@@ -330,50 +324,18 @@ var activeRosterTab = 'nemesis';
 
       if (data.horde_pool && typeof data.horde_pool === 'object' && Object.keys(data.horde_pool).length > 0) {
         if (typeof localStorage !== 'undefined') {
-          if (data.horde_pool.byFaction) {
-            const localRoot = getStoredPoolRoot();
-            const mergedByFaction = {
-              ...(localRoot.byFaction || {}),
-              ...data.horde_pool.byFaction
-            };
-            const mergedPool = {
-              ...localRoot,
-              ...data.horde_pool,
-              byFaction: mergedByFaction
-            };
-            localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(mergedPool));
-          } else {
-            localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify(data.horde_pool));
-          }
+          const localRoot = getStoredPoolRoot();
+          const mergedByFaction = {
+            ...(localRoot.byFaction || {}),
+            ...(data.horde_pool.byFaction || {})
+          };
+          localStorage.setItem(CUSTOM_POOL_STORAGE_KEY, JSON.stringify({ byFaction: mergedByFaction }));
         }
         loadFactionInputs(facName);
       }
 
       if (isManual && typeof document !== 'undefined') {
-        const currentP = getFactionPoolFromStore(facName);
-        const hasAnyValue = Boolean(
-          (currentP.b34 && currentP.b34.trim()) ||
-          (currentP.b56 && currentP.b56.trim()) ||
-          (currentP.b79 && currentP.b79.trim()) ||
-          (currentP.b10 && currentP.b10.trim()) ||
-          (currentP.b13 && currentP.b13.trim())
-        );
-        if (!hasAnyValue) {
-          const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined') ? HORDE_FACTION_SPAWN_TABLES : ROSTER_SPAWN_TABLES;
-          const ref = tables[facName] || {};
-          const fallbackInputs = {
-            b34: Array.isArray(ref.b34) ? ref.b34.join(', ') : '',
-            b56: Array.isArray(ref.b56) ? ref.b56.join(', ') : '',
-            b79: Array.isArray(ref.b79) ? ref.b79.join(', ') : '',
-            b10: Array.isArray(ref.b10) ? ref.b10.join(', ') : '',
-            b13: Array.isArray(ref.b13) ? ref.b13.join(', ') : ''
-          };
-          if (document.getElementById('rosterPool34')) document.getElementById('rosterPool34').value = fallbackInputs.b34;
-          if (document.getElementById('rosterPool56')) document.getElementById('rosterPool56').value = fallbackInputs.b56;
-          if (document.getElementById('rosterPool79')) document.getElementById('rosterPool79').value = fallbackInputs.b79;
-          if (document.getElementById('rosterPool10')) document.getElementById('rosterPool10').value = fallbackInputs.b10;
-          if (document.getElementById('rosterPool13')) document.getElementById('rosterPool13').value = fallbackInputs.b13;
-        }
+        loadFactionInputs(facName);
         const notice = document.getElementById('shelfSaveNotice');
         if (notice) {
           notice.textContent = '✓ Pulled Latest Pool & Nemesis Status from Supabase Cloud!';
@@ -418,12 +380,9 @@ var activeRosterTab = 'nemesis';
       : null;
 
     const customP = getFactionPoolFromStore(facName);
-    const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined') ? HORDE_FACTION_SPAWN_TABLES : ROSTER_SPAWN_TABLES;
-    const refTable = tables[facName] || {};
 
-    const fmtRow = (customStr, refArr) => {
+    const fmtRow = (customStr) => {
       if (customStr && customStr.trim()) return customStr;
-      if (Array.isArray(refArr) && refArr.length > 0) return refArr.join(' • ');
       return `<span style="color:var(--red); font-style:italic;">⚠️ Horde Pool Empty for ${facName} — Configure above &amp; Sync to Cloud!</span>`;
     };
 
