@@ -162,3 +162,76 @@
     return daemonOnline;
   }
 
+  /**
+   * Synchronizes Room Code, Round, Faction, CP/SP, and active Misery cards from Mode 1 Spawner `localStorage`.
+   */
+  async function syncFromSpawnerStorage() {
+    if (typeof localStorage === 'undefined') return false;
+    try {
+      const raw = localStorage.getItem('foa_horde_session_v1');
+      if (raw) {
+        const s = JSON.parse(raw);
+        const patch = {
+          roomCode: s.seed || clientState.roomCode,
+          battleRound: Math.max(1, Number(s.battleRound) || 1),
+          factionName: s.activeHordeFactionName || clientState.factionName,
+          playerCp: s.cp !== undefined ? Number(s.cp) : clientState.playerCp,
+          playerSp: s.sp !== undefined ? Number(s.sp) : clientState.playerSp,
+          activeMiseryIds: Array.isArray(s.activeMiseries) ? s.activeMiseries.map(m => m.id) : [],
+          zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : []
+        };
+        Object.assign(clientState, patch);
+        try {
+          const res = await daemonRequest('/session/sync', 'POST', patch);
+          daemonOnline = true;
+          clientState = res.state;
+        } catch (err) {
+          daemonOnline = false;
+        }
+      }
+    } catch (e) {}
+    renderTacticaConsole();
+    return daemonOnline;
+  }
+
+  async function setConsolePhaseAndTrigger(phase, reactionTrigger = null) {
+    const rndEl = document.getElementById('tacticaRoundSelect');
+    if (rndEl && rndEl.value) clientState.battleRound = Number(rndEl.value) || clientState.battleRound;
+    clientState.phase = phase;
+    const summary = `Entered ${phase} (Round ${clientState.battleRound}).`;
+
+    try {
+      const res = await daemonRequest('/chronicle/append', 'POST', {
+        battleRound: clientState.battleRound,
+        phase,
+        type: 'PHASE',
+        summary,
+        reactionTrigger
+      });
+      daemonOnline = true;
+      clientState.pendingReactionWindow = res.pendingReactionWindow;
+      localChronicle.push(res.entry);
+    } catch (e) {
+      localChronicle.push(formatChronicleEntry({ battleRound: clientState.battleRound, phase, type: 'PHASE', summary }, clientState));
+      if (reactionTrigger && typeof detectPlayerReactionWindow === 'function') {
+        const win = detectPlayerReactionWindow(reactionTrigger, clientState);
+        clientState.pendingReactionWindow = win.open ? win : null;
+      }
+    }
+    renderTacticaConsole();
+  }
+
+  async function resolveConsoleReaction(choice, cpCost = 0) {
+    const summary = choice === 'PASS' ? 'Player passed reaction window.' : `Player activated ${choice} (-${cpCost} CP).`;
+    try {
+      const res = await daemonRequest('/reaction/resolve', 'POST', { choice, cpCost, summary });
+      clientState = res.state;
+      localChronicle.push(res.entry);
+    } catch (e) {
+      clientState.playerCp = Math.max(0, (Number(clientState.playerCp) || 0) - cpCost);
+      clientState.pendingReactionWindow = null;
+      localChronicle.push(formatChronicleEntry({ type: 'REACTION', summary }, clientState));
+    }
+    renderTacticaConsole();
+  }
+
