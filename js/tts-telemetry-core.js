@@ -169,3 +169,66 @@
     const scoutMatch = clean.match(/Scouts\s+(\d+)"/i);
     if (scoutMatch) scoutsInches = parseInt(scoutMatch[1], 10);
 
+    for (const line of lines) {
+      const kwLine = line.match(/^(?:Faction\s+)?Keywords:\s*(.+)$/i);
+      if (kwLine) {
+        kwLine[1].split(/[,|]/).map(k => k.trim().toUpperCase()).filter(Boolean).forEach(k => keywords.add(k));
+        continue;
+      }
+      const wp = parseWeaponLine(line);
+      if (wp) weapons.push(wp);
+    }
+
+    return {
+      move,
+      toughness,
+      save,
+      invuln,
+      fnp,
+      woundsPerModel,
+      leadership,
+      oc,
+      scoutsInches,
+      keywords: Array.from(keywords),
+      weapons
+    };
+  }
+
+  /**
+   * Infers 2D horizontal base radius in inches from explicit mm or TTS normalized bounds.
+   */
+  function inferBaseRadiusInches(obj = {}) {
+    if (obj.baseDiameterMm) {
+      return (Number(obj.baseDiameterMm) / 25.4) * 0.5;
+    }
+    if (obj.bounds && obj.bounds.x && obj.bounds.z) {
+      const minSpan = Math.min(Number(obj.bounds.x) || 1.26, Number(obj.bounds.z) || 1.26);
+      return Math.max(0.45, Math.min(3.5, minSpan * 0.5));
+    }
+    return 0.63; // Default 32mm base radius in inches
+  }
+
+  /**
+   * Measures 2D tabletop edge-to-edge distance in inches (1 TTS unit = 1 inch on XZ plane).
+   */
+  function measureEdgeToEdgeInches(posA = {}, radiusA = 0, posB = {}, radiusB = 0) {
+    const dx = (Number(posA.x) || 0) - (Number(posB.x) || 0);
+    const dz = (Number(posA.z) || 0) - (Number(posB.z) || 0);
+    const centerDist = Math.hypot(dx, dz);
+    return Number(Math.max(0, centerDist - radiusA - radiusB).toFixed(2));
+  }
+
+  function isPointInZones(pos, zones = []) {
+    if (!pos || !Array.isArray(zones)) return false;
+    const x = Number(pos.x) || 0;
+    const z = Number(pos.z) || 0;
+    return zones.some(zn => x >= zn.minX && x <= zn.maxX && z >= zn.minZ && z <= zn.maxZ);
+  }
+
+  function inferSide(obj) {
+    const tags = Array.isArray(obj.tags) ? obj.tags.map(t => String(t).toUpperCase()) : [];
+    if (tags.includes('PLAYER') || String(obj.side || '').toUpperCase() === 'PLAYER') return 'PLAYER';
+    if (tags.includes('HORDE') || String(obj.side || '').toUpperCase() === 'HORDE') return 'HORDE';
+    return 'HORDE';
+  }
+
