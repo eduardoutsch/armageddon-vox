@@ -613,3 +613,64 @@
     return moves;
   }
 
+  function initTacticaPage() {
+    syncFromSpawnerStorage().then(() => refreshDaemonState());
+  }
+
+  if (typeof window !== 'undefined') {
+    Object.assign(window, {
+      getTacticaClientState: () => clientState,
+      getTacticaChronicle: () => localChronicle,
+      syncFromSpawnerStorage,
+      refreshDaemonState,
+      setConsolePhaseAndTrigger,
+      resolveConsoleReaction,
+      queueConsoleAutoDefender,
+      submitSettledMatPips,
+      appendConsoleNote,
+      compileAndPreviewMatchReport,
+      sendCompiledReportToVox,
+      requestTtsBoardScan,
+      selectTelemetryUnitForDefense,
+      triggerAutopilotSpawnWaves,
+      triggerAutopilotMovement,
+      revertAutopilotSquadMove,
+      triggerAutopilotShooting,
+      fireAutopilotWeaponOnMat,
+      triggerAutopilotCharges,
+      triggerAutopilotConsolidate,
+      initTacticaPage
+    });
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('DOMContentLoaded', initTacticaPage);
+      window.addEventListener('vox:page-swapped', () => {
+        if (typeof document !== 'undefined' && document.getElementById('tacticaChronicleBox')) initTacticaPage();
+      });
+    }
+  }
+
+  return {
+    getTacticaClientState: () => clientState,
+    getTacticaChronicle: () => localChronicle,
+    refreshDaemonState,
+    syncFromSpawnerStorage,
+    setConsolePhaseAndTrigger,
+    resolveConsoleReaction,
+    queueConsoleAutoDefender,
+    submitSettledMatPips,
+    appendConsoleNote,
+    compileAndPreviewMatchReport,
+    sendCompiledReportToVox,
+    requestTtsBoardScan,
+    selectTelemetryUnitForDefense,
+    triggerAutopilotSpawnWaves,
+    triggerAutopilotMovement,
+    revertAutopilotSquadMove,
+    triggerAutopilotShooting,
+    fireAutopilotWeaponOnMat,
+    triggerAutopilotCharges,
+    triggerAutopilotConsolidate,
+    initTacticaPage
+  };
+});
+
