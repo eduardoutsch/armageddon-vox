@@ -225,44 +225,144 @@
     return zones.some(zn => x >= zn.minX && x <= zn.maxX && z >= zn.minZ && z <= zn.maxZ);
   }
 
-  function inferSide(obj) {
+  /**
+   * Declarative prop/terrain name blacklist rejecting LCT cameras, Objective Secured chips,
+   * ruins, clocks, and table helpers unless explicitly tagged `PLAYER` or `HORDE`.
+   */
+  const PROP_NAME_BLACKLIST = /\b(dice\s*cam(?:era)?|camera|objective\s+secured|tower|ruin|wall|container|crate|barricade|statue|tree|woods|crater|clock|scoreboard|mat|table|zone|helper|ruler)\b/i;
+
+  /**
+   * Verifies that an untagged TTS object carries genuine Yellowscribe/ForceOrg datasheet text
+   * (`M/T/Sv/W`, `Keywords:`, weapon table rows, or `current/max` wound counters) so locked terrain
+   * and decorative table props never pollute tactical telemetry.
+   *
+   * @param {string} [description=''] - TTS object description.
+   * @param {string} [gmNotes=''] - TTS object GMNotes.
+   * @param {string} [cleanName=''] - Markup-stripped object name.
+   * @returns {boolean} True when the object matches a real 40k datasheet signature.
+   */
+  function hasDatasheetSignature(description = '', gmNotes = '', cleanName = '') {
+    if (/^\(?(\d+)\s*\/\s*(\d+)\)?\s+.+|.+\s+\(?(\d+)\s*\/\s*(\d+)\)?$/.test(cleanName)) return true;
+    const combined = stripTtsMarkup(`${description || ''}\n${gmNotes || ''}`);
+    if (!combined) return false;
+    return (
+      /\bM:?\s*\d+"?[\s|]+T:?\s*\d+/i.test(combined) ||
+      /\bM\s+T\s+Sv\s+W\s+Ld\s+OC\b/i.test(combined) ||
+      /\b(?:Faction\s+)?Keywords:\s*\S+/i.test(combined) ||
+      /\|\s*(?:Melee|\d+")\s*\|/i.test(combined)
+    );
+  }
+
+  /**
+   * Declarative lookup mapping Mode 1 Horde faction names to Yellowscribe/ForceOrg faction keyword tokens
+   * so pre-deployed untagged armies on the LCT battlemat auto-classify as `PLAYER` vs `HORDE`.
+   */
+  const HORDE_FACTION_ALIASES = {
+    'Space Marines': ['ADEPTUS ASTARTES'],
+    'Imperial Agents': ['AGENTS OF THE IMPERIUM', 'IMPERIAL AGENTS'],
+    'Astra Militarum': ['ASTRA MILITARUM'],
+    'Imperial Knights': ['IMPERIAL KNIGHTS', 'QUESTORIS', 'ARMIGER', 'DOMINUS'],
+    'Chaos Daemons': ['LEGIONES DAEMONICA'],
+    'Chaos Knights': ['CHAOS KNIGHTS', 'WAR DOG', 'ABHORRENT'],
+    'Chaos Space Marines': ['HERETIC ASTARTES'],
+    "Emperor's Children": ["EMPEROR'S CHILDREN", 'EMPERORS CHILDREN'],
+    'Aeldari': ['AELDARI', 'ASURYANI'],
+    "T'au Empire": ["T'AU EMPIRE", 'TAU EMPIRE'],
+    'Leagues of Votann': ['LEAGUES OF VOTANN', 'VOTANN'],
+    'Tyranids': ['TYRANIDS', 'GREAT DEVOURER']
+  };
+
+  /**
+   * Resolves a squad's allegiance (`PLAYER` vs `HORDE`) from explicit TTS tags first, then by comparing
+   * parsed Yellowscribe faction keywords against `options.hordeFactionName`.
+   *
+   * @param {object} obj - Raw TTS object descriptor.
+   * @param {string[]} [dsKeywords=[]] - Uppercase datasheet keywords from `parseDatasheetFromTts()`.
+   * @param {object} [options={}] - Normalization options (`hordeFactionName`).
+   * @returns {'PLAYER'|'HORDE'} Resolved tabletop side.
+   */
+  function inferSide(obj, dsKeywords = [], options = {}) {
     const tags = Array.isArray(obj.tags) ? obj.tags.map(t => String(t).toUpperCase()) : [];
     if (tags.includes('PLAYER') || String(obj.side || '').toUpperCase() === 'PLAYER') return 'PLAYER';
     if (tags.includes('HORDE') || String(obj.side || '').toUpperCase() === 'HORDE') return 'HORDE';
+
+    const hordeFac = String(options.hordeFactionName || '').trim();
+    if (hordeFac && dsKeywords.length > 0) {
+      const expectedTokens = [hordeFac.toUpperCase(), ...(HORDE_FACTION_ALIASES[hordeFac] || [])];
+      const matchesHorde = expectedTokens.some(tok => dsKeywords.some(kw => kw.includes(tok)));
+      return matchesHorde ? 'HORDE' : 'PLAYER';
+    }
     return 'HORDE';
   }
 
   /**
-   * Converts a raw TTS `getAllObjects()` snapshot into grouped squads, parsed datasheets & exact distances.
+   * Converts a raw TTS `getAllObjects()` snapshot into grouped squads, parsed datasheets & exact distances,
+   * filtering out off-mat reserves, `HORDE_TEMPLATE` shelf clones, and non-datasheet LCT props/terrain.
+   *
+   * @param {object} [rawScan={}] - Raw telemetry payload (`objects`, `playmatBounds`, `spawnZones`).
+   * @param {object} [options={}] - Optional `{ hordeFactionName, playmatBounds }` context.
+   * @returns {{units: object[], objectives: object[]}} Normalized tabletop telemetry.
    */
-  function normalizeTtsBoardScan(rawScan = {}) {
+  function normalizeTtsBoardScan(rawScan = {}, options = {}) {
     const rawObjects = Array.isArray(rawScan.objects) ? rawScan.objects : [];
     const spawnZones = Array.isArray(rawScan.spawnZones) ? rawScan.spawnZones : [];
+    const playmatBounds = rawScan.playmatBounds || options.playmatBounds || null;
     const objectives = [];
     const squadBuckets = new Map();
 
     for (const obj of rawObjects) {
       if (!obj || !obj.name) continue;
       const cleanName = stripTtsMarkup(obj.name);
+      if (!cleanName) continue;
       const tags = Array.isArray(obj.tags) ? obj.tags.map(t => String(t).toUpperCase()) : [];
 
-      if (tags.includes('OBJECTIVE') || /^obj(?:ective)?\b/i.test(cleanName)) {
+      if (tags.includes('HORDE_TEMPLATE')) continue;
+
+      const pos = obj.pos || { x: 0, y: 0, z: 0 };
+      if (playmatBounds) {
+        const px = Number(pos.x) || 0;
+        const pz = Number(pos.z) || 0;
+        if (
+          px < playmatBounds.minX ||
+          px > playmatBounds.maxX ||
+          pz < playmatBounds.minZ ||
+          pz > playmatBounds.maxZ
+        ) {
+          continue;
+        }
+      }
+
+      const explicitSide = String(obj.side || '').toUpperCase();
+      const hasExplicitSide =
+        tags.includes('PLAYER') ||
+        tags.includes('HORDE') ||
+        explicitSide === 'PLAYER' ||
+        explicitSide === 'HORDE';
+
+      if (!hasExplicitSide && PROP_NAME_BLACKLIST.test(cleanName)) continue;
+
+      if (tags.includes('OBJECTIVE') || /^(?:objective(?:\s+marker)?|obj)(?:\s*#?\d+)?$/i.test(cleanName)) {
         objectives.push({
           guid: obj.guid || null,
           name: cleanName,
-          pos: obj.pos || { x: 0, y: 0, z: 0 },
+          pos,
           radiusInches: inferBaseRadiusInches({ baseDiameterMm: 40, bounds: obj.bounds })
         });
         continue;
       }
 
-      const side = inferSide(obj);
+      if (!hasExplicitSide) {
+        if (obj.locked === true) continue;
+        if (!hasDatasheetSignature(obj.description, obj.gmNotes, cleanName)) continue;
+      }
+
+      const ds = parseDatasheetFromTts(obj.description, obj.gmNotes);
+      const side = inferSide(obj, ds.keywords, options);
       const parsedName = parseModelNameAndWounds(cleanName);
       const squadKey = obj.squadId || `${side}::${parsedName.baseName}`;
       const radiusInches = inferBaseRadiusInches(obj);
 
       if (!squadBuckets.has(squadKey)) {
-        const ds = parseDatasheetFromTts(obj.description, obj.gmNotes);
         squadBuckets.set(squadKey, {
           squadKey,
           guid: obj.guid || null,
@@ -293,7 +393,7 @@
       bucket.totalRemainingWounds += curW;
       bucket.models.push({
         guid: obj.guid,
-        pos: obj.pos || { x: 0, y: 0, z: 0 },
+        pos,
         radiusInches,
         currentWounds: curW
       });
@@ -354,6 +454,8 @@
     stripTtsMarkup,
     parseModelNameAndWounds,
     parseDatasheetFromTts,
+    hasDatasheetSignature,
+    inferSide,
     inferBaseRadiusInches,
     measureEdgeToEdgeInches,
     normalizeTtsBoardScan

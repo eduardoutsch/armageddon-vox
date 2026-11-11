@@ -9,6 +9,8 @@ const {
   stripTtsMarkup,
   parseModelNameAndWounds,
   parseDatasheetFromTts,
+  hasDatasheetSignature,
+  inferSide,
   inferBaseRadiusInches,
   measureEdgeToEdgeInches,
   normalizeTtsBoardScan
@@ -153,5 +155,147 @@ test('normalizeTtsBoardScan: groups squad models, detects Spawn Zones, and compu
   assert.ok(warriors.closestEnemy && warriors.closestEnemy.name === 'Leman Russ Vanquisher');
   assert.ok(warriors.closestEnemy.distanceInches > 17 && warriors.closestEnemy.distanceInches < 19);
   assert.ok(warriors.closestObjective && warriors.closestObjective.name === 'Objective 1');
+});
+
+test('hasDatasheetSignature & inferSide: reject non-datasheet props and auto-classify non-Horde factions as PLAYER', () => {
+  assert.equal(typeof hasDatasheetSignature, 'function');
+  assert.equal(typeof inferSide, 'function');
+
+  assert.equal(hasDatasheetSignature('', '', 'Blue dice camera'), false);
+  assert.equal(hasDatasheetSignature('', '', 'Tower'), false);
+  assert.equal(hasDatasheetSignature('', '', '8/10 Screamer-Killer'), true);
+  assert.equal(hasDatasheetSignature('M: 5" T: 5 Sv: 4+ W: 1 Ld: 7+ OC: 2', '', 'Hearthkyn'), true);
+  assert.equal(hasDatasheetSignature('M T Sv W Ld OC\n5" 5 4+ 1 7+ 2', '', 'Hearthkyn'), true);
+  assert.equal(hasDatasheetSignature('', 'Keywords: Infantry, Leagues of Votann', 'Hearthkyn'), true);
+  assert.equal(hasDatasheetSignature('Autoch-pattern bolter | 24" | 2 | 4+ | 4 | 0 | 1', '', 'Hearthkyn'), true);
+
+  assert.equal(
+    inferSide({ tags: [] }, ['INFANTRY', 'LEAGUES OF VOTANN'], { hordeFactionName: 'Imperial Knights' }),
+    'PLAYER'
+  );
+  assert.equal(
+    inferSide({ tags: [] }, ['VEHICLE', 'WALKER', 'IMPERIUM', 'ARMIGER'], { hordeFactionName: 'Imperial Knights' }),
+    'HORDE'
+  );
+  assert.equal(
+    inferSide({ tags: ['HORDE'] }, ['INFANTRY', 'LEAGUES OF VOTANN'], { hordeFactionName: 'Imperial Knights' }),
+    'HORDE'
+  );
+  assert.equal(
+    inferSide({ tags: ['PLAYER'] }, ['VEHICLE', 'ARMIGER'], { hordeFactionName: 'Imperial Knights' }),
+    'PLAYER'
+  );
+  assert.equal(inferSide({ tags: [] }, [], {}), 'HORDE');
+});
+
+test('normalizeTtsBoardScan: rejects LCT cameras, locked Tower, Objective Secured chips, and off-board reserves while auto-detecting deployed PLAYER army', () => {
+  const rawScan = {
+    playmatBounds: { minX: -22.5, maxX: 22.5, minZ: -30.5, maxZ: 30.5 },
+    objects: [
+      {
+        guid: 'cam-blue',
+        name: 'Blue dice camera',
+        locked: true,
+        pos: { x: 10, y: 2, z: 12 },
+        bounds: { x: 1.5, y: 1.5, z: 1.5 },
+        description: ''
+      },
+      {
+        guid: 'cam-red',
+        name: 'Red dice cam',
+        locked: false,
+        pos: { x: -10, y: 2, z: -12 },
+        bounds: { x: 1.5, y: 1.5, z: 1.5 },
+        description: ''
+      },
+      {
+        guid: 'ter-tower',
+        name: 'Tower',
+        locked: true,
+        pos: { x: 4, y: 3, z: -2 },
+        bounds: { x: 5.0, y: 6.0, z: 5.0 },
+        description: 'M: 0" T: 12'
+      },
+      {
+        guid: 'sec-chip',
+        name: 'Objective Secured Red',
+        tags: ['OBJECTIVE'],
+        locked: false,
+        pos: { x: 0, y: 1, z: 2 },
+        bounds: { x: 1.5, y: 0.2, z: 1.5 },
+        description: ''
+      },
+      {
+        guid: 'untagged-prop',
+        name: 'Decorative Munitorum Barrel',
+        locked: false,
+        pos: { x: 2, y: 1, z: 2 },
+        bounds: { x: 1.0, y: 1.2, z: 1.0 },
+        description: 'Just a prop'
+      },
+      {
+        guid: 'tmpl-1',
+        name: '12/12 Armiger Helverin',
+        tags: ['HORDE_TEMPLATE'],
+        locked: false,
+        pos: { x: 0, y: 1, z: 10 },
+        bounds: { x: 3.9, y: 4.5, z: 3.9 },
+        description: 'M: 12" T: 10 Sv: 3+ W: 12 Ld: 7+ OC: 8\nKeywords: Vehicle, Walker, Armiger'
+      },
+      {
+        guid: 'offboard-gork',
+        name: '18/18 Gorkanaut',
+        tags: ['HORDE'],
+        locked: false,
+        pos: { x: -45, y: 1, z: 60 },
+        bounds: { x: 5.0, y: 6.0, z: 5.0 },
+        description: 'M: 8" T: 12 Sv: 3+ W: 18 Ld: 7+ OC: 8\nKeywords: Vehicle, Titanic, Orks'
+      },
+      {
+        guid: 'real-obj',
+        name: 'Objective 2',
+        locked: true,
+        pos: { x: 0, y: 1, z: 0 },
+        bounds: { x: 1.57, y: 0.1, z: 1.57 }
+      },
+      {
+        guid: 'vot-1',
+        name: 'Hearthkyn Warriors',
+        locked: false,
+        pos: { x: 0, y: 1, z: -10 },
+        bounds: { x: 1.1, y: 1.4, z: 1.1 },
+        description: 'M: 5" T: 5 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry, Battleline, Leagues of Votann'
+      },
+      {
+        guid: 'kni-1',
+        name: '12/12 Armiger Warglaive',
+        locked: false,
+        pos: { x: 0, y: 1, z: 14 },
+        bounds: { x: 3.9, y: 4.5, z: 3.9 },
+        description: 'M: 12" T: 10 Sv: 3+ W: 12 Ld: 7+ OC: 8\nKeywords: Vehicle, Walker, Imperium, Armiger'
+      }
+    ]
+  };
+
+  const res = normalizeTtsBoardScan(rawScan, { hordeFactionName: 'Imperial Knights' });
+  assert.equal(res.objectives.length, 1, 'Only Objective 2 must remain; Objective Secured Red must be rejected');
+  assert.equal(res.objectives[0].name, 'Objective 2');
+
+  const unitNames = res.units.map(u => u.name);
+  assert.equal(unitNames.includes('Blue dice camera'), false);
+  assert.equal(unitNames.includes('Red dice cam'), false);
+  assert.equal(unitNames.includes('Tower'), false);
+  assert.equal(unitNames.includes('Objective Secured Red'), false);
+  assert.equal(unitNames.includes('Decorative Munitorum Barrel'), false);
+  assert.equal(unitNames.includes('Armiger Helverin'), false);
+  assert.equal(unitNames.includes('Gorkanaut'), false, 'Off-board Gorkanaut at (-45, 60) must be rejected');
+
+  assert.equal(res.units.length, 2);
+  const votann = res.units.find(u => u.name === 'Hearthkyn Warriors');
+  const warglaive = res.units.find(u => u.name === 'Armiger Warglaive');
+  assert.ok(votann, 'Untagged Hearthkyn Warriors with Yellowscribe keywords must be kept');
+  assert.equal(votann.side, 'PLAYER', 'Hearthkyn Warriors must auto-resolve to PLAYER against Imperial Knights');
+  assert.ok(warglaive, 'Untagged Armiger Warglaive on playmat must be kept');
+  assert.equal(warglaive.side, 'HORDE', 'Armiger Warglaive must match Imperial Knights alias and resolve to HORDE');
 });
 
