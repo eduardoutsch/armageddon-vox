@@ -117,3 +117,55 @@
     return false;
   }
 
+  /**
+   * 1. Converts synced Mode 1 `zoneSpawns` into deterministic `SPAWN_WAVE` TTS commands
+   * so off-board `HORDE_TEMPLATE` miniatures clone directly into LCT Spawn Zones.
+   *
+   * @param {Array<object>} [zoneSpawns=[]] - Active round zone spawns from Mode 1 Spawner.
+   * @param {Array<object>} [spawnZoneAnchors=[]] - Optional custom `{ zone, x, z, facingY }` overrides.
+   * @returns {{commands: Array<object>, summary: string}}
+   */
+  function planWaveSpawnCommands(zoneSpawns = [], spawnZoneAnchors = []) {
+    if (!Array.isArray(zoneSpawns) || zoneSpawns.length === 0) {
+      return { commands: [], summary: 'No active zone spawns to deploy.' };
+    }
+
+    const totalZones = zoneSpawns.length;
+    const commands = [];
+
+    zoneSpawns.forEach((z, idx) => {
+      if (!z || z.bracketKey === 'NONE') return;
+      let parsedUnits = Array.isArray(z.parsedWave) && z.parsedWave.length > 0 ? z.parsedWave : [];
+      if (parsedUnits.length === 0 && Array.isArray(z.units) && typeof spawnerCore.parseSpawnWaveSpec === 'function') {
+        parsedUnits = z.units.flatMap(u => spawnerCore.parseSpawnWaveSpec(u, () => 0));
+      }
+      if (parsedUnits.length === 0) return;
+
+      const zoneNum = Number(z.zone) || (idx + 1);
+      const anchor = spawnZoneAnchors.find(a => Number(a.zone) === zoneNum) || {
+        zone: zoneNum,
+        x: totalZones === 1 ? 0 : Number((-20 + (40 * idx) / Math.max(1, totalZones - 1)).toFixed(1)),
+        z: 19.5,
+        facingY: 180
+      };
+
+      commands.push({
+        action: 'SPAWN_WAVE',
+        zone: zoneNum,
+        targetX: anchor.x,
+        targetZ: anchor.z,
+        facingY: anchor.facingY ?? 180,
+        units: parsedUnits.map(u => ({
+          templateName: u.templateName,
+          count: Math.max(1, Number(u.count) || 1),
+          embarked: u.embarked || null
+        }))
+      });
+    });
+
+    return {
+      commands,
+      summary: `Queued ${commands.length} Spawn Zone wave drop(s) for LCT Staging Shelf.`
+    };
+  }
+
