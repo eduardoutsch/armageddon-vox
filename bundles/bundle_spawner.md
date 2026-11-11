@@ -507,7 +507,8 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
           </div>
         </div>
 
-        <div class="hud-actions" style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+        <div class="hud-actions" style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; flex-shrink:1; min-width:0; max-width:100%;">
+          <a href="tactica.html" class="btn-ghost btn-sm" style="text-decoration:none;">🖥️ Open In-Match LCT Tactical Console</a>
           <button type="button" class="btn-ghost btn-sm" onclick="exportHordeStatsToCrusade()"
             title="Snapshot Horde Battle stats and copy telemetry for your Crusade Battle Report">📋 Export to Crusade</button>
           <button class="btn-ghost btn-sm" onclick="resetMatchToSetup()"
@@ -890,6 +891,7 @@ Complete source code for the Mode 1 Horde Command tactical terminal and automate
   <script src="../js/rng.js"></script>
   <script src="../js/spawner.js"></script>
   <script src="../js/horde-battle-stats.js"></script>
+  <script src="../js/horde-combat-modifiers.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/vox-audio.js"></script>
 
