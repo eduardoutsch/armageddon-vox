@@ -420,3 +420,62 @@ var CrusadeCore = (function () {
     return { changed: true, tombSystems: updated, allocated: currentTotal + delta, maxTotal };
   }
 
+  function applyMasterSystemDrain(tombSystems, currentCycles = 0, rng = Math.random) {
+    const updated = { command: 0, reanimation: 0, translocation: 0, ...(tombSystems || {}) };
+    const drainTarget = _rollDie(3, rng);
+    let remaining = drainTarget;
+    for (const key of TOMB_DRAIN_ORDER) {
+      while (remaining > 0 && (updated[key] || 0) > 0) {
+        updated[key] -= 1;
+        remaining -= 1;
+      }
+    }
+    return {
+      drainTarget,
+      drained: drainTarget - remaining,
+      tombSystems: updated,
+      tombAwakeningCycles: (Number(currentCycles) || 0) + 1
+    };
+  }
+
+  function deriveTombMatrixViewModel(tombSystems, powerReservesAllocated, systemsCatalog = []) {
+    const baseSys = tombSystems || { command: 1, reanimation: 1, translocation: 0 };
+    const maxTotal = powerReservesAllocated ? 4 : 3;
+    const allocated = Object.values(baseSys).reduce((a, b) => a + b, 0);
+    const masterUnlocked = allocated >= 3;
+
+    const masterStatus = masterUnlocked
+      ? { label: `🟢 MASTER ONLINE (${allocated} / ${maxTotal} PTS)`, color: 'var(--green)' }
+      : (allocated > 0
+        ? { label: `🟡 AWAKENING (${allocated} / ${maxTotal} PTS)`, color: 'var(--gold)' }
+        : { label: `🔴 DORMANT STASIS (0 / ${maxTotal} PTS)`, color: 'var(--red)' });
+
+    const cards = (systemsCatalog || []).map((sys) => {
+      const pts = baseSys[sys.key] || 0;
+      const sysMasterActive = masterUnlocked && pts >= 1;
+      return {
+        key: sys.key,
+        title: sys.title,
+        agenda: sys.agenda,
+        master: sys.master,
+        pts,
+        stateClass: (pts >= 2 || sysMasterActive) ? 'state-surplus' : (pts === 0 ? 'state-deficiency' : ''),
+        badgeText: pts === 3 ? '🟢 MAX TIER 3 (3 PTS)' : (pts > 0 ? `⚡ TIER ${pts} ONLINE (${pts} PT${pts === 1 ? '' : 'S'})` : '🔴 DORMANT (0 PTS)'),
+        badgeColor: pts === 3 ? 'var(--green)' : (pts > 0 ? 'var(--blue)' : 'var(--red)'),
+        tiers: (sys.tiers || []).map((text, idx) => ({ text, unlocked: pts >= idx + 1 })),
+        masterColor: sysMasterActive ? '#d8b4fe' : 'var(--muted)',
+        masterPrefix: sysMasterActive ? '🟢 UNLOCKED — ' : '🔒 REQUIRES 3/3 MATRIX + 1 PT HERE — '
+      };
+    });
+
+    return {
+      allocated,
+      maxTotal,
+      allocatedLabel: `${allocated} / ${maxTotal}`,
+      masterUnlocked,
+      masterStatusLabel: masterStatus.label,
+      masterStatusColor: masterStatus.color,
+      cards
+    };
+  }
+
