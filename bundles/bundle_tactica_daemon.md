@@ -22,6 +22,7 @@ Zero-dependency local HTTP LCT TTS dice-mat queue, TACTICA_THREAD_URL Playwright
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 try {
   require('dotenv').config({ path: path.join(__dirname, '.env') });
   require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
@@ -49,6 +50,7 @@ const {
   planConsolidationMove
 } = require('./js/horde-autopilot-core.js');
 const {
+  resolveTacticalAuspexVoice,
   buildLosVerificationPrompt,
   scrubGeminiThreadArtifacts,
   isGeminiInterimThinkingText,
@@ -173,15 +175,17 @@ async function launchTacticaBrowserSession(tacticaThreadUrl, options = {}) {
       const prevCount = await page.locator('model-response').count();
 
       if (imageBase64) {
-        const tmpImg = path.join(__dirname, 'match_logs', '_los_frame.jpg');
         const cleanB64 = String(imageBase64).replace(/^data:image\/\w+;base64,/, '');
-        fs.mkdirSync(path.dirname(tmpImg), { recursive: true });
-        fs.writeFileSync(tmpImg, Buffer.from(cleanB64, 'base64'));
-        const fileInput = page.locator('input[type="file"]').first();
-        if (await fileInput.count() > 0) {
-          await fileInput.setInputFiles(tmpImg).catch(() => {});
-          await page.waitForTimeout(800);
-        }
+        await page.evaluate(async ({ b64 }) => {
+          const editor = document.querySelector('rich-textarea div.ql-editor, div[contenteditable="true"]');
+          if (!editor) return;
+          editor.focus();
+          const blob = await (await fetch(`data:image/jpeg;base64,${b64}`)).blob();
+          const dt = new DataTransfer();
+          dt.items.add(new File([blob], 'tts_los_frame.jpg', { type: 'image/jpeg' }));
+          editor.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: dt }));
+        }, { b64: cleanB64 });
+        await page.waitForTimeout(900);
       }
 
       const input = page.locator(CHAT_INPUT_SELECTOR).first();
@@ -429,6 +433,48 @@ function createTacticaDaemon(options = {}) {
         return res.end('IDLE');
       }
       return sendJson(res, 200, ttsCommandQueue.shift());
+    }
+
+    if (req.method === 'POST' && urlPath === '/audio/speak') {
+      const body = await readJsonBody(req);
+      const text = String(body.text || '').trim().slice(0, 320);
+      if (!text) return sendJson(res, 400, { ok: false, error: 'Empty text' });
+
+      const preset = resolveTacticalAuspexVoice(body.theme);
+      const cacheDir = path.join(logDir, 'audio_cache');
+      fs.mkdirSync(cacheDir, { recursive: true });
+      const hash = crypto.createHash('sha256').update(`${preset.voice}|${preset.rate}|${preset.pitch}|${text}`).digest('hex').slice(0, 24);
+      const mp3Path = path.join(cacheDir, `${hash}.mp3`);
+
+      if (fs.existsSync(mp3Path)) {
+        const b64 = fs.readFileSync(mp3Path).toString('base64');
+        return sendJson(res, 200, { ok: true, cached: true, voice: preset.voice, mimeType: 'audio/mpeg', audioBase64: b64 });
+      }
+
+      const synthFn = options.ttsSynthesizeFn || (async (t, p, destFile) => {
+        const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata(p.voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        const { audioStream } = tts.toStream(t, { rate: p.rate, pitch: p.pitch });
+        const chunks = [];
+        await new Promise((resolve, reject) => {
+          audioStream.on('data', d => chunks.push(Buffer.from(d)));
+          audioStream.on('close', resolve);
+          audioStream.on('end', resolve);
+          audioStream.on('error', reject);
+        });
+        const buf = Buffer.concat(chunks);
+        fs.writeFileSync(destFile, buf);
+        return buf;
+      });
+
+      try {
+        const audioBuf = Buffer.from(await synthFn(text, preset, mp3Path));
+        if (!fs.existsSync(mp3Path)) fs.writeFileSync(mp3Path, audioBuf);
+        return sendJson(res, 200, { ok: true, cached: false, voice: preset.voice, mimeType: 'audio/mpeg', audioBase64: audioBuf.toString('base64') });
+      } catch (err) {
+        return sendJson(res, 200, { ok: false, fallbackChimeOnly: true, error: err.message });
+      }
     }
 
     if (req.method === 'POST' && urlPath === '/session/sync') {

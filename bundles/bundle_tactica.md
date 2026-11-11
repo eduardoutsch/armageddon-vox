@@ -1,10 +1,10 @@
-# 📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (View & Controller)
+# 📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (3-Mode Progressive View & UI Tests)
 
-In-Match Tactical Console view and imperative UI controller bridging Mode 1 session storage and LCT dice-mat rolls (`pages/tactica.html`, `js/tactica.js`).
+Sticky Command Bar, 3-mode progressive panels (Horde Turn, Attack Horde, End Match), collapsed bottom drawers, and boundary UI tests (`pages/tactica.html`, `tests/ui/tactica.test.js`).
 
 ## 📑 Table of Contents
 - [pages/tactica.html](#file-pagestacticahtml)
-- [js/tactica.js](#file-jstacticajs)
+- [tests/ui/tactica.test.js](#file-testsuitacticatestjs)
 
 ---
 
@@ -20,6 +20,61 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .tactica-sticky-bar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(11, 13, 19, 0.96);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-bottom: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .tactica-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #111520;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+    .ptt-pill {
+      cursor: pointer;
+      border-color: rgba(245, 176, 65, 0.45);
+      color: var(--gold);
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+    .ptt-pill.ptt-active {
+      background: rgba(255, 71, 87, 0.22);
+      border-color: var(--red);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 71, 87, 0.45);
+    }
+    .tactica-mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .tactica-mode-btn.active {
+      border-color: var(--gold);
+      background: rgba(245, 176, 65, 0.16);
+      color: var(--gold);
+      font-weight: 800;
+    }
+    .horde-step-btn.active {
+      border-color: var(--green);
+      background: rgba(46, 204, 113, 0.16);
+      color: #fff;
+      font-weight: 700;
+    }
+  </style>
 </head>
 <body>
 
@@ -35,134 +90,189 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
   </nav>
 
   <div class="app-shell">
-    <div class="hero-banner">
-      <div id="tacticaDaemonBadge" class="status-pill" style="margin-bottom:8px;">🟡 Checking LCT Tactica Daemon...</div>
-      <h1>In-Match Tactical &amp; LCT Autopilot Console</h1>
-      <p>100% LCT TTS Map Dice Roller Orchestration • Persistent Round 1–6 Scribe • Separate from Live Vox</p>
-    </div>
+    <!-- 1. STICKY COMMAND BAR -->
+    <div class="tactica-sticky-bar">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+          <a href="spawner.html" class="btn-ghost btn-sm" style="text-decoration:none;">🧟 &larr; Mode 1 Spawner</a>
+          <span class="tactica-pill"><strong>Room:</strong> <span id="tacticaRoomLabel">HADES-1</span></span>
+          <select id="tacticaRoundSelect" style="padding:4px 8px; background:#0b0d13; font-size:0.8rem;" onchange="setConsolePhaseAndTrigger(document.getElementById('tacticaPhaseSelect').value)">
+            <option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option>
+            <option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Round 6 (Final Stand)</option>
+          </select>
+          <select id="tacticaPhaseSelect" class="hidden" onchange="setConsolePhaseAndTrigger(this.value)">
+            <option value="COMMAND_SPAWN">1. Command &amp; Wave Spawns</option>
+            <option value="HORDE_MOVEMENT">2. Horde Movement</option>
+            <option value="HORDE_SHOOTING">3. Horde Shooting</option>
+            <option value="HORDE_CHARGE">4. Horde Charges</option>
+            <option value="HORDE_FIGHT">5. Horde Fight &amp; Consolidate</option>
+            <option value="PLAYER_TURN">6. Player Turn</option>
+            <option value="ROUND_END">7. End of Round</option>
+          </select>
+          <span class="tactica-pill"><strong>Horde:</strong> <span id="tacticaFactionLabel" style="color:var(--gold);">Chaos Daemons</span></span>
+          <span class="tactica-pill">
+            <button type="button" class="btn-ghost btn-sm" style="padding:1px 6px;" onclick="adjustTacticaCp(-1)">&minus;</button>
+            <strong id="tacticaCpLabel">2 CP / 0 SP</strong>
+            <button type="button" class="btn-ghost btn-sm" style="padding:1px 6px;" onclick="adjustTacticaCp(1)">+</button>
+          </span>
+        </div>
 
-    <!-- 1. LIVE SESSION & REACTION WINDOWS -->
-    <div class="card green" style="margin-bottom:14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span id="pttStatusPill" class="tactica-pill ptt-pill" onclick="startPushToTalkMic()">🎙️ Hold [SPACE] or [V] to Talk</span>
+          <button type="button" class="btn-ghost btn-sm" onclick="toggleTtsScreenCapture()">🖥️ Share TTS <span id="overwatchScreenStatus" style="font-size:0.74rem; color:var(--muted);">📷 Off</span></button>
+          <button type="button" id="btnToggleOverwatchTts" class="btn-ghost btn-sm" onclick="toggleOverwatchVoiceOutput()">🔊 Auspex Voice: ON</button>
+          <button type="button" class="btn-green btn-sm" onclick="syncFromSpawnerStorage()">🔄 Sync</button>
+          <button type="button" class="btn-ghost btn-sm" onclick="refreshDaemonState()">📡 Poll</button>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:0.76rem; color:var(--muted);">
+        <div id="tacticaDaemonBadge">🟡 Checking LCT Tactica Daemon...</div>
         <div>
-          <strong>Room:</strong> <span id="tacticaRoomLabel">HADES-1</span> •
-          <strong>Horde:</strong> <span id="tacticaFactionLabel" style="color:var(--gold);">Chaos Daemons</span> •
-          <strong>Assets:</strong> <span id="tacticaCpLabel">2 CP / 0 SP</span> •
-          <strong>Warlord:</strong> <span id="tacticaWarlordLabel">None Designated</span> •
-          <strong>LCT Queue:</strong> <span id="tacticaQueueLabel">0 Queued</span>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <button type="button" class="btn-ghost btn-sm" onclick="refreshDaemonState()">📡 Poll LCT Daemon</button>
-          <button type="button" class="btn-green btn-sm" onclick="syncFromSpawnerStorage()">🔄 Sync Mode 1 Session</button>
+          Warlord: <strong id="tacticaWarlordLabel" style="color:var(--text);">None Designated</strong> •
+          LCT Queue: <strong id="tacticaQueueLabel" style="color:var(--text);">0 Queued</strong>
         </div>
       </div>
 
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <select id="tacticaRoundSelect" style="padding:6px 10px; background:#0b0d13;">
-          <option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option>
-          <option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Round 6 (Final Stand)</option>
-        </select>
-        <select id="tacticaPhaseSelect" style="padding:6px 10px; background:#0b0d13;" onchange="setConsolePhaseAndTrigger(this.value)">
-          <option value="COMMAND_SPAWN">1. Command &amp; Wave Spawns</option>
-          <option value="HORDE_MOVEMENT">2. Horde Movement</option>
-          <option value="HORDE_SHOOTING">3. Horde Shooting</option>
-          <option value="HORDE_CHARGE">4. Horde Charges</option>
-          <option value="HORDE_FIGHT">5. Horde Fight &amp; Consolidate</option>
-          <option value="PLAYER_TURN">6. Player Turn</option>
-          <option value="ROUND_END">7. End of Round</option>
-        </select>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">⏸️ End Horde Move (Overwatch)</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_CHARGE', 'HORDE_CHARGE_DECLARED')">⏸️ Charge Declared (Heroic)</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_FIGHT', 'AFTER_HORDE_UNIT_FOUGHT')">⏸️ Counter-Offensive</button>
-      </div>
+      <!-- Compact [ ⚡ Stratagem ] Drawer in Sticky Bar -->
+      <details id="tacticaQuickStratDrawer" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px;">
+        <summary style="cursor:pointer; font-size:0.8rem; color:var(--gold); font-weight:700;">⚡ Quick Player Stratagem (or Hold [SPACE]/[V] &amp; speak "Stratagem Void Armour on Hearthguard, 1 CP")</summary>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+          <select id="quickStratCategorySelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;" onchange="toggleQuickStratCategory()">
+            <option value="FACTION">Faction Stratagem</option>
+            <option value="CORE">11th Ed Core Stratagem</option>
+          </select>
+          <input id="quickStratNameInput" placeholder="Stratagem Name (e.g. Void Armour)" style="padding:5px 8px; background:#0b0d13; min-width:190px; flex:1;">
+          <select id="quickStratCoreSelect" class="hidden" style="padding:5px 8px; background:#0b0d13; min-width:190px; flex:1;">
+            <option value="Fire Overwatch">Fire Overwatch (1 CP)</option>
+            <option value="Smokescreen">Smokescreen (1 CP)</option>
+            <option value="Go to Ground">Go to Ground (1 CP)</option>
+            <option value="Heroic Intervention">Heroic Intervention (1 CP)</option>
+            <option value="Counter-Offensive">Counter-Offensive (2 CP)</option>
+            <option value="Rapid Ingress">Rapid Ingress (1 CP • R2+)</option>
+            <option value="Command Re-roll">Command Re-roll (1 CP)</option>
+            <option value="Crushing Impact">Crushing Impact (1 CP)</option>
+            <option value="Explosives">Explosives (1 CP)</option>
+            <option value="Insane Bravery">Insane Bravery (1 CP)</option>
+            <option value="Epic Challenge">Epic Challenge (1 CP)</option>
+          </select>
+          <span style="font-size:0.8rem; color:var(--muted);">on</span>
+          <select id="quickStratTargetSelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;">
+            <option value="">(Any / Untargeted)</option>
+          </select>
+          <button type="button" class="btn-ghost btn-sm" onclick="triggerQuickStratagem(0)">0 CP</button>
+          <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(1)">1 CP</button>
+          <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(2)">2 CP</button>
+        </div>
+      </details>
 
-      <div id="tacticaReactionBanner" class="card hidden" style="margin-top:10px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.1);"></div>
+      <div id="tacticaReactionBanner" class="card hidden" style="margin-top:8px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.1);"></div>
     </div>
 
-    <!-- 1B. LIVE LCT ORBITAL AUSPEX TELEMETRY -->
-    <div class="card" style="margin-bottom:14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-        <h3 style="margin:0;">🛰️ LCT Orbital Auspex Telemetry (Exact Edge-to-Edge Inches)</h3>
-        <button type="button" class="btn-ghost btn-sm" onclick="requestTtsBoardScan()">📡 Request LCT Board Scan</button>
-      </div>
-      <div id="tacticaTelemetryBox" style="max-height:200px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border);"></div>
+    <!-- 2. CONTEXTUAL POP-UP STRIP (HIDDEN WHEN IDLE) -->
+    <div id="tacticaIntrusionAlertBox" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--red); background:rgba(255,71,87,0.12);"></div>
+
+    <div id="tacticaPendingRollStrip" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.08);">
+      <div id="tacticaPendingRollBox" class="hidden"></div>
+      <details style="margin-top:8px;">
+        <summary style="cursor:pointer; font-size:0.8rem; color:var(--muted);">Offline Manual Pip Entry</summary>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <input id="tacticaManualPipsInput" placeholder="Enter settled LCT mat pips (e.g. 5, 2, 4, 6)" style="flex:1; padding:6px 8px; background:#0b0d13;">
+          <button type="button" class="btn-ghost btn-sm" onclick="submitSettledMatPips()">✓ Apply Settled Pips</button>
+        </div>
+      </details>
     </div>
 
-    <!-- 1C. DETERMINISTIC HORDE AUTOPILOT DECK -->
-    <div class="card" style="margin-bottom:14px;">
-      <h3>🤖 Horde Turn Autopilot (Shelf Cloning • Pre-LOS Revert • Keyword Priority • 11th Ed Consolidation)</h3>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-        <button type="button" class="btn-green btn-sm" onclick="triggerAutopilotSpawnWaves()">🧟 1. Drop Wave Spawns</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotMovement()">🏃 2. Move Horde (Pre-LOS Preview)</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">✅ Lock Moves &amp; Open Overwatch</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotShooting()">🎯 3. Compute Shooting Priority</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotCharges()">⚡ 4. Declare Charges (&le;12")</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotConsolidate()">⚔️ 5. 3" Consolidate</button>
+    <!-- 3. 3-TAB PROGRESSIVE MODE SWITCHER -->
+    <div class="tactica-mode-tabs">
+      <button type="button" id="btnTacticaModeHorde" class="btn-ghost tactica-mode-btn active" onclick="switchTacticaMode('horde')">🧟 1. Horde Turn</button>
+      <button type="button" id="btnTacticaModePlayer" class="btn-ghost tactica-mode-btn" onclick="switchTacticaMode('player')">🛡️ 2. Your Turn — Attack Horde</button>
+      <button type="button" id="btnTacticaModeExport" class="btn-ghost tactica-mode-btn" onclick="switchTacticaMode('export')">🏆 3. End Match &amp; Export</button>
+    </div>
+
+    <!-- PANEL 1: HORDE TURN (DEFAULT VISIBLE) -->
+    <div id="tacticaModeHorde" class="card" style="margin-bottom:14px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" id="hordeStepBtn1" class="btn-ghost btn-sm horde-step-btn active" onclick="setHordeTurnStep(1)">1. Spawn</button>
+        <button type="button" id="hordeStepBtn2" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(2)">2. Move &amp; LOS</button>
+        <button type="button" id="hordeStepBtn3" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(3)">3. Shoot</button>
+        <button type="button" id="hordeStepBtn4" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(4)">4. Charge &amp; Consolidate</button>
       </div>
+
+      <div id="hordeStepPanel1" style="margin-bottom:10px;">
+        <button type="button" class="btn-green" onclick="triggerAutopilotSpawnWaves()">🧟 Drop Wave Spawns onto LCT Playmat</button>
+      </div>
+
+      <div id="hordeStepPanel2" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="btn-green" onclick="triggerAutopilotMovement()">🏃 Move Horde (Pre-LOS Preview)</button>
+        <button type="button" class="btn-ghost" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">✅ Lock Moves &amp; Check Overwatch</button>
+      </div>
+
+      <div id="hordeStepPanel3" class="hidden" style="margin-bottom:10px;">
+        <button type="button" class="btn-red" onclick="triggerAutopilotShooting()">🎯 Compute Shooting Target Priority</button>
+      </div>
+
+      <div id="hordeStepPanel4" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="btn-red" onclick="triggerAutopilotCharges()">⚡ Declare Charges (&le;12")</button>
+        <button type="button" class="btn-ghost" onclick="triggerAutopilotConsolidate()">⚔️ 3" Consolidate</button>
+      </div>
+
       <div id="tacticaAutopilotBox" style="background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); font-size:0.84rem; color:var(--text);">
         Ready. Sync Mode 1 Session &amp; scan LCT board to pilot Horde waves automatically.
       </div>
+
+      <!-- Contextual 3D LOS Bar (Visible inside Step 2 Move & LOS and Step 3 Shoot) -->
+      <div id="tacticaLosBar" class="hidden" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <div style="display:flex; gap:8px;">
+          <input id="overwatchQueryInput" placeholder="Ask 3D Ruin LOS or type command (e.g. 'Can Screamer-Killer see Krieg behind central ruin?')" style="flex:1; padding:8px; background:#0b0d13;">
+          <button type="button" class="btn-ghost btn-sm" onclick="dispatchSpokenOrTypedCommand(document.getElementById('overwatchQueryInput').value)">👁️ Verify 3D LOS</button>
+        </div>
+        <div id="overwatchVerdictBox" style="margin-top:8px; font-size:0.84rem; color:var(--text);"></div>
+      </div>
     </div>
 
-    <!-- 1D. LIVE SCREEN & MICROPHONE OVERWATCH REFEREE + 6+ INTRUSION WATCHER -->
-    <div class="card" style="margin-bottom:14px;">
+    <!-- PANEL 2: YOUR TURN — ATTACK HORDE (HIDDEN UNTIL CLICKED) -->
+    <div id="tacticaModePlayer" class="card hidden" style="margin-bottom:14px;">
+      <h3 style="margin-top:0;">🛡️ Attack Horde — Auto-Defender Saves &amp; FNP</h3>
+      <div id="tacticaHordeTargetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin-bottom:10px;">
+        <label style="font-size:0.8rem; color:var(--muted);">Incoming Wounds
+          <input id="defWoundsCountInput" type="number" placeholder="Incoming Wounds" value="4" style="width:100%; margin-top:4px; padding:8px; background:#0b0d13;">
+        </label>
+        <label style="font-size:0.8rem; color:var(--muted);">Weapon AP (e.g. -1)
+          <input id="defApInput" type="number" placeholder="AP (e.g. -1)" value="-1" style="width:100%; margin-top:4px; padding:8px; background:#0b0d13;">
+        </label>
+        <label style="font-size:0.8rem; color:var(--muted);">Damage per Wound
+          <input id="defDmgInput" type="number" placeholder="Damage" value="1" style="width:100%; margin-top:4px; padding:8px; background:#0b0d13;">
+        </label>
+      </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-        <h3 style="margin:0;">🎙️ Live Screen &amp; Mic Overwatch (3D Ruin LOS • Hands-Free Voice • 6+ Intrusions)</h3>
-        <span id="overwatchScreenStatus" style="font-size:0.8rem; color:var(--muted);">📷 Screen Share: Disconnected</span>
-      </div>
-      <div id="tacticaIntrusionAlertBox" class="card hidden" style="margin-bottom:10px; border-left:4px solid var(--red); background:rgba(255,71,87,0.12);"></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-        <button type="button" class="btn-green btn-sm" onclick="toggleTtsScreenCapture()">🖥️ Share TTS Window</button>
-        <button type="button" class="btn-red btn-sm" onclick="startPushToTalkMic()">🎙️ Push-to-Talk Mic</button>
-        <button type="button" id="btnToggleOverwatchTts" class="btn-ghost btn-sm" onclick="toggleOverwatchVoiceOutput()">🔊 Voice Readout: ON</button>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <input id="overwatchQueryInput" placeholder="Voice/text command or 3D LOS check (e.g. 'Can Screamer-Killer see Krieg behind central ruin?')" style="flex:1; padding:8px; background:#0b0d13;">
-        <button type="button" class="btn-ghost btn-sm" onclick="dispatchSpokenOrTypedCommand(document.getElementById('overwatchQueryInput').value)">👁️ Verify LOS / Run</button>
-      </div>
-      <div id="overwatchVerdictBox" style="margin-top:8px; font-size:0.84rem; color:var(--text);"></div>
-    </div>
-
-    <!-- 2. HORDE AUTO-DEFENDER (QUEUES SAVES & FNP ON LCT TTS DICE MAT) -->
-    <div class="card" style="margin-bottom:14px;">
-      <h3>🛡️ Horde Auto-Defender (Queues Saves, FNP &amp; On-Death onto LCT Dice Mat)</h3>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-bottom:10px;">
-        <input id="defUnitName" placeholder="Unit" value="Necron Warriors" style="padding:8px; background:#0b0d13;">
-        <input id="defSaveInput" type="number" placeholder="Save (4)" value="4" style="padding:8px; background:#0b0d13;">
-        <input id="defInvulnInput" type="number" placeholder="Invuln (0=None)" value="0" style="padding:8px; background:#0b0d13;">
-        <input id="defWpmInput" type="number" placeholder="Wounds/Model" value="1" style="padding:8px; background:#0b0d13;">
-        <input id="defKeywordsInput" placeholder="Keywords" value="INFANTRY" style="padding:8px; background:#0b0d13;">
-        <input id="defModelsInput" type="number" placeholder="Models Alive" value="10" style="padding:8px; background:#0b0d13;">
-        <input id="defWoundsCountInput" type="number" placeholder="Incoming Wounds" value="4" style="padding:8px; background:#0b0d13;">
-        <input id="defApInput" type="number" placeholder="AP (e.g. -1)" value="-1" style="padding:8px; background:#0b0d13;">
-        <input id="defDmgInput" type="number" placeholder="Damage" value="1" style="padding:8px; background:#0b0d13;">
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <label style="display:inline-flex; align-items:center; gap:6px;"><input type="checkbox" id="defInSpawnCheck"> Unit in Spawn Zone (Cover + Hidden)</label>
-        <button type="button" class="btn-red" onclick="queueConsoleAutoDefender()">🎲 Queue Roll on LCT TTS Dice Mat</button>
+        <button type="button" class="btn-red" onclick="queueConsoleAutoDefender()">🎲 Queue Saves &amp; FNP on LCT Mat</button>
       </div>
 
-      <div id="tacticaPendingRollBox" class="card hidden" style="margin-top:10px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.08);"></div>
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <input id="tacticaManualPipsInput" placeholder="Offline fallback: enter settled LCT mat pips (e.g. 5, 2, 4, 6)" style="flex:1; padding:8px; background:#0b0d13;">
-        <button type="button" class="btn-ghost btn-sm" onclick="submitSettledMatPips()">✓ Apply Settled Pips</button>
-      </div>
+      <details id="defStatsOverrideDrawer" style="margin-top:8px;">
+        <summary style="cursor:pointer; font-size:0.82rem; color:var(--muted);">⚙️ Override Scanned Yellowscribe Stats</summary>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-top:8px;">
+          <input id="defUnitName" placeholder="Unit" value="Necron Warriors" style="padding:8px; background:#0b0d13;">
+          <input id="defSaveInput" type="number" placeholder="Save (4)" value="4" style="padding:8px; background:#0b0d13;">
+          <input id="defInvulnInput" type="number" placeholder="Invuln (0=None)" value="0" style="padding:8px; background:#0b0d13;">
+          <input id="defWpmInput" type="number" placeholder="Wounds/Model" value="1" style="padding:8px; background:#0b0d13;">
+          <input id="defKeywordsInput" placeholder="Keywords" value="INFANTRY" style="padding:8px; background:#0b0d13;">
+          <input id="defModelsInput" type="number" placeholder="Models Alive" value="10" style="padding:8px; background:#0b0d13;">
+        </div>
+        <label style="display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:0.84rem;">
+          <input type="checkbox" id="defInSpawnCheck"> Unit in Spawn Zone (Cover + Hidden)
+        </label>
+      </details>
+
       <div id="defResultBox" style="margin-top:10px; font-size:0.88rem; color:var(--text);"></div>
     </div>
 
-    <!-- 3. PERSISTENT ROUND 1–6 BLACK-BOX CHRONICLE -->
-    <div class="card" style="margin-bottom:14px;">
-      <h3>📜 Persistent Match Chronicle (Round 1–6 Disk Scribe)</h3>
-      <div id="tacticaChronicleBox" style="max-height:240px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); margin-bottom:8px;"></div>
-      <div style="display:flex; gap:8px;">
-        <input id="tacticaNoteInput" placeholder="Log tactical event, LOS ruling, or heroic moment..." style="flex:1; padding:8px; background:#0b0d13;">
-        <button type="button" class="btn-ghost" onclick="appendConsoleNote()">+ Log Event</button>
-      </div>
-    </div>
-
-    <!-- 4. OPTIONAL POST-MATCH EXPORT TO VOX -->
-    <div class="card">
-      <h3>📡 Optional Post-Match Chronicle Export</h3>
+    <!-- PANEL 3: END MATCH & EXPORT (HIDDEN UNTIL CLICKED) -->
+    <div id="tacticaModeExport" class="card hidden" style="margin-bottom:14px;">
+      <h3 style="margin-top:0;">🏆 End Match — Export Crusade Telemetry &amp; Vox Chronicle</h3>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
         <select id="tacticaReportChannel" style="padding:8px; background:#0b0d13;">
           <option value="alpha">Conduit Alpha (The Exile)</option>
@@ -174,11 +284,29 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
       </div>
       <pre id="tacticaCompiledPreview" class="master-dossier-preview vox-preview-alpha" style="min-height:80px; white-space:pre-wrap;"></pre>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button type="button" class="launch-btn" style="flex:1; margin:0;" onclick="sendCompiledReportToVox()">📡 Queue Compiled Match File into Astropathic Vox →</button>
-        <button type="button" class="btn-green" onclick="exportTacticaToCrusade()">🏆 Export Telemetry to Mode 5 Crusade →</button>
+        <button type="button" class="btn-green" onclick="exportTacticaToCrusade()">🏆 Export Telemetry to Mode 5 Crusade &rarr;</button>
+        <button type="button" class="launch-btn" style="flex:1; margin:0;" onclick="sendCompiledReportToVox()">📡 Queue Chronicle to Vox &rarr;</button>
       </div>
       <div id="tacticaCrusadeExportNotice" class="hidden" style="margin-top:8px; font-size:0.84rem; color:var(--green);"></div>
     </div>
+
+    <!-- 4. COLLAPSED UTILITY DRAWERS AT BOTTOM -->
+    <details id="tacticaBoardDrawer" class="card" style="margin-bottom:10px;">
+      <summary style="cursor:pointer; font-weight:700;">🛰️ Scanned Board Units &amp; Side-Flipper (<span id="tacticaUnitCountSummary">0 Units</span>)</summary>
+      <div style="display:flex; justify-content:flex-end; margin:8px 0;">
+        <button type="button" class="btn-ghost btn-sm" onclick="requestTtsBoardScan()">📡 Request LCT Board Scan</button>
+      </div>
+      <div id="tacticaTelemetryBox" style="max-height:220px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border);"></div>
+    </details>
+
+    <details id="tacticaChronicleDrawer" class="card">
+      <summary style="cursor:pointer; font-weight:700;">📜 Match Chronicle Scribe (<span id="tacticaLatestLogSummary">Ready</span>)</summary>
+      <div id="tacticaChronicleBox" style="max-height:220px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); margin:8px 0;"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="tacticaNoteInput" placeholder="Log tactical event, LOS ruling, or heroic moment..." style="flex:1; padding:8px; background:#0b0d13;">
+        <button type="button" class="btn-ghost" onclick="appendConsoleNote()">+ Log Event</button>
+      </div>
+    </details>
   </div>
 
   <script src="../js/spawner.js"></script>
@@ -192,727 +320,333 @@ In-Match Tactical Console view and imperative UI controller bridging Mode 1 sess
   <script src="../js/vox-audio.js"></script>
 </body>
 </html>
-
 ````
 
 ---
 
-## File: `js/tactica.js` <a id="file-jstacticajs"></a>
+## File: `tests/ui/tactica.test.js` <a id="file-testsuitacticatestjs"></a>
 
 ````javascript
 /**
- * @fileoverview Fires of Armageddon // In-Match Tactical Console Imperative Shell
- *
- * Humble View / Imperative Shell bridging Mode 1 Spawner `localStorage`,
- * `tactica_daemon.js` (LCT TTS dice-mat queue), offline settled-pip entry,
- * and optional post-match export to Astropathic Vox (zero local PRNG calls).
+ * @fileoverview UI & boundary tests for pages/tactica.html and js/tactica.js LCT mat workflow.
  */
 
-(function (root, factory) {
-  const exports = factory();
-  if (typeof root !== 'undefined') Object.assign(root, exports);
-  if (typeof module !== 'undefined' && module.exports) module.exports = exports;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 
-  const DAEMON_URL = 'http://127.0.0.1:3030';
-  let clientState = (typeof createInitialTacticaState === 'function')
-    ? createInitialTacticaState()
-    : { roomCode: 'HADES-1', battleRound: 1, phase: 'COMMAND_SPAWN', factionName: 'Chaos Daemons', playerCp: 2, playerSp: 0, activeMiseryIds: [] };
-  let localChronicle = [];
-  let daemonOnline = false;
-  let lastCompiledReport = '';
+const ROOT_DIR = path.resolve(__dirname, '../../');
 
-  async function daemonRequest(route, method = 'GET', body = null) {
-    if (typeof fetch !== 'function') throw new Error('No fetch');
-    const opts = { method, headers: {} };
-    if (body !== null) {
-      opts.headers['Content-Type'] = 'application/json';
-      opts.body = JSON.stringify(body);
+test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat rolls without local RNG', async () => {
+  const html = fs.readFileSync(path.join(ROOT_DIR, 'pages/tactica.html'), 'utf8');
+  assert.ok(html.includes('href="../index.html" class="suite-link'), 'Must include root index suite-link');
+  assert.ok(html.includes('href="briefing.html" class="suite-link'), 'Must include briefing suite-link');
+  assert.ok(html.includes('href="spawner.html"'), 'Sticky bar must include href="spawner.html" return button');
+  assert.ok(html.includes('id="pttStatusPill"'), 'Sticky bar must include #pttStatusPill');
+  assert.ok(html.includes('id="tacticaModeHorde"') && html.includes('id="tacticaModePlayer"') && html.includes('id="tacticaModeExport"'), 'Must include 3-mode progressive panels');
+  assert.ok(html.includes('id="tacticaBoardDrawer"') && html.includes('id="tacticaChronicleDrawer"'), 'Must include collapsed bottom utility drawers');
+  assert.ok(html.includes('<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">'), 'Must link favicon');
+  assert.ok(html.includes('<script src="../js/spawner.js"></script>'), 'Must link spawner.js');
+  assert.ok(html.includes('<script src="../js/tts-telemetry-core.js"></script>'), 'Must link tts-telemetry-core.js');
+  assert.ok(html.includes('<script src="../js/horde-autopilot-core.js"></script>'), 'Must link horde-autopilot-core.js');
+  assert.ok(html.includes('<script src="../js/tactica-core.js"></script>'), 'Must link tactica-core.js');
+  assert.ok(html.includes('<script src="../js/tactica.js"></script>'), 'Must link tactica.js');
+  assert.ok(html.includes('<script src="../js/tactica-overwatch-core.js"></script>'), 'Must link tactica-overwatch-core.js');
+  assert.ok(html.includes('<script src="../js/tactica-overwatch.js"></script>'), 'Must link tactica-overwatch.js');
+  assert.ok(html.includes('<script src="../js/vox-audio.js"></script>'), 'Must link vox-audio.js');
+
+  const luaPath = path.join(ROOT_DIR, 'tts/lct_horde_bridge.lua');
+  assert.ok(fs.existsSync(luaPath), 'tts/lct_horde_bridge.lua must exist');
+  const luaSrc = fs.readFileSync(luaPath, 'utf8');
+  assert.ok(luaSrc.includes('/tts/poll'), 'Lua beacon must poll /tts/poll');
+  assert.ok(luaSrc.includes('/tts/telemetry'), 'Lua beacon must post to /tts/telemetry');
+  assert.ok(luaSrc.includes('/tts/dice-result'), 'Lua beacon must post settled dice to /tts/dice-result');
+  assert.ok(luaSrc.includes('SPAWN_WAVE') && luaSrc.includes('REVERT_MOVE') && luaSrc.includes('SPAWN_GHOST_RING'), 'Lua beacon must support SPAWN_WAVE, REVERT_MOVE & SPAWN_GHOST_RING');
+  assert.ok(luaSrc.includes('self.setRotation({ x = 0, y = rot.y, z = 0 })'), 'Lua beacon must force upright rotation on load');
+  assert.ok(luaSrc.includes('buildContextMenu') && luaSrc.includes('addContextMenuItem') && luaSrc.includes('tagSelectionAsTemplate'), 'Lua beacon must register right-click context menu items including HORDE_TEMPLATE');
+  assert.ok(luaSrc.includes('detectPlaymatBounds') && luaSrc.includes('playmatBounds'), 'Lua beacon must auto-detect LCT 44"x60" playmat bounds');
+  assert.ok(luaSrc.includes('SET_UNIT_SIDE') && luaSrc.includes('executeSetUnitSide'), 'Lua beacon must support browser-driven SET_UNIT_SIDE command');
+
+  const spawnerHtml = fs.readFileSync(path.join(ROOT_DIR, 'pages/spawner.html'), 'utf8');
+  assert.ok(spawnerHtml.includes('tactica.html'), 'spawner.html must link to pages/tactica.html');
+
+  const spawner = require(path.join(ROOT_DIR, 'js/spawner.js'));
+  const combat = require(path.join(ROOT_DIR, 'js/horde-combat-modifiers.js'));
+  const telemetry = require(path.join(ROOT_DIR, 'js/tts-telemetry-core.js'));
+  const autopilot = require(path.join(ROOT_DIR, 'js/horde-autopilot-core.js'));
+  const overwatchCore = require(path.join(ROOT_DIR, 'js/tactica-overwatch-core.js'));
+  const core = require(path.join(ROOT_DIR, 'js/tactica-core.js'));
+  Object.assign(globalThis, spawner, combat, telemetry, autopilot, overwatchCore, core);
+
+  const store = new Map();
+  store.set('foa_horde_session_v1', JSON.stringify({
+    seed: 'ASHEN-11',
+    battleRound: 2,
+    activeHordeFactionName: 'Necrons',
+    cp: 2,
+    sp: 8,
+    activeMiseries: []
+  }));
+
+  const els = {};
+  const makeEl = (val = '') => ({
+    value: val,
+    checked: false,
+    textContent: '',
+    innerHTML: '',
+    style: {},
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); },
+      remove(c) { this._s.delete(c); },
+      toggle(c, f) { if (f === undefined ? !this._s.has(c) : f) this._s.add(c); else this._s.delete(c); },
+      contains(c) { return this._s.has(c); }
     }
-    const res = await fetch(`${DAEMON_URL}${route}`, opts);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  }
+  });
 
-  function renderCompletedDefenseSummary(seq) {
-    const box = document.getElementById('defResultBox');
-    if (!box || !seq || seq.kind !== 'AUTO_DEFENDER') return;
-    const prof = seq.defenseProfile;
-    const out = seq.outcome;
-    box.innerHTML = `
-      <strong>${seq.unitName}</strong> • Save: <strong>${prof.saveTarget}+</strong> (${out.savesPassed}/${seq.numWounds} saved)
-      ${prof.fnp ? ` • <strong>FNP ${prof.fnp}+</strong> (${out.fnpPassed} shrugged)` : ''}
-      • Slain: <strong style="color:var(--red);">${out.modelsSlain}</strong> • Remaining: <strong>${out.remainingModels}</strong>
-      ${out.onDeathTriggers > 0 ? `<br><span style="color:var(--gold);">⚡ Misery #30: ${out.onDeathTriggers} model(s) Shoot/Fight on Death!</span>` : ''}
-      ${out.gscRespawnTriggered ? `<br><span style="color:var(--purple);">♻️ GSC 5+ Respawn Triggered!</span>` : ''}
-    `;
-  }
+  [
+    'tacticaDaemonBadge', 'tacticaRoomLabel', 'tacticaFactionLabel', 'tacticaRoundSelect',
+    'tacticaPhaseSelect', 'tacticaCpLabel', 'tacticaWarlordLabel', 'tacticaQueueLabel',
+    'tacticaTelemetryBox', 'tacticaAutopilotBox', 'tacticaReactionBanner', 'tacticaPendingRollBox', 'tacticaManualPipsInput',
+    'tacticaChronicleBox', 'tacticaNoteInput', 'defUnitName', 'defSaveInput', 'defInvulnInput',
+    'defWpmInput', 'defKeywordsInput', 'defModelsInput', 'defWoundsCountInput', 'defApInput',
+    'defDmgInput', 'defInSpawnCheck', 'defResultBox', 'tacticaReportChannel',
+    'tacticaOutcomeInput', 'tacticaCompiledPreview',
+    'overwatchScreenStatus', 'tacticaIntrusionAlertBox', 'btnToggleOverwatchTts',
+    'overwatchQueryInput', 'overwatchVerdictBox', 'tacticaCrusadeExportNotice',
+    'pttStatusPill', 'tacticaModeHorde', 'tacticaModePlayer', 'tacticaModeExport',
+    'btnTacticaModeHorde', 'btnTacticaModePlayer', 'btnTacticaModeExport',
+    'hordeStepPanel1', 'hordeStepPanel2', 'hordeStepPanel3', 'hordeStepPanel4',
+    'hordeStepBtn1', 'hordeStepBtn2', 'hordeStepBtn3', 'hordeStepBtn4',
+    'tacticaLosBar', 'tacticaHordeTargetChips', 'tacticaUnitCountSummary',
+    'tacticaLatestLogSummary', 'tacticaPendingRollStrip', 'quickStratTargetSelect',
+    'quickStratNameInput', 'quickStratCategorySelect', 'quickStratCoreSelect'
+  ].forEach(id => { els[id] = makeEl(); });
 
-  /**
-   * Idempotently projects explicit `clientState` and `localChronicle` onto the DOM.
-   */
-  function renderTacticaConsole() {
-    if (typeof document === 'undefined') return;
-    const badge = document.getElementById('tacticaDaemonBadge');
-    if (badge) {
-      badge.textContent = daemonOnline
-        ? '🟢 LCT TACTICA DAEMON ONLINE (127.0.0.1:3030 • Disk Scribe & LCT Mat Ready)'
-        : '🟡 OFFLINE TABLETOP MODE (Run `npm run tactica:daemon` for Automatic LCT Mat Polling)';
-    }
+  els.defUnitName.value = 'Necron Warriors';
+  els.defSaveInput.value = '4';
+  els.defWpmInput.value = '1';
+  els.defKeywordsInput.value = 'INFANTRY';
+  els.defModelsInput.value = '10';
+  els.defWoundsCountInput.value = '2';
+  els.defApInput.value = '0';
+  els.defDmgInput.value = '1';
+  els.tacticaReportChannel.value = 'alpha';
+  els.tacticaRoundSelect.value = '2';
 
-    const setTxt = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = String(val);
-    };
-    setTxt('tacticaRoomLabel', clientState.roomCode || 'HADES-1');
-    setTxt('tacticaFactionLabel', clientState.factionName || 'Chaos Daemons');
-    setTxt('tacticaCpLabel', `${clientState.playerCp ?? 2} CP / ${clientState.playerSp ?? 0} SP`);
-    setTxt('tacticaWarlordLabel', clientState.hordeWarlord ? clientState.hordeWarlord.name : 'None Designated');
-
-    const pendingBox = document.getElementById('tacticaPendingRollBox');
-    if (pendingBox) {
-      const seq = clientState.pendingDiceSequence;
-      const chgCmd = (!seq && clientState.pendingChargeDecl) ? clientState.pendingChargeDecl.lctCommand : null;
-      const activeCmd = (seq && seq.nextCommand) ? seq.nextCommand : chgCmd;
-      const stageLabel = seq ? seq.stage : 'CHARGE_ROLL';
-      if (activeCmd) {
-        pendingBox.classList.remove('hidden');
-        pendingBox.innerHTML = `
-          <div style="font-weight:800; color:var(--gold);">🎲 AWAITING LCT DICE MAT [${stageLabel}]: ${activeCmd.label}</div>
-          <div style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
-            TTS LCT table rolls <strong>${activeCmd.count}D6</strong> automatically when connected, or enter settled mat pips below (comma-separated) if offline.
-          </div>
-        `;
-      } else {
-        pendingBox.classList.add('hidden');
-        pendingBox.innerHTML = '';
-      }
-    }
-
-    const reactBanner = document.getElementById('tacticaReactionBanner');
-    if (reactBanner) {
-      const win = clientState.pendingReactionWindow;
-      if (win && win.open) {
-        reactBanner.classList.remove('hidden');
-        const btns = win.eligibleStratagems.map(s =>
-          `<button type="button" class="btn-red btn-sm" onclick="resolveConsoleReaction('${s.key}', ${s.cpCost})">⚡ ${s.name} (-${s.cpCost} CP)</button>`
-        ).join(' ');
-        reactBanner.innerHTML = `
-          <div style="font-weight:800; color:var(--gold); margin-bottom:6px;">⚡ PLAYER REACTION WINDOW: ${win.title} (${win.playerCp} CP)</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">${btns} <button type="button" class="btn-ghost btn-sm" onclick="resolveConsoleReaction('PASS', 0)">Pass (Hold CP)</button></div>
-        `;
-      } else {
-        reactBanner.classList.add('hidden');
-        reactBanner.innerHTML = '';
-      }
-    }
-
-    const telBox = document.getElementById('tacticaTelemetryBox');
-    if (telBox) {
-      const units = clientState.boardTelemetry?.units || [];
-      if (units.length === 0) {
-        telBox.innerHTML = '<div style="color:var(--muted); font-style:italic;">No LCT tabletop scan received yet. Click [📡 Scan LCT Board] on your TTS Beacon token or request a scan above.</div>';
-      } else {
-        telBox.innerHTML = units.map((u, idx) => {
-          const nearObj = u.closestObjective ? `${u.closestObjective.name} (${u.closestObjective.distanceInches}")` : 'None';
-          const nearEnemy = u.closestEnemy ? `${u.closestEnemy.name} (${u.closestEnemy.distanceInches}")` : 'None';
-          const sideBadge = u.side === 'PLAYER' ? '<span class="badge blue">PLAYER</span>' : '<span class="badge red">HORDE</span>';
-          const flipBtn = `<button type="button" class="btn-ghost btn-sm" onclick="toggleTelemetryUnitSide(${idx})">⇄ Flip Side</button>`;
-          const loadBtn = u.side !== 'PLAYER'
-            ? `<button type="button" class="btn-ghost btn-sm" onclick="selectTelemetryUnitForDefense(${idx})">🎯 Load into Auto-Defender</button>`
-            : '';
-          return `
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
-              <div>
-                ${sideBadge} <strong>${u.name}</strong> [x${u.modelCount || 1} • Sv ${u.save || 4}+${u.invuln ? `/${u.invuln}++` : ''}${u.fnp ? `/FNP ${u.fnp}+` : ''}]
-                <span style="color:#94a3b8;">• Obj: ${nearObj} • Nearest Enemy: ${nearEnemy}</span>
-              </div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                ${flipBtn}
-                ${loadBtn}
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-    }
-
-    const box = document.getElementById('tacticaChronicleBox');
-    if (box) {
-      box.innerHTML = localChronicle.length === 0
-        ? '<div style="color:var(--muted); font-style:italic;">No match events logged yet.</div>'
-        : localChronicle.slice(-40).map(e =>
-          `<div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
-            <strong style="color:var(--gold);">[R${e.battleRound} • ${e.phase}]</strong> <span style="color:#94a3b8;">(${e.type})</span> ${e.summary}
-          </div>`
-        ).join('');
-    }
-
-    if (typeof window !== 'undefined' && typeof window.syncOverwatchAlertsFromState === 'function') {
-      window.syncOverwatchAlertsFromState();
-    }
-  }
-
-  async function refreshDaemonState() {
-    try {
-      const data = await daemonRequest('/state', 'GET');
-      daemonOnline = true;
-      clientState = data.state;
-      localChronicle = data.chronicle || [];
-      const qEl = document.getElementById('tacticaQueueLabel');
-      if (qEl) qEl.textContent = `${data.ttsQueueLength || 0} Queued`;
-    } catch (e) {
-      daemonOnline = false;
-    }
-    renderTacticaConsole();
-    return daemonOnline;
-  }
-
-  /**
-   * Synchronizes Room Code, Round, Faction, CP/SP, and active Misery cards from Mode 1 Spawner `localStorage`.
-   */
-  async function syncFromSpawnerStorage() {
-    if (typeof localStorage === 'undefined') return false;
-    try {
-      const raw = localStorage.getItem('foa_horde_session_v1');
-      if (raw) {
-        const s = JSON.parse(raw);
-        const patch = {
-          roomCode: s.seed || clientState.roomCode,
-          battleRound: Math.max(1, Number(s.battleRound) || 1),
-          factionName: s.activeHordeFactionName || clientState.factionName,
-          playerCp: s.cp !== undefined ? Number(s.cp) : clientState.playerCp,
-          playerSp: s.sp !== undefined ? Number(s.sp) : clientState.playerSp,
-          activeMiseryIds: Array.isArray(s.activeMiseries) ? s.activeMiseries.map(m => m.id) : [],
-          zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : []
-        };
-        Object.assign(clientState, patch);
-        try {
-          const res = await daemonRequest('/session/sync', 'POST', patch);
-          daemonOnline = true;
-          clientState = res.state;
-        } catch (err) {
-          daemonOnline = false;
-        }
-      }
-    } catch (e) {}
-    renderTacticaConsole();
-    return daemonOnline;
-  }
-
-  async function setConsolePhaseAndTrigger(phase, reactionTrigger = null) {
-    const rndEl = document.getElementById('tacticaRoundSelect');
-    if (rndEl && rndEl.value) clientState.battleRound = Number(rndEl.value) || clientState.battleRound;
-    clientState.phase = phase;
-    const summary = `Entered ${phase} (Round ${clientState.battleRound}).`;
-
-    try {
-      const res = await daemonRequest('/chronicle/append', 'POST', {
-        battleRound: clientState.battleRound,
-        phase,
-        type: 'PHASE',
-        summary,
-        reactionTrigger
-      });
-      daemonOnline = true;
-      clientState.pendingReactionWindow = res.pendingReactionWindow;
-      localChronicle.push(res.entry);
-    } catch (e) {
-      localChronicle.push(formatChronicleEntry({ battleRound: clientState.battleRound, phase, type: 'PHASE', summary }, clientState));
-      if (reactionTrigger && typeof detectPlayerReactionWindow === 'function') {
-        const win = detectPlayerReactionWindow(reactionTrigger, clientState);
-        clientState.pendingReactionWindow = win.open ? win : null;
-      }
-    }
-    renderTacticaConsole();
-  }
-
-  async function resolveConsoleReaction(choice, cpCost = 0) {
-    const summary = choice === 'PASS' ? 'Player passed reaction window.' : `Player activated ${choice} (-${cpCost} CP).`;
-    try {
-      const res = await daemonRequest('/reaction/resolve', 'POST', { choice, cpCost, summary });
-      clientState = res.state;
-      localChronicle.push(res.entry);
-    } catch (e) {
-      clientState.playerCp = Math.max(0, (Number(clientState.playerCp) || 0) - cpCost);
-      clientState.pendingReactionWindow = null;
-      localChronicle.push(formatChronicleEntry({ type: 'REACTION', summary }, clientState));
-    }
-    renderTacticaConsole();
-  }
-
-  /**
-   * Queues a multi-stage Horde Auto-Defender roll sequence onto the LCT TTS Dice Mat.
-   */
-  async function queueConsoleAutoDefender() {
-    if (typeof document === 'undefined') return null;
-    const payload = {
-      unitName: (document.getElementById('defUnitName')?.value || 'Horde Squad').trim(),
-      defender: {
-        save: Number(document.getElementById('defSaveInput')?.value) || 4,
-        invuln: Number(document.getElementById('defInvulnInput')?.value) || null,
-        woundsPerModel: Number(document.getElementById('defWpmInput')?.value) || 1,
-        keywords: (document.getElementById('defKeywordsInput')?.value || 'INFANTRY').split(',').map(s => s.trim()).filter(Boolean)
-      },
-      incomingAttack: {
-        type: 'ranged',
-        strength: 4,
-        ap: Number(document.getElementById('defApInput')?.value) || 0,
-        damage: Number(document.getElementById('defDmgInput')?.value) || 1
-      },
-      context: { inSpawnZone: Boolean(document.getElementById('defInSpawnCheck')?.checked) },
-      options: {
-        numWounds: Number(document.getElementById('defWoundsCountInput')?.value) || 1,
-        damagePerWound: Number(document.getElementById('defDmgInput')?.value) || 1,
-        startingModels: Number(document.getElementById('defModelsInput')?.value) || 10
-      }
-    };
-
-    try {
-      const res = await daemonRequest('/combat/defend-request', 'POST', payload);
-      daemonOnline = true;
-      clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
-      if (res.sequence.stage === 'COMPLETE') renderCompletedDefenseSummary(res.sequence);
-    } catch (e) {
-      const seq = createDefenseRollSequence(payload, clientState);
-      clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
-      if (seq.stage === 'COMPLETE') renderCompletedDefenseSummary(seq);
-    }
-    renderTacticaConsole();
-    return clientState.pendingDiceSequence;
-  }
-
-  /**
-   * Advances the active LCT roll sequence using physical/tabletop settled pip values.
-   */
-  async function submitSettledMatPips() {
-    const inp = document.getElementById('tacticaManualPipsInput');
-    const raw = (inp?.value || '').trim();
-    if (!raw || (!clientState.pendingDiceSequence && !clientState.pendingChargeDecl)) return null;
-    const dice = raw.split(/[\s,]+/).map(Number).filter(n => n >= 1 && n <= 6);
-    if (inp) inp.value = '';
-
-    if (!clientState.pendingDiceSequence && clientState.pendingChargeDecl) {
-      const decl = clientState.pendingChargeDecl;
-      try {
-        const res = await daemonRequest('/tts/dice-result', 'POST', { sequenceId: decl.sequenceId, dice });
-        clientState.pendingChargeDecl = null;
-        if (res.entry) localChronicle.push(res.entry);
-      } catch (e) {
-        const resolved = resolveHordeChargeRoll(decl, dice);
-        clientState.pendingChargeDecl = null;
-        localChronicle.push(formatChronicleEntry({
-          type: 'HORDE_CHARGE',
-          summary: `${resolved.attackerName} -> ${resolved.targetName} [LCT 2D6 = ${resolved.modifiedTotal}"]: ${resolved.succeeded ? 'CHARGE SUCCEEDED!' : 'Charge Failed.'}`
-        }, clientState));
-      }
-      renderTacticaConsole();
-      return null;
-    }
-
-    const activeSeq = clientState.pendingDiceSequence;
-    try {
-      const res = await daemonRequest('/tts/dice-result', 'POST', {
-        rollId: activeSeq.nextCommand?.rollId,
-        sequenceId: activeSeq.sequenceId,
-        dice
-      });
-      clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
-      if (res.sequence.stage === 'COMPLETE') renderCompletedDefenseSummary(res.sequence);
-    } catch (e) {
-      const updated = activeSeq.kind === 'AUTO_DEFENDER'
-        ? advanceDefenseRollSequence(activeSeq, dice)
-        : advanceHordeAttackRollSequence(activeSeq, dice);
-      if (updated.stage === 'COMPLETE') {
-        clientState.pendingDiceSequence = null;
-        renderCompletedDefenseSummary(updated);
-        localChronicle.push(formatChronicleEntry({
-          type: updated.kind,
-          summary: `${updated.unitName || updated.attackerName} [LCT Mat Settled] -> Slain: ${updated.outcome?.modelsSlain ?? 0}.`
-        }, clientState));
-      } else {
-        clientState.pendingDiceSequence = updated;
-      }
-    }
-    renderTacticaConsole();
-    return clientState.pendingDiceSequence;
-  }
-
-  async function appendConsoleNote() {
-    const inp = document.getElementById('tacticaNoteInput');
-    const text = (inp?.value || '').trim();
-    if (!text) return;
-    if (inp) inp.value = '';
-    try {
-      const res = await daemonRequest('/chronicle/append', 'POST', { type: 'NOTE', summary: text });
-      localChronicle.push(res.entry);
-    } catch (e) {
-      localChronicle.push(formatChronicleEntry({ type: 'NOTE', summary: text }, clientState));
-    }
-    renderTacticaConsole();
-  }
-
-  async function compileAndPreviewMatchReport() {
-    const channel = document.getElementById('tacticaReportChannel')?.value || 'alpha';
-    const outcome = document.getElementById('tacticaOutcomeInput')?.value || '';
-    try {
-      const res = await daemonRequest('/chronicle/compile', 'POST', { channel, outcome });
-      lastCompiledReport = res.report;
-    } catch (e) {
-      lastCompiledReport = compileTacticaPostMatchReport(clientState, localChronicle, { channel, outcome });
-    }
-    const prev = document.getElementById('tacticaCompiledPreview');
-    if (prev) prev.textContent = lastCompiledReport;
-    return lastCompiledReport;
-  }
-
-  function sendCompiledReportToVox() {
-    const channel = document.getElementById('tacticaReportChannel')?.value || 'alpha';
-    if (!lastCompiledReport) {
-      lastCompiledReport = compileTacticaPostMatchReport(clientState, localChronicle, { channel });
-    }
-    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-      window.VoxAudio.transmitToVox(channel, lastCompiledReport);
-    }
-  }
-
-  /**
-   * Enqueues a `SCAN_BOARD` request onto the LCT daemon poll queue for the TTS Beacon token.
-   */
-  async function requestTtsBoardScan() {
-    try {
-      await daemonRequest('/tts/enqueue', 'POST', { action: 'SCAN_BOARD' });
-      daemonOnline = true;
-    } catch (e) {
-      daemonOnline = false;
-    }
-    renderTacticaConsole();
-  }
-
-  /**
-   * Populates the Horde Auto-Defender form inputs directly from a scanned Yellowscribe squad on the LCT table.
-   */
-  function selectTelemetryUnitForDefense(idx) {
-    const units = clientState.boardTelemetry?.units || [];
-    const u = units[idx];
-    if (!u || typeof document === 'undefined') return null;
-
-    const setVal = (id, v) => {
-      const el = document.getElementById(id);
-      if (el) el.value = String(v);
-    };
-    setVal('defUnitName', u.name || 'Horde Unit');
-    setVal('defSaveInput', u.save || 4);
-    setVal('defInvulnInput', u.invuln || 0);
-    setVal('defWpmInput', u.woundsPerModel || 1);
-    setVal('defKeywordsInput', Array.isArray(u.keywords) && u.keywords.length > 0 ? u.keywords.join(', ') : 'INFANTRY');
-    setVal('defModelsInput', u.modelCount || 1);
-    const spCheck = document.getElementById('defInSpawnCheck');
-    if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
-    return u;
-  }
-
-  /**
-   * Flips a scanned squad's allegiance (`PLAYER` <-> `HORDE`) in both browser telemetry state and TTS tags
-   * via `POST /tts/set-side`, falling back cleanly to local state updates when offline.
-   *
-   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
-   * @returns {Promise<object|null>} Updated squad entry or `null` when out of bounds.
-   */
-  async function toggleTelemetryUnitSide(idx) {
-    const units = clientState.boardTelemetry?.units || [];
-    const u = units[idx];
-    if (!u) return null;
-    const nextSide = u.side === 'PLAYER' ? 'HORDE' : 'PLAYER';
-    const payload = {
-      squadKey: u.squadKey,
-      guids: Array.isArray(u.guids) ? u.guids : (u.guid ? [u.guid] : []),
-      side: nextSide
-    };
-    try {
-      const res = await daemonRequest('/tts/set-side', 'POST', payload);
-      daemonOnline = true;
-      if (Array.isArray(res.units) && clientState.boardTelemetry) {
-        clientState.boardTelemetry.units = res.units;
-      } else {
-        u.side = nextSide;
-      }
-    } catch (e) {
-      daemonOnline = false;
-      u.side = nextSide;
-    }
-    renderTacticaConsole();
-    return (clientState.boardTelemetry?.units || [])[idx] || u;
-  }
-
-  function setAutopilotHtml(html) {
-    if (typeof document === 'undefined') return;
-    const box = document.getElementById('tacticaAutopilotBox');
-    if (box) box.innerHTML = html;
-  }
-
-  /**
-   * 1. Clones off-board `HORDE_TEMPLATE` miniatures into active Mode 1 Spawn Zones.
-   */
-  async function triggerAutopilotSpawnWaves() {
-    let plan;
-    try {
-      const res = await daemonRequest('/autopilot/spawn-waves', 'POST', { zoneSpawns: clientState.zoneSpawns });
-      daemonOnline = true;
-      plan = res;
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      plan = planWaveSpawnCommands(clientState.zoneSpawns);
-      localChronicle.push(formatChronicleEntry({ type: 'SPAWN_WAVE', summary: plan.summary }, clientState));
-    }
-    setAutopilotHtml(`<strong>🧟 Wave Spawn Queue:</strong> ${plan.summary}`);
-    renderTacticaConsole();
-    return plan;
-  }
-
-  /**
-   * 2. Computes deterministic Horde Movement & Advance vectors with one-click Pre-Overwatch LOS Revert buttons.
-   */
-  async function triggerAutopilotMovement() {
-    clientState.phase = 'HORDE_MOVEMENT';
-    let plans = [];
-    try {
-      const res = await daemonRequest('/autopilot/plan-movement', 'POST', {});
-      daemonOnline = true;
-      plans = res.plans || [];
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      const localRes = planHordeMovementPhase(clientState.boardTelemetry, clientState);
-      plans = localRes.plans || [];
-      localChronicle.push(formatChronicleEntry({
-        type: 'HORDE_MOVE',
-        summary: `Moved ${plans.length} Horde squad(s) — awaiting Pre-Overwatch LOS check.`
-      }, clientState));
-    }
-    clientState.lastMovementPlans = plans;
-
-    if (plans.length === 0) {
-      setAutopilotHtml('<span style="color:var(--muted);">No eligible Horde movement vectors found on board.</span>');
-    } else {
-      setAutopilotHtml(plans.map((p, idx) => {
-        if (p.status === 'ENGAGED_HOLD') {
-          return `<div style="padding:4px 0;"><strong>${p.unitName}</strong> — Engaged (&le;2.0"): Holding melee contact.</div>`;
-        }
-        const advTag = p.advanced ? ' <span class="badge red">ADVANCED</span>' : '';
-        return `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
-            <div>🏃 <strong>${p.unitName}</strong> &rarr; ${p.goalName} (${p.moveBudgetInches}" to X:${p.targetX}, Z:${p.targetZ})${advTag}</div>
-            <button type="button" class="btn-ghost btn-sm" onclick="revertAutopilotSquadMove(${idx})">↩️ Revert Move (No LOS)</button>
-          </div>
-        `;
-      }).join(''));
-    }
-    renderTacticaConsole();
-    return plans;
-  }
-
-  /**
-   * Reverts a planned Horde squad move back to its exact `(x, y, z)` origin before locking Movement for Overwatch.
-   */
-  async function revertAutopilotSquadMove(idx) {
-    const plans = clientState.lastMovementPlans || [];
-    const targetPlan = plans[idx];
-    if (!targetPlan) return null;
-    try {
-      const res = await daemonRequest('/autopilot/revert-move', 'POST', { squadKey: targetPlan.squadKey, planIndex: idx });
-      daemonOnline = true;
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      buildMoveRevertCommand(targetPlan);
-      localChronicle.push(formatChronicleEntry({
-        type: 'MOVE_REVERT',
-        summary: `Reverted ${targetPlan.unitName} to pre-move origin (No LOS).`
-      }, clientState));
-    }
-    setAutopilotHtml(`↩️ Reverted <strong>${targetPlan.unitName}</strong> to pre-move origin (No LOS).`);
-    renderTacticaConsole();
-    return targetPlan;
-  }
-
-  /**
-   * 3. Computes Mode 3 Keyword-Driven Shooting Target Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`) & 11th Ed Hidden caps.
-   */
-  async function triggerAutopilotShooting() {
-    clientState.phase = 'HORDE_SHOOTING';
-    let assignments = [];
-    try {
-      const res = await daemonRequest('/autopilot/select-shooting', 'POST', {});
-      daemonOnline = true;
-      assignments = res.assignments || [];
-    } catch (e) {
-      assignments = selectHordeShootingTargets(clientState.boardTelemetry, clientState);
-    }
-    clientState.lastShootingAssignments = assignments;
-
-    if (assignments.length === 0) {
-      setAutopilotHtml('<span style="color:var(--muted);">No visible Player targets within Horde ranged weapon envelopes.</span>');
-    } else {
-      setAutopilotHtml(assignments.map((a, idx) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
-          <div>🎯 <strong>${a.attackerName}</strong> [${a.weapon.name}] &rarr; <strong>${a.targetName}</strong> (${a.distanceInches}")</div>
-          <button type="button" class="btn-red btn-sm" onclick="fireAutopilotWeaponOnMat(${idx})">🎲 Roll Attack on LCT Mat</button>
-        </div>
-      `).join(''));
-    }
-    renderTacticaConsole();
-    return assignments;
-  }
-
-  /**
-   * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`).
-   */
-  async function fireAutopilotWeaponOnMat(idx) {
-    const asgn = (clientState.lastShootingAssignments || [])[idx];
-    if (!asgn) return null;
-    const units = clientState.boardTelemetry?.units || [];
-    const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
-    const payload = {
-      attackerName: asgn.attackerName,
-      targetName: asgn.targetName,
-      attacker,
-      target: asgn.target || { toughness: 4 },
-      weapon: asgn.weapon
-    };
-    try {
-      const res = await daemonRequest('/combat/attack-request', 'POST', payload);
-      daemonOnline = true;
-      clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      const seq = createHordeAttackRollSequence(payload, clientState);
-      clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
-    }
-    renderTacticaConsole();
-    return clientState.pendingDiceSequence;
-  }
-
-  /**
-   * 4. Declares eligible Horde Charges (`<= 12"`), opens Heroic Intervention, and queues `2D6` on the LCT Mat.
-   */
-  async function triggerAutopilotCharges() {
-    clientState.phase = 'HORDE_CHARGE';
-    let declarations = [];
-    try {
-      const res = await daemonRequest('/autopilot/declare-charges', 'POST', {});
-      daemonOnline = true;
-      declarations = res.declarations || [];
-      clientState.pendingReactionWindow = res.pendingReactionWindow;
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      const chg = planHordeCharges(clientState.boardTelemetry, clientState);
-      declarations = chg.declarations || [];
-      const win = detectPlayerReactionWindow('HORDE_CHARGE_DECLARED', clientState);
-      clientState.pendingReactionWindow = (declarations.length > 0 && win.open) ? win : null;
-      localChronicle.push(formatChronicleEntry({
-        type: 'HORDE_CHARGE',
-        summary: `Declared ${declarations.length} Horde charge(s).`
-      }, clientState));
-    }
-    clientState.pendingChargeDecl = declarations[0]?.lctCommand ? declarations[0] : null;
-    setAutopilotHtml(declarations.length === 0
-      ? '<span style="color:var(--muted);">No Horde units within 12" Charge eligibility.</span>'
-      : declarations.map(d => `<div>⚡ <strong>${d.attackerName}</strong> &rarr; <strong>${d.targetName}</strong> (${d.distanceInches}" edge-to-edge • ${d.autoSucceeded ? 'Auto-12" Charge!' : '2D6 Queued on LCT Mat'})</div>`).join(''));
-    renderTacticaConsole();
-    return declarations;
-  }
-
-  /**
-   * 5. Executes 11th Edition 3-Tier `3"` Consolidation (`ONGOING` -> `ENGAGING` -> `OBJECTIVE` -> `HOLD`).
-   */
-  async function triggerAutopilotConsolidate() {
-    clientState.phase = 'HORDE_FIGHT';
-    let moves = [];
-    try {
-      const res = await daemonRequest('/autopilot/consolidate', 'POST', {});
-      daemonOnline = true;
-      moves = res.moves || [];
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      const units = clientState.boardTelemetry?.units || [];
-      const objs = clientState.boardTelemetry?.objectives || [];
-      const horde = units.filter(u => u.side !== 'PLAYER');
-      const players = units.filter(u => u.side === 'PLAYER');
-      moves = horde.map(h => ({ unitName: h.name, ...planConsolidationMove(h, players, objs) }));
-      localChronicle.push(formatChronicleEntry({
-        type: 'CONSOLIDATE',
-        summary: `Resolved 3" Consolidation for ${moves.length} Horde unit(s).`
-      }, clientState));
-    }
-    setAutopilotHtml(moves.length === 0
-      ? '<span style="color:var(--muted);">No Horde units on board to consolidate.</span>'
-      : moves.map(m => `<div>⚔️ <strong>${m.unitName}</strong>: [${m.mode}]${m.targetName ? ` &rarr; ${m.targetName}` : ''}</div>`).join(''));
-    renderTacticaConsole();
-    return moves;
-  }
-
-  function initTacticaPage() {
-    syncFromSpawnerStorage().then(() => refreshDaemonState());
-  }
-
-  if (typeof window !== 'undefined') {
-    Object.assign(window, {
-      getTacticaClientState: () => clientState,
-      getTacticaChronicle: () => localChronicle,
-      syncFromSpawnerStorage,
-      refreshDaemonState,
-      setConsolePhaseAndTrigger,
-      resolveConsoleReaction,
-      queueConsoleAutoDefender,
-      submitSettledMatPips,
-      appendConsoleNote,
-      compileAndPreviewMatchReport,
-      sendCompiledReportToVox,
-      requestTtsBoardScan,
-      selectTelemetryUnitForDefense,
-      toggleTelemetryUnitSide,
-      triggerAutopilotSpawnWaves,
-      triggerAutopilotMovement,
-      revertAutopilotSquadMove,
-      triggerAutopilotShooting,
-      fireAutopilotWeaponOnMat,
-      triggerAutopilotCharges,
-      triggerAutopilotConsolidate,
-      initTacticaPage
-    });
-    if (typeof window.addEventListener === 'function') {
-      window.addEventListener('DOMContentLoaded', initTacticaPage);
-      window.addEventListener('vox:page-swapped', () => {
-        if (typeof document !== 'undefined' && document.getElementById('tacticaChronicleBox')) initTacticaPage();
-      });
-    }
-  }
-
-  return {
-    getTacticaClientState: () => clientState,
-    getTacticaChronicle: () => localChronicle,
-    refreshDaemonState,
-    syncFromSpawnerStorage,
-    setConsolePhaseAndTrigger,
-    resolveConsoleReaction,
-    queueConsoleAutoDefender,
-    submitSettledMatPips,
-    appendConsoleNote,
-    compileAndPreviewMatchReport,
-    sendCompiledReportToVox,
-    requestTtsBoardScan,
-    selectTelemetryUnitForDefense,
-    toggleTelemetryUnitSide,
-    triggerAutopilotSpawnWaves,
-    triggerAutopilotMovement,
-    revertAutopilotSquadMove,
-    triggerAutopilotShooting,
-    fireAutopilotWeaponOnMat,
-    triggerAutopilotCharges,
-    triggerAutopilotConsolidate,
-    initTacticaPage
+  let voxQueued = null;
+  let tacticaApexSirens = 0;
+  let tacticaMidAlerts = 0;
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v))
   };
+  globalThis.document = { getElementById: (id) => els[id] || null };
+  globalThis.window = {
+    addEventListener: () => {},
+    VoxAudio: {
+      playClank: () => {},
+      playWarpSiren: () => { tacticaApexSirens++; },
+      playUnboundBreachAlert: () => { tacticaMidAlerts++; },
+      transmitToVox: (chan, text) => { voxQueued = { chan, text }; }
+    }
+  };
+  globalThis.fetch = async () => { throw new Error('Offline'); };
+
+  const tactica = require(path.join(ROOT_DIR, 'js/tactica.js'));
+  const overwatch = require(path.join(ROOT_DIR, 'js/tactica-overwatch.js'));
+  await tactica.syncFromSpawnerStorage();
+  await tactica.refreshDaemonState();
+  assert.ok(els.tacticaDaemonBadge.textContent.includes('OFFLINE'));
+
+  // Reaction window & manual note offline fallback
+  await tactica.setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT');
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), false);
+  await tactica.resolveConsoleReaction('FIRE_OVERWATCH', 1);
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), true);
+
+  els.tacticaNoteInput.value = 'Krieg squad held Eastern Bastion.';
+  await tactica.appendConsoleNote();
+  assert.ok(els.tacticaChronicleBox.innerHTML.includes('Eastern Bastion'));
+
+  // Queue Auto-Defender -> pauses awaiting 2D6 Saves on LCT mat (does NOT roll in JS!)
+  await tactica.queueConsoleAutoDefender();
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('SAVES'), 'Must display pending SAVES stage for LCT mat');
+
+  // Feed settled pips [2, 5] -> 1 fail triggers FNP stage (5+)
+  els.tacticaManualPipsInput.value = '2, 5';
+  await tactica.submitSettledMatPips();
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('FNP'), 'Must advance to FNP stage');
+
+  // Feed settled FNP pip [6] -> shrugged! Sequence completes with 0 slain
+  els.tacticaManualPipsInput.value = '6';
+  await tactica.submitSettledMatPips();
+  assert.ok(els.defResultBox.innerHTML.includes('Slain: <strong style="color:var(--red);">0</strong>'));
+
+  await tactica.compileAndPreviewMatchReport();
+  tactica.sendCompiledReportToVox();
+  assert.ok(voxQueued && voxQueued.text.includes('ASHEN-11'));
+
+  // One-click Orbital Auspex Telemetry -> Auto-Defender population & Autopilot Move + LOS Revert
+  tactica.getTacticaClientState().boardTelemetry = {
+    objectives: [],
+    units: [
+      {
+        squadKey: 'HORDE::Skorpekh',
+        name: 'Skorpekh Destroyers',
+        side: 'HORDE',
+        modelCount: 3,
+        move: 8,
+        save: 3,
+        invuln: 0,
+        woundsPerModel: 3,
+        pos: { x: 0, z: 14 },
+        keywords: ['INFANTRY'],
+        weapons: [{ name: 'Gauss Blaster', type: 'ranged', rangeInches: 24, attacks: 2, skill: 3, strength: 5, ap: -2, damage: 2, keywords: [] }],
+        inSpawnZone: true,
+        models: [{ guid: 'sk1', pos: { x: 0, y: 1.1, z: 14 }, radiusInches: 0.98 }]
+      },
+      {
+        squadKey: 'PLAYER::Cadians',
+        name: 'Cadian Shock Troops',
+        side: 'PLAYER',
+        modelCount: 10,
+        toughness: 3,
+        pos: { x: 0, z: 4 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'cd1', pos: { x: 0, y: 1.1, z: 4 }, radiusInches: 0.55 }]
+      }
+    ]
+  };
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, bracketKey: '5-6', units: ['10 Necron Warriors'] }
+  ];
+  await tactica.requestTtsBoardScan();
+  assert.ok(els.tacticaTelemetryBox.innerHTML.includes('Skorpekh Destroyers'));
+  assert.ok(
+    els.tacticaTelemetryBox.innerHTML.includes('onclick="toggleTelemetryUnitSide(0)"') &&
+    els.tacticaTelemetryBox.innerHTML.includes('⇄ Flip Side'),
+    'Each telemetry row must render a 1-click ⇄ Flip Side button'
+  );
+  tactica.selectTelemetryUnitForDefense(0);
+  assert.equal(els.defUnitName.value, 'Skorpekh Destroyers');
+  assert.equal(els.defInSpawnCheck.checked, true);
+
+  // Flip unit side HORDE -> PLAYER and back PLAYER -> HORDE
+  await tactica.toggleTelemetryUnitSide(0);
+  assert.equal(tactica.getTacticaClientState().boardTelemetry.units[0].side, 'PLAYER');
+  await tactica.toggleTelemetryUnitSide(0);
+  assert.equal(tactica.getTacticaClientState().boardTelemetry.units[0].side, 'HORDE');
+
+  await tactica.triggerAutopilotSpawnWaves();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Queued 1 Spawn Zone wave drop'));
+
+  await tactica.triggerAutopilotMovement();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Revert Move (No LOS)'));
+  await tactica.revertAutopilotSquadMove(0);
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Reverted'));
+
+  await tactica.triggerAutopilotShooting();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Roll Attack on LCT Mat'));
+  await tactica.fireAutopilotWeaponOnMat(0);
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('HITS'));
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  await tactica.triggerAutopilotCharges();
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('CHARGE_ROLL'));
+  els.tacticaManualPipsInput.value = '5, 6';
+  await tactica.submitSettledMatPips();
+  assert.equal(tactica.getTacticaClientState().pendingChargeDecl, null);
+
+  await tactica.triggerAutopilotConsolidate();
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Skorpekh Destroyers'));
+
+  // Step 6 Overwatch voice command dispatch, 6+ Intrusion Vox ping & Mode 5 Crusade export
+  await tactica.setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT');
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), false);
+  await overwatch.dispatchSpokenOrTypedCommand('Pass window and hold CP');
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), true);
+
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 2, waveId: 't_mid_1', bracketKey: '10-12', bracketLabel: 'Bracket [10–12]', intrusionRoll: 6, units: ['3 Skorpekh Destroyers'] }
+  ];
+  overwatch.syncOverwatchAlertsFromState();
+  assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  assert.equal(tacticaMidAlerts, 1, 'Tactica [10-12] 6+ breach must play playUnboundBreachAlert');
+  assert.equal(tacticaApexSirens, 0, 'Tactica [10-12] 6+ breach must NOT play [13+] playWarpSiren');
+
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, waveId: 't_apex_1', bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Monolith'] }
+  ];
+  overwatch.syncOverwatchAlertsFromState();
+  assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  assert.equal(tacticaApexSirens, 1, 'Tactica [13+] 6+ breach must play terrifying playWarpSiren');
+  assert.equal(tacticaMidAlerts, 1, 'Tactica [13+] 6+ breach must not increment playUnboundBreachAlert');
+  overwatch.pingIntrusionFromTactica(1, 'Bracket [13+]', 'alpha');
+  assert.ok(voxQueued && voxQueued.chan === 'alpha' && voxQueued.text.includes('EMERGENCY AUSPEX PING'));
+
+  const crusadeSnap = overwatch.exportTacticaToCrusade();
+  assert.ok(crusadeSnap && crusadeSnap.roomSeed === 'ASHEN-11');
+  assert.ok(store.has('foa_horde_battle_stats_v1'), 'Must write foa_horde_battle_stats_v1 to localStorage');
+  assert.equal(els.tacticaCrusadeExportNotice.classList.contains('hidden'), false);
+
+  assert.equal(overwatch.toggleOverwatchVoiceOutput(), false);
+  assert.equal(els.btnToggleOverwatchTts.textContent.includes('MUTE'), true);
+  assert.equal(overwatch.startPushToTalkMic(), false);
+  assert.equal(await overwatch.toggleTtsScreenCapture(), false);
+  await overwatch.dispatchSpokenOrTypedCommand('Can Skorpekh see Cadians behind central ruin?');
+  assert.ok(els.overwatchVerdictBox.innerHTML.includes('offline'));
+
+  // 3-Mode Progressive Switcher & Guided 4-Step Horde Sub-Bar
+  assert.equal(typeof tactica.switchTacticaMode, 'function');
+  tactica.switchTacticaMode('player');
+  assert.equal(els.tacticaModeHorde.classList.contains('hidden'), true, 'switchTacticaMode("player") must hide #tacticaModeHorde');
+  assert.equal(els.tacticaModePlayer.classList.contains('hidden'), false, 'switchTacticaMode("player") must reveal #tacticaModePlayer');
+  assert.equal(els.tacticaModeExport.classList.contains('hidden'), true);
+
+  tactica.switchTacticaMode('export');
+  assert.equal(els.tacticaModePlayer.classList.contains('hidden'), true);
+  assert.equal(els.tacticaModeExport.classList.contains('hidden'), false);
+
+  tactica.switchTacticaMode('horde');
+  tactica.setHordeTurnStep(1);
+  assert.equal(els.tacticaLosBar.classList.contains('hidden'), true, 'LOS bar stays tucked in Step 1 (Spawn)');
+  tactica.setHordeTurnStep(2);
+  assert.equal(els.tacticaLosBar.classList.contains('hidden'), false, 'LOS bar reveals in Step 2 (Move & LOS)');
+
+  // Hold-[Space] / [V] Push-to-Talk Hotkey (ignores INPUT/TEXTAREA/SELECT)
+  let spacePrevented = false;
+  overwatch.handlePttKeyDown({ code: 'Space', preventDefault: () => { spacePrevented = true; }, target: { tagName: 'INPUT' } });
+  assert.equal(spacePrevented, false, 'handlePttKeyDown must ignore editable INPUT targets');
+  assert.equal(els.pttStatusPill.classList.contains('ptt-active'), false);
+
+  overwatch.handlePttKeyDown({ code: 'Space', preventDefault: () => { spacePrevented = true; }, target: { tagName: 'BODY' } });
+  assert.equal(spacePrevented, true, 'handlePttKeyDown must activate PTT on BODY');
+  assert.equal(els.pttStatusPill.classList.contains('ptt-active'), true);
+  overwatch.handlePttKeyUp({ code: 'Space' });
+  assert.equal(els.pttStatusPill.classList.contains('ptt-active'), false);
+
+  // Spoken Player Stratagem fuzzy-matching & Mode 1 session sync
+  tactica.getTacticaClientState().playerCp = 3;
+  tactica.getTacticaClientState().boardTelemetry.units.push({
+    squadKey: 'PLAYER::Einhyr Hearthguard',
+    name: 'Einhyr Hearthguard',
+    side: 'PLAYER',
+    modelCount: 5,
+    save: 2
+  });
+  await overwatch.dispatchSpokenOrTypedCommand('Stratagem Void Armour on Hearthguard, one CP');
+  assert.equal(tactica.getTacticaClientState().playerCp, 2, 'Vocal stratagem must deduct 1 CP');
+  assert.ok(els.tacticaChronicleBox.innerHTML.includes('Void Armour on Einhyr Hearthguard'), 'Must fuzzy-match scanned PLAYER unit name into chronicle');
+  const syncedSession = JSON.parse(store.get('foa_horde_session_v1'));
+  assert.equal(syncedSession.cp, 2, 'Updated CP must sync back to foa_horde_session_v1');
+  assert.equal(syncedSession.stratCount, 1, '1+ CP Stratagem must increment stratCount for Secret #20');
+
+  delete globalThis.localStorage;
+  delete globalThis.document;
+  delete globalThis.window;
+  delete globalThis.fetch;
 });
 
 ````

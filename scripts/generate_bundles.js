@@ -142,10 +142,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (View & Controller)',
-  'In-Match Tactical Console view and imperative UI controller bridging Mode 1 session storage and LCT dice-mat rolls (`pages/tactica.html`, `js/tactica.js`).',
-  ['pages/tactica.html', 'js/tactica.js'],
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (3-Mode Progressive View & UI Tests)',
+  'Sticky Command Bar, 3-mode progressive panels (Horde Turn, Attack Horde, End Match), collapsed bottom drawers, and boundary UI tests (`pages/tactica.html`, `tests/ui/tactica.test.js`).',
+  ['pages/tactica.html', 'tests/ui/tactica.test.js'],
   path.join(BUNDLES_DIR, 'bundle_tactica.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller',
+  'Imperative Humble View controller bridging Mode 1 session storage, 3-mode progressive panel switching, Horde Autopilot sub-steps, and LCT dice-mat rolls (`js/tactica.js`).',
+  ['js/tactica.js'],
+  path.join(BUNDLES_DIR, 'bundle_tactica_controller.md')
 );
 
 compileBundle(
@@ -177,10 +184,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Live Screen & Mic Overwatch Referee & Crusade Handoff',
-  'Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers, Gemini thinking/artifact scrubbers, 6+ Warp-Breach Intrusion alerts, Mode 5 Crusade snapshot compiler, browser screen/mic shell, and unit tests (`js/tactica-overwatch-core.js`, `js/tactica-overwatch.js`, `tests/js/tactica-overwatch-core.test.js`).',
-  ['js/tactica-overwatch-core.js', 'js/tactica-overwatch.js', 'tests/js/tactica-overwatch-core.test.js'],
+  '📦 Fires of Armageddon // Bundle: Live Overwatch & Vocal Stratagem Core',
+  'Pure vocal Core/Faction Stratagem parser, neural Auspex voice presets, multimodal 3D ruin LOS prompt/verdict helpers, 6+ Warp-Breach Intrusion alerts, and Mode 5 Crusade snapshot compiler (`js/tactica-overwatch-core.js`).',
+  ['js/tactica-overwatch-core.js'],
   path.join(BUNDLES_DIR, 'bundle_tactica_overwatch.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Live Screen, Neural Auspex & Push-to-Talk Shell',
+  'Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hold-[Space]/[V] Push-to-Talk listener, Quick Stratagem drawer controller, and Mode 5 Crusade exporter (`js/tactica-overwatch.js`).',
+  ['js/tactica-overwatch.js'],
+  path.join(BUNDLES_DIR, 'bundle_tactica_overwatch_shell.md')
 );
 
 // ============================================================================
@@ -545,16 +559,21 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Tests (Mode 1 Spawner, Tactica UI & Combat Modifiers)',
-  'Headless Playwright & boundary UI tests for Mode 1 Horde Spawner and In-Match Tactica Console, plus Horde Combat Modifiers unit tests (`tests/ui/spawner.test.js`, `tests/ui/tactica.test.js`, `tests/js/horde-combat-modifiers.test.js`).',
-  ['tests/ui/spawner.test.js', 'tests/ui/tactica.test.js', 'tests/js/horde-combat-modifiers.test.js'],
+  '📦 Fires of Armageddon // Bundle: Tests (Mode 1 Spawner UI & Combat Modifiers)',
+  'Headless Playwright boundary UI tests for Mode 1 Horde Spawner plus Horde Combat Modifiers unit tests (`tests/ui/spawner.test.js`, `tests/js/horde-combat-modifiers.test.js`).',
+  ['tests/ui/spawner.test.js', 'tests/js/horde-combat-modifiers.test.js'],
   path.join(BUNDLES_DIR, 'bundle_tests_ui_spawner.md')
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Unit Tests (TTS Telemetry Core & Tactica Console)',
-  'Unit tests for LCT playmat bounds filtering, prop/camera rejection, deployed PLAYER army keyword detection, and 1-click `/tts/set-side` side flipping (`tests/js/tts-telemetry-core.test.js`, `tests/js/tactica.test.js`).',
-  ['tests/js/tts-telemetry-core.test.js', 'tests/js/tactica.test.js'],
+  '📦 Fires of Armageddon // Bundle: Unit Tests (TTS Telemetry, Tactica & Overwatch)',
+  'Unit tests for LCT playmat bounds filtering, prop/camera rejection, deployed PLAYER army keyword detection, 1-click side flipping, vocal Stratagem parsing, and neural Auspex visor playback (`tests/js/tts-telemetry-core.test.js`, `tests/js/tactica.test.js`, `tests/js/tactica-overwatch-core.test.js`, `tests/js/tactica-overwatch.test.js`).',
+  [
+    'tests/js/tts-telemetry-core.test.js',
+    'tests/js/tactica.test.js',
+    'tests/js/tactica-overwatch-core.test.js',
+    'tests/js/tactica-overwatch.test.js'
+  ],
   path.join(BUNDLES_DIR, 'bundle_tests_tts_tactica.md')
 );
 
@@ -626,12 +645,14 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_spawner_cockpit.md\`](bundle_spawner_cockpit.md) | **Spawner Cockpit & Telemetry** | \`js/spawner-cockpit.js\` |
 | [\`bundle_spawner_engine.md\`](bundle_spawner_engine.md) | **Spawner Engine & Resupply** | \`js/spawner.js\`, \`js/spawner-resupply.js\` |
 | [\`bundle_horde_combat.md\`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | \`js/horde-combat-modifiers.js\` |
-| [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (View & UI)** | \`pages/tactica.html\`, \`js/tactica.js\` |
+| [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View & UI Tests)** | \`pages/tactica.html\`, \`tests/ui/tactica.test.js\` |
+| [\`bundle_tactica_controller.md\`](bundle_tactica_controller.md) | **In-Match LCT Tactical Console Controller** | \`js/tactica.js\` |
 | [\`bundle_tactica_core.md\`](bundle_tactica_core.md) | **In-Match LCT Tactical Functional Core** | \`js/tactica-core.js\`, \`tests/js/tactica-core.test.js\` |
 | [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe** | \`tactica_daemon.js\` |
 | [\`bundle_tts_bridge.md\`](bundle_tts_bridge.md) | **LCT TTS Orbital Auspex & Telemetry** | \`js/tts-telemetry-core.js\`, \`tts/lct_horde_bridge.lua\` |
 | [\`bundle_horde_autopilot.md\`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | \`js/horde-autopilot-core.js\`, \`tests/js/horde-autopilot-core.test.js\` |
-| [\`bundle_tactica_overwatch.md\`](bundle_tactica_overwatch.md) | **Live Screen/Mic Overwatch & Crusade Handoff** | \`js/tactica-overwatch-core.js\`, \`js/tactica-overwatch.js\`, \`tests/js/tactica-overwatch-core.test.js\` |
+| [\`bundle_tactica_overwatch.md\`](bundle_tactica_overwatch.md) | **Live Overwatch & Vocal Stratagem Core** | \`js/tactica-overwatch-core.js\` |
+| [\`bundle_tactica_overwatch_shell.md\`](bundle_tactica_overwatch_shell.md) | **Live Screen, Neural Auspex & Push-to-Talk Shell** | \`js/tactica-overwatch.js\` |
 | [\`bundle_data_rng.md\`](bundle_data_rng.md) | **Data Schemas & Seeded RNG** | \`js/data.js\`, \`js/rng.js\` |
 | [\`bundle_app_part1.md\`](bundle_app_part1.md) | **App Engine (State & Factions)** | \`js/app.js\` (Lines 1-700) |
 | [\`bundle_app_part2.md\`](bundle_app_part2.md) | **App Engine (Waves & Escalation)** | \`js/app.js\` (Lines 701-1400) |
@@ -675,8 +696,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_tests_bridge.md\`](bundle_tests_bridge.md) | **Courier Bridge Tests (Part 1)** | \`tests/vox_bridge.test.js\` (Lines 1-522) |
 | [\`bundle_tests_bridge_part2.md\`](bundle_tests_bridge_part2.md) | **Courier Bridge Tests (Part 2)** | \`tests/vox_bridge.test.js\` (Lines 523-end) |
 | [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | \`tests/js/spawner*.test.js\` |
-| [\`bundle_tests_ui_spawner.md\`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner, Tactica UI & Combat Mods)** | \`tests/ui/spawner.test.js\`, \`tests/ui/tactica.test.js\`, \`tests/js/horde-combat-modifiers.test.js\` |
-| [\`bundle_tests_tts_tactica.md\`](bundle_tests_tts_tactica.md) | **Unit Tests (TTS Telemetry & Tactica Console)** | \`tests/js/tts-telemetry-core.test.js\`, \`tests/js/tactica.test.js\` |
+| [\`bundle_tests_ui_spawner.md\`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner UI & Combat Mods)** | \`tests/ui/spawner.test.js\`, \`tests/js/horde-combat-modifiers.test.js\` |
+| [\`bundle_tests_tts_tactica.md\`](bundle_tests_tts_tactica.md) | **Unit Tests (TTS Telemetry, Tactica & Overwatch)** | \`tests/js/tts-telemetry-core.test.js\`, \`tests/js/tactica.test.js\`, \`tests/js/tactica-overwatch-core.test.js\`, \`tests/js/tactica-overwatch.test.js\` |
 | [\`bundle_tests_js_core.md\`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | \`tests/js/data.test.js\`, \`tests/js/rng.test.js\`, \`tests/js/vox-audio.test.js\` |
 | [\`bundle_tests_js_app.md\`](bundle_tests_js_app.md) | **Unit Tests (App Engine Part 1)** | \`tests/js/app.test.js\` (Lines 1-519) |
 | [\`bundle_tests_js_app_part2.md\`](bundle_tests_js_app_part2.md) | **Unit Tests (App Engine Part 2)** | \`tests/js/app.test.js\` (Lines 520-end) |

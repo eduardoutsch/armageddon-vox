@@ -1,11 +1,9 @@
-# 📦 Fires of Armageddon // Bundle: Live Screen & Mic Overwatch Referee & Crusade Handoff
+# 📦 Fires of Armageddon // Bundle: Live Overwatch & Vocal Stratagem Core
 
-Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers, Gemini thinking/artifact scrubbers, 6+ Warp-Breach Intrusion alerts, Mode 5 Crusade snapshot compiler, browser screen/mic shell, and unit tests (`js/tactica-overwatch-core.js`, `js/tactica-overwatch.js`, `tests/js/tactica-overwatch-core.test.js`).
+Pure vocal Core/Faction Stratagem parser, neural Auspex voice presets, multimodal 3D ruin LOS prompt/verdict helpers, 6+ Warp-Breach Intrusion alerts, and Mode 5 Crusade snapshot compiler (`js/tactica-overwatch-core.js`).
 
 ## 📑 Table of Contents
 - [js/tactica-overwatch-core.js](#file-jstacticaoverwatchcorejs)
-- [js/tactica-overwatch.js](#file-jstacticaoverwatchjs)
-- [tests/js/tactica-overwatch-core.test.js](#file-testsjstacticaoverwatchcoretestjs)
 
 ---
 
@@ -28,6 +26,224 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
   if (typeof module !== 'undefined' && module.exports) module.exports = exports;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
 
+  /** Maps YOUR active Commander theme (never the enemy Horde) to a clean neural Auspex voice. */
+  const AUSPEX_VOICE_PRESETS = {
+    votann:    { voice: 'en-GB-RyanNeural',   rate: '+4%', pitch: '-2Hz', label: 'Brôkhyr Helm-Auspex' },
+    militarum: { voice: 'en-GB-SoniaNeural',  rate: '+5%', pitch: '+0Hz', label: 'Orbital Tactica Auspex' },
+    necron:    { voice: 'en-GB-ThomasNeural', rate: '+2%', pitch: '-3Hz', label: 'Cryptek Engram Auspex' },
+    default:   { voice: 'en-GB-RyanNeural',   rate: '+4%', pitch: '+0Hz', label: 'Tactical Auspex' }
+  };
+
+  /**
+   * Resolves the neural Auspex voice preset for the player's active Commander theme.
+   *
+   * @param {string} [theme='default'] - Active Commander faction theme (`votann`, `militarum`, `necron`, `default`).
+   * @returns {{voice: string, rate: string, pitch: string, label: string}}
+   */
+  function resolveTacticalAuspexVoice(theme = 'default') {
+    return AUSPEX_VOICE_PRESETS[String(theme || '').toLowerCase()] || AUSPEX_VOICE_PRESETS.default;
+  }
+
+  /** Canonical 11th Ed Core Stratagems declared vocally by the Player. */
+  const PLAYER_VOCAL_STRATAGEMS = [
+    { key: 'FIRE_OVERWATCH',      name: 'Fire Overwatch',      cpCost: 1, pattern: /\b(fire\s+overwatch|pop(?:ping)?\s+overwatch|use\s+overwatch)\b/i },
+    { key: 'RAPID_INGRESS',       name: 'Rapid Ingress',       cpCost: 1, minRound: 2, pattern: /\b(rapid\s+ingress)\b/i },
+    { key: 'SMOKESCREEN',         name: 'Smokescreen',         cpCost: 1, buff: { hitMod: -1, cover: true }, pattern: /\b(smokescreen|pop(?:ping)?\s+smoke)\b/i },
+    { key: 'GO_TO_GROUND',        name: 'Go to Ground',        cpCost: 1, buff: { cover: true, invuln6: true }, pattern: /\b(go(?:ing)?\s+to\s+ground)\b/i },
+    { key: 'HEROIC_INTERVENTION', name: 'Heroic Intervention', cpCost: 1, pattern: /\b(heroic\s+intervention)\b/i },
+    { key: 'COUNTER_OFFENSIVE',   name: 'Counter-Offensive',   cpCost: 2, pattern: /\b(counter[\s-]*offensive)\b/i },
+    { key: 'COMMAND_REROLL',      name: 'Command Re-roll',     cpCost: 1, pattern: /\b(command\s+re[\s-]*roll)\b/i },
+    { key: 'TANK_SHOCK',          name: 'Crushing Impact',     cpCost: 1, pattern: /\b(tank\s+shock|crushing\s+impact)\b/i },
+    { key: 'GRENADE',             name: 'Explosives',          cpCost: 1, pattern: /\b(throw\s+grenades?|use\s+grenades?|explosives\s+strat(?:agem)?)\b/i },
+    { key: 'INSANE_BRAVERY',      name: 'Insane Bravery',      cpCost: 1, pattern: /\b(insane\s+bravery)\b/i },
+    { key: 'EPIC_CHALLENGE',      name: 'Epic Challenge',      cpCost: 1, pattern: /\b(epic\s+challenge)\b/i }
+  ];
+
+  const SPOKEN_NUM_MAP = {
+    zero: '0', free: '0', one: '1', won: '1', two: '2', to: '2', too: '2', three: '3'
+  };
+
+  const CORE_STRAT_NAMES = {
+    FIRE_OVERWATCH: 'Fire Overwatch',
+    RAPID_INGRESS: 'Rapid Ingress',
+    SMOKESCREEN: 'Smokescreen',
+    GO_TO_GROUND: 'Go to Ground',
+    HEROIC_INTERVENTION: 'Heroic Intervention',
+    COUNTER_OFFENSIVE: 'Counter-Offensive',
+    COMMAND_REROLL: 'Command Re-roll',
+    CRUSHING_IMPACT: 'Crushing Impact',
+    EXPLOSIVES: 'Explosives',
+    INSANE_BRAVERY: 'Insane Bravery',
+    EPIC_CHALLENGE: 'Epic Challenge'
+  };
+
+  /**
+   * Maps normalized spoken/typed Stratagem text to a canonical 11th Edition Core key or `FACTION_CUSTOM`.
+   *
+   * @param {string} [name=''] - Candidate Stratagem name.
+   * @returns {string} Canonical Core Stratagem key or `'FACTION_CUSTOM'`.
+   */
+  function normalizeCoreStratKey(name = '') {
+    const s = name.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (/\boverwatch\b/.test(s)) return 'FIRE_OVERWATCH';
+    if (/\brapid ingress\b/.test(s)) return 'RAPID_INGRESS';
+    if (/\bsmoke\s*screen\b|\bpop(?:ping)?\s+smoke\b|\bsmoke\b/.test(s)) return 'SMOKESCREEN';
+    if (/\bgo(?:ing)? to ground\b/.test(s)) return 'GO_TO_GROUND';
+    if (/\bheroic intervention\b/.test(s)) return 'HEROIC_INTERVENTION';
+    if (/\bcounter offensive\b/.test(s)) return 'COUNTER_OFFENSIVE';
+    if (/\bcommand re roll\b|\breroll\b/.test(s)) return 'COMMAND_REROLL';
+    if (/\btank shock\b|\bcrushing impact\b/.test(s)) return 'CRUSHING_IMPACT';
+    if (/\bgrenades?\b|\bexplosives\b/.test(s)) return 'EXPLOSIVES';
+    if (/\binsane bravery\b/.test(s)) return 'INSANE_BRAVERY';
+    if (/\bepic challenge\b/.test(s)) return 'EPIC_CHALLENGE';
+    return 'FACTION_CUSTOM';
+  }
+
+  /**
+   * Infers common defensive buffs from Faction Stratagem names (e.g., Void Armour / Armour of Contempt).
+   *
+   * @param {string} [stratName=''] - Faction Stratagem display name.
+   * @returns {object|null} Defensive buff descriptor or `null`.
+   */
+  function inferFactionStratBuff(stratName = '') {
+    if (/\b(void\s+armou?r|armou?r\s+of\s+contempt|reinforced\s+armou?r)\b/i.test(stratName)) {
+      return { worsenAp: 1 };
+    }
+    return null;
+  }
+
+  /**
+   * Parses Core & Faction-Specific Stratagem declarations such as:
+   *   - `"strategem Void Armour on Hearthguard - 2cp"`
+   *   - `"Stratagem Ancestral Sentence on Pioneers, one CP"`
+   *   - `"Using Void Armour for 1 CP"` / `"Spend 2 CP on Reactive Reprisal"`
+   *   - `"Fire Overwatch on Yaegirs"` (uses Core 1 CP default, or explicit override like `"- 0cp"`)
+   *
+   * @param {string} [rawInput=''] - Raw spoken or typed text.
+   * @returns {object|null} Structured `PLAYER_STRATAGEM` descriptor or `null` when not a Stratagem.
+   */
+  function parsePlayerStratagem(rawInput = '') {
+    let text = String(rawInput || '').trim();
+    if (!text) return null;
+
+    // Normalize spoken number words right before "CP" (e.g. "two CP" -> "2 CP")
+    text = text.replace(/\b(zero|free|one|won|two|to|too|three)\s*(?=cp\b|command\s+points?\b)/gi, (_, word) => SPOKEN_NUM_MAP[word.toLowerCase()] + ' ');
+
+    let explicitCp = null;
+    const cpMatch = text.match(/(?:[-–—,]|for|\bwith)?\s*(\d+)\s*(?:cp|command\s+points?)\b/i);
+    if (cpMatch) {
+      explicitCp = parseInt(cpMatch[1], 10);
+      text = (text.slice(0, cpMatch.index) + ' ' + text.slice(cpMatch.index + cpMatch[0].length)).trim();
+    }
+
+    const hasStratPrefix = /^(?:use\s+|using\s+|pop(?:ping)?\s+|spend(?:ing)?\s+|declare\s+|activate\s+)?strat[ae]gem\b/i.test(text);
+    const stripped = text
+      .replace(/^(?:use\s+|using\s+|pop(?:ping)?\s+|spend(?:ing)?\s+(?:on\s+|for\s+)?|declare\s+|activate\s+)?(?:strat[ae]gem\s+)?/i, '')
+      .replace(/[-–—,\s]+$/, '')
+      .trim();
+
+    let rawName = stripped;
+    let targetUnit = null;
+    const onMatch = stripped.match(/^(.+?)\s+\bon\s+(.+)$/i);
+    if (onMatch) {
+      rawName = onMatch[1].replace(/[-–—,\s]+$/, '').trim();
+      targetUnit = onMatch[2].replace(/[-–—,\s]+$/, '').trim();
+    }
+
+    const coreKey = normalizeCoreStratKey(rawName);
+    if (coreKey === 'FACTION_CUSTOM' && !hasStratPrefix && explicitCp === null) {
+      return null;
+    }
+
+    switch (coreKey) {
+      case 'COUNTER_OFFENSIVE':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Counter-Offensive', targetUnit, cpCost: explicitCp ?? 2, minRound: 1, buff: null };
+      case 'RAPID_INGRESS':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Rapid Ingress', targetUnit, cpCost: explicitCp ?? 1, minRound: 2, buff: null };
+      case 'SMOKESCREEN':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Smokescreen', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: { hitMod: -1, cover: true } };
+      case 'GO_TO_GROUND':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Go to Ground', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: { cover: true, invuln6: true } };
+      case 'FIRE_OVERWATCH':
+      case 'HEROIC_INTERVENTION':
+      case 'COMMAND_REROLL':
+      case 'CRUSHING_IMPACT':
+      case 'EXPLOSIVES':
+      case 'INSANE_BRAVERY':
+      case 'EPIC_CHALLENGE': {
+        const pretty = CORE_STRAT_NAMES[coreKey] || rawName.replace(/\b\w/g, c => c.toUpperCase());
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: pretty, targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: null };
+      }
+      default: {
+        const cleanFactionStrat = rawName.replace(/\b\w/g, c => c.toUpperCase()) || 'Faction Stratagem';
+        return {
+          intent: 'PLAYER_STRATAGEM',
+          category: 'FACTION',
+          stratKey: 'FACTION_CUSTOM',
+          stratName: cleanFactionStrat,
+          targetUnit,
+          cpCost: explicitCp ?? 1,
+          minRound: 1,
+          buff: inferFactionStratBuff(cleanFactionStrat)
+        };
+      }
+    }
+  }
+
+  /**
+   * Fuzzy-matches a spoken target keyword (e.g. `"Hearthguard"`, `"Pioneers"`) strictly against
+   * scanned `PLAYER` squads on the LCT playmat (`Einhyr Hearthguard`, `Hernkyn Pioneers`).
+   *
+   * @param {string|null} [rawTarget=''] - Spoken or selected target name.
+   * @param {Array<object>} [boardUnits=[]] - Scanned board telemetry units.
+   * @returns {object|null} Matched `PLAYER` unit entry or `null`.
+   */
+  function matchPlayerUnitFromTelemetry(rawTarget = '', boardUnits = []) {
+    const query = String(rawTarget || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!query || !Array.isArray(boardUnits)) return null;
+    const playerUnits = boardUnits.filter(u => u && u.side === 'PLAYER');
+    if (playerUnits.length === 0) return null;
+
+    for (const u of playerUnits) {
+      const uNorm = String(u.name || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (uNorm === query || uNorm.includes(query) || query.includes(uNorm)) return u;
+    }
+
+    const qTokens = query.split(' ').filter(t => t.length >= 3);
+    for (const u of playerUnits) {
+      const uNorm = String(u.name || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (qTokens.some(tok => uNorm.includes(tok))) return u;
+    }
+    return null;
+  }
+
+  /**
+   * Pure rule validator checking Misery #22 (Comms Jammed), minimum Battle Round, and available CP,
+   * while computing whether the activation increments `stratCount` for Secret Objective #20 (Tacticool).
+   *
+   * @param {object} stratParsed - Output from `parsePlayerStratagem`.
+   * @param {object} [state={}] - Live Tactica match state.
+   * @returns {{allowed: boolean, reason: string|null, countsForSecret20: boolean}}
+   */
+  function validatePlayerStratagemUse(stratParsed, state = {}) {
+    if (!stratParsed) return { allowed: false, reason: 'Invalid Stratagem.', countsForSecret20: false };
+    const miseryIds = Array.isArray(state.activeMiseryIds) ? state.activeMiseryIds.map(Number) : [];
+    if (miseryIds.includes(22)) {
+      return { allowed: false, reason: 'Comms Jammed (Misery #22 active — Stratagems are locked this round).', countsForSecret20: false };
+    }
+    const minRound = Number(stratParsed.minRound) || 1;
+    const curRound = Math.max(1, Number(state.battleRound) || 1);
+    if (curRound < minRound) {
+      return { allowed: false, reason: `${stratParsed.stratName} cannot be used before Battle Round ${minRound}.`, countsForSecret20: false };
+    }
+    const cost = Math.max(0, Number(stratParsed.cpCost) || 0);
+    const availCp = Math.max(0, Number(state.playerCp) || 0);
+    if (availCp < cost) {
+      return { allowed: false, reason: `Insufficient Command Points for ${stratParsed.stratName} (requires ${cost} CP, ${availCp} CP available).`, countsForSecret20: false };
+    }
+    return { allowed: true, reason: null, countsForSecret20: cost >= 1 };
+  }
+
   /** Declarative lookup table mapping spoken tabletop commands to deterministic console actions. */
   const VOICE_INTENT_RULES = [
     { intent: 'SCAN_BOARD', pattern: /\b(scan\b.*boards?|update\s+auspex|board\s+scan)\b/i },
@@ -38,18 +254,15 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
     { intent: 'SELECT_SHOOTING', pattern: /\b(compute\s+shoot\w*|shooting\s+priority|target\s+priority|roll\s+shoot\w*)\b/i },
     { intent: 'DECLARE_CHARGES', pattern: /\b(declare\s+charges?|horde\s+charges?)\b/i },
     { intent: 'CONSOLIDATE', pattern: /\b(consolidate|consolidation)\b/i },
-    { intent: 'USE_FIRE_OVERWATCH', pattern: /\b(fire\s+overwatch|use\s+overwatch)\b/i },
-    { intent: 'USE_HEROIC_INTERVENTION', pattern: /\b(heroic\s+intervention)\b/i },
-    { intent: 'USE_COUNTER_OFFENSIVE', pattern: /\b(counter[\s-]*offensive)\b/i },
     { intent: 'PASS_REACTION', pattern: /\b(pass\s+window|hold\s+cp|decline\s+reaction|pass\s+reaction)\b/i },
     { intent: 'VISUAL_LOS_CHECK', pattern: /\b(line\s+of\s+sight|\blos\b|can\s+.+\s+see|visible|ruin\s+window)\b/i }
   ];
 
   /**
-   * Maps a spoken or typed transcript to a deterministic console command or `VISUAL_LOS_CHECK`.
+   * Maps a spoken or typed transcript to a deterministic console command, `PLAYER_STRATAGEM`, or `VISUAL_LOS_CHECK`.
    *
    * @param {string} [transcript=''] - Raw voice or typed text query.
-   * @returns {{intent: string, transcript: string}}
+   * @returns {object}
    */
   function parseSpokenTacticaIntent(transcript = '') {
     const clean = String(transcript || '').trim();
@@ -57,6 +270,25 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
     for (const rule of VOICE_INTENT_RULES) {
       if (rule.pattern.test(clean)) {
         return { intent: rule.intent, transcript: clean };
+      }
+    }
+    const strat = parsePlayerStratagem(clean);
+    if (strat) {
+      return { ...strat, transcript: clean };
+    }
+    for (const s of PLAYER_VOCAL_STRATAGEMS) {
+      if (s.pattern.test(clean)) {
+        return {
+          intent: 'PLAYER_STRATAGEM',
+          category: 'CORE',
+          stratKey: s.key,
+          stratName: s.name,
+          targetUnit: null,
+          cpCost: s.cpCost,
+          minRound: s.minRound || 1,
+          buff: s.buff || null,
+          transcript: clean
+        };
       }
     }
     return { intent: 'VISUAL_LOS_CHECK', transcript: clean };
@@ -266,7 +498,7 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
       if (e.type === 'AUTO_DEFENDER' && e.details?.outcome?.unitDestroyed) {
         chronicleUnitWipes += 1;
       }
-      if (e.type === 'REACTION' && !/passed\s+reaction/i.test(e.summary || '')) {
+      if ((e.type === 'REACTION' || e.type === 'STRATAGEM') && !/passed\s+reaction/i.test(e.summary || '') && !/\(-?0\s*CP\)/i.test(e.summary || '')) {
         chronicleStrats += 1;
       }
     }
@@ -303,6 +535,12 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
   }
 
   return {
+    AUSPEX_VOICE_PRESETS,
+    resolveTacticalAuspexVoice,
+    PLAYER_VOCAL_STRATAGEMS,
+    parsePlayerStratagem,
+    matchPlayerUnitFromTelemetry,
+    validatePlayerStratagemUse,
     parseSpokenTacticaIntent,
     buildLosVerificationPrompt,
     scrubGeminiThreadArtifacts,
@@ -314,486 +552,4 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
     compileTacticaCrusadeSnapshot
   };
 });
-````
-
----
-
-## File: `js/tactica-overwatch.js` <a id="file-jstacticaoverwatchjs"></a>
-
-````javascript
-/**
- * @fileoverview Fires of Armageddon // Live Screen & Microphone Overwatch Imperative Shell
- *
- * Humble View adapter managing:
- * - On-demand TTS window frame capture (`getDisplayMedia` -> offscreen JPEG canvas)
- * - Push-to-talk Web Speech microphone input & spoken tactical callouts (`speechSynthesis`)
- * - 6+ Big-Bracket Warp-Breach Intrusion alerts & 1-click Vox emergency dispatch
- * - 1-click post-match telemetry export to Mode 5 Crusade (`foa_horde_battle_stats_v1`)
- */
-
-(function (root, factory) {
-  const exports = factory();
-  if (typeof root !== 'undefined') Object.assign(root, exports);
-  if (typeof module !== 'undefined' && module.exports) module.exports = exports;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
-
-  const DAEMON_URL = 'http://127.0.0.1:3030';
-  let screenStream = null;
-  let screenVideoEl = null;
-  let voiceOutputEnabled = true;
-  let lastAnnouncedReactionKey = '';
-  let lastSirenSignature = '';
-
-  function speakOverwatchLine(text) {
-    if (!voiceOutputEnabled || !text || typeof window === 'undefined') return false;
-    if (window.speechSynthesis && typeof window.speechSynthesis.speak === 'function' && typeof SpeechSynthesisUtterance === 'function') {
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 1.04;
-      utter.pitch = 0.92;
-      window.speechSynthesis.speak(utter);
-      return true;
-    }
-    return false;
-  }
-
-  function toggleOverwatchVoiceOutput() {
-    voiceOutputEnabled = !voiceOutputEnabled;
-    const btn = typeof document !== 'undefined' ? document.getElementById('btnToggleOverwatchTts') : null;
-    if (btn) btn.textContent = voiceOutputEnabled ? '🔊 Voice Readout: ON' : '🔇 Voice Readout: MUTE';
-    return voiceOutputEnabled;
-  }
-
-  async function toggleTtsScreenCapture() {
-    const statusEl = typeof document !== 'undefined' ? document.getElementById('overwatchScreenStatus') : null;
-    if (screenStream) {
-      screenStream.getTracks().forEach(t => t.stop());
-      screenStream = null;
-      if (statusEl) statusEl.textContent = '📷 Screen Share: Disconnected';
-      return false;
-    }
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
-      if (statusEl) statusEl.textContent = '⚠️ Screen Share unavailable in this browser';
-      return false;
-    }
-    screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
-    if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
-      screenVideoEl = document.createElement('video');
-      screenVideoEl.srcObject = screenStream;
-      screenVideoEl.muted = true;
-      if (typeof screenVideoEl.play === 'function') await screenVideoEl.play().catch(() => {});
-    }
-    if (statusEl) statusEl.textContent = '🟢 Screen Share: Locked on TTS Window';
-    return true;
-  }
-
-  function captureSingleScreenFrameBase64() {
-    if (!screenStream || !screenVideoEl || typeof document === 'undefined' || typeof document.createElement !== 'function') {
-      return null;
-    }
-    const w = screenVideoEl.videoWidth || 1280;
-    const h = screenVideoEl.videoHeight || 720;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.min(1280, w);
-    canvas.height = Math.round((canvas.width / w) * h);
-    const ctx = canvas.getContext && canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.drawImage(screenVideoEl, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.72);
-  }
-
-  async function runOverwatchLosCheck(explicitQuery) {
-    const inp = typeof document !== 'undefined' ? document.getElementById('overwatchQueryInput') : null;
-    const query = (explicitQuery !== undefined ? explicitQuery : (inp?.value || '')).trim();
-    if (inp && explicitQuery === undefined) inp.value = '';
-
-    const outBox = typeof document !== 'undefined' ? document.getElementById('overwatchVerdictBox') : null;
-    const imageBase64 = captureSingleScreenFrameBase64();
-
-    try {
-      const res = await fetch(`${DAEMON_URL}/overwatch/los-check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transcript: query, imageBase64, mimeType: 'image/jpeg', autoRevert: true })
-      });
-      const data = await res.json();
-      if (outBox && data.verdict) {
-        outBox.innerHTML = `<strong>👁️ Overwatch Referee (${data.mode}):</strong> ${data.verdict.spokenReply}`;
-      }
-      if (data.verdict?.spokenReply) speakOverwatchLine(data.verdict.spokenReply);
-      if (typeof window !== 'undefined' && typeof window.refreshDaemonState === 'function') {
-        await window.refreshDaemonState();
-      }
-      return data.verdict;
-    } catch (e) {
-      const fallbackMsg = 'Overwatch daemon offline — run `npm run tactica:daemon` for live Gemini Vision LOS checks, or use [↩️ Revert Move] above.';
-      if (outBox) outBox.innerHTML = `<strong>👁️ Overwatch Referee (offline):</strong> ${fallbackMsg}`;
-      return { losBlocked: false, revertSquadKey: null, blockedPairs: [], spokenReply: fallbackMsg };
-    }
-  }
-
-  async function dispatchSpokenOrTypedCommand(rawTranscript) {
-    const parsed = parseSpokenTacticaIntent(rawTranscript);
-    if (parsed.intent === 'NONE') return parsed;
-
-    const w = typeof window !== 'undefined' ? window : globalThis;
-    if (parsed.intent === 'SCAN_BOARD' && typeof w.requestTtsBoardScan === 'function') await w.requestTtsBoardScan();
-    else if (parsed.intent === 'SPAWN_WAVES' && typeof w.triggerAutopilotSpawnWaves === 'function') await w.triggerAutopilotSpawnWaves();
-    else if (parsed.intent === 'MOVE_HORDE' && typeof w.triggerAutopilotMovement === 'function') await w.triggerAutopilotMovement();
-    else if (parsed.intent === 'REVERT_LAST_MOVE' && typeof w.revertAutopilotSquadMove === 'function') await w.revertAutopilotSquadMove(0);
-    else if (parsed.intent === 'LOCK_MOVEMENT' && typeof w.setConsolePhaseAndTrigger === 'function') await w.setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT');
-    else if (parsed.intent === 'SELECT_SHOOTING' && typeof w.triggerAutopilotShooting === 'function') await w.triggerAutopilotShooting();
-    else if (parsed.intent === 'DECLARE_CHARGES' && typeof w.triggerAutopilotCharges === 'function') await w.triggerAutopilotCharges();
-    else if (parsed.intent === 'CONSOLIDATE' && typeof w.triggerAutopilotConsolidate === 'function') await w.triggerAutopilotConsolidate();
-    else if (parsed.intent === 'USE_FIRE_OVERWATCH' && typeof w.resolveConsoleReaction === 'function') await w.resolveConsoleReaction('FIRE_OVERWATCH', 1);
-    else if (parsed.intent === 'USE_HEROIC_INTERVENTION' && typeof w.resolveConsoleReaction === 'function') await w.resolveConsoleReaction('HEROIC_INTERVENTION', 1);
-    else if (parsed.intent === 'USE_COUNTER_OFFENSIVE' && typeof w.resolveConsoleReaction === 'function') await w.resolveConsoleReaction('COUNTER_OFFENSIVE', 2);
-    else if (parsed.intent === 'PASS_REACTION' && typeof w.resolveConsoleReaction === 'function') await w.resolveConsoleReaction('PASS', 0);
-    else {
-      await runOverwatchLosCheck(parsed.transcript);
-    }
-
-    syncOverwatchAlertsFromState();
-    return parsed;
-  }
-
-  function startPushToTalkMic() {
-    if (typeof window === 'undefined') return false;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const outBox = typeof document !== 'undefined' ? document.getElementById('overwatchVerdictBox') : null;
-    if (!SR) {
-      if (outBox) outBox.innerHTML = '⚠️ Web Speech API mic not supported in this browser; type commands in the box instead.';
-      return false;
-    }
-    const rec = new SR();
-    rec.lang = 'en-US';
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-    if (outBox) outBox.innerHTML = '🎙️ Listening... speak a command or LOS question now.';
-    rec.onresult = (ev) => {
-      const spoken = ev.results?.[0]?.[0]?.transcript || '';
-      dispatchSpokenOrTypedCommand(spoken);
-    };
-    rec.start();
-    return true;
-  }
-
-  function syncOverwatchAlertsFromState() {
-    const w = typeof window !== 'undefined' ? window : globalThis;
-    const state = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : null;
-    if (!state) return;
-
-    // 1. Voice reaction callout
-    const win = state.pendingReactionWindow;
-    if (win && win.open) {
-      const rKey = `${state.battleRound}_${win.triggerKey}_${win.playerCp}`;
-      if (rKey !== lastAnnouncedReactionKey) {
-        lastAnnouncedReactionKey = rKey;
-        speakOverwatchLine(buildReactionVoiceCallout(win));
-      }
-    }
-
-    // 2. Render 6+ Big-Bracket Warp-Breach Intrusion alerts
-    const intBox = typeof document !== 'undefined' ? document.getElementById('tacticaIntrusionAlertBox') : null;
-    const breaches = detectActiveIntrusionZones(state.zoneSpawns || []);
-    if (intBox) {
-      if (breaches.length === 0) {
-        intBox.classList.add('hidden');
-        intBox.innerHTML = '';
-      } else {
-        intBox.classList.remove('hidden');
-        const sig = breaches.map(b => `${b.waveId || b.zone}:${b.intrusionRoll}`).join('|');
-        if (sig !== lastSirenSignature) {
-          lastSirenSignature = sig;
-          const hasApex13 = breaches.some(b => b.bracketKey === '13+' || /13\+/.test(String(b.bracketLabel || '')));
-          if (w.VoxAudio) {
-            if (hasApex13 && typeof w.VoxAudio.playWarpSiren === 'function') {
-              w.VoxAudio.playWarpSiren();
-            } else if (!hasApex13 && typeof w.VoxAudio.playUnboundBreachAlert === 'function') {
-              w.VoxAudio.playUnboundBreachAlert();
-            } else if (typeof w.VoxAudio.playWarpSiren === 'function') {
-              w.VoxAudio.playWarpSiren();
-            }
-          }
-          speakOverwatchLine(`Warning! Warp-Breach Intrusion detected in Spawn Zone ${breaches[0].zone}!`);
-        }
-        intBox.innerHTML = breaches.map(b => `
-          <div style="margin-bottom:6px;">
-            <strong style="color:var(--red);">⚡ WARP-BREACH INTRUSION (D6 = ${b.intrusionRoll}) — Spawn Zone ${b.zone} • ${b.bracketLabel}</strong>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-              <button type="button" class="btn-red btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'alpha')">📡 Ping Vox (Alpha)</button>
-              <button type="button" class="btn-ghost btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'beta')">📡 Ping Vox (Beta)</button>
-              <button type="button" class="btn-ghost btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'gamma')">📡 Ping Vox (Gamma)</button>
-              <button type="button" class="btn-ghost btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'distant')">🛰️ Ping Vox (Distant)</button>
-            </div>
-          </div>
-        `).join('');
-      }
-    }
-  }
-
-  function pingIntrusionFromTactica(zoneNum, bracketLabel, channel) {
-    const w = typeof window !== 'undefined' ? window : globalThis;
-    const state = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : {};
-    const payload = buildIntrusionVoxPayload({
-      zoneNum,
-      bracketLabel,
-      channel,
-      roomCode: state.roomCode,
-      battleRound: state.battleRound,
-      factionName: state.factionName
-    });
-    if (w.VoxAudio && typeof w.VoxAudio.transmitToVox === 'function') {
-      w.VoxAudio.transmitToVox(channel, payload);
-    }
-    return payload;
-  }
-
-  function exportTacticaToCrusade() {
-    if (typeof localStorage === 'undefined') return null;
-    const w = typeof window !== 'undefined' ? window : globalThis;
-    const state = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : {};
-    const chronicle = typeof w.getTacticaChronicle === 'function' ? w.getTacticaChronicle() : [];
-    let spawnerSession = {};
-    try {
-      const raw = localStorage.getItem('foa_horde_session_v1');
-      if (raw) spawnerSession = JSON.parse(raw);
-    } catch (e) {}
-
-    const snapshot = compileTacticaCrusadeSnapshot(state, chronicle, spawnerSession);
-    localStorage.setItem('foa_horde_battle_stats_v1', JSON.stringify(snapshot));
-    if (w.VoxAudio && typeof w.VoxAudio.playPowerSurge === 'function') w.VoxAudio.playPowerSurge();
-
-    const notice = typeof document !== 'undefined' ? document.getElementById('tacticaCrusadeExportNotice') : null;
-    if (notice) {
-      notice.classList.remove('hidden');
-      notice.innerHTML = `✅ Exported to Mode 5 Crusade Quartermaster (${snapshot.hordeKills} Horde Units Wiped • R${snapshot.roundsPlayed} • ${snapshot.leftoverSp} Leftover SP)! <a href="crusade.html" style="color:var(--gold); text-decoration:underline;">Open Crusade Command &rarr;</a>`;
-    }
-    return snapshot;
-  }
-
-  if (typeof window !== 'undefined') {
-    Object.assign(window, {
-      toggleTtsScreenCapture,
-      toggleOverwatchVoiceOutput,
-      startPushToTalkMic,
-      runOverwatchLosCheck,
-      dispatchSpokenOrTypedCommand,
-      syncOverwatchAlertsFromState,
-      pingIntrusionFromTactica,
-      exportTacticaToCrusade
-    });
-  }
-
-  return {
-    toggleTtsScreenCapture,
-    toggleOverwatchVoiceOutput,
-    startPushToTalkMic,
-    runOverwatchLosCheck,
-    dispatchSpokenOrTypedCommand,
-    syncOverwatchAlertsFromState,
-    pingIntrusionFromTactica,
-    exportTacticaToCrusade
-  };
-});
-
-````
-
----
-
-## File: `tests/js/tactica-overwatch-core.test.js` <a id="file-testsjstacticaoverwatchcoretestjs"></a>
-
-````javascript
-/**
- * @fileoverview Unit tests for js/tactica-overwatch-core.js voice intent parser,
- * multimodal 3D LOS prompt/verdict helpers, 6+ Intrusion alerts & Crusade stats handoff.
- */
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const {
-  parseSpokenTacticaIntent,
-  buildLosVerificationPrompt,
-  scrubGeminiThreadArtifacts,
-  isGeminiInterimThinkingText,
-  parseOverwatchVerdict,
-  buildReactionVoiceCallout,
-  detectActiveIntrusionZones,
-  buildIntrusionVoxPayload,
-  compileTacticaCrusadeSnapshot
-} = require('../../js/tactica-overwatch-core.js');
-
-test('parseSpokenTacticaIntent: maps spoken tabletop commands to deterministic console actions and routes LOS queries', () => {
-  assert.equal(parseSpokenTacticaIntent('').intent, 'NONE');
-  assert.equal(parseSpokenTacticaIntent('Scan the LCT board now').intent, 'SCAN_BOARD');
-  assert.equal(parseSpokenTacticaIntent('Drop wave spawns into zones').intent, 'SPAWN_WAVES');
-  assert.equal(parseSpokenTacticaIntent('Move the horde units').intent, 'MOVE_HORDE');
-  assert.equal(parseSpokenTacticaIntent('Revert move on that squad').intent, 'REVERT_LAST_MOVE');
-  assert.equal(parseSpokenTacticaIntent('Lock movement and check overwatch').intent, 'LOCK_MOVEMENT');
-  assert.equal(parseSpokenTacticaIntent('Compute shooting target priority').intent, 'SELECT_SHOOTING');
-  assert.equal(parseSpokenTacticaIntent('Declare charges').intent, 'DECLARE_CHARGES');
-  assert.equal(parseSpokenTacticaIntent('Consolidate horde').intent, 'CONSOLIDATE');
-  assert.equal(parseSpokenTacticaIntent('Activate Fire Overwatch').intent, 'USE_FIRE_OVERWATCH');
-  assert.equal(parseSpokenTacticaIntent('Heroic Intervention').intent, 'USE_HEROIC_INTERVENTION');
-  assert.equal(parseSpokenTacticaIntent('Counter-Offensive').intent, 'USE_COUNTER_OFFENSIVE');
-  assert.equal(parseSpokenTacticaIntent('Pass window and hold CP').intent, 'PASS_REACTION');
-  assert.equal(
-    parseSpokenTacticaIntent('Can the Screamer-Killer see my Krieg squad through that ruin window?').intent,
-    'VISUAL_LOS_CHECK'
-  );
-});
-
-test('buildLosVerificationPrompt & parseOverwatchVerdict: embeds Misery #28 / coordinates and parses JSON or prose verdicts', () => {
-  const prompt = buildLosVerificationPrompt({
-    factionName: 'Tyranids',
-    battleRound: 2,
-    activeMiseryIds: [],
-    lastMovementPlans: [{ squadKey: 'HORDE::Screamer', unitName: 'Screamer-Killer', goalName: 'Krieg Squad', targetX: 2, targetZ: 6 }],
-    boardTelemetry: {
-      units: [
-        { squadKey: 'HORDE::Screamer', name: 'Screamer-Killer', side: 'HORDE', pos: { x: 2, z: 6 }, keywords: ['MONSTER'] },
-        { squadKey: 'PLAYER::Krieg', name: 'Krieg Squad', side: 'PLAYER', pos: { x: 2, z: -4 }, keywords: ['INFANTRY'], isHidden: true }
-      ]
-    }
-  }, 'Can the Screamer-Killer see the Krieg Squad behind the solid L-ruin?');
-
-  assert.ok(prompt.includes('HORDE::Screamer'));
-  assert.ok(prompt.includes('11th Edition'));
-
-  const flyPrompt = buildLosVerificationPrompt({ activeMiseryIds: [28] }, '');
-  assert.ok(flyPrompt.includes('Misery #28'));
-
-  const fencedJson = '```json\n{"losBlocked":true,"revertSquadKey":"HORDE::Screamer","blockedPairs":["HORDE::Screamer->PLAYER::Krieg"],"spokenReply":"Solid first-floor ruin blocks true line of sight; reverting Screamer-Killer."}\n```';
-  const parsed = parseOverwatchVerdict(fencedJson);
-  assert.equal(parsed.losBlocked, true);
-  assert.equal(parsed.revertSquadKey, 'HORDE::Screamer');
-  assert.deepEqual(parsed.blockedPairs, ['HORDE::Screamer->PLAYER::Krieg']);
-  assert.ok(parsed.spokenReply.includes('reverting Screamer-Killer'));
-
-  const fallback = parseOverwatchVerdict('Line of sight is clear past the rubble.');
-  assert.equal(fallback.losBlocked, false);
-  assert.equal(fallback.spokenReply, 'Line of sight is clear past the rubble.');
-
-  const proseBlocked = parseOverwatchVerdict('No line of sight behind the ruin.');
-  assert.equal(proseBlocked.losBlocked, true);
-  assert.equal(parseOverwatchVerdict('').losBlocked, false);
-});
-
-test('buildReactionVoiceCallout & detectActiveIntrusionZones: announces CP options and flags 6+ Big-Bracket breaches', () => {
-  assert.equal(buildReactionVoiceCallout(null), '');
-  const callout = buildReactionVoiceCallout({
-    open: true,
-    title: 'End of Horde Movement Phase',
-    playerCp: 2,
-    eligibleStratagems: [{ name: 'Fire Overwatch (24", 6+ Snap Shots)', cpCost: 1 }]
-  });
-  assert.ok(callout.includes('2 Command Points') && callout.includes('Fire Overwatch'));
-
-  const breaches = detectActiveIntrusionZones([
-    { zone: 1, bracketKey: '7-9', bracketLabel: 'Bracket [7–9]', intrusionRoll: null },
-    { zone: 2, bracketKey: '10-12', bracketLabel: 'Bracket [10–12]', intrusionRoll: 5 },
-    { zone: 3, bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6 }
-  ]);
-  assert.equal(breaches.length, 1);
-  assert.equal(breaches[0].zone, 3);
-
-  const gammaPing = buildIntrusionVoxPayload({
-    zoneNum: 3,
-    bracketLabel: 'Bracket [13+]',
-    channel: 'gamma',
-    roomCode: 'EMBER-09',
-    battleRound: 4,
-    factionName: 'Orks'
-  });
-  assert.ok(gammaPing.includes('FANE-NODE VÔL-09') && gammaPing.includes('EMBER-09'));
-
-  const alphaPing = buildIntrusionVoxPayload({ zoneNum: 1, bracketLabel: '[10–12]', channel: 'alpha', roomCode: 'HADES-1' });
-  assert.ok(alphaPing.includes('THE EXILE'));
-  const betaPing = buildIntrusionVoxPayload({ zoneNum: 1, bracketLabel: '[10–12]', channel: 'beta', roomCode: 'HADES-1' });
-  assert.ok(betaPing.includes('JUNEBUG'));
-  const distPing = buildIntrusionVoxPayload({ zoneNum: 2, bracketLabel: '[13+]', channel: 'distant', roomCode: 'HADES-1' });
-  assert.ok(distPing.includes('ORBITAL AUGUR ARRAY'));
-});
-
-test('compileTacticaCrusadeSnapshot: aggregates chronicle kills, reactions, Misery cards & Warlord status for Mode 5 Crusade', () => {
-  const state = {
-    roomCode: 'GOLGOTHA-44',
-    battleRound: 6,
-    factionName: 'World Eaters',
-    playerSp: 10,
-    playerCp: 1,
-    activeMiseryIds: [5, 30],
-    hordeWarlord: { name: 'Lord Invocatus', roundSpawned: 2, alive: false }
-  };
-  const chronicle = [
-    { type: 'AUTO_DEFENDER', summary: 'Wiped Berzerkers', details: { outcome: { unitDestroyed: true, modelsSlain: 10 } } },
-    { type: 'AUTO_DEFENDER', summary: 'Slain Invocatus', details: { outcome: { unitDestroyed: true, modelsSlain: 1 } } },
-    { type: 'REACTION', summary: 'Player activated FIRE_OVERWATCH (-1 CP).' },
-    { type: 'REACTION', summary: 'Player passed reaction window.' }
-  ];
-  const spawnerSession = {
-    selectedModeVal: 'solo',
-    spSpentThisRound: 6,
-    activeMiseries: [{ id: 5, name: 'Untouchable' }, { id: 30, name: 'Aim for the Heads' }],
-    activeCard: { code: 'L2Y', name: '11 - Show Off', tags: 'End of Game' }
-  };
-
-  const snap = compileTacticaCrusadeSnapshot(state, chronicle, spawnerSession);
-  assert.equal(snap.hordeKills, 2);
-  assert.equal(snap.stratagemsUsed, 1);
-  assert.equal(snap.roundsPlayed, 6);
-  assert.equal(snap.hordeFaction, 'World Eaters');
-  assert.equal(snap.roomSeed, 'GOLGOTHA-44');
-  assert.equal(snap.gameMode, 'SOLO');
-  assert.equal(snap.leftoverSp, 10);
-  assert.equal(snap.leftoverCp, 1);
-  assert.equal(snap.secretObjective.code, 'L2Y');
-  assert.equal(snap.hordeWarlord.alive, false);
-});
-
-test('scrubGeminiThreadArtifacts & isGeminiInterimThinkingText: strips "O Gemini disse" anywhere and rejects thinking/streaming states', () => {
-  assert.equal(typeof scrubGeminiThreadArtifacts, 'function');
-  assert.equal(typeof isGeminiInterimThinkingText, 'function');
-
-  // Exact interim thinking strings observed in live Portuguese/English Gemini 2.5 Thinking UI
-  const interim1 = scrubGeminiThreadArtifacts('Processing: Determining if terrain blocks visibility O Gemini disse');
-  assert.equal(interim1.includes('O Gemini disse'), false);
-  assert.equal(isGeminiInterimThinkingText(interim1), true, 'Must treat "Processing: Determining..." as interim thinking');
-
-  const interim2 = scrubGeminiThreadArtifacts('Determining if large rulebooks are supported O Gemini disse');
-  assert.equal(interim2.includes('O Gemini disse'), false);
-  assert.equal(isGeminiInterimThinkingText(interim2), true, 'Must treat "Determining if..." thought header as interim thinking');
-
-  const adjacentNoSpace = scrubGeminiThreadArtifacts('Mostrar pensamentoDetermining if terrain blocks visibilityO Gemini disse');
-  assert.equal(adjacentNoSpace.includes('O Gemini disse'), false);
-  assert.equal(adjacentNoSpace.includes('Mostrar pensamento'), false);
-  assert.equal(isGeminiInterimThinkingText(adjacentNoSpace), true);
-
-  const emptyAfterLabel = scrubGeminiThreadArtifacts('  O Gemini disse:  ');
-  assert.equal(emptyAfterLabel, '');
-  assert.equal(isGeminiInterimThinkingText(emptyAfterLabel), true, 'Empty body after stripping O Gemini disse must keep waiting');
-
-  // Active streaming button still present on page
-  assert.equal(
-    isGeminiInterimThinkingText('{"losBlocked":true', { isGenerating: true }),
-    true,
-    'Must keep waiting while Gemini Stop/streaming indicator is active'
-  );
-
-  // Completed real responses (JSON and conversational prose)
-  const finalJson = scrubGeminiThreadArtifacts(
-    'O Gemini disse\nJSON\nCopiar código\n{"losBlocked":true,"revertSquadKey":"HORDE::Paladin","blockedPairs":[],"spokenReply":"Solid ruin blocks LOS."}'
-  );
-  assert.equal(isGeminiInterimThinkingText(finalJson, { isGenerating: false }), false);
-  const verdict = parseOverwatchVerdict(
-    'O Gemini disse\n{"losBlocked":false,"revertSquadKey":null,"blockedPairs":[],"spokenReply":"Clear sightline past low rubble."}'
-  );
-  assert.equal(verdict.spokenReply, 'Clear sightline past low rubble.');
-
-  const proseVerdict = parseOverwatchVerdict('O Gemini disse: Yes, I can hear you loud and clear and am ready to verify line of sight.');
-  assert.equal(proseVerdict.spokenReply.includes('O Gemini disse'), false);
-  assert.equal(isGeminiInterimThinkingText(proseVerdict.spokenReply, { isGenerating: false }), false);
-});
-
-
 ````

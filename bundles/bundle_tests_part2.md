@@ -11,6 +11,8 @@ Headless browser E2E verification, cockpit controls, and LCT Tactica Daemon inte
 ## File: `tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)` <a id="file-testsuipagestestjspart2headlessplaywrighte2elines5661100"></a>
 
 ````javascript
+    if (browser) await browser.close();
+    server.close();
   }
 });
 
@@ -884,6 +886,56 @@ test('resolveTacticaProfileDir & launchTacticaBrowserSession: strictly isolates 
     'Must NEVER touch chrome_vox_profile'
   );
   await session.close();
+});
+
+test('POST /audio/speak & Clipboard LOS paste: caches SHA-256 neural Auspex MP3s in audio_cache/ and pastes TTS LOS frames via ClipboardEvent', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tactica-audio-test-'));
+  let synthCallCount = 0;
+  const daemon = createTacticaDaemon({
+    logDir: tmpDir,
+    ttsSynthesizeFn: async (text, preset, destFile) => {
+      synthCallCount += 1;
+      const fakeMp3 = Buffer.from(`MP3:${preset.voice}:${text}`);
+      fs.writeFileSync(destFile, fakeMp3);
+      return fakeMp3;
+    }
+  });
+  const port = await daemon.start(0);
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    const emptyRes = await fetch(`${baseUrl}/audio/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '   ', theme: 'votann' })
+    });
+    assert.equal(emptyRes.status, 400);
+
+    const call1 = await postJson(baseUrl, '/audio/speak', {
+      text: 'Void Armour active. One Command Point deducted.',
+      theme: 'votann'
+    });
+    assert.equal(call1.ok, true);
+    assert.equal(call1.cached, false, 'First call must synthesize fresh MP3');
+    assert.equal(call1.voice, 'en-GB-RyanNeural');
+    assert.equal(call1.mimeType, 'audio/mpeg');
+    assert.equal(synthCallCount, 1);
+
+    const call2 = await postJson(baseUrl, '/audio/speak', {
+      text: 'Void Armour active. One Command Point deducted.',
+      theme: 'votann'
+    });
+    assert.equal(call2.ok, true);
+    assert.equal(call2.cached, true, 'Second identical call must hit SHA-256 disk audio_cache/');
+    assert.equal(call2.audioBase64, call1.audioBase64);
+    assert.equal(synthCallCount, 1, 'Cached hit must not invoke ttsSynthesizeFn again');
+
+    const daemonSrc = fs.readFileSync(path.resolve(__dirname, '../tactica_daemon.js'), 'utf8');
+    assert.ok(daemonSrc.includes("new ClipboardEvent('paste'"), 'launchTacticaBrowserSession must paste LOS frames via ClipboardEvent');
+  } finally {
+    await daemon.stop();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 
