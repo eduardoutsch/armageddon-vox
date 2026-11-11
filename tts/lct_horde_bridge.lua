@@ -258,3 +258,42 @@ function getSurfaceY(x, z, halfH)
     return 1.1
 end
 
+function executeSquadMove(guids, targetX, targetZ, facingY)
+    local total = #guids
+    for i, guid in ipairs(guids) do
+        local obj = getObjectFromGUID(guid)
+        if obj then
+            local ox, oz = 0, 0
+            if total > 1 and i > 1 then
+                local ang = ((i - 2) / (total - 1)) * (2 * math.pi)
+                local rad = (i <= 7) and 1.35 or 2.6
+                ox = math.cos(ang) * rad
+                oz = math.sin(ang) * rad
+            end
+            local halfH = obj.getBoundsNormalized().size.y * 0.5
+            local y = getSurfaceY(targetX + ox, targetZ + oz, halfH)
+            obj.setPositionSmooth({x = targetX + ox, y = y, z = targetZ + oz}, false, false)
+            if facingY then obj.setRotationSmooth({x = 0, y = facingY, z = 0}, false, false) end
+        end
+    end
+    Wait.time(pushBoardTelemetry, 1.4)
+end
+
+-- Finds an off-board or HORDE_TEMPLATE miniature matching templateName for wave cloning
+function findShelfTemplateModel(templateName)
+    local targetLower = string.lower(templateName or "")
+    for _, obj in ipairs(getAllObjects()) do
+        if obj ~= self then
+            local p = obj.getPosition()
+            local isOffBoard = math.abs(p.x) > 32 or math.abs(p.z) > 24
+            if obj.hasTag("HORDE_TEMPLATE") or isOffBoard then
+                local clean = string.lower(string.gsub(obj.getName() or "", "^%s*%d+/%d+%s*", ""))
+                if clean == targetLower or string.find(clean, targetLower, 1, true) then
+                    return obj
+                end
+            end
+        end
+    end
+    return nil
+end
+
