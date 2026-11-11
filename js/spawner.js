@@ -47,7 +47,50 @@ function calculateRollDown(bracketKey) {
 }
 
 /**
- * Picks a unit from the shelf pool for a given bracket.
+ * Pure helper: parses a single chosen spawn wave string into structured TTS spawn descriptors.
+ * Convention:
+ *   - '+' separates multiple units spawned together (e.g. "5 Bladeguard Veterans + 1 Captain")
+ *   - Leading number or dice expression sets model count (e.g. "10 Boyz", "1D3 Chaos Spawns", "D3+1 Scarabs")
+ *   - Optional "[Count Unit]" suffix tags embarked transport passengers (e.g. "1 Chimera [10 Kasrkin]")
+ *
+ * @param {string} entryStr - Chosen spawn option from a bracket.
+ * @param {function(): number} [rng=Math.random] - Random float generator in [0, 1).
+ * @returns {Array<{count: number, countExpr: string, templateName: string, embarked: object|null}>}
+ */
+function splitTopLevelWaveUnits(str) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === '[') depth++;
+    else if (ch === ']' && depth > 0) depth--;
+    else if (ch === '+' && depth === 0) {
+      const before = str.slice(start, i);
+      const after = str.slice(i + 1);
+      const isDiceBonus = /(?:^|\s)\d*d\d+\s*$/i.test(before) && /^\s*\d+\s+\S/.test(after);
+      if (!isDiceBonus) {
+        parts.push(before.trim());
+        start = i + 1;
+      }
+    }
+  }
+  parts.push(str.slice(start).trim());
+  return parts.filter(Boolean);
+}
+
+function parseSpawnWaveSpec(entryStr, rng = Math.random) {
+  if (!entryStr || typeof entryStr !== 'string') return [];
+  const trimmed = entryStr.trim();
+  if (!trimmed || trimmed === 'None' || trimmed.startsWith('⚠️') || trimmed.startsWith('Unit from Bracket')) {
+    return [];
+  }
+
+  return splitTopLevelWaveUnits(trimmed)
+    .map(sub => parseSingleUnitToken(sub, rng))
+    .filter(Boolean);
+}
+
  */
 function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
   const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10', '10-12': 'pool10', '13+': 'pool13' };
