@@ -159,12 +159,14 @@ function rollRandomWeaponMod() {
   const result = _forgeCore.rollWeaponModPair(_resolveForgeCatalogs().weaponMods);
   lastRolledItem.weapon = { category: result.category, roll: result.roll, name: result.name, desc: result.desc };
 
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
-    const box = typeof document !== 'undefined' ? document.getElementById('weaponResultBox') : null;
+  _scheduleForgeReveal(() => {
+    _getVoxAudio()?.playForgeAnvil?.();
+    const box = _getForgeEl('weaponResultBox');
     if (box) {
+      const m1 = result.pick1;
+      const m2 = result.pick2;
       box.innerHTML = `
-        <div><span class="dice-pip-badge">D6: ${m1.d6} &amp; ${m2.d6}</span> <strong style="color:var(--blue);">${m1.name} + ${m2.name}</strong></div>
+        <div><span class="dice-pip-badge">D6: ${m1.d6} &amp; ${m2.d6}</span> <strong style="color:var(--blue);">${result.name}</strong></div>
         <div style="margin-top:6px; font-size:0.81rem; color:var(--text);">• <strong>${m1.name}:</strong> ${m1.desc}<br>• <strong>${m2.name}:</strong> ${m2.desc}</div>
       `;
     }
@@ -172,30 +174,15 @@ function rollRandomWeaponMod() {
 }
 
 function rollRandomRelic() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const poolKey = (typeof document !== 'undefined' ? document.getElementById('forgeSourcePool')?.value : '') || 'Armageddon';
-  const tier = (typeof document !== 'undefined' ? document.getElementById('relicTierSelect')?.value : '') || 'Artificer';
-  const relics = (typeof CRUSADE_RELIC_VAULT !== 'undefined') ? CRUSADE_RELIC_VAULT : (typeof window !== 'undefined' ? window.CRUSADE_RELIC_VAULT : {});
-  const amRelics = (typeof ASTRA_MILITARUM_RELIC_VAULT !== 'undefined') ? ASTRA_MILITARUM_RELIC_VAULT : (typeof window !== 'undefined' ? window.ASTRA_MILITARUM_RELIC_VAULT : {});
-  const necRelics = (typeof NECRONS_RELIC_VAULT !== 'undefined') ? NECRONS_RELIC_VAULT : (typeof window !== 'undefined' ? window.NECRONS_RELIC_VAULT : {});
-  const votRelics = (typeof VOTANN_RELIC_VAULT !== 'undefined') ? VOTANN_RELIC_VAULT : (typeof window !== 'undefined' ? window.VOTANN_RELIC_VAULT : {});
+  _getVoxAudio()?.playDiceClatter?.();
+  const poolKey = _getForgeEl('forgeSourcePool')?.value || 'Armageddon';
+  const tier = _getForgeEl('relicTierSelect')?.value || 'Artificer';
+  const pick = _forgeCore.rollCrusadeRelicPick(poolKey, tier, _resolveForgeCatalogs());
+  lastRolledItem.relic = { category: pick.category, roll: pick.roll, name: pick.name, desc: pick.desc };
 
-  const activeVault = poolKey === 'AlphaCodex'
-    ? amRelics
-    : (poolKey === 'BetaCodex' ? necRelics : (poolKey === 'GammaCodex' ? votRelics : relics));
-  const pool = activeVault[tier] || relics.Artificer || [];
-  const pick = pool[Math.floor(Math.random() * pool.length)] || { name: 'Standard Relic', desc: 'No relic found' };
-
-  lastRolledItem.relic = {
-    category: `Crusade Relic (${tier})`,
-    roll: `Vault Draw`,
-    name: pick.name,
-    desc: pick.desc
-  };
-
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio?.playRelicChoir) window.VoxAudio.playRelicChoir();
-    const box = typeof document !== 'undefined' ? document.getElementById('relicResultBox') : null;
+  _scheduleForgeReveal(() => {
+    _getVoxAudio()?.playRelicChoir?.();
+    const box = _getForgeEl('relicResultBox');
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--purple); color:#fff;">${tier.toUpperCase()}</span> <strong style="color:#d8b4fe;">${pick.name}</strong></div>
@@ -206,22 +193,22 @@ function rollRandomRelic() {
 }
 
 function rollOutOfActionTest() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const d6 = Math.floor(Math.random() * 6) + 1;
+  _getVoxAudio()?.playDiceClatter?.();
+  const outcome = _forgeCore.evaluateOutOfActionRoll();
 
-  setTimeout(() => {
-    const box = typeof document !== 'undefined' ? document.getElementById('scarResultBox') : null;
+  _scheduleForgeReveal(() => {
+    const box = _getForgeEl('scarResultBox');
     if (!box) return;
-    if (d6 === 1) {
-      if (typeof window !== 'undefined' && window.VoxAudio?.playScarHazard) window.VoxAudio.playScarHazard();
+    if (!outcome.survived) {
+      _getVoxAudio()?.playScarHazard?.();
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--red); color:#fff;">D6: 1 (FAILED!)</span> <strong style="color:var(--red);">Out of Action Test Failed!</strong></div>
         <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">Choose <strong>Devastating Blow</strong> (-1 Battle Honour) OR click <strong>🎲 Roll Scar (D6)</strong> below to roll a Battle Scar!</div>
       `;
     } else {
-      if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
+      _getVoxAudio()?.playForgeAnvil?.();
       box.innerHTML = `
-        <div><span class="dice-pip-badge" style="background:var(--green); color:#000;">D6: ${d6} (PASSED)</span> <strong style="color:var(--green);">Unit Recovered Unscathed!</strong></div>
+        <div><span class="dice-pip-badge" style="background:var(--green); color:#000;">D6: ${outcome.roll} (PASSED)</span> <strong style="color:var(--green);">Unit Recovered Unscathed!</strong></div>
         <div style="margin-top:6px; font-size:0.83rem; color:var(--text);">No Battle Scar suffered. Unit returns to Order of Battle at full strength.</div>
       `;
     }
