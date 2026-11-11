@@ -172,3 +172,55 @@ test('Horde Attack LCT Sequence: chains HITS -> HIT_REROLLS -> WOUNDS with Letha
   assert.equal(atk.stage, 'HIT_REROLLS');
   assert.equal(atk.nextCommand.count, 1, 'Only the unmodified 1 is re-rolled for Space Marines');
 
+  // Re-roll the 1 -> rolls [5] (normal hit! Total normal hits needing wound roll = 1 Sustained + 1 [4] + 1 [5] = 3)
+  atk = advanceHordeAttackRollSequence(atk, [5]);
+  assert.equal(atk.stage, 'WOUNDS');
+  assert.equal(atk.autoWounds, 1);
+  assert.equal(atk.nextCommand.count, 3);
+  assert.equal(atk.nextCommand.threshold, 3); // S4 vs T3 = 3+
+
+  // Wound rolls on LCT mat: [6 (Devastating MW!), 3 (normal wound), 2 (fail)]
+  atk = advanceHordeAttackRollSequence(atk, [6, 3, 2]);
+  assert.equal(atk.stage, 'COMPLETE');
+  assert.equal(atk.normalWounds, 2); // 1 Lethal auto-wound + 1 rolled [3]
+  assert.equal(atk.devastatingMortalWounds, 1);
+
+  // T'au Glasses check + Twin-Linked wound re-rolls
+  const tauState = createInitialTacticaState({ factionName: "T'au Empire" });
+  let tauAtk = createHordeAttackRollSequence({
+    attackerName: 'Crisis Suits',
+    target: { toughness: 4 },
+    weapon: { type: 'ranged', attacks: 2, skill: 4, strength: 5, keywords: ['TWIN-LINKED'] }
+  }, tauState);
+  assert.equal(tauAtk.stage, 'TAU_GLASSES');
+  tauAtk = advanceHordeAttackRollSequence(tauAtk, [5]); // Passes 4+ -> BS improves to 3+
+  assert.equal(tauAtk.stage, 'HITS');
+  assert.equal(tauAtk.nextCommand.threshold, 3);
+  tauAtk = advanceHordeAttackRollSequence(tauAtk, [4, 2]); // 1 hit, 1 miss
+  assert.equal(tauAtk.stage, 'WOUNDS');
+  tauAtk = advanceHordeAttackRollSequence(tauAtk, [2]); // Failed wound -> Twin-Linked re-roll!
+  assert.equal(tauAtk.stage, 'WOUND_REROLLS');
+  tauAtk = advanceHordeAttackRollSequence(tauAtk, [5]);
+  assert.equal(tauAtk.stage, 'COMPLETE');
+  assert.equal(tauAtk.normalWounds, 1);
+});
+
+test('compileTacticaPostMatchReport: preserves full Round 1 through Round 6 history without truncation', () => {
+  const state = createInitialTacticaState({
+    roomCode: 'TARTARUS-09',
+    factionName: 'World Eaters',
+    battleRound: 6,
+    hordeWarlord: { name: 'Lord Invocatus', roundSpawned: 2, alive: false }
+  });
+  const entries = [
+    formatChronicleEntry({ seq: 1, battleRound: 0, phase: 'COMMAND_SPAWN', type: 'NOTE', summary: 'Fortifications placed.' }, state),
+    formatChronicleEntry({ seq: 2, battleRound: 1, phase: 'COMMAND_SPAWN', type: 'SPAWN', summary: 'Zone 1 spawned 10 Berzerkers.' }, state),
+    formatChronicleEntry({ seq: 3, battleRound: 6, phase: 'PLAYER_TURN', type: 'AUTO_DEFENDER', summary: 'Lord Invocatus slain!' }, state)
+  ];
+  const report = compileTacticaPostMatchReport(state, entries, { channel: 'alpha', outcome: 'Victory' });
+  assert.ok(report.includes('[DEPLOYMENT & PRE-GAME]:') && report.includes('[BATTLE ROUND 1]') && report.includes('[BATTLE ROUND 6]'));
+  assert.ok(report.includes('Lord Invocatus (Slain'));
+
+  const emptyGamma = compileTacticaPostMatchReport(createInitialTacticaState(), [], { channel: 'gamma' });
+  assert.ok(emptyGamma.includes('KÂHL HÂRKYN') && emptyGamma.includes('[NO TACTICAL EVENTS RECORDED IN CHRONICLE]'));
+});
