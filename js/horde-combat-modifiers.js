@@ -54,3 +54,60 @@
       vsImperiumRerollHitAndWoundOnes: true,
       vsOtherWoundMod: 1
     },
+    'Imperial Knights': {
+      ruleTitle: 'Passive Ion Shields',
+      fnp: 6
+    },
+    'Chaos Space Marines': {
+      ruleTitle: 'Wonton Slaughter',
+      chargeTurnMeleeAttacksMod: 1
+    },
+    'Chaos Daemons': {
+      ruleTitle: 'Shadow Forms',
+      rangedStealthBeyondInches: 12
+    },
+    'Chaos Knights': {
+      ruleTitle: 'God I Wish We Had A Different Theme',
+      vsBattleShocked: { hitMod: 1, woundMod: 1 }
+    },
+    'Death Guard': {
+      ruleTitle: "Don't You Miss DR?",
+      contagionRangeInches: 6,
+      enemyToughnessMod: -1,
+      enemySkillWorsen: 1
+    },
+    "Emperor's Children": {
+      ruleTitle: 'Elegant Violence',
+      canShootAfterAdvance: true,
+      canChargeAfterAdvance: true,
+      canShootAfterFallBack: true,
+      canChargeAfterFallBack: true
+    },
+    'Thousand Sons': {
+      ruleTitle: 'Psychic Storms',
+      startOfHordeShootingAura: { rangeInches: 12, mortalWounds: 'D3' }
+    },
+    'World Eaters': {
+      ruleTitle: 'Bloodthirsty',
+      moveMod: 2
+    },
+    'Aeldari': {
+      ruleTitle: 'Monomolecular Ammunition',
+      rangedApImprove: 1
+    },
+    'Drukhari': {
+      ruleTitle: 'Monomolecular Edges',
+      meleeApImprove: 1
+    },
+    'Necrons': {
+      ruleTitle: "We're So Back",
+      conditionalFnp: {
+        threshold: 5,
+        excludeKeywords: ['CHARACTER'],
+        requireAnyKeyword: ['INFANTRY', 'BEAST', 'BEASTS', 'SWARM']
+      }
+    },
+    "T'au Empire": {
+      ruleTitle: 'Glasses',
+      onSelectToShootRoll: { threshold: 4, rangedBsImprove: 1 }
+    },
