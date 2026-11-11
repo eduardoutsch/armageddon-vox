@@ -405,6 +405,10 @@ test('app: adjustSpRoundTally and adjustStratTally allow manual correction of ta
 
 
 test('app: saveCustomPool and loadCustomPool persist custom units to localStorage', () => {
+  localStorage.removeItem('armageddon_horde_pool');
+  localStorage.removeItem('foa_custom_shelf_pool_v1');
+  const activeFac = app.activeHordeFaction ? app.activeHordeFaction.name : 'Orks';
+  document.getElementById('hordeFactionSelect').value = activeFac;
   document.getElementById('pool34').value = '10 Termagants';
   document.getElementById('pool56').value = '5 Genestealers';
   document.getElementById('pool79').value = '1 Carnifex';
@@ -413,9 +417,11 @@ test('app: saveCustomPool and loadCustomPool persist custom units to localStorag
   globalThis.alert = () => {};
   app.saveCustomPool();
 
-  const saved = JSON.parse(localStorage.getItem('armageddon_horde_pool'));
-  assert.equal(saved.b34, '10 Termagants');
-  assert.equal(saved.b10, '1 Hive Tyrant');
+  assert.equal(localStorage.getItem('armageddon_horde_pool'), null, 'Must not write legacy armageddon_horde_pool');
+  const saved = JSON.parse(localStorage.getItem('foa_custom_shelf_pool_v1'));
+  assert.equal(saved.b34, undefined, 'Must not spread flat root keys');
+  assert.equal(saved.byFaction[activeFac].b34, '10 Termagants');
+  assert.equal(saved.byFaction[activeFac].b10, '1 Hive Tyrant');
 
   // Clear inputs and reload
   document.getElementById('pool34').value = '';
@@ -427,9 +433,12 @@ test('app: saveCustomPool and loadCustomPool persist custom units to localStorag
 });
 
 test('app: renderLiveSpawnerBracketTable renders table with cloud pool values and intrusion warning', () => {
+  const activeFac = document.getElementById('hordeFactionSelect').value || 'Chaos Daemons';
+  document.getElementById('hordeFactionSelect').value = activeFac;
   localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify({
-    b34: 'Test Chaff 10',
-    b10: 'Test Greater Daemon'
+    byFaction: {
+      [activeFac]: { b34: 'Test Chaff 10', b13: 'Test Greater Daemon' }
+    }
   }));
 
   const windowEl = document.getElementById('liveSpawnerBracketWindow');
@@ -442,17 +451,23 @@ test('app: renderLiveSpawnerBracketTable renders table with cloud pool values an
 
 test('app: syncSpawnerPoolFromSupabase pulls cloud pool and updates localStorage and table', async () => {
   const origFetch = globalThis.fetch;
+  const activeFac = document.getElementById('hordeFactionSelect').value || 'Chaos Daemons';
+  document.getElementById('hordeFactionSelect').value = activeFac;
   globalThis.fetch = async (url) => {
     return {
       ok: true,
       json: async () => ({
         ok: true,
         horde_pool: {
-          b34: 'Cloud Hormagaunts 20',
-          b56: 'Cloud Bloodletters 10',
-          b79: 'Cloud Trygon 1',
-          b10: 'Cloud Bloodthirster 1',
-          b13: 'Cloud Baneblade 1'
+          byFaction: {
+            [activeFac]: {
+              b34: 'Cloud Hormagaunts 20',
+              b56: 'Cloud Bloodletters 10',
+              b79: 'Cloud Trygon 1',
+              b10: 'Cloud Bloodthirster 1',
+              b13: 'Cloud Baneblade 1'
+            }
+          }
         }
       })
     };
@@ -461,8 +476,9 @@ test('app: syncSpawnerPoolFromSupabase pulls cloud pool and updates localStorage
   await app.syncSpawnerPoolFromSupabase();
 
   const saved = JSON.parse(localStorage.getItem('foa_custom_shelf_pool_v1'));
-  assert.equal(saved.b34, 'Cloud Hormagaunts 20');
-  assert.equal(saved.b10, 'Cloud Bloodthirster 1');
+  assert.equal(saved.b34, undefined, 'Must not spread flat root keys');
+  assert.equal(saved.byFaction[activeFac].b34, 'Cloud Hormagaunts 20');
+  assert.equal(saved.byFaction[activeFac].b10, 'Cloud Bloodthirster 1');
 
   const windowEl = document.getElementById('liveSpawnerBracketWindow');
   assert.ok(windowEl.innerHTML.includes('Cloud Bloodthirster 1'));
