@@ -522,69 +522,16 @@ function compileMasterDossier(input = {}) {
     ? compileHordeBattleStatsDossierSection
     : _compileHordeBattleStatsDossierSection;
   const chan = input.channel || 'alpha';
-        : _compileHordeBattleStatsDossierSection;
-      const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
-      if (statsSection) {
-        lines.push(statsSection);
-      }
-    }
+  const enriched = { ...input };
 
-    lines.push(
-      `------------------------------------------------`,
-      `• OBSERVED REMOTE UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES IN THE ASH-STORM"):`,
-      unitLines,
-      `------------------------------------------------`,
-      `• ORBITAL AUGUR AFTER-ACTION LOG: "${notes}"`,
-      `------------------------------------------------`,
-      `REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this distant solo horde breach caught in the distance by our orbital augurs. As neither main player participated, no Alliance SPts are shifted—please chronicle the narrative fate of this remote detachment and christen custom in-universe Lore Names & Backstories for their attached unit Upgrades, Relics, and Battle Scars!`
-    );
-    return lines.join('\n');
-  }
-
-  const isBeta = chan === 'beta';
-  const isGamma = chan === 'gamma';
-  const headerLine = isBeta ? `+++ DYNASTIC ENGRAM-CHRONICLE // MASTER POST-BATTLE DOSSIER & AWAKENING LOG +++`
-    : (isGamma ? `+++ THRYMKÂL SALVAGE CONSORTIUM // MASTER POST-BATTLE DOSSIER & BLACK-LEDGER REPORT +++`
-      : `+++ DEPARTMENTO MUNITORUM // MASTER POST-BATTLE DOSSIER & HONOUR SCROLL +++`);
-  const cmdrLabel = isBeta ? `PHAERON JUNEBUG // TOMB-SHIP COMMAND INTERLINK (NECRONS)`
-    : (isGamma ? `KÂHL HÂRKYN // THE LEDGER OF EMBERS (THRYMKÂL SALVAGE CONSORTIUM)`
-      : `THE EXILE // THE SANCTUARY OF ASH (ASTRA MILITARUM — 044TH KRIEG)`);
-  const upgradeSectionTitle = isBeta ? `[2. CRYPTEK CONCLAVE // DYNASTIC EPITHETS, RELICS & ENGRAMMATIC FLAWS]:`
-    : (isGamma ? `[2. BRÔKHYR GUILD-COUNCIL // BATTLE HONOURS, RELICS & SCARS]:`
-      : `[2. QUARTERMASTER ROLLS // BATTLE HONOURS, RELICS & SCARS]:`);
-  const closingRequest = isBeta ? `REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE: Please inscribe this engagement into the Blackstone Engram-Chronicles (Pattern 2), allocate any earned Tomb World Awakening Points or Marauder/Alliance Hegemony spoils, and bestow permanent Dynastic Epithets upon the upgraded phalanxes above!`
-    : (isGamma ? `REQUEST FOR FANE-NODE VÔL-09 ("THE DEAF EAR"): Inscribe this Black-Ledger post-battle record into the deep-core Ancestor Vault, register all asset yields and contract rewards, and christen our upgraded Kin with permanent Kindred honours!`
-      : `REQUEST FOR CAMPAIGN MASTER (LOGIS-PREFECT VANE): Please audit this after-action dossier (Pattern 2), credit our Alliance & Sector Hegemony spoils in the orbital ledger, and christen the upgraded units and scars above with permanent Munitorum lore titles!`);
-
-  const lines = [
-    headerLine,
-    `• REPORTING COMMANDER: ${cmdrLabel}`,
-    `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
-    `• OUTCOME & SURVIVAL: ${outcome}`,
-    `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
-    `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
-    `• LEFTOVER SP SALVAGE: ${leftover}`
-  ];
-
-  if (isBeta) {
-    const tombSummary = input.tombSummary || (typeof buildTombMatrixSummaryLine === 'function' ? buildTombMatrixSummaryLine() : '');
-    if (tombSummary) lines.push(`• TOMB WORLD AWAKENING MATRIX TELEMETRY: ${tombSummary}`);
-  } else if (isGamma) {
-    const votSummary = input.votannSummary || (typeof buildVotannSummaryLine === 'function' ? buildVotannSummaryLine() : '');
-    if (votSummary) lines.push(`• KINDRED EXPEDITION & RESOURCE VAULT TELEMETRY: ${votSummary}`);
-  } else {
-    const logSummary = input.logisticsSummary || (typeof buildLogisticsSummaryLine === 'function' ? buildLogisticsSummaryLine() : '');
-    if (logSummary) lines.push(`• TOUR OF DUTY & LOGISTICS TELEMETRY: ${logSummary}`);
-  }
-
-  if (allowHordeStats && input.hordeBattleStats) {
-    const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
-      ? compileHordeBattleStatsDossierSection
-      : _compileHordeBattleStatsDossierSection;
-    const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
-    if (statsSection) {
-      lines.push(statsSection);
-    }
+  if (chan === 'beta' && !enriched.tombSummary) {
+    enriched.tombSummary = buildTombMatrixSummaryLine();
+  } else if (chan === 'gamma' && !enriched.votannSummary) {
+    enriched.votannSummary = buildVotannSummaryLine();
+  } else if (chan === 'alpha' && !enriched.logisticsSummary) {
+    enriched.logisticsSummary = typeof buildLogisticsSummaryLine === 'function'
+      ? buildLogisticsSummaryLine()
+      : _matrixCore.formatLogisticsSummaryLine(crusadeState, _resolveMatrixCatalogs().logisticsCategories);
   }
 
   lines.push(
