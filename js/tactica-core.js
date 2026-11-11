@@ -464,3 +464,54 @@
       request.context || {}
     );
 
+    const totalAttacks = Math.max(0, (Number(weapon.attacks) || 1) + attackMods.attacksMod);
+    const seq = {
+      sequenceId,
+      kind: 'HORDE_ATTACK',
+      attackerName,
+      targetName,
+      matSide,
+      attacker: request.attacker || {},
+      target: request.target || {},
+      weapon,
+      context: request.context || {},
+      matchStateSnapshot: { factionName: matchState.factionName, activeMiseryIds: matchState.activeMiseryIds || [] },
+      attackMods,
+      totalAttacks,
+      stage: 'HITS',
+      expectedDice: 0,
+      hitsToWound: 0,
+      autoWounds: 0,
+      normalWounds: 0,
+      devastatingMortalWounds: 0,
+      nextCommand: null
+    };
+
+    if (totalAttacks === 0) {
+      seq.stage = 'COMPLETE';
+      return seq;
+    }
+
+    if (attackMods.requiresTauGlassesRoll) {
+      seq.stage = 'TAU_GLASSES';
+      seq.expectedDice = 1;
+      seq.nextCommand = buildLctCommand(sequenceId, 'TAU_GLASSES', 1, 4, matSide, `${attackerName} — T'au Glasses Check (4+)`);
+      return seq;
+    }
+
+    const hitThresh = clamp(attackMods.effectiveSkill - attackMods.netHitMod, 2, 6);
+    seq.stage = 'HITS';
+    seq.expectedDice = totalAttacks;
+    seq.nextCommand = buildLctCommand(sequenceId, 'HITS', totalAttacks, hitThresh, matSide, `${attackerName} -> ${targetName} — ${totalAttacks}x Hits (${hitThresh}+)`);
+    return seq;
+  }
+
+  function evaluateHitDiceBatch(dice, mods) {
+    const kws = mods.keywords || [];
+    const hasLethal = kws.includes('LETHAL HITS') || kws.includes('LETHAL HITS 1');
+    const hasSustained = kws.includes('SUSTAINED HITS 1');
+    let normalHits = 0;
+    let autoWounds = 0;
+    let ones = 0;
+    let misses = 0;
+
