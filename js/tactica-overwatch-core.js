@@ -14,6 +14,224 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = exports;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
 
+  /** Maps YOUR active Commander theme (never the enemy Horde) to a clean neural Auspex voice. */
+  const AUSPEX_VOICE_PRESETS = {
+    votann:    { voice: 'en-GB-RyanNeural',   rate: '+4%', pitch: '-2Hz', label: 'Brôkhyr Helm-Auspex' },
+    militarum: { voice: 'en-GB-SoniaNeural',  rate: '+5%', pitch: '+0Hz', label: 'Orbital Tactica Auspex' },
+    necron:    { voice: 'en-GB-ThomasNeural', rate: '+2%', pitch: '-3Hz', label: 'Cryptek Engram Auspex' },
+    default:   { voice: 'en-GB-RyanNeural',   rate: '+4%', pitch: '+0Hz', label: 'Tactical Auspex' }
+  };
+
+  /**
+   * Resolves the neural Auspex voice preset for the player's active Commander theme.
+   *
+   * @param {string} [theme='default'] - Active Commander faction theme (`votann`, `militarum`, `necron`, `default`).
+   * @returns {{voice: string, rate: string, pitch: string, label: string}}
+   */
+  function resolveTacticalAuspexVoice(theme = 'default') {
+    return AUSPEX_VOICE_PRESETS[String(theme || '').toLowerCase()] || AUSPEX_VOICE_PRESETS.default;
+  }
+
+  /** Canonical 11th Ed Core Stratagems declared vocally by the Player. */
+  const PLAYER_VOCAL_STRATAGEMS = [
+    { key: 'FIRE_OVERWATCH',      name: 'Fire Overwatch',      cpCost: 1, pattern: /\b(fire\s+overwatch|pop(?:ping)?\s+overwatch|use\s+overwatch)\b/i },
+    { key: 'RAPID_INGRESS',       name: 'Rapid Ingress',       cpCost: 1, minRound: 2, pattern: /\b(rapid\s+ingress)\b/i },
+    { key: 'SMOKESCREEN',         name: 'Smokescreen',         cpCost: 1, buff: { hitMod: -1, cover: true }, pattern: /\b(smokescreen|pop(?:ping)?\s+smoke)\b/i },
+    { key: 'GO_TO_GROUND',        name: 'Go to Ground',        cpCost: 1, buff: { cover: true, invuln6: true }, pattern: /\b(go(?:ing)?\s+to\s+ground)\b/i },
+    { key: 'HEROIC_INTERVENTION', name: 'Heroic Intervention', cpCost: 1, pattern: /\b(heroic\s+intervention)\b/i },
+    { key: 'COUNTER_OFFENSIVE',   name: 'Counter-Offensive',   cpCost: 2, pattern: /\b(counter[\s-]*offensive)\b/i },
+    { key: 'COMMAND_REROLL',      name: 'Command Re-roll',     cpCost: 1, pattern: /\b(command\s+re[\s-]*roll)\b/i },
+    { key: 'TANK_SHOCK',          name: 'Crushing Impact',     cpCost: 1, pattern: /\b(tank\s+shock|crushing\s+impact)\b/i },
+    { key: 'GRENADE',             name: 'Explosives',          cpCost: 1, pattern: /\b(throw\s+grenades?|use\s+grenades?|explosives\s+strat(?:agem)?)\b/i },
+    { key: 'INSANE_BRAVERY',      name: 'Insane Bravery',      cpCost: 1, pattern: /\b(insane\s+bravery)\b/i },
+    { key: 'EPIC_CHALLENGE',      name: 'Epic Challenge',      cpCost: 1, pattern: /\b(epic\s+challenge)\b/i }
+  ];
+
+  const SPOKEN_NUM_MAP = {
+    zero: '0', free: '0', one: '1', won: '1', two: '2', to: '2', too: '2', three: '3'
+  };
+
+  const CORE_STRAT_NAMES = {
+    FIRE_OVERWATCH: 'Fire Overwatch',
+    RAPID_INGRESS: 'Rapid Ingress',
+    SMOKESCREEN: 'Smokescreen',
+    GO_TO_GROUND: 'Go to Ground',
+    HEROIC_INTERVENTION: 'Heroic Intervention',
+    COUNTER_OFFENSIVE: 'Counter-Offensive',
+    COMMAND_REROLL: 'Command Re-roll',
+    CRUSHING_IMPACT: 'Crushing Impact',
+    EXPLOSIVES: 'Explosives',
+    INSANE_BRAVERY: 'Insane Bravery',
+    EPIC_CHALLENGE: 'Epic Challenge'
+  };
+
+  /**
+   * Maps normalized spoken/typed Stratagem text to a canonical 11th Edition Core key or `FACTION_CUSTOM`.
+   *
+   * @param {string} [name=''] - Candidate Stratagem name.
+   * @returns {string} Canonical Core Stratagem key or `'FACTION_CUSTOM'`.
+   */
+  function normalizeCoreStratKey(name = '') {
+    const s = name.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (/\boverwatch\b/.test(s)) return 'FIRE_OVERWATCH';
+    if (/\brapid ingress\b/.test(s)) return 'RAPID_INGRESS';
+    if (/\bsmoke\s*screen\b|\bpop(?:ping)?\s+smoke\b|\bsmoke\b/.test(s)) return 'SMOKESCREEN';
+    if (/\bgo(?:ing)? to ground\b/.test(s)) return 'GO_TO_GROUND';
+    if (/\bheroic intervention\b/.test(s)) return 'HEROIC_INTERVENTION';
+    if (/\bcounter offensive\b/.test(s)) return 'COUNTER_OFFENSIVE';
+    if (/\bcommand re roll\b|\breroll\b/.test(s)) return 'COMMAND_REROLL';
+    if (/\btank shock\b|\bcrushing impact\b/.test(s)) return 'CRUSHING_IMPACT';
+    if (/\bgrenades?\b|\bexplosives\b/.test(s)) return 'EXPLOSIVES';
+    if (/\binsane bravery\b/.test(s)) return 'INSANE_BRAVERY';
+    if (/\bepic challenge\b/.test(s)) return 'EPIC_CHALLENGE';
+    return 'FACTION_CUSTOM';
+  }
+
+  /**
+   * Infers common defensive buffs from Faction Stratagem names (e.g., Void Armour / Armour of Contempt).
+   *
+   * @param {string} [stratName=''] - Faction Stratagem display name.
+   * @returns {object|null} Defensive buff descriptor or `null`.
+   */
+  function inferFactionStratBuff(stratName = '') {
+    if (/\b(void\s+armou?r|armou?r\s+of\s+contempt|reinforced\s+armou?r)\b/i.test(stratName)) {
+      return { worsenAp: 1 };
+    }
+    return null;
+  }
+
+  /**
+   * Parses Core & Faction-Specific Stratagem declarations such as:
+   *   - `"strategem Void Armour on Hearthguard - 2cp"`
+   *   - `"Stratagem Ancestral Sentence on Pioneers, one CP"`
+   *   - `"Using Void Armour for 1 CP"` / `"Spend 2 CP on Reactive Reprisal"`
+   *   - `"Fire Overwatch on Yaegirs"` (uses Core 1 CP default, or explicit override like `"- 0cp"`)
+   *
+   * @param {string} [rawInput=''] - Raw spoken or typed text.
+   * @returns {object|null} Structured `PLAYER_STRATAGEM` descriptor or `null` when not a Stratagem.
+   */
+  function parsePlayerStratagem(rawInput = '') {
+    let text = String(rawInput || '').trim();
+    if (!text) return null;
+
+    // Normalize spoken number words right before "CP" (e.g. "two CP" -> "2 CP")
+    text = text.replace(/\b(zero|free|one|won|two|to|too|three)\s*(?=cp\b|command\s+points?\b)/gi, (_, word) => SPOKEN_NUM_MAP[word.toLowerCase()] + ' ');
+
+    let explicitCp = null;
+    const cpMatch = text.match(/(?:[-–—,]|for|\bwith)?\s*(\d+)\s*(?:cp|command\s+points?)\b/i);
+    if (cpMatch) {
+      explicitCp = parseInt(cpMatch[1], 10);
+      text = (text.slice(0, cpMatch.index) + ' ' + text.slice(cpMatch.index + cpMatch[0].length)).trim();
+    }
+
+    const hasStratPrefix = /^(?:use\s+|using\s+|pop(?:ping)?\s+|spend(?:ing)?\s+|declare\s+|activate\s+)?strat[ae]gem\b/i.test(text);
+    const stripped = text
+      .replace(/^(?:use\s+|using\s+|pop(?:ping)?\s+|spend(?:ing)?\s+(?:on\s+|for\s+)?|declare\s+|activate\s+)?(?:strat[ae]gem\s+)?/i, '')
+      .replace(/[-–—,\s]+$/, '')
+      .trim();
+
+    let rawName = stripped;
+    let targetUnit = null;
+    const onMatch = stripped.match(/^(.+?)\s+\bon\s+(.+)$/i);
+    if (onMatch) {
+      rawName = onMatch[1].replace(/[-–—,\s]+$/, '').trim();
+      targetUnit = onMatch[2].replace(/[-–—,\s]+$/, '').trim();
+    }
+
+    const coreKey = normalizeCoreStratKey(rawName);
+    if (coreKey === 'FACTION_CUSTOM' && !hasStratPrefix && explicitCp === null) {
+      return null;
+    }
+
+    switch (coreKey) {
+      case 'COUNTER_OFFENSIVE':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Counter-Offensive', targetUnit, cpCost: explicitCp ?? 2, minRound: 1, buff: null };
+      case 'RAPID_INGRESS':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Rapid Ingress', targetUnit, cpCost: explicitCp ?? 1, minRound: 2, buff: null };
+      case 'SMOKESCREEN':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Smokescreen', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: { hitMod: -1, cover: true } };
+      case 'GO_TO_GROUND':
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Go to Ground', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: { cover: true, invuln6: true } };
+      case 'FIRE_OVERWATCH':
+      case 'HEROIC_INTERVENTION':
+      case 'COMMAND_REROLL':
+      case 'CRUSHING_IMPACT':
+      case 'EXPLOSIVES':
+      case 'INSANE_BRAVERY':
+      case 'EPIC_CHALLENGE': {
+        const pretty = CORE_STRAT_NAMES[coreKey] || rawName.replace(/\b\w/g, c => c.toUpperCase());
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: pretty, targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: null };
+      }
+      default: {
+        const cleanFactionStrat = rawName.replace(/\b\w/g, c => c.toUpperCase()) || 'Faction Stratagem';
+        return {
+          intent: 'PLAYER_STRATAGEM',
+          category: 'FACTION',
+          stratKey: 'FACTION_CUSTOM',
+          stratName: cleanFactionStrat,
+          targetUnit,
+          cpCost: explicitCp ?? 1,
+          minRound: 1,
+          buff: inferFactionStratBuff(cleanFactionStrat)
+        };
+      }
+    }
+  }
+
+  /**
+   * Fuzzy-matches a spoken target keyword (e.g. `"Hearthguard"`, `"Pioneers"`) strictly against
+   * scanned `PLAYER` squads on the LCT playmat (`Einhyr Hearthguard`, `Hernkyn Pioneers`).
+   *
+   * @param {string|null} [rawTarget=''] - Spoken or selected target name.
+   * @param {Array<object>} [boardUnits=[]] - Scanned board telemetry units.
+   * @returns {object|null} Matched `PLAYER` unit entry or `null`.
+   */
+  function matchPlayerUnitFromTelemetry(rawTarget = '', boardUnits = []) {
+    const query = String(rawTarget || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!query || !Array.isArray(boardUnits)) return null;
+    const playerUnits = boardUnits.filter(u => u && u.side === 'PLAYER');
+    if (playerUnits.length === 0) return null;
+
+    for (const u of playerUnits) {
+      const uNorm = String(u.name || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (uNorm === query || uNorm.includes(query) || query.includes(uNorm)) return u;
+    }
+
+    const qTokens = query.split(' ').filter(t => t.length >= 3);
+    for (const u of playerUnits) {
+      const uNorm = String(u.name || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+      if (qTokens.some(tok => uNorm.includes(tok))) return u;
+    }
+    return null;
+  }
+
+  /**
+   * Pure rule validator checking Misery #22 (Comms Jammed), minimum Battle Round, and available CP,
+   * while computing whether the activation increments `stratCount` for Secret Objective #20 (Tacticool).
+   *
+   * @param {object} stratParsed - Output from `parsePlayerStratagem`.
+   * @param {object} [state={}] - Live Tactica match state.
+   * @returns {{allowed: boolean, reason: string|null, countsForSecret20: boolean}}
+   */
+  function validatePlayerStratagemUse(stratParsed, state = {}) {
+    if (!stratParsed) return { allowed: false, reason: 'Invalid Stratagem.', countsForSecret20: false };
+    const miseryIds = Array.isArray(state.activeMiseryIds) ? state.activeMiseryIds.map(Number) : [];
+    if (miseryIds.includes(22)) {
+      return { allowed: false, reason: 'Comms Jammed (Misery #22 active — Stratagems are locked this round).', countsForSecret20: false };
+    }
+    const minRound = Number(stratParsed.minRound) || 1;
+    const curRound = Math.max(1, Number(state.battleRound) || 1);
+    if (curRound < minRound) {
+      return { allowed: false, reason: `${stratParsed.stratName} cannot be used before Battle Round ${minRound}.`, countsForSecret20: false };
+    }
+    const cost = Math.max(0, Number(stratParsed.cpCost) || 0);
+    const availCp = Math.max(0, Number(state.playerCp) || 0);
+    if (availCp < cost) {
+      return { allowed: false, reason: `Insufficient Command Points for ${stratParsed.stratName} (requires ${cost} CP, ${availCp} CP available).`, countsForSecret20: false };
+    }
+    return { allowed: true, reason: null, countsForSecret20: cost >= 1 };
+  }
+
   /** Declarative lookup table mapping spoken tabletop commands to deterministic console actions. */
   const VOICE_INTENT_RULES = [
     { intent: 'SCAN_BOARD', pattern: /\b(scan\b.*boards?|update\s+auspex|board\s+scan)\b/i },
@@ -24,18 +242,15 @@
     { intent: 'SELECT_SHOOTING', pattern: /\b(compute\s+shoot\w*|shooting\s+priority|target\s+priority|roll\s+shoot\w*)\b/i },
     { intent: 'DECLARE_CHARGES', pattern: /\b(declare\s+charges?|horde\s+charges?)\b/i },
     { intent: 'CONSOLIDATE', pattern: /\b(consolidate|consolidation)\b/i },
-    { intent: 'USE_FIRE_OVERWATCH', pattern: /\b(fire\s+overwatch|use\s+overwatch)\b/i },
-    { intent: 'USE_HEROIC_INTERVENTION', pattern: /\b(heroic\s+intervention)\b/i },
-    { intent: 'USE_COUNTER_OFFENSIVE', pattern: /\b(counter[\s-]*offensive)\b/i },
     { intent: 'PASS_REACTION', pattern: /\b(pass\s+window|hold\s+cp|decline\s+reaction|pass\s+reaction)\b/i },
     { intent: 'VISUAL_LOS_CHECK', pattern: /\b(line\s+of\s+sight|\blos\b|can\s+.+\s+see|visible|ruin\s+window)\b/i }
   ];
 
   /**
-   * Maps a spoken or typed transcript to a deterministic console command or `VISUAL_LOS_CHECK`.
+   * Maps a spoken or typed transcript to a deterministic console command, `PLAYER_STRATAGEM`, or `VISUAL_LOS_CHECK`.
    *
    * @param {string} [transcript=''] - Raw voice or typed text query.
-   * @returns {{intent: string, transcript: string}}
+   * @returns {object}
    */
   function parseSpokenTacticaIntent(transcript = '') {
     const clean = String(transcript || '').trim();
@@ -43,6 +258,25 @@
     for (const rule of VOICE_INTENT_RULES) {
       if (rule.pattern.test(clean)) {
         return { intent: rule.intent, transcript: clean };
+      }
+    }
+    const strat = parsePlayerStratagem(clean);
+    if (strat) {
+      return { ...strat, transcript: clean };
+    }
+    for (const s of PLAYER_VOCAL_STRATAGEMS) {
+      if (s.pattern.test(clean)) {
+        return {
+          intent: 'PLAYER_STRATAGEM',
+          category: 'CORE',
+          stratKey: s.key,
+          stratName: s.name,
+          targetUnit: null,
+          cpCost: s.cpCost,
+          minRound: s.minRound || 1,
+          buff: s.buff || null,
+          transcript: clean
+        };
       }
     }
     return { intent: 'VISUAL_LOS_CHECK', transcript: clean };
@@ -252,7 +486,7 @@
       if (e.type === 'AUTO_DEFENDER' && e.details?.outcome?.unitDestroyed) {
         chronicleUnitWipes += 1;
       }
-      if (e.type === 'REACTION' && !/passed\s+reaction/i.test(e.summary || '')) {
+      if ((e.type === 'REACTION' || e.type === 'STRATAGEM') && !/passed\s+reaction/i.test(e.summary || '') && !/\(-?0\s*CP\)/i.test(e.summary || '')) {
         chronicleStrats += 1;
       }
     }
@@ -289,6 +523,12 @@
   }
 
   return {
+    AUSPEX_VOICE_PRESETS,
+    resolveTacticalAuspexVoice,
+    PLAYER_VOCAL_STRATAGEMS,
+    parsePlayerStratagem,
+    matchPlayerUnitFromTelemetry,
+    validatePlayerStratagemUse,
     parseSpokenTacticaIntent,
     buildLosVerificationPrompt,
     scrubGeminiThreadArtifacts,

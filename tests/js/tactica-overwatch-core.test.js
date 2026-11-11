@@ -5,7 +5,15 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const {
+  AUSPEX_VOICE_PRESETS,
+  resolveTacticalAuspexVoice,
+  PLAYER_VOCAL_STRATAGEMS,
+  parsePlayerStratagem,
+  matchPlayerUnitFromTelemetry,
+  validatePlayerStratagemUse,
   parseSpokenTacticaIntent,
   buildLosVerificationPrompt,
   scrubGeminiThreadArtifacts,
@@ -17,7 +25,7 @@ const {
   compileTacticaCrusadeSnapshot
 } = require('../../js/tactica-overwatch-core.js');
 
-test('parseSpokenTacticaIntent: maps spoken tabletop commands to deterministic console actions and routes LOS queries', () => {
+test('parseSpokenTacticaIntent: maps spoken tabletop commands, Core/Faction Stratagems, and LOS queries', () => {
   assert.equal(parseSpokenTacticaIntent('').intent, 'NONE');
   assert.equal(parseSpokenTacticaIntent('Scan the LCT board now').intent, 'SCAN_BOARD');
   assert.equal(parseSpokenTacticaIntent('Drop wave spawns into zones').intent, 'SPAWN_WAVES');
@@ -27,14 +35,100 @@ test('parseSpokenTacticaIntent: maps spoken tabletop commands to deterministic c
   assert.equal(parseSpokenTacticaIntent('Compute shooting target priority').intent, 'SELECT_SHOOTING');
   assert.equal(parseSpokenTacticaIntent('Declare charges').intent, 'DECLARE_CHARGES');
   assert.equal(parseSpokenTacticaIntent('Consolidate horde').intent, 'CONSOLIDATE');
-  assert.equal(parseSpokenTacticaIntent('Activate Fire Overwatch').intent, 'USE_FIRE_OVERWATCH');
-  assert.equal(parseSpokenTacticaIntent('Heroic Intervention').intent, 'USE_HEROIC_INTERVENTION');
-  assert.equal(parseSpokenTacticaIntent('Counter-Offensive').intent, 'USE_COUNTER_OFFENSIVE');
+
+  const ow = parseSpokenTacticaIntent('Activate Fire Overwatch');
+  assert.equal(ow.intent, 'PLAYER_STRATAGEM');
+  assert.equal(ow.stratKey, 'FIRE_OVERWATCH');
+  assert.equal(ow.cpCost, 1);
+
+  const hi = parseSpokenTacticaIntent('Heroic Intervention');
+  assert.equal(hi.intent, 'PLAYER_STRATAGEM');
+  assert.equal(hi.stratKey, 'HEROIC_INTERVENTION');
+  assert.equal(hi.cpCost, 1);
+
+  const co = parseSpokenTacticaIntent('Counter-Offensive');
+  assert.equal(co.intent, 'PLAYER_STRATAGEM');
+  assert.equal(co.stratKey, 'COUNTER_OFFENSIVE');
+  assert.equal(co.cpCost, 2);
+
   assert.equal(parseSpokenTacticaIntent('Pass window and hold CP').intent, 'PASS_REACTION');
   assert.equal(
     parseSpokenTacticaIntent('Can the Screamer-Killer see my Krieg squad through that ruin window?').intent,
     'VISUAL_LOS_CHECK'
   );
+});
+
+test('resolveTacticalAuspexVoice & zero speechSynthesis guard: maps Commander themes to neural voices and removes robotic OS TTS', () => {
+  assert.ok(AUSPEX_VOICE_PRESETS && Array.isArray(PLAYER_VOCAL_STRATAGEMS));
+  assert.equal(resolveTacticalAuspexVoice('votann').voice, 'en-GB-RyanNeural');
+  assert.equal(resolveTacticalAuspexVoice('VOTANN').label, 'Brôkhyr Helm-Auspex');
+  assert.equal(resolveTacticalAuspexVoice('militarum').voice, 'en-GB-SoniaNeural');
+  assert.equal(resolveTacticalAuspexVoice('necron').voice, 'en-GB-ThomasNeural');
+  assert.equal(resolveTacticalAuspexVoice('unknown').voice, 'en-GB-RyanNeural');
+
+  const overwatchSrc = fs.readFileSync(path.resolve(__dirname, '../../js/tactica-overwatch.js'), 'utf8');
+  assert.equal(
+    /speechSynthesis/i.test(overwatchSrc),
+    false,
+    'js/tactica-overwatch.js must contain zero speechSynthesis references'
+  );
+});
+
+test('parsePlayerStratagem, matchPlayerUnitFromTelemetry & validatePlayerStratagemUse: parses Core + Faction stratagems, spoken numbers, fuzzy targets & Misery #22/Secret #20 rules', () => {
+  const voidArmour1 = parseSpokenTacticaIntent('Using Void Armour for 1 CP');
+  assert.equal(voidArmour1.intent, 'PLAYER_STRATAGEM');
+  assert.equal(voidArmour1.category, 'FACTION');
+  assert.equal(voidArmour1.stratName, 'Void Armour');
+  assert.equal(voidArmour1.cpCost, 1);
+
+  const reprisal = parseSpokenTacticaIntent('Spend 2 CP on Reactive Reprisal');
+  assert.equal(reprisal.intent, 'PLAYER_STRATAGEM');
+  assert.equal(reprisal.stratName, 'Reactive Reprisal');
+  assert.equal(reprisal.cpCost, 2);
+
+  const typed = parsePlayerStratagem('strategem Void Armour on Hearthguard - 2cp');
+  assert.equal(typed.intent, 'PLAYER_STRATAGEM');
+  assert.equal(typed.category, 'FACTION');
+  assert.equal(typed.stratName, 'Void Armour');
+  assert.equal(typed.targetUnit, 'Hearthguard');
+  assert.equal(typed.cpCost, 2);
+
+  const spokenWords = parsePlayerStratagem('Stratagem Ancestral Sentence on Pioneers, one CP');
+  assert.equal(spokenWords.intent, 'PLAYER_STRATAGEM');
+  assert.equal(spokenWords.stratName, 'Ancestral Sentence');
+  assert.equal(spokenWords.targetUnit, 'Pioneers');
+  assert.equal(spokenWords.cpCost, 1);
+
+  const freeOw = parsePlayerStratagem('Fire Overwatch on Yaegirs - 0cp');
+  assert.equal(freeOw.intent, 'PLAYER_STRATAGEM');
+  assert.equal(freeOw.category, 'CORE');
+  assert.equal(freeOw.stratKey, 'FIRE_OVERWATCH');
+  assert.equal(freeOw.targetUnit, 'Yaegirs');
+  assert.equal(freeOw.cpCost, 0);
+
+  const smoke = parseSpokenTacticaIntent('Popping smoke on Sagitaur');
+  assert.equal(smoke.intent, 'PLAYER_STRATAGEM');
+  assert.equal(smoke.stratKey, 'SMOKESCREEN');
+  assert.deepEqual(smoke.buff, { hitMod: -1, cover: true });
+
+  // Fuzzy PLAYER unit matching
+  const boardUnits = [
+    { name: 'Armiger Warglaive', side: 'HORDE' },
+    { name: 'Einhyr Hearthguard', side: 'PLAYER' },
+    { name: 'Hernkyn Pioneers', side: 'PLAYER' }
+  ];
+  assert.equal(matchPlayerUnitFromTelemetry('Hearthguard', boardUnits)?.name, 'Einhyr Hearthguard');
+  assert.equal(matchPlayerUnitFromTelemetry('Pioneers', boardUnits)?.name, 'Hernkyn Pioneers');
+  assert.equal(matchPlayerUnitFromTelemetry('Warglaive', boardUnits), null, 'Must never fuzzy-match HORDE units for Player Stratagems');
+
+  // Misery #22 (Comms Jammed), minRound, CP check, and Secret #20 (cpCost >= 1)
+  assert.equal(validatePlayerStratagemUse(voidArmour1, { battleRound: 2, playerCp: 2, activeMiseryIds: [22] }).allowed, false);
+  const ingress = parseSpokenTacticaIntent('Rapid Ingress');
+  assert.equal(validatePlayerStratagemUse(ingress, { battleRound: 1, playerCp: 2, activeMiseryIds: [] }).allowed, false);
+  assert.equal(validatePlayerStratagemUse(ingress, { battleRound: 2, playerCp: 2, activeMiseryIds: [] }).allowed, true);
+  assert.equal(validatePlayerStratagemUse(reprisal, { battleRound: 2, playerCp: 1, activeMiseryIds: [] }).allowed, false);
+  assert.equal(validatePlayerStratagemUse(freeOw, { battleRound: 2, playerCp: 0, activeMiseryIds: [] }).countsForSecret20, false);
+  assert.equal(validatePlayerStratagemUse(voidArmour1, { battleRound: 2, playerCp: 2, activeMiseryIds: [] }).countsForSecret20, true);
 });
 
 test('buildLosVerificationPrompt & parseOverwatchVerdict: embeds Misery #28 / coordinates and parses JSON or prose verdicts', () => {
