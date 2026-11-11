@@ -114,3 +114,63 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     assert.equal(pollDeath.stage, 'ON_DEATH');
     assert.equal(pollDeath.count, 1);
 
+    // LCT mat rolls [5 (triggers shoot-on-death!)] -> sequence completes and writes chronicle!
+    const resDeath = await postJson(url1, '/tts/dice-result', {
+      rollId: pollDeath.rollId,
+      sequenceId: pollDeath.sequenceId,
+      dice: [5]
+    });
+    assert.equal(resDeath.sequence.stage, 'COMPLETE');
+    assert.equal(resDeath.sequence.outcome.modelsSlain, 1);
+    assert.equal(resDeath.sequence.outcome.onDeathTriggers, 1);
+
+    // Queue is now IDLE
+    assert.equal(await (await fetch(`${url1}/tts/poll`)).text(), 'IDLE');
+
+    // Horde Attack sequence + standalone roll + custom command enqueue + 404 check
+    const reqAtk = await postJson(url1, '/combat/attack-request', {
+      attackerName: 'Immortals',
+      targetName: 'Cadians',
+      target: { toughness: 3 },
+      weapon: { type: 'ranged', attacks: 1, skill: 3, strength: 5, ap: -1, damage: 1 }
+    });
+    assert.equal(reqAtk.sequence.stage, 'HITS');
+    const pollHits = await (await fetch(`${url1}/tts/poll`)).json();
+    await postJson(url1, '/tts/dice-result', { sequenceId: pollHits.sequenceId, dice: [5] });
+    const pollWounds = await (await fetch(`${url1}/tts/poll`)).json();
+    const atkDone = await postJson(url1, '/tts/dice-result', { sequenceId: pollWounds.sequenceId, dice: [4] });
+    assert.equal(atkDone.sequence.stage, 'COMPLETE');
+
+    const standalone = await postJson(url1, '/tts/dice-result', { label: 'Battle-shock', dice: [6, 3] });
+    assert.equal(standalone.sequence, null);
+
+    const enq = await postJson(url1, '/tts/enqueue', { action: 'SPAWN_PING', zone: 1 });
+    assert.equal(enq.ok, true);
+    const popped = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(popped.action, 'SPAWN_PING');
+
+    // Raw TTS Yellowscribe objects telemetry parses datasheets, computes objective distance & locks Horde Warlord
+    const telRaw = await postJson(url1, '/tts/telemetry', {
+      objects: [
+        {
+          guid: 'w1',
+          name: '5/5 Technomancer',
+          tags: ['HORDE'],
+          pos: { x: 0, y: 1, z: 8 },
+          bounds: { x: 1.57, y: 2.0, z: 1.57 },
+          description: 'M: 6" T: 5 Sv: 3+ W: 5 Ld: 6+ OC: 2\nInvuln: 4+\nKeywords: Infantry, Character'
+        },
+        {
+          guid: 'obj1',
+          name: 'Objective 1',
+          pos: { x: 0, y: 1, z: 0 },
+          bounds: { x: 1.57, y: 0.1, z: 1.57 }
+        }
+      ]
+    });
+    assert.equal(telRaw.trackedUnits, 1);
+    assert.equal(telRaw.objectives, 1);
+    assert.equal(telRaw.warlord.name, 'Technomancer');
+    assert.ok(typeof telRaw.units[0].closestObjective.distanceInches === 'number');
+    assert.ok(telRaw.units[0].closestObjective.distanceInches > 6 && telRaw.units[0].closestObjective.distanceInches < 7);
+
