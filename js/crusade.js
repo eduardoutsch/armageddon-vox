@@ -325,72 +325,57 @@ function rollVotannPostBattleHarvest() {
 }
 
 function rollVotannRareResourceCheck() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  _getMatrixVox()?.playDiceClatter?.();
   const v = ensureVotannState();
-  if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
-  const d6 = Math.floor(Math.random() * 6) + 1;
-  const notice = typeof document !== 'undefined' ? document.getElementById('votHarvestNotice') : null;
-  if (d6 === 6) {
-    v.rare.rawMinerals = (v.rare.rawMinerals || 0) + 1;
-    v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
-    v.expTotals.rare = (v.expTotals.rare || 0) + 1;
+  const outcome = _matrixCore.evaluateVotannRareRoll();
+  const notice = _getMatrixEl('votHarvestNotice');
+  if (outcome.success) {
+    Object.assign(v, _matrixCore.adjustVotannRareResource(v, 'rawMinerals', 1).votann);
     if (notice) notice.innerHTML = `<strong style="color:var(--green);">D6 = 6! Unearthed +1 Rare Resource!</strong>`;
-  } else {
-    if (notice) notice.innerHTML = `<span style="color:var(--muted);">Victory Rare Roll: D6 = ${d6} (Requires 6+).</span>`;
+  } else if (notice) {
+    notice.innerHTML = `<span style="color:var(--muted);">Victory Rare Roll: D6 = ${outcome.d6} (Requires 6+).</span>`;
   }
   renderVotannTab();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  saveCrusadeState();
 }
 
 function syncVotannExpeditionSelectors() {
   const v = ensureVotannState();
-  v.expBacking = document.getElementById('votExpBacking')?.value || v.expBacking;
-  v.expGoal = document.getElementById('votExpGoal')?.value || v.expGoal;
-  v.expContract = document.getElementById('votExpContract')?.value || v.expContract;
+  v.expBacking = _getMatrixEl('votExpBacking')?.value || v.expBacking;
+  v.expGoal = _getMatrixEl('votExpGoal')?.value || v.expGoal;
+  v.expContract = _getMatrixEl('votExpContract')?.value || v.expContract;
   renderVotannTab();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  saveCrusadeState();
 }
 
 function adjVotannExpField(field, delta) {
   const v = ensureVotannState();
-  if (field === 'expeditionsCompleted') {
-    v.expeditionsCompleted = Math.max(0, (v.expeditionsCompleted || 0) + delta);
-    v.expBattles = 0;
-    v.expWins = 0;
-    v.goalProgress = 0;
-    v.expTotals = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
-  } else if (field === 'goalProgress') {
-    v.goalProgress = Math.min(3, Math.max(0, (v.goalProgress || 0) + delta));
-  } else {
-    v[field] = Math.max(0, (v[field] || 0) + delta);
-  }
+  Object.assign(v, _matrixCore.adjustVotannExpeditionField(v, field, delta).votann);
   renderVotannTab();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  saveCrusadeState();
 }
 
 function cycleVotannAssetState(key) {
   const v = ensureVotannState();
-  const states = ['Locked', 'Active', 'Upgraded', 'Inactive'];
-  const curr = v.assets[key] || 'Locked';
-  v.assets[key] = states[(states.indexOf(curr) + 1) % states.length];
+  v.assets[key] = _matrixCore.nextVotannAssetState(v.assets[key]);
   renderVotannTab();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  saveCrusadeState();
 }
 
 function populateVotannVault() {
-  const sel = document.getElementById('votannVaultSelect');
+  const sel = _getMatrixEl('votannVaultSelect');
   if (!sel) return;
-  const vault = (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined') ? VOTANN_VAULT_PROTOCOLS : (typeof window !== 'undefined' ? window.VOTANN_VAULT_PROTOCOLS : []);
-  sel.innerHTML = vault.map(i => `<option value="${i.id}">${i.name} — [${i.type}]</option>`).join('');
+  const vault = _resolveMatrixCatalogs().votannVault;
+  sel.innerHTML = vault.map((i) => `<option value="${i.id}">${i.name} — [${i.type}]</option>`).join('');
   renderSelectedVotannVaultPreview();
 }
 
 function renderSelectedVotannVaultPreview() {
-  const sel = document.getElementById('votannVaultSelect');
-  const box = document.getElementById('votannVaultPreviewBox');
+  const sel = _getMatrixEl('votannVaultSelect');
+  const box = _getMatrixEl('votannVaultPreviewBox');
   if (!sel || !box) return;
-  const vault = (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined') ? VOTANN_VAULT_PROTOCOLS : (typeof window !== 'undefined' ? window.VOTANN_VAULT_PROTOCOLS : []);
-  const pick = vault.find(i => i.id === sel.value) || vault[0];
+  const vault = _resolveMatrixCatalogs().votannVault;
+  const pick = vault.find((i) => i.id === sel.value) || vault[0];
   if (!pick) return;
   box.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
@@ -402,11 +387,12 @@ function renderSelectedVotannVaultPreview() {
 }
 
 function attachVotannVaultToDossier() {
-  const sel = document.getElementById('votannVaultSelect');
+  const sel = _getMatrixEl('votannVaultSelect');
   if (!sel) return;
-  const vault = (typeof VOTANN_VAULT_PROTOCOLS !== 'undefined') ? VOTANN_VAULT_PROTOCOLS : (typeof window !== 'undefined' ? window.VOTANN_VAULT_PROTOCOLS : []);
-  const pick = vault.find(i => i.id === sel.value) || vault[0];
-  const unitName = (document.getElementById('votannRecipientUnit')?.value || 'Needgaârd Oathband').trim();
+  const vault = _resolveMatrixCatalogs().votannVault;
+  const pick = vault.find((i) => i.id === sel.value) || vault[0];
+  if (!pick) return;
+  const unitName = (_getMatrixEl('votannRecipientUnit')?.value || 'Needgaârd Oathband').trim();
   crusadeState.queuedRolls.push({
     unit: unitName,
     context: `Activated via Kindred Acquisitions Vault (${pick.type})`,
@@ -415,7 +401,7 @@ function attachVotannVaultToDossier() {
     name: pick.name,
     desc: pick.desc
   });
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playRelicChoir();
+  _getMatrixVox()?.playRelicChoir?.();
   if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
   updateMasterDossierPreview();
   saveCrusadeState();
