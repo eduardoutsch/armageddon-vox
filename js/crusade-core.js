@@ -299,3 +299,68 @@ var CrusadeCore = (function () {
     };
   }
 
+  // ===========================================================================
+  // TAB 3: ASTRA MILITARUM TOUR OF DUTY & MUNITORUM LOGISTICS
+  // ===========================================================================
+  function rollTourQuotaValues(rng = Math.random) {
+    const bRoll = _rollDie(6, rng);
+    const wRoll = _rollDie(3, rng);
+    return {
+      bRoll,
+      wRoll,
+      tourBattlesRem: bRoll + 4,
+      tourWinsRem: wRoll + 2
+    };
+  }
+
+  function rollCommendationPointsGain(currentPts = 0, rng = Math.random) {
+    const gain = _rollDie(3, rng);
+    return {
+      gain,
+      commendationPts: (Number(currentPts) || 0) + gain
+    };
+  }
+
+  function allocateLogisticsPoint(logistics, upliftingPrimer, catKey, delta) {
+    const baseLog = logistics || { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+    const maxTotal = upliftingPrimer ? 5 : 4;
+    const currentTotal = Object.values(baseLog).reduce((a, b) => a + b, 0);
+    const currVal = baseLog[catKey] || 0;
+    const nextVal = currVal + delta;
+
+    if (nextVal < 0 || nextVal > 2 || (delta > 0 && currentTotal >= maxTotal)) {
+      return { changed: false, logistics: { ...baseLog }, allocated: currentTotal, maxTotal };
+    }
+
+    const updated = { ...baseLog, [catKey]: nextVal };
+    return {
+      changed: true,
+      logistics: updated,
+      allocated: currentTotal + delta,
+      maxTotal
+    };
+  }
+
+  function deriveLogisticsViewModel(logistics, upliftingPrimer, categories = []) {
+    const baseLog = logistics || { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+    const maxTotal = upliftingPrimer ? 5 : 4;
+    const allocated = Object.values(baseLog).reduce((a, b) => a + b, 0);
+    const cards = (categories || []).map((cat) => {
+      const pts = baseLog[cat.key] || 0;
+      const isSurplus = pts === 2;
+      const isStandard = pts === 1;
+      return {
+        key: cat.key,
+        title: cat.title,
+        pts,
+        ptsLabel: `${pts} PT${pts === 1 ? '' : 'S'}`,
+        stateClass: isSurplus ? 'state-surplus' : (pts === 0 ? 'state-deficiency' : ''),
+        statusBadge: isSurplus ? '🟢 SURPLUS (2 PTS)' : (isStandard ? '⚪ STANDARD (1 PT)' : '🔴 DEFICIENCY (0 PTS)'),
+        badgeColor: isSurplus ? 'var(--green)' : (isStandard ? 'var(--muted)' : 'var(--red)'),
+        ruleColor: isSurplus ? 'var(--green)' : (isStandard ? 'var(--muted)' : 'var(--red)'),
+        ruleText: isSurplus
+          ? cat.surplus
+          : (isStandard ? 'Standard Munitorum allocation — no Surplus bonus or Deficiency penalty applies.' : cat.deficiency)
+      };
+    });
+
