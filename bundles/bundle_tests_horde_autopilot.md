@@ -381,6 +381,33 @@ test('planWaveSpawnCommands & buildDisembarkWaveCommand: links Bodyguard + Leade
   const centerDist = Math.hypot(disembarkCmd.targetX - 6, disembarkCmd.targetZ - 12);
   const edgeFromHull = Math.max(0, centerDist - 2.0 - 0.63);
   assert.ok(edgeFromHull <= 3.0, `Disembark anchor must place models within 3" of Transport hull (got ${edgeFromHull}")`);
+
+  // Round 2 Deep Strike reserve routing + Step 2 Movement Phase Ingress
+  const r2Wave = planWaveSpawnCommands(
+    [
+      { zone: 1, bracketKey: '7-9', units: ['5 Terminator Squad'] },
+      { zone: 2, bracketKey: '5-6', units: ['10 Intercessor Squad'] }
+    ],
+    [],
+    { battleRound: 2, shelfTemplates: [{ name: 'Terminator Squad', hasDeepStrike: true, radiusInches: 0.79 }] }
+  );
+  assert.equal(r2Wave.commands.length, 1, 'Only non-Deep-Strike Intercessors spawn in Step 1 during Round 2');
+  assert.equal(r2Wave.queuedReserves.length, 1, 'Terminators hold in Deep Strike Reserves for Step 2 Ingress');
+
+  const ingressMove = planHordeMovementPhase(
+    {
+      playmatBounds: { minX: -22, maxX: 22, minZ: -30, maxZ: 30 },
+      objectives: [],
+      units: [
+        { squadKey: 'HORDE::JustDropped', name: 'Raptors', side: 'HORDE', didIngressThisTurn: true, pos: { x: -8, z: 4 }, models: [{ guid: 'r1', pos: { x: -8, z: 4 }, radiusInches: 0.63 }] },
+        { squadKey: 'PLAYER::Guard', name: 'Cadians', side: 'PLAYER', pos: { x: 0, z: -12 }, models: [{ guid: 'c1', pos: { x: 0, z: -12 }, radiusInches: 0.55 }] }
+      ]
+    },
+    { factionName: 'Chaos Space Marines', activeMiseryIds: [], hordeReserves: r2Wave.queuedReserves }
+  );
+  assert.equal(ingressMove.plans[0].status, 'INGRESSED_HOLD', 'Units flagged didIngressThisTurn must hold rather than Normal Move');
+  assert.equal(ingressMove.ingressDrops.length, 1);
+  assert.equal(ingressMove.commands.some(c => c.action === 'DEEP_STRIKE_DROP'), true);
 });
 
 

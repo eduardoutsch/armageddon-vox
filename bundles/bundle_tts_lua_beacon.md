@@ -146,25 +146,33 @@ function executeSetUnitSide(cmd)
     pushBoardTelemetry()
 end
 
--- Scans all miniatures and objectives inside LCT's playmat bounds and posts raw metadata to /tts/telemetry
+-- Scans all miniatures and objectives inside LCT's playmat bounds (plus off-board shelf templates) and posts raw metadata to /tts/telemetry
 function pushBoardTelemetry()
     local matBounds = detectPlaymatBounds()
     local objectsPayload = {}
+    local shelfTemplates = {}
 
     for _, obj in ipairs(getAllObjects()) do
         if obj ~= self and obj.interactable ~= false and not obj.isSmoothMoving() then
             local pos = obj.getPosition()
             local inMat = pos.x >= matBounds.minX and pos.x <= matBounds.maxX
                       and pos.z >= matBounds.minZ and pos.z <= matBounds.maxZ
+            local name = obj.getName() or ""
+            local lname = string.lower(name)
+            local size = obj.getBoundsNormalized().size
+            local isSecChip = string.find(lname, "secured") or string.find(lname, "camera") or string.find(lname, "dice cam")
+            local isMini = not isSecChip and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or obj.hasTag("HORDE_TEMPLATE"))
+                           and size.x > 0.3 and size.x < 12 and size.z < 12
 
-            if inMat and not obj.hasTag("HORDE_TEMPLATE") then
-                local name = obj.getName() or ""
-                local lname = string.lower(name)
-                local size = obj.getBoundsNormalized().size
-                local isSecChip = string.find(lname, "secured") or string.find(lname, "camera") or string.find(lname, "dice cam")
+            if (not inMat or obj.hasTag("HORDE_TEMPLATE")) and isMini and name ~= "" then
+                table.insert(shelfTemplates, {
+                    name = name,
+                    description = obj.getDescription() or "",
+                    gmNotes = obj.getGMNotes() or "",
+                    bounds = { x = size.x, y = size.y, z = size.z }
+                })
+            elseif inMat and not obj.hasTag("HORDE_TEMPLATE") then
                 local isObjMarker = not isSecChip and (obj.hasTag("OBJECTIVE") or string.match(lname, "^objective%s*%d*$") or string.match(lname, "^obj%s*%d+$"))
-                local isMini = not isSecChip and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER"))
-                               and size.x > 0.3 and size.x < 12 and size.z < 12
 
                 if isObjMarker or isMini then
                     local tags = obj.getTags()
@@ -200,7 +208,7 @@ function pushBoardTelemetry()
         end
     end
 
-    local body = JSON.encode({ playmatBounds = matBounds, objects = objectsPayload })
+    local body = JSON.encode({ playmatBounds = matBounds, objects = objectsPayload, shelfTemplates = shelfTemplates })
     WebRequest.custom(BRIDGE_URL .. "/tts/telemetry", "POST", true, body, { ["Content-Type"] = "application/json" }, function(res)
         if not res.is_error then
             printToAll("📡 LCT Playmat Synced (" .. #objectsPayload .. " on-board objects).", {0.4, 0.95, 0.7})
@@ -223,6 +231,13 @@ function pollTacticaDaemon()
             executeSquadMove(cmd.guids or {}, cmd.targetX, cmd.targetZ, cmd.facingY)
         elseif cmd.action == "SPAWN_WAVE" then
             executeSpawnWave(cmd)
+        elseif cmd.action == "DEEP_STRIKE_DROP" then
+            executeDeepStrikeDrop(cmd)
+        elseif cmd.action == "FALLBACK_INGRESS_TO_SPAWN" then
+            executeFallbackIngressToSpawn(cmd)
+        elseif cmd.action == "CLEAR_DEEP_STRUCK" then
+            clearDeepStruckTags()
+            pushBoardTelemetry()
         elseif cmd.action == "DISEMBARK_CARGO" then
             executeDisembarkCargo(cmd)
         elseif cmd.action == "REVERT_MOVE" then
@@ -405,7 +420,16 @@ function findShelfTemplateModel(templateName)
     return nil
 end
 
+function clearDeepStruckTags()
+    for _, obj in ipairs(getAllObjects()) do
+        if obj ~= self and obj.hasTag("DEEP_STRUCK") then
+            obj.removeTag("DEEP_STRUCK")
+        end
+    end
+end
+
 function executeSpawnWave(cmd)
+    clearDeepStruckTags()
     local offsetGroup = 0
     local prevAttachedGroup = nil
     local anchorByGroup = {}
@@ -504,6 +528,93 @@ function executeDisembarkCargo(cmd)
     end
     printToAll("🚌 " .. tostring(cmd.summary or "Disembarked passengers within 3\"."), {0.95, 0.8, 0.3})
     Wait.time(pushBoardTelemetry, 1.4)
+end
+
+function executeDeepStrikeDrop(cmd)
+    local cx = tonumber(cmd.targetX) or 0
+    local cz = tonumber(cmd.targetZ) or 0
+    local sharedTag = cmd.squadTag or ("SQUAD:DS_" .. tostring(cmd.reserveId or "R1"))
+    local totalModels = 0
+    for _, u in ipairs(cmd.units or {}) do
+        totalModels = totalModels + math.max(1, tonumber(u.count) or 1)
+    end
+    local modelIdx = 0
+
+    for _, u in ipairs(cmd.units or {}) do
+        local tmpl = findShelfTemplateModel(u.templateName)
+        local count = math.max(1, tonumber(u.count) or 1)
+        if tmpl then
+            for _ = 1, count do
+                modelIdx = modelIdx + 1
+                local ox, oz = 0, 0
+                if totalModels > 1 and modelIdx > 1 then
+                    local ang = ((modelIdx - 2) / (totalModels - 1)) * (2 * math.pi)
+                    local rad = (modelIdx <= 7) and 1.35 or 2.6
+                    ox = math.cos(ang) * rad
+                    oz = math.sin(ang) * rad
+                end
+                local y = getSurfaceY(cx + ox, cz + oz, 0.5)
+                local cloned = tmpl.clone({ position = { x = cx + ox, y = y + 0.5, z = cz + oz } })
+                cloned.removeTag("HORDE_TEMPLATE")
+                cloned.addTag("HORDE")
+                cloned.addTag("DEEP_STRUCK")
+                cloned.addTag(sharedTag)
+                cloned.setLock(false)
+                if cmd.facingY then cloned.setRotation({ x = 0, y = cmd.facingY, z = 0 }) end
+            end
+        else
+            spawnGhostRing({ targetX = cx, targetZ = cz, label = "Deep Strike: " .. tostring(count) .. "x " .. tostring(u.templateName) })
+        end
+    end
+    local tagLabel = (cmd.mode == "PINCER_MANEUVER") and "PINCER >3\" DROP" or "DEEP STRIKE >8\" DROP"
+    printToAll("🪂 [" .. tagLabel .. "] " .. tostring(cmd.unitLabel or "Horde Reserve") .. " @ (" .. cx .. ", " .. cz .. ")", {0.95, 0.55, 1.0})
+    Wait.time(pushBoardTelemetry, 1.5)
+end
+
+function executeFallbackIngressToSpawn(cmd)
+    local targetTag = cmd.squadTag
+    if targetTag and targetTag ~= "" then
+        for _, obj in ipairs(getAllObjects()) do
+            if obj ~= self and obj.hasTag(targetTag) then
+                destroyObject(obj)
+            end
+        end
+    end
+    local cx = tonumber(cmd.targetX) or 0
+    local cz = tonumber(cmd.targetZ) or 19.5
+    local fbTag = "SQUAD:WAVE_FB_" .. tostring(cmd.reserveId or "R1")
+    local totalModels = 0
+    for _, u in ipairs(cmd.units or {}) do
+        totalModels = totalModels + math.max(1, tonumber(u.count) or 1)
+    end
+    local modelIdx = 0
+    for _, u in ipairs(cmd.units or {}) do
+        local tmpl = findShelfTemplateModel(u.templateName)
+        local count = math.max(1, tonumber(u.count) or 1)
+        if tmpl then
+            for _ = 1, count do
+                modelIdx = modelIdx + 1
+                local ox, oz = 0, 0
+                if totalModels > 1 and modelIdx > 1 then
+                    local ang = ((modelIdx - 2) / (totalModels - 1)) * (2 * math.pi)
+                    local rad = (modelIdx <= 7) and 1.35 or 2.6
+                    ox = math.cos(ang) * rad
+                    oz = math.sin(ang) * rad
+                end
+                local y = getSurfaceY(cx + ox, cz + oz, 0.5)
+                local cloned = tmpl.clone({ position = { x = cx + ox, y = y + 0.5, z = cz + oz } })
+                cloned.removeTag("HORDE_TEMPLATE")
+                cloned.addTag("HORDE")
+                cloned.addTag(fbTag)
+                cloned.setLock(false)
+                if cmd.facingY then cloned.setRotation({ x = 0, y = cmd.facingY, z = 0 }) end
+            end
+        else
+            spawnGhostRing({ targetX = cx, targetZ = cz, label = "Fallback Spawn: " .. tostring(count) .. "x " .. tostring(u.templateName) })
+        end
+    end
+    printToAll("↩️ [INGRESS FALLBACK] " .. tostring(cmd.unitLabel or "Horde Reserve") .. " relocated to Spawn Zone " .. tostring(cmd.zone or 1), {0.95, 0.8, 0.3})
+    Wait.time(pushBoardTelemetry, 1.5)
 end
 
 function executeRevertMove(cmd)

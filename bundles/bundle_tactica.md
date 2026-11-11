@@ -175,6 +175,7 @@ Sticky Command Bar, 3-mode progressive panels (Horde Turn, Attack Horde, End Mat
 
     <!-- 2. CONTEXTUAL POP-UP STRIP (HIDDEN WHEN IDLE) -->
     <div id="tacticaIntrusionAlertBox" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--red); background:rgba(255,71,87,0.12);"></div>
+    <div id="tacticaReservesStrip" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--purple); background:rgba(155,81,224,0.12); font-size:0.84rem;"></div>
 
     <div id="tacticaPendingRollStrip" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.08);">
       <div id="tacticaPendingRollBox" class="hidden"></div>
@@ -316,6 +317,7 @@ Sticky Command Bar, 3-mode progressive panels (Horde Turn, Attack Horde, End Mat
   <script src="../js/spawner.js"></script>
   <script src="../js/horde-combat-modifiers.js"></script>
   <script src="../js/tts-telemetry-core.js"></script>
+  <script src="../js/horde-deepstrike-core.js"></script>
   <script src="../js/horde-autopilot-core.js"></script>
   <script src="../js/tactica-core.js"></script>
   <script src="../js/tactica.js"></script>
@@ -348,12 +350,14 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(html.includes('href="briefing.html" class="suite-link'), 'Must include briefing suite-link');
   assert.ok(html.includes('href="spawner.html"'), 'Sticky bar must include href="spawner.html" return button');
   assert.ok(html.includes('id="pttStatusPill"'), 'Sticky bar must include #pttStatusPill');
+  assert.ok(html.includes('id="tacticaReservesStrip" class="card hidden"'), 'Section 2 pop-up strip must include hidden #tacticaReservesStrip');
   assert.ok(html.includes('id="tacticaModeHorde"') && html.includes('id="tacticaModePlayer"') && html.includes('id="tacticaModeExport"'), 'Must include 3-mode progressive panels');
   assert.ok(html.includes('id="quickStratDurationSelect"'), 'Quick Stratagem drawer must include phase vs round duration selector');
   assert.ok(html.includes('id="tacticaBoardDrawer"') && html.includes('id="tacticaChronicleDrawer"'), 'Must include collapsed bottom utility drawers');
   assert.ok(html.includes('<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">'), 'Must link favicon');
   assert.ok(html.includes('<script src="../js/spawner.js"></script>'), 'Must link spawner.js');
   assert.ok(html.includes('<script src="../js/tts-telemetry-core.js"></script>'), 'Must link tts-telemetry-core.js');
+  assert.ok(html.includes('<script src="../js/horde-deepstrike-core.js"></script>'), 'Must link horde-deepstrike-core.js');
   assert.ok(html.includes('<script src="../js/horde-autopilot-core.js"></script>'), 'Must link horde-autopilot-core.js');
   assert.ok(html.includes('<script src="../js/tactica-core.js"></script>'), 'Must link tactica-core.js');
   assert.ok(html.includes('<script src="../js/tactica.js"></script>'), 'Must link tactica.js');
@@ -374,6 +378,8 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(luaSrc.includes('SET_UNIT_SIDE') && luaSrc.includes('executeSetUnitSide'), 'Lua beacon must support browser-driven SET_UNIT_SIDE command');
   assert.ok(luaSrc.includes('linkSelectionAsSquad') && luaSrc.includes('SQUAD:WAVE_') && luaSrc.includes('colorTint'), 'Lua beacon must stamp SQUAD tags on waves/manual links and export colorTint');
   assert.ok(luaSrc.includes('DISEMBARK_CARGO') && luaSrc.includes('EMBARKED:'), 'Lua beacon must support EMBARKED cargo tags and DISEMBARK_CARGO 3" drop');
+  assert.ok(luaSrc.includes('DEEP_STRIKE_DROP') && luaSrc.includes('shelfTemplates'), 'Lua beacon must export shelfTemplates and execute DEEP_STRIKE_DROP');
+  assert.ok(luaSrc.includes('FALLBACK_INGRESS_TO_SPAWN') && luaSrc.includes('executeFallbackIngressToSpawn'), 'Lua beacon must support FALLBACK_INGRESS_TO_SPAWN ruin-block fallback');
 
   const spawnerHtml = fs.readFileSync(path.join(ROOT_DIR, 'pages/spawner.html'), 'utf8');
   assert.ok(spawnerHtml.includes('tactica.html'), 'spawner.html must link to pages/tactica.html');
@@ -381,10 +387,11 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   const spawner = require(path.join(ROOT_DIR, 'js/spawner.js'));
   const combat = require(path.join(ROOT_DIR, 'js/horde-combat-modifiers.js'));
   const telemetry = require(path.join(ROOT_DIR, 'js/tts-telemetry-core.js'));
+  const deepStrike = require(path.join(ROOT_DIR, 'js/horde-deepstrike-core.js'));
   const autopilot = require(path.join(ROOT_DIR, 'js/horde-autopilot-core.js'));
   const overwatchCore = require(path.join(ROOT_DIR, 'js/tactica-overwatch-core.js'));
   const core = require(path.join(ROOT_DIR, 'js/tactica-core.js'));
-  Object.assign(globalThis, spawner, combat, telemetry, autopilot, overwatchCore, core);
+  Object.assign(globalThis, spawner, combat, telemetry, deepStrike, autopilot, overwatchCore, core);
 
   const store = new Map();
   store.set('foa_horde_session_v1', JSON.stringify({
@@ -427,7 +434,7 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     'hordeStepPanel1', 'hordeStepPanel2', 'hordeStepPanel3', 'hordeStepPanel4',
     'hordeStepBtn1', 'hordeStepBtn2', 'hordeStepBtn3', 'hordeStepBtn4',
     'tacticaLosBar', 'tacticaHordeTargetChips', 'tacticaUnitCountSummary',
-    'tacticaLatestLogSummary', 'tacticaPendingRollStrip', 'quickStratTargetSelect',
+    'tacticaLatestLogSummary', 'tacticaPendingRollStrip', 'tacticaReservesStrip', 'quickStratTargetSelect',
     'quickStratNameInput', 'quickStratCategorySelect', 'quickStratCoreSelect', 'quickStratDurationSelect'
   ].forEach(id => { els[id] = makeEl(); });
 
@@ -757,6 +764,75 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     'Disembark button must disappear once cargo has disembarked'
   );
   assert.ok(els.tacticaChronicleBox.innerHTML.includes('Disembarked 5x Kill Team + 1x Watch Master'));
+
+  // Round 2 Deep Strike Reserves Strip, Step 2 Button Badge, Empty-Board Ingress Guard, 1-Click Ruin Fallback & DEEP_STRUCK Telemetry Badge
+  assert.equal(els.tacticaReservesStrip.classList.contains('hidden'), true, '#tacticaReservesStrip must stay hidden when hordeReserves is empty');
+  assert.equal(els.hordeStepBtn2.textContent, '2. Move & LOS');
+
+  tactica.getTacticaClientState().battleRound = 2;
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, bracketKey: '7-9', units: ['5 Terminator Squad'] }
+  ];
+  // Empty Horde board (zero Horde units -> plans.length === 0) while 1 Player unit is on board
+  tactica.getTacticaClientState().boardTelemetry.units = [
+    {
+      squadKey: 'PLAYER::Hearthkyn Warriors',
+      name: 'Hearthkyn Warriors',
+      side: 'PLAYER',
+      modelCount: 5,
+      pos: { x: 0, z: -14 },
+      models: [{ guid: 'hk-ds-1', pos: { x: 0, z: -14 }, radiusInches: 0.55 }]
+    }
+  ];
+  await tactica.triggerAutopilotSpawnWaves();
+  assert.equal((tactica.getTacticaClientState().hordeReserves || []).length, 1);
+  assert.equal(els.tacticaReservesStrip.classList.contains('hidden'), false, '#tacticaReservesStrip must reveal while hordeReserves > 0');
+  assert.ok(
+    els.tacticaReservesStrip.innerHTML.includes('Holding in Deep Strike Reserves (Drops in Step 2):') &&
+    els.tacticaReservesStrip.innerHTML.includes('5x Terminator Squad (&gt;8")'),
+    '#tacticaReservesStrip must list queued Deep Strike reserve units'
+  );
+  assert.equal(els.hordeStepBtn2.textContent, '2. Move & Ingress (1 🪂)');
+
+  await tactica.triggerAutopilotMovement();
+  assert.equal(els.tacticaReservesStrip.classList.contains('hidden'), true, '#tacticaReservesStrip must hide again once Step 2 drops reserves');
+  assert.equal(els.hordeStepBtn2.textContent, '2. Move & LOS');
+  assert.equal(
+    els.tacticaAutopilotBox.innerHTML.includes('No eligible Horde movement vectors found on board'),
+    false,
+    'Empty-Board Ingress Guard: must NOT display empty movement message when ingressDrops.length > 0'
+  );
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('Deep Strike Ingress') &&
+    els.tacticaAutopilotBox.innerHTML.includes('Terminator Squad') &&
+    els.tacticaAutopilotBox.innerHTML.includes('fallbackAutopilotIngressDrop(0)') &&
+    els.tacticaAutopilotBox.innerHTML.includes('Fire Overwatch (1 CP)'),
+    'Step 2 Movement must render Deep Strike Ingress drop coordinates, 1-click Fallback to Spawn Zone button, and Fire Overwatch (1 CP) reminder'
+  );
+  assert.equal((tactica.getTacticaClientState().hordeReserves || []).length, 0);
+
+  // Trigger 1-click Fallback to Spawn Zone (e.g. unscanned 3D ruin mesh physically blocks (X, Z))
+  assert.equal(typeof tactica.fallbackAutopilotIngressDrop, 'function');
+  const fbRes = await tactica.fallbackAutopilotIngressDrop(0);
+  assert.ok(fbRes && fbRes.action === 'FALLBACK_INGRESS_TO_SPAWN');
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Spawn Zone 1'));
+
+  // Scanned DEEP_STRUCK unit displays purple 🪂 Deep Struck badge in #tacticaTelemetryBox
+  tactica.getTacticaClientState().boardTelemetry.units.push({
+    squadKey: 'HORDE::Terminator Squad',
+    name: 'Terminator Squad',
+    side: 'HORDE',
+    modelCount: 5,
+    save: 2,
+    invuln: 4,
+    didIngressThisTurn: true
+  });
+  await tactica.refreshDaemonState();
+  assert.ok(
+    els.tacticaTelemetryBox.innerHTML.includes('badge purple') &&
+    els.tacticaTelemetryBox.innerHTML.includes('🪂 Deep Struck'),
+    '#tacticaTelemetryBox must render purple 🪂 Deep Struck badge for units with didIngressThisTurn'
+  );
 
   delete globalThis.localStorage;
   delete globalThis.document;
