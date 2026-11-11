@@ -143,6 +143,48 @@ async function launchTacticaBrowserSession(tacticaThreadUrl) {
         }
       }
 
+      const input = page.locator(CHAT_INPUT_SELECTOR).first();
+      await input.click({ force: true });
+      await page.keyboard.press('Control+A');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.insertText(promptText);
+      await page.waitForTimeout(250);
+
+      const sendBtn = page.locator(SEND_BUTTON_SELECTOR).first();
+      if (await sendBtn.count() > 0 && await sendBtn.isEnabled().catch(() => false)) {
+        await sendBtn.click();
+      } else {
+        await page.keyboard.press('Enter');
+      }
+
+      let lastText = '';
+      let stable = 0;
+      const started = Date.now();
+      while (Date.now() - started < 45000) {
+        await page.waitForTimeout(1000);
+        const count = await page.locator('model-response').count();
+        if (count <= prevCount) continue;
+        const txt = (await page.locator('model-response').nth(count - 1).innerText().catch(() => '')).trim();
+        if (!txt) continue;
+        if (txt === lastText) {
+          stable += 1;
+          if (stable >= 2) return txt;
+        } else {
+          lastText = txt;
+          stable = 0;
+        }
+      }
+      return lastText;
+    });
+    lock = task.catch(() => {});
+    return task;
+  };
+
+  return {
+    queryThread,
+    close: () => context.close().catch(() => {})
+  };
+}
 
 /**
  * Creates a self-contained LCT Relay & Append-Only Chronicle Daemon instance.
@@ -151,9 +193,12 @@ async function launchTacticaBrowserSession(tacticaThreadUrl) {
  * @returns {{server: http.Server, start: function(number=): Promise<number>, stop: function(): Promise<void>}}
  */
 function createTacticaDaemon(options = {}) {
+  const env = options.env || process.env;
+  const tacticaThreadUrl = resolveTacticaThreadUrl(env);
   const logDir = options.logDir || path.join(__dirname, 'match_logs');
   const statePath = path.join(logDir, 'live_state.json');
   const chroniclePath = path.join(logDir, 'match_chronicle.jsonl');
+  let activeThreadQueryFn = options.threadQueryFn || null;
 
   fs.mkdirSync(logDir, { recursive: true });
 
@@ -269,7 +314,9 @@ function createTacticaDaemon(options = {}) {
         ok: true,
         state: liveState,
         chronicle: readChronicleFromDisk(),
-        ttsQueueLength: ttsCommandQueue.length
+        ttsQueueLength: ttsCommandQueue.length,
+        tacticaThreadUrl,
+        tacticaThreadReady: Boolean(activeThreadQueryFn || isUsableGeminiThreadUrl(tacticaThreadUrl))
       });
     }
 
@@ -528,19 +575,25 @@ function createTacticaDaemon(options = {}) {
     if (req.method === 'POST' && urlPath === '/overwatch/los-check') {
       const body = await readJsonBody(req);
       const prompt = buildLosVerificationPrompt(liveState, body.transcript || '');
-      const apiKey = options.geminiApiKey ?? process.env.GEMINI_API_KEY ?? '';
-      const model = options.geminiModel || process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
+      const apiKey = options.geminiApiKey ?? env.GEMINI_API_KEY ?? '';
+      const model = options.geminiModel || env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
       const fetchImpl = options.visionFetchFn || (apiKey && typeof fetch === 'function' ? fetch : null);
 
       let verdict = {
         losBlocked: false,
         revertSquadKey: null,
         blockedPairs: [],
-        spokenReply: 'Offline LOS mode: add GEMINI_API_KEY in .env for automatic TTS screen vision, or click Revert Move manually.'
+        spokenReply: 'Offline LOS mode: configure TACTICA_THREAD_URL (or GEMINI_API_KEY) in .env for automatic TTS screen vision, or click Revert Move manually.'
       };
       let mode = 'offline';
 
-      if (fetchImpl) {
+      if (typeof activeThreadQueryFn === 'function') {
+        const rawText = await activeThreadQueryFn(prompt, body.imageBase64 || '');
+        if (rawText) {
+          verdict = parseOverwatchVerdict(rawText);
+          mode = 'gemini-thread';
+        }
+      } else if (fetchImpl) {
         const parts = [{ text: prompt }];
         if (body.imageBase64) {
           const cleanB64 = String(body.imageBase64).replace(/^data:image\/\w+;base64,/, '');
@@ -594,6 +647,10 @@ function createTacticaDaemon(options = {}) {
 
   return {
     server,
+    tacticaThreadUrl,
+    setThreadQueryFn(fn) {
+      activeThreadQueryFn = fn;
+    },
     start(port = DEFAULT_PORT) {
       return new Promise((resolve, reject) => {
         server.once('error', reject);
