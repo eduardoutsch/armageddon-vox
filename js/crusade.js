@@ -216,54 +216,28 @@ function buildTombMatrixSummaryLine() {
 }
 
 function compileTombAwakeningDossier(input = {}) {
-  const sys = input.tombSystems || (typeof crusadeState !== 'undefined' ? crusadeState.tombSystems : {}) || {};
-  const cmd = sys.command || 0;
-  const reanim = sys.reanimation || 0;
-  const trans = sys.translocation || 0;
-  const allocatedPts = (typeof input.allocatedPts === 'number') ? input.allocatedPts : (cmd + reanim + trans);
-  const maxPts = (input.powerReservesAllocated || (typeof crusadeState !== 'undefined' && crusadeState.powerReservesAllocated)) ? 4 : 3;
-
-  const cmdSystemStatus = cmd > 0 ? `ACTIVE (${cmd} Pt${cmd > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)';
-  const reanimSystemStatus = reanim > 0 ? `ACTIVE (${reanim} Pt${reanim > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)';
-  const transSystemStatus = trans > 0 ? `ACTIVE (${trans} Pt${trans > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)';
-  const allThreeAllocated = allocatedPts >= 3;
-  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('tombAwakeningNotes')?.value) || '').trim();
-
-  const lines = [
-    `+++ TOMB-SHIP MASTER MATRIX // TOMB WORLD AWAKENING & SYSTEM ALLOCATION DISPATCH +++`,
-    `• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP INTERLINK`,
-    `• AWAKENING POINTS ALLOCATED: ${allocatedPts} / ${maxPts} Awakening Points Active`,
-    `• COMMAND SYSTEM (SUBJUGATION DECREE): ${cmdSystemStatus}`,
-    `• REANIMATION SYSTEM (IMMORTAL SERVITUDE): ${reanimSystemStatus}`,
-    `• TRANSLOCATION SYSTEM (RELENTLESS EXPANSION): ${transSystemStatus}`,
-    `• MASTER SYSTEM STATUS: ${allThreeAllocated ? 'ONLINE (1D3 Power Drain Ready)' : 'DORMANT (Requires 3/3 Points)'}`
-  ];
-
-  if (notes) {
-    lines.push(`• CRYPTEK CONCLAVE DIRECTIVE: "${notes}"`);
-  }
-
-  lines.push(
-    `------------------------------------------------`,
-    `REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE: Please lock these Dynastic Awakening System power allocations into our Tomb-Ship hypercircuits and confirm our active Master System protocols!`
-  );
-
-  return lines.join('\n');
+  const hasExplicitNotes = Object.prototype.hasOwnProperty.call(input, 'notes');
+  return _matrixCore.compileTombAwakeningDossier({
+    tombSystems: input.tombSystems || (typeof crusadeState !== 'undefined' ? crusadeState.tombSystems : {}),
+    allocatedPts: input.allocatedPts,
+    powerReservesAllocated: typeof input.powerReservesAllocated === 'boolean'
+      ? input.powerReservesAllocated
+      : !!(typeof crusadeState !== 'undefined' && crusadeState.powerReservesAllocated),
+    notes: hasExplicitNotes ? input.notes : (_getMatrixEl('tombAwakeningNotes')?.value || '')
+  });
 }
 
 function buildTombAwakeningDossierString() {
   return compileTombAwakeningDossier({
-    tombAgendasCompleted: crusadeState.tombAgendasCompleted || 0,
-    tombAwakeningCycles: crusadeState.tombAwakeningCycles || 0,
     powerReservesAllocated: !!crusadeState.powerReservesAllocated,
     tombSystems: crusadeState.tombSystems,
-    notes: (typeof document !== 'undefined' ? document.getElementById('tombAwakeningNotes')?.value : '') || ''
+    notes: _getMatrixEl('tombAwakeningNotes')?.value || ''
   });
 }
 
 function updateTombAwakeningPreview() {
   if (typeof document === 'undefined') return;
-  const box = document.getElementById('tombAwakeningPreviewBox');
+  const box = _getMatrixEl('tombAwakeningPreviewBox');
   if (box) {
     box.textContent = buildTombAwakeningDossierString();
     if (box.classList && typeof box.classList.toggle === 'function') {
@@ -275,36 +249,40 @@ function updateTombAwakeningPreview() {
 
 function transmitTombAwakeningDossier() {
   const payload = buildTombAwakeningDossierString();
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-    window.VoxAudio.transmitToVox('beta', payload);
-  }
+  _getMatrixVox()?.transmitToVox?.('beta', payload);
 }
 
-/**
- * Resets all Tomb World Awakening Matrix counters, system point allocations,
- * Power Reserves requisition checkbox, and dispatch notes on Tab 4 back to clean defaults.
- */
 function resetTombAwakeningTab() {
   crusadeState.tombAgendasCompleted = 0;
   crusadeState.tombAwakeningCycles = 0;
   crusadeState.powerReservesAllocated = false;
   crusadeState.tombSystems = { command: 0, reanimation: 0, translocation: 0 };
+
   if (typeof document !== 'undefined') {
     const txtIds = { tombAgendasCompleted: '0', tombAwakeningCycles: '0', necronRecipientUnit: '', tombAwakeningNotes: '' };
-    Object.entries(txtIds).forEach(([id, val]) => { const el = document.getElementById(id); if (el) { if ('value' in el) el.value = val; else el.textContent = val; } });
-    const reservesEl = document.getElementById('powerReservesToggle');
+    Object.entries(txtIds).forEach(([id, val]) => {
+      const el = _getMatrixEl(id);
+      if (el) {
+        if ('value' in el) el.value = val;
+        else el.textContent = val;
+      }
+    });
+    const reservesEl = _getMatrixEl('powerReservesToggle');
     if (reservesEl) reservesEl.checked = false;
-    const noticeEl = document.getElementById('tombResetNotice');
+    const noticeEl = _getMatrixEl('tombResetNotice');
     if (noticeEl) noticeEl.innerHTML = 'Allocate 3/3 pts to unlock Master System abilities';
   }
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') window.VoxAudio.playClank('card');
+
+  _getMatrixVox()?.playClank?.('card');
   renderTombAwakeningMatrix();
   updateMasterDossierPreview();
   updateTombAwakeningPreview();
   saveCrusadeState();
 }
 
-// --- TAB 5: LEAGUES OF VOTANN EXPEDITIONS & GUILD CONTRACTS ---
+// =============================================================================
+// TAB 5: LEAGUES OF VOTANN EXPEDITIONS & GUILD CONTRACTS ADAPTERS
+// =============================================================================
 function ensureVotannState() {
   if (!crusadeState.votann) {
     crusadeState.votann = {
