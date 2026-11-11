@@ -71,3 +71,66 @@
     return Math.max(min, Math.min(max, v));
   }
 
+  /**
+   * Constructs a standardized LCT TTS Dice-Mat roll command descriptor.
+   */
+  function buildLctCommand(sequenceId, stage, count, threshold, matSide, label) {
+    return {
+      action: 'LCT_MAT_ROLL',
+      rollId: `${sequenceId}:${stage}`,
+      sequenceId,
+      stage,
+      matSide: matSide || 'RED',
+      count,
+      threshold,
+      clearFirst: true,
+      label
+    };
+  }
+
+  /**
+   * Creates a normalized, serializable In-Match Tactical Console state object.
+   */
+  function createInitialTacticaState(overrides = {}) {
+    return {
+      roomCode: String(overrides.roomCode || 'HADES-1').trim().toUpperCase(),
+      battleRound: Number(overrides.battleRound) || 1,
+      phase: TACTICA_PHASES.includes(overrides.phase) ? overrides.phase : 'COMMAND_SPAWN',
+      factionName: overrides.factionName || 'Chaos Daemons',
+      playerCp: overrides.playerCp !== undefined ? Number(overrides.playerCp) : 2,
+      playerSp: overrides.playerSp !== undefined ? Number(overrides.playerSp) : 0,
+      activeMiseryIds: Array.isArray(overrides.activeMiseryIds) ? [...overrides.activeMiseryIds] : [],
+      activeFortifications: Array.isArray(overrides.activeFortifications) ? [...overrides.activeFortifications] : [],
+      zoneSpawns: Array.isArray(overrides.zoneSpawns) ? [...overrides.zoneSpawns] : [],
+      hordeWarlord: overrides.hordeWarlord || null,
+      pendingReactionWindow: overrides.pendingReactionWindow || null,
+      pendingDiceSequence: overrides.pendingDiceSequence || null,
+      pendingChargeDecl: overrides.pendingChargeDecl || null,
+      lastMovementPlans: Array.isArray(overrides.lastMovementPlans) ? [...overrides.lastMovementPlans] : [],
+      lastShootingAssignments: Array.isArray(overrides.lastShootingAssignments) ? [...overrides.lastShootingAssignments] : [],
+      losBlockedPairs: Array.isArray(overrides.losBlockedPairs) ? [...overrides.losBlockedPairs] : [],
+      boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [] },
+      lastDiceResult: overrides.lastDiceResult || null,
+      seqCounter: Number(overrides.seqCounter) || 0
+    };
+  }
+
+  /**
+   * Formats a raw match event into an append-only JSONL chronicle record.
+   */
+  function formatChronicleEntry(rawEvent = {}, state = {}) {
+    const ts = rawEvent.timestamp || Date.now();
+    const round = rawEvent.battleRound !== undefined ? Number(rawEvent.battleRound) : (Number(state.battleRound) || 1);
+    return {
+      seq: Number(rawEvent.seq) || ((Number(state.seqCounter) || 0) + 1),
+      timestamp: ts,
+      isoTime: new Date(ts).toISOString(),
+      roomCode: rawEvent.roomCode || state.roomCode || 'HADES-1',
+      battleRound: Math.max(0, round),
+      phase: rawEvent.phase || state.phase || 'COMMAND_SPAWN',
+      type: String(rawEvent.type || 'NOTE').toUpperCase(),
+      summary: String(rawEvent.summary || '').trim(),
+      details: rawEvent.details || null
+    };
+  }
+
