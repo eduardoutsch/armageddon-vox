@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getBracketInfo, calculateRollDown, pickSyncedUnitFromBracket } = require('../../js/spawner.js');
+const { getBracketInfo, calculateRollDown, pickSyncedUnitFromBracket, parseSpawnWaveSpec } = require('../../js/spawner.js');
 const { mulberry32 } = require('../../js/rng.js');
 
 test('getBracketInfo: unmod 2 always results in No Spawn', () => {
@@ -126,23 +126,66 @@ test('pickSyncedUnitFromBracket: resolves per-faction pool from byFaction in loc
   delete globalThis.document;
 });
 
-test('pickSyncedUnitFromBracket: falls back to canonical HORDE_FACTION_SPAWN_TABLES when custom storage is empty', () => {
+test('pickSyncedUnitFromBracket: enforces zero hardcoded defaults and ignores flat root keys when faction pool is empty', () => {
   const { HORDE_FACTION_SPAWN_TABLES } = require('../../js/data.js');
   globalThis.HORDE_FACTION_SPAWN_TABLES = HORDE_FACTION_SPAWN_TABLES;
+  globalThis.localStorage = {
+    getItem: () => JSON.stringify({
+      b10: '1 Contaminated Root Unit',
+      byFaction: { 'Orks': { b10: '1 Ghazghkull' } }
+    })
+  };
   globalThis.document = {
     getElementById: (id) => {
       if (id === 'hordeFactionSelect') return { value: 'World Eaters' };
+      if (id === 'pool10') return { value: '1 Contaminated DOM Unit' };
       return null;
     }
   };
 
   const rng = mulberry32(77);
   const picked10 = pickSyncedUnitFromBracket('10-12', rng);
-  assert.ok(
-    HORDE_FACTION_SPAWN_TABLES['World Eaters'].b10.includes(picked10),
-    `Expected unit from World Eaters b10, got: ${picked10}`
-  );
+  assert.equal(picked10, '⚠️ World Eaters Pool Empty for Bracket [10-12] — Configure in Mode 4!');
 
   delete globalThis.HORDE_FACTION_SPAWN_TABLES;
+  delete globalThis.localStorage;
   delete globalThis.document;
+});
+
+test('parseSpawnWaveSpec: parses counts, dice expressions, + combos, and [Embarked] tags cleanly', () => {
+  const fixedRng = () => 0.99; // max roll on dice
+
+  assert.deepEqual(parseSpawnWaveSpec('10 Termagants (Fleshborers)', fixedRng), [
+    { count: 10, countExpr: '10', templateName: 'Termagants (Fleshborers)', embarked: null }
+  ]);
+
+  assert.deepEqual(parseSpawnWaveSpec('5 Bladeguard Veterans + 1 Captain', fixedRng), [
+    { count: 5, countExpr: '5', templateName: 'Bladeguard Veterans', embarked: null },
+    { count: 1, countExpr: '1', templateName: 'Captain', embarked: null }
+  ]);
+
+  assert.deepEqual(parseSpawnWaveSpec('1D3 Chaos Spawns', fixedRng), [
+    { count: 3, countExpr: '1D3', templateName: 'Chaos Spawns', embarked: null }
+  ]);
+
+  assert.deepEqual(parseSpawnWaveSpec('D3+1 Scarabs', fixedRng), [
+    { count: 4, countExpr: '1D3+1', templateName: 'Scarabs', embarked: null }
+  ]);
+
+  assert.deepEqual(parseSpawnWaveSpec('1 Chimera [10 Kasrkin]', fixedRng), [
+    {
+      count: 1,
+      countExpr: '1',
+      templateName: 'Chimera',
+      embarked: { count: 10, countExpr: '10', templateName: 'Kasrkin', embarked: null }
+    }
+  ]);
+
+  assert.deepEqual(parseSpawnWaveSpec('Avatar of Khaine', fixedRng), [
+    { count: 1, countExpr: '1', templateName: 'Avatar of Khaine', embarked: null }
+  ]);
+
+  assert.deepEqual(parseSpawnWaveSpec('None'), []);
+  assert.deepEqual(parseSpawnWaveSpec(null), []);
+  assert.deepEqual(parseSpawnWaveSpec('⚠️ Necrons Pool Empty for Bracket [5-6] — Configure in Mode 4!'), []);
 });
