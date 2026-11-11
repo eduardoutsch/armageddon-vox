@@ -52,3 +52,63 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     activeMiseries: []
   }));
 
+  const els = {};
+  const makeEl = (val = '') => ({
+    value: val,
+    checked: false,
+    textContent: '',
+    innerHTML: '',
+    style: {},
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); },
+      remove(c) { this._s.delete(c); },
+      toggle(c, f) { if (f === undefined ? !this._s.has(c) : f) this._s.add(c); else this._s.delete(c); },
+      contains(c) { return this._s.has(c); }
+    }
+  });
+
+  [
+    'tacticaDaemonBadge', 'tacticaRoomLabel', 'tacticaFactionLabel', 'tacticaRoundSelect',
+    'tacticaPhaseSelect', 'tacticaCpLabel', 'tacticaWarlordLabel', 'tacticaQueueLabel',
+    'tacticaTelemetryBox', 'tacticaAutopilotBox', 'tacticaReactionBanner', 'tacticaPendingRollBox', 'tacticaManualPipsInput',
+    'tacticaChronicleBox', 'tacticaNoteInput', 'defUnitName', 'defSaveInput', 'defInvulnInput',
+    'defWpmInput', 'defKeywordsInput', 'defModelsInput', 'defWoundsCountInput', 'defApInput',
+    'defDmgInput', 'defInSpawnCheck', 'defResultBox', 'tacticaReportChannel',
+    'tacticaOutcomeInput', 'tacticaCompiledPreview',
+    'overwatchScreenStatus', 'tacticaIntrusionAlertBox', 'btnToggleOverwatchTts',
+    'overwatchQueryInput', 'overwatchVerdictBox', 'tacticaCrusadeExportNotice'
+  ].forEach(id => { els[id] = makeEl(); });
+
+  els.defUnitName.value = 'Necron Warriors';
+  els.defSaveInput.value = '4';
+  els.defWpmInput.value = '1';
+  els.defKeywordsInput.value = 'INFANTRY';
+  els.defModelsInput.value = '10';
+  els.defWoundsCountInput.value = '2';
+  els.defApInput.value = '0';
+  els.defDmgInput.value = '1';
+  els.tacticaReportChannel.value = 'alpha';
+  els.tacticaRoundSelect.value = '2';
+
+  let voxQueued = null;
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v))
+  };
+  globalThis.document = { getElementById: (id) => els[id] || null };
+  globalThis.window = {
+    addEventListener: () => {},
+    VoxAudio: {
+      playClank: () => {},
+      transmitToVox: (chan, text) => { voxQueued = { chan, text }; }
+    }
+  };
+  globalThis.fetch = async () => { throw new Error('Offline'); };
+
+  const tactica = require(path.join(ROOT_DIR, 'js/tactica.js'));
+  const overwatch = require(path.join(ROOT_DIR, 'js/tactica-overwatch.js'));
+  await tactica.syncFromSpawnerStorage();
+  await tactica.refreshDaemonState();
+  assert.ok(els.tacticaDaemonBadge.textContent.includes('OFFLINE'));
+
