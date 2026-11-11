@@ -26,6 +26,8 @@ function getLang(filePath) {
       return 'javascript';
     case '.lua':
       return 'lua';
+    case '.bat':
+      return 'batch';
     default:
       if (filePath.endsWith('.gitignore')) return 'gitignore';
       return 'text';
@@ -154,9 +156,9 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Test Suites',
-  'Zero-dependency local HTTP LCT TTS dice-mat queue, Horde Autopilot & Overwatch Vision LOS routes, append-only JSONL chronicle scribe, and daemon integration tests (`tactica_daemon.js`, `tests/tactica_daemon.test.js`).',
-  ['tactica_daemon.js', 'tests/tactica_daemon.test.js'],
+  '📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Scribe Server',
+  'Zero-dependency local HTTP LCT TTS dice-mat queue, TACTICA_THREAD_URL Playwright referee session, Horde Autopilot & Overwatch Vision LOS routes, and append-only JSONL chronicle scribe (`tactica_daemon.js`).',
+  ['tactica_daemon.js'],
   path.join(BUNDLES_DIR, 'bundle_tactica_daemon.md')
 );
 
@@ -434,16 +436,24 @@ compileBundle(
     'AGENTS.md',
     '.gitignore',
     '.env.example',
-    'vox_autopilot.bat'
+    'vox_autopilot.bat',
+    'tactica_daemon.bat'
   ],
   path.join(BUNDLES_DIR, 'bundle_packages.md')
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Astropathic Courier WebSocket Bridge',
-  'Bidirectional Node.js relay bridge connecting local game modes to Gemini AI Campaign Master (`vox_bridge.js`).',
-  ['vox_bridge.js'],
+  '📦 Fires of Armageddon // Bundle: Astropathic Courier Bridge (Part 1: Config, Scrubbers & Persona Routing)',
+  'Thread URL partitioning, response artifact scrubbers, and Commander Alpha/Beta/Gamma persona routing (`vox_bridge.js` lines 1 to 525).',
+  [{ file: 'vox_bridge.js', label: 'vox_bridge.js (Part 1: Config, Scrubbers & Persona Routing, Lines 1-525)', startLine: 1, endLine: 525 }],
   path.join(BUNDLES_DIR, 'bundle_bridge.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Astropathic Courier Bridge (Part 2: Queue Draining, Heartbeat & Playwright Runner)',
+  'Single-message dispatch, interference bleed routing, Supabase heartbeat, and multi-tab Playwright runner (`vox_bridge.js` lines 526 to end).',
+  [{ file: 'vox_bridge.js', label: 'vox_bridge.js (Part 2: Queue Draining, Heartbeat & Playwright Runner, Lines 526-end)', startLine: 526, endLine: 1150 }],
+  path.join(BUNDLES_DIR, 'bundle_bridge_part2.md')
 );
 
 // ============================================================================
@@ -457,9 +467,12 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Pages & Boundary Tests (Part 2: Headless Playwright E2E)',
-  'Headless browser E2E verification, cockpit controls, and multi-CP stratagem validation (`tests/ui/pages.test.js` lines 566 to end).',
-  [{ file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)', startLine: 566, endLine: 1100 }],
+  '📦 Fires of Armageddon // Bundle: Pages, Boundary & Tactica Daemon Tests (Part 2)',
+  'Headless browser E2E verification, cockpit controls, and LCT Tactica Daemon integration & .env routing tests (`tests/ui/pages.test.js` lines 566 to end, `tests/tactica_daemon.test.js`).',
+  [
+    { file: 'tests/ui/pages.test.js', label: 'tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)', startLine: 566, endLine: 1100 },
+    'tests/tactica_daemon.test.js'
+  ],
   path.join(BUNDLES_DIR, 'bundle_tests_part2.md')
 );
 
@@ -506,10 +519,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Courier Bridge Tests',
-  'Automated mock WebSocket bridge, rate-limiting, and error-handling verification suite (`tests/vox_bridge.test.js`).',
-  ['tests/vox_bridge.test.js'],
+  '📦 Fires of Armageddon // Bundle: Courier Bridge Tests (Part 1: Scrubbing & Intercept Routing)',
+  'Automated verification for response scrubbing, persona routing, and Pattern 5 intercept broadcasts (`tests/vox_bridge.test.js` lines 1 to 522).',
+  [{ file: 'tests/vox_bridge.test.js', label: 'tests/vox_bridge.test.js (Part 1: Scrubbing & Intercept Routing, Lines 1-522)', startLine: 1, endLine: 522 }],
   path.join(BUNDLES_DIR, 'bundle_tests_bridge.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Courier Bridge Tests (Part 2: Queue Draining, Heartbeat & Thread URLs)',
+  'Automated verification for queue draining, heartbeats, Gamma isolation, and non-Tactica .env thread URL resolution (`tests/vox_bridge.test.js` lines 523 to end).',
+  [{ file: 'tests/vox_bridge.test.js', label: 'tests/vox_bridge.test.js (Part 2: Queue Draining, Heartbeat & Thread URLs, Lines 523-end)', startLine: 523, endLine: 1150 }],
+  path.join(BUNDLES_DIR, 'bundle_tests_bridge_part2.md')
 );
 
 compileBundle(
@@ -601,7 +621,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_horde_combat.md\`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | \`js/horde-combat-modifiers.js\` |
 | [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (View & UI)** | \`pages/tactica.html\`, \`js/tactica.js\` |
 | [\`bundle_tactica_core.md\`](bundle_tactica_core.md) | **In-Match LCT Tactical Functional Core** | \`js/tactica-core.js\`, \`tests/js/tactica-core.test.js\` |
-| [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Integration Tests** | \`tactica_daemon.js\`, \`tests/tactica_daemon.test.js\` |
+| [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe** | \`tactica_daemon.js\` |
 | [\`bundle_tts_bridge.md\`](bundle_tts_bridge.md) | **LCT TTS Orbital Auspex & Telemetry** | \`js/tts-telemetry-core.js\`, \`tts/lct_horde_bridge.lua\`, \`tests/js/tts-telemetry-core.test.js\` |
 | [\`bundle_horde_autopilot.md\`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | \`js/horde-autopilot-core.js\`, \`tests/js/horde-autopilot-core.test.js\` |
 | [\`bundle_tactica_overwatch.md\`](bundle_tactica_overwatch.md) | **Live Screen/Mic Overwatch & Crusade Handoff** | \`js/tactica-overwatch-core.js\`, \`js/tactica-overwatch.js\`, \`tests/js/tactica-overwatch-core.test.js\`, \`tests/ui/tactica.test.js\` |
@@ -634,17 +654,19 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_css_part2.md\`](bundle_css_part2.md) | **Styles (Part 2: Navigation & Cards)** | \`css/style.css\` (Lines 751-1450) |
 | [\`bundle_css_part3.md\`](bundle_css_part3.md) | **Styles (Part 3: Spawner & Modals)** | \`css/style.css\` (Lines 1451-2150) |
 | [\`bundle_css_part4.md\`](bundle_css_part4.md) | **Styles (Part 4: Utilities & SVG)** | \`css/style.css\` (Lines 2151-end), \`assets/favicon.svg\` |
-| [\`bundle_packages.md\`](bundle_packages.md) | **Configs & Engineering Directives** | \`package.json\`, \`wrangler.jsonc\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\`, \`.env.example\`, \`vox_autopilot.bat\` |
-| [\`bundle_bridge.md\`](bundle_bridge.md) | **Courier WebSocket Bridge** | \`vox_bridge.js\` |
-| [\`bundle_tests.md\`](bundle_tests.md) | **Pages & Boundary Tests (Part 1: UI & Bundles)** | \`tests/ui/pages.test.js\` (Lines 1-558) |
-| [\`bundle_tests_part2.md\`](bundle_tests_part2.md) | **Pages & Boundary Tests (Part 2: Headless Playwright E2E)** | \`tests/ui/pages.test.js\` (Lines 559-end) |
+| [\`bundle_packages.md\`](bundle_packages.md) | **Configs & Engineering Directives** | \`package.json\`, \`wrangler.jsonc\`, \`README.md\`, \`AGENTS.md\`, \`.gitignore\`, \`.env.example\`, \`vox_autopilot.bat\`, \`tactica_daemon.bat\` |
+| [\`bundle_bridge.md\`](bundle_bridge.md) | **Courier Bridge (Part 1: Config & Routing)** | \`vox_bridge.js\` (Lines 1-525) |
+| [\`bundle_bridge_part2.md\`](bundle_bridge_part2.md) | **Courier Bridge (Part 2: Queue & Runner)** | \`vox_bridge.js\` (Lines 526-end) |
+| [\`bundle_tests.md\`](bundle_tests.md) | **Pages & Boundary Tests (Part 1: UI & Bundles)** | \`tests/ui/pages.test.js\` (Lines 1-565) |
+| [\`bundle_tests_part2.md\`](bundle_tests_part2.md) | **Pages, E2E & Tactica Daemon Tests (Part 2)** | \`tests/ui/pages.test.js\` (Lines 566-end), \`tests/tactica_daemon.test.js\` |
 | [\`bundle_tests_ui_overview.md\`](bundle_tests_ui_overview.md) | **UI Tests (Briefing & PvP)** | \`tests/ui/briefing.test.js\`, \`tests/ui/pvp.test.js\` |
 | [\`bundle_tests_ui_roster_rogue.md\`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | \`tests/ui/rogue.test.js\`, \`tests/ui/roster.test.js\` |
 | [\`bundle_tests_ui_crusade.md\`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | \`tests/ui/crusade.test.js\`, \`tests/js/horde-battle-stats.test.js\` |
 | [\`bundle_tests_ui_forge.md\`](bundle_tests_ui_forge.md) | **UI Tests (Munitorum Forge)** | \`tests/ui/crusade-forge.test.js\` |
 | [\`bundle_tests_ui_vox.md\`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal Part 1)** | \`tests/ui/vox.test.js\` (Lines 1-550) |
 | [\`bundle_tests_ui_vox_part2.md\`](bundle_tests_ui_vox_part2.md) | **UI Tests (Vox-Terminal Part 2)** | \`tests/ui/vox.test.js\` (Lines 551-end) |
-| [\`bundle_tests_bridge.md\`](bundle_tests_bridge.md) | **Courier Bridge Tests** | \`tests/vox_bridge.test.js\` |
+| [\`bundle_tests_bridge.md\`](bundle_tests_bridge.md) | **Courier Bridge Tests (Part 1)** | \`tests/vox_bridge.test.js\` (Lines 1-522) |
+| [\`bundle_tests_bridge_part2.md\`](bundle_tests_bridge_part2.md) | **Courier Bridge Tests (Part 2)** | \`tests/vox_bridge.test.js\` (Lines 523-end) |
 | [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | \`tests/js/spawner*.test.js\` |
 | [\`bundle_tests_ui_spawner.md\`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner UI & Combat Mods)** | \`tests/ui/spawner.test.js\`, \`tests/js/horde-combat-modifiers.test.js\` |
 | [\`bundle_tests_js_core.md\`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | \`tests/js/data.test.js\`, \`tests/js/rng.test.js\`, \`tests/js/vox-audio.test.js\` |
