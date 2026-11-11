@@ -360,3 +360,57 @@
     return finalizeOrAdvancePostDamageStage(seq);
   }
 
+  /**
+   * Advances a pending Defense sequence using actual pip values settled on LCT's TTS dice mat.
+   */
+  function advanceDefenseRollSequence(prevSeq, rawDice = []) {
+    const seq = JSON.parse(JSON.stringify(prevSeq));
+    if (seq.stage === 'COMPLETE') return seq;
+
+    const dice = (Array.isArray(rawDice) ? rawDice : []).slice(0, seq.expectedDice).map(Number);
+    if (dice.length < seq.expectedDice) {
+      throw new Error(`Expected ${seq.expectedDice} dice from LCT mat for ${seq.stage}, got ${dice.length}`);
+    }
+
+    const prof = seq.defenseProfile;
+    const wpm = prof.woundsPerModel || 1;
+
+    if (seq.stage === 'SAVES') {
+      seq.outcome.savesRolled = dice;
+      const passed = dice.filter(d => d >= 2 && d >= prof.saveTarget).length;
+      const unsaved = dice.length - passed;
+      seq.outcome.savesPassed = passed;
+      seq.outcome.unsavedWounds = unsaved;
+
+      if (unsaved === 0) {
+        seq.stage = 'COMPLETE';
+        seq.expectedDice = 0;
+        seq.nextCommand = null;
+        return seq;
+      }
+
+      if (prof.fnp) {
+        const fnpCount = unsaved * seq.damagePerWound;
+        seq.stage = 'FNP';
+        seq.expectedDice = fnpCount;
+        seq.nextCommand = buildLctCommand(
+          seq.sequenceId,
+          'FNP',
+          fnpCount,
+          prof.fnp,
+          seq.matSide,
+          `${seq.unitName} — ${fnpCount}x Feel No Pain (${prof.fnp}+)`
+        );
+        return seq;
+      }
+
+      const packets = new Array(unsaved).fill(seq.damagePerWound);
+      const alloc = applyDamagePacketsToModels(packets, wpm, seq.startingModels, seq.startWounds, false);
+      Object.assign(seq.outcome, alloc, { unitDestroyed: alloc.remainingModels <= 0 });
+      return finalizeOrAdvancePostDamageStage(seq);
+    }
+
+    if (seq.stage === 'FNP') {
+      seq.outcome.fnpRolls = dice;
+      seq.outcome.fnpPassed = dice.filter(d => d >= prof.fnp).length;
+
