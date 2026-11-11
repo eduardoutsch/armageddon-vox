@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fires of Armageddon // In-Match LCT Tactical Console</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+  <link rel="apple-touch-icon" href="../assets/favicon.svg">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <nav class="suite-nav">
+    <a href="../index.html" class="suite-link">📖 Field Codex &amp; Guide</a>
+    <a href="spawner.html" class="suite-link">🧟 Mode 1: Horde Command &amp; Spawner</a>
+    <a href="pvp.html" class="suite-link">⚔️ Mode 2: 1v1 Ash Wastes PvP</a>
+    <a href="rogue.html" class="suite-link">🎲 Mode 3: Rogue Sector &amp; AI Tracker</a>
+    <a href="roster.html" class="suite-link">🎖️ Mode 4: Hostile Matrix &amp; Nemeses</a>
+    <a href="crusade.html" class="suite-link">🏆 Mode 5: Crusade Quartermaster</a>
+    <a href="briefing.html" class="suite-link">📜 Mode 6: Briefings, Ship &amp; Atlas</a>
+    <a href="vox.html" class="suite-link">📡 Mode 7: Astropath Vox</a>
+  </nav>
+
+  <div class="app-shell">
+    <div class="hero-banner">
+      <div id="tacticaDaemonBadge" class="status-pill" style="margin-bottom:8px;">🟡 Checking LCT Tactica Daemon...</div>
+      <h1>In-Match Tactical &amp; LCT Autopilot Console</h1>
+      <p>100% LCT TTS Map Dice Roller Orchestration • Persistent Round 1–6 Scribe • Separate from Live Vox</p>
+    </div>
+
+    <!-- 1. LIVE SESSION & REACTION WINDOWS -->
+    <div class="card green" style="margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div>
+          <strong>Room:</strong> <span id="tacticaRoomLabel">HADES-1</span> •
+          <strong>Horde:</strong> <span id="tacticaFactionLabel" style="color:var(--gold);">Chaos Daemons</span> •
+          <strong>Assets:</strong> <span id="tacticaCpLabel">2 CP / 0 SP</span> •
+          <strong>Warlord:</strong> <span id="tacticaWarlordLabel">None Designated</span> •
+          <strong>LCT Queue:</strong> <span id="tacticaQueueLabel">0 Queued</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn-ghost btn-sm" onclick="refreshDaemonState()">📡 Poll LCT Daemon</button>
+          <button type="button" class="btn-green btn-sm" onclick="syncFromSpawnerStorage()">🔄 Sync Mode 1 Session</button>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <select id="tacticaRoundSelect" style="padding:6px 10px; background:#0b0d13;">
+          <option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option>
+          <option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Round 6 (Final Stand)</option>
+        </select>
+        <select id="tacticaPhaseSelect" style="padding:6px 10px; background:#0b0d13;" onchange="setConsolePhaseAndTrigger(this.value)">
+          <option value="COMMAND_SPAWN">1. Command &amp; Wave Spawns</option>
+          <option value="HORDE_MOVEMENT">2. Horde Movement</option>
+          <option value="HORDE_SHOOTING">3. Horde Shooting</option>
+          <option value="HORDE_CHARGE">4. Horde Charges</option>
+          <option value="HORDE_FIGHT">5. Horde Fight &amp; Consolidate</option>
+          <option value="PLAYER_TURN">6. Player Turn</option>
+          <option value="ROUND_END">7. End of Round</option>
+        </select>
+        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">⏸️ End Horde Move (Overwatch)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_CHARGE', 'HORDE_CHARGE_DECLARED')">⏸️ Charge Declared (Heroic)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_FIGHT', 'AFTER_HORDE_UNIT_FOUGHT')">⏸️ Counter-Offensive</button>
+      </div>
+
