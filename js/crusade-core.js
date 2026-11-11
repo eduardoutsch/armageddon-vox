@@ -782,3 +782,57 @@ var CrusadeCore = (function () {
     return lines.join('\n');
   }
 
+  return {
+    CRUSADE_TAB_DESCRIPTORS,
+    FACTION_THEME_CLASSES,
+    ALLIANCE_TREE_BUTTON_MAP,
+    DOSSIER_CHANNEL_PROFILES,
+    VOTANN_HARVEST_RESOURCE_MAP,
+    VOTANN_ASSET_CYCLE,
+    LEFTOVER_SP_SALVAGE_TIERS,
+    TOMB_DRAIN_ORDER,
+    clampCounter,
+    createInitialVotannState,
+    createInitialCrusadeState,
+    hydrateCrusadeState,
+    rollBattleTraitPick,
+    rollWeaponModPair,
+    rollCrusadeRelicPick,
+    evaluateOutOfActionRoll,
+    rollBattleScarPick,
+    createQueuedUpgradeEntry,
+    rollTourQuotaValues,
+    rollCommendationPointsGain,
+    allocateLogisticsPoint,
+    deriveLogisticsViewModel,
+    formatLogisticsSummaryLine,
+    compileTourDispatch,
+    allocateTombSystemPoint,
+    applyMasterSystemDrain,
+    deriveTombMatrixViewModel,
+    formatTombMatrixSummaryLine,
+    compileTombAwakeningDossier,
+    adjustVotannResource,
+    adjustVotannRareResource,
+    calculateVotannHarvest,
+    evaluateVotannRareRoll,
+    adjustVotannExpeditionField,
+    nextVotannAssetState,
+    deriveVotannTabViewModel,
+    formatVotannSummaryLine,
+    compileVotannDispatch,
+    isHordeModeDossier,
+    isDistantAugurEngagement,
+    mapLeftoverSpToOption,
+    deriveHordeTelemetryImportPatch,
+    compileMasterDossier
+  };
+})();
+
+if (typeof window !== 'undefined') {
+  window.CrusadeCore = CrusadeCore;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = CrusadeCore;
+}
