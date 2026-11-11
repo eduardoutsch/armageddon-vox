@@ -277,3 +277,60 @@
     return clientState.pendingDiceSequence;
   }
 
+  /**
+   * Advances the active LCT roll sequence using physical/tabletop settled pip values.
+   */
+  async function submitSettledMatPips() {
+    const inp = document.getElementById('tacticaManualPipsInput');
+    const raw = (inp?.value || '').trim();
+    if (!raw || (!clientState.pendingDiceSequence && !clientState.pendingChargeDecl)) return null;
+    const dice = raw.split(/[\s,]+/).map(Number).filter(n => n >= 1 && n <= 6);
+    if (inp) inp.value = '';
+
+    if (!clientState.pendingDiceSequence && clientState.pendingChargeDecl) {
+      const decl = clientState.pendingChargeDecl;
+      try {
+        const res = await daemonRequest('/tts/dice-result', 'POST', { sequenceId: decl.sequenceId, dice });
+        clientState.pendingChargeDecl = null;
+        if (res.entry) localChronicle.push(res.entry);
+      } catch (e) {
+        const resolved = resolveHordeChargeRoll(decl, dice);
+        clientState.pendingChargeDecl = null;
+        localChronicle.push(formatChronicleEntry({
+          type: 'HORDE_CHARGE',
+          summary: `${resolved.attackerName} -> ${resolved.targetName} [LCT 2D6 = ${resolved.modifiedTotal}"]: ${resolved.succeeded ? 'CHARGE SUCCEEDED!' : 'Charge Failed.'}`
+        }, clientState));
+      }
+      renderTacticaConsole();
+      return null;
+    }
+
+    const activeSeq = clientState.pendingDiceSequence;
+    try {
+      const res = await daemonRequest('/tts/dice-result', 'POST', {
+        rollId: activeSeq.nextCommand?.rollId,
+        sequenceId: activeSeq.sequenceId,
+        dice
+      });
+      clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
+      if (res.entry) localChronicle.push(res.entry);
+      if (res.sequence.stage === 'COMPLETE') renderCompletedDefenseSummary(res.sequence);
+    } catch (e) {
+      const updated = activeSeq.kind === 'AUTO_DEFENDER'
+        ? advanceDefenseRollSequence(activeSeq, dice)
+        : advanceHordeAttackRollSequence(activeSeq, dice);
+      if (updated.stage === 'COMPLETE') {
+        clientState.pendingDiceSequence = null;
+        renderCompletedDefenseSummary(updated);
+        localChronicle.push(formatChronicleEntry({
+          type: updated.kind,
+          summary: `${updated.unitName || updated.attackerName} [LCT Mat Settled] -> Slain: ${updated.outcome?.modelsSlain ?? 0}.`
+        }, clientState));
+      } else {
+        clientState.pendingDiceSequence = updated;
+      }
+    }
+    renderTacticaConsole();
+    return clientState.pendingDiceSequence;
+  }
+
