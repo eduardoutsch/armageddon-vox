@@ -9,18 +9,21 @@ const CRUSADE_HTML_PATH = path.join(ROOT_DIR, 'pages/crusade.html');
 // Read crusade.html and modular crusade scripts
 const crusadeHtml = fs.readFileSync(CRUSADE_HTML_PATH, 'utf8');
 assert.ok(crusadeHtml.includes('<script src="../js/crusade-data.js"></script>'), 'pages/crusade.html must link to js/crusade-data.js');
+assert.ok(crusadeHtml.includes('<script src="../js/crusade-core.js"></script>'), 'pages/crusade.html must link to js/crusade-core.js');
 assert.ok(crusadeHtml.includes('<script src="../js/horde-battle-stats.js"></script>'), 'pages/crusade.html must link to js/horde-battle-stats.js');
 assert.ok(crusadeHtml.includes('<script src="../js/crusade-forge.js"></script>'), 'pages/crusade.html must link to js/crusade-forge.js');
 assert.ok(crusadeHtml.includes('<script src="../js/crusade.js"></script>'), 'pages/crusade.html must link to js/crusade.js');
 assert.ok(crusadeHtml.includes('id="hordeStatsAttachCard"'), 'pages/crusade.html must include #hordeStatsAttachCard');
 
 const CRUSADE_DATA_JS = path.join(ROOT_DIR, 'js/crusade-data.js');
+const CRUSADE_CORE_JS = path.join(ROOT_DIR, 'js/crusade-core.js');
 const HORDE_STATS_JS = path.join(ROOT_DIR, 'js/horde-battle-stats.js');
 const CRUSADE_FORGE_JS = path.join(ROOT_DIR, 'js/crusade-forge.js');
 const CRUSADE_JS = path.join(ROOT_DIR, 'js/crusade.js');
 
 const crusadeScriptCode = [
   fs.readFileSync(CRUSADE_DATA_JS, 'utf8'),
+  fs.readFileSync(CRUSADE_CORE_JS, 'utf8'),
   fs.readFileSync(HORDE_STATS_JS, 'utf8'),
   fs.readFileSync(CRUSADE_FORGE_JS, 'utf8'),
   fs.readFileSync(CRUSADE_JS, 'utf8')

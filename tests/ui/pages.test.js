@@ -30,6 +30,8 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
   assert.ok(spawnerHtml.includes('<script src="../js/data.js"></script>'));
   assert.ok(spawnerHtml.includes('<script src="../js/rng.js"></script>'));
   assert.ok(spawnerHtml.includes('<script src="../js/spawner.js"></script>'));
+  assert.ok(spawnerHtml.includes('<script src="../js/horde-battle-stats.js"></script>'));
+  assert.ok(spawnerHtml.includes('<script src="../js/horde-combat-modifiers.js"></script>'), 'spawner.html must link to js/horde-combat-modifiers.js');
   assert.ok(spawnerHtml.includes('<script src="../js/app.js"></script>'));
   assert.ok(spawnerHtml.includes('<script src="../js/vox-audio.js"></script>'), 'spawner.html must link to js/vox-audio.js');
   assert.ok(spawnerHtml.includes('<script src="../js/spawner-cards.js"></script>'), 'spawner.html must link to js/spawner-cards.js');
@@ -38,7 +40,7 @@ test('UI Boundary: index.html is the home launchpad and pages/spawner.html house
 });
 
 test('UI Boundary: all subpages live in /pages and share unified navigation links', () => {
-  const subpages = ['spawner.html', 'pvp.html', 'rogue.html', 'roster.html', 'crusade.html', 'briefing.html', 'vox.html', 'welcome.html'];
+  const subpages = ['spawner.html', 'tactica.html', 'pvp.html', 'rogue.html', 'roster.html', 'crusade.html', 'briefing.html', 'vox.html', 'welcome.html'];
   const expectedBriefingSnippet = 'href="briefing.html" class="suite-link';
   const expectedRootIndexSnippet = 'href="../index.html" class="suite-link';
 
@@ -84,7 +86,7 @@ test('All HTML pages link to assets/favicon.svg and apple-touch-icon in /assets'
     'index.html must include <link rel="apple-touch-icon" href="assets/favicon.svg">'
   );
 
-  const subpages = ['pages/spawner.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/crusade.html', 'pages/vox.html', 'pages/welcome.html'];
+  const subpages = ['pages/spawner.html', 'pages/tactica.html', 'pages/briefing.html', 'pages/pvp.html', 'pages/rogue.html', 'pages/roster.html', 'pages/crusade.html', 'pages/vox.html', 'pages/welcome.html'];
   for (const page of subpages) {
     const html = readPage(page);
     assert.match(
@@ -227,6 +229,14 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_rogue.md', check: 'pages/rogue.html' },
     { file: 'bundle_roster.md', check: 'pages/roster.html' },
     { file: 'bundle_crusade.md', check: 'pages/crusade.html' },
+    { file: 'bundle_crusade_core.md', check: 'js/crusade-core.js' },
+    { file: 'bundle_horde_combat.md', check: 'js/horde-combat-modifiers.js' },
+    { file: 'bundle_tactica.md', check: 'pages/tactica.html' },
+    { file: 'bundle_tactica_core.md', check: 'js/tactica-core.js' },
+    { file: 'bundle_tactica_daemon.md', check: 'tactica_daemon.js' },
+    { file: 'bundle_tts_bridge.md', check: 'js/tts-telemetry-core.js' },
+    { file: 'bundle_horde_autopilot.md', check: 'js/horde-autopilot-core.js' },
+    { file: 'bundle_tactica_overwatch.md', check: 'js/tactica-overwatch-core.js' },
     { file: 'bundle_vox.md', check: 'pages/vox.html' },
     { file: 'bundle_welcome.md', check: 'pages/welcome.html' },
     { file: 'bundle_css.md', check: 'css/style.css' },
@@ -300,6 +310,7 @@ test('UI Script Boundary: HTML script sequences parse cleanly in shared scope wi
   const pages = [
     'index.html',
     'pages/spawner.html',
+    'pages/tactica.html',
     'pages/pvp.html',
     'pages/rogue.html',
     'pages/roster.html',
@@ -359,6 +370,7 @@ test('UI Browser Integration: all HTML pages load in headless browser with zero 
   const pages = [
     'index.html',
     'pages/spawner.html',
+    'pages/tactica.html',
     'pages/pvp.html',
     'pages/rogue.html',
     'pages/roster.html',

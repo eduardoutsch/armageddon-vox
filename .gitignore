@@ -14,6 +14,7 @@ node_modules/
 *.log
 .wrangler/
 scratch/
+match_logs/
 chrome_vox_profile/
 .env
 .env.*
