@@ -326,3 +326,64 @@ function createTacticaDaemon(options = {}) {
       });
     }
 
+    if (req.method === 'POST' && urlPath === '/autopilot/spawn-waves') {
+      const body = await readJsonBody(req);
+      const resPlan = planWaveSpawnCommands(body.zoneSpawns || liveState.zoneSpawns, body.spawnZones || []);
+      resPlan.commands.forEach(c => {
+        cmdCounter += 1;
+        ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...c });
+      });
+      const entry = appendEvent({ type: 'SPAWN_WAVE', summary: resPlan.summary });
+      return sendJson(res, 200, { ok: true, ...resPlan, entry, queueLength: ttsCommandQueue.length });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/plan-movement') {
+      const body = await readJsonBody(req);
+      liveState.phase = 'HORDE_MOVEMENT';
+      const moveRes = planHordeMovementPhase(liveState.boardTelemetry, liveState, body);
+      liveState.lastMovementPlans = moveRes.plans;
+      moveRes.commands.forEach(c => {
+        cmdCounter += 1;
+        ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...c });
+      });
+      const entry = appendEvent({
+        type: 'HORDE_MOVE',
+        summary: `Moved ${moveRes.plans.length} Horde squad(s) — awaiting Pre-Overwatch LOS check.`
+      });
+      return sendJson(res, 200, { ok: true, plans: moveRes.plans, entry, queueLength: ttsCommandQueue.length });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/revert-move') {
+      const body = await readJsonBody(req);
+      const plans = liveState.lastMovementPlans || [];
+      const targetPlan = plans.find(p => p.squadKey === body.squadKey) || plans[Number(body.planIndex) || 0];
+      const cmd = buildMoveRevertCommand(targetPlan);
+      if (!cmd) return sendJson(res, 400, { ok: false, error: 'No stored origin snapshot' });
+      cmdCounter += 1;
+      ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...cmd });
+      const entry = appendEvent({ type: 'MOVE_REVERT', summary: `Reverted ${cmd.unitName} to pre-move origin (No LOS).` });
+      return sendJson(res, 200, { ok: true, command: cmd, entry });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/select-shooting') {
+      const body = await readJsonBody(req);
+      liveState.phase = 'HORDE_SHOOTING';
+      const mergedBlocked = Array.from(new Set([
+        ...(liveState.losBlockedPairs || []),
+        ...(body.losBlockedPairs || [])
+      ]));
+      const assignments = selectHordeShootingTargets(liveState.boardTelemetry, liveState, {
+        ...body,
+        losBlockedPairs: mergedBlocked
+      });
+      liveState.lastShootingAssignments = assignments;
+      return sendJson(res, 200, { ok: true, assignments, losBlockedPairs: mergedBlocked });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/declare-charges') {
+      const body = await readJsonBody(req);
+      liveState.phase = 'HORDE_CHARGE';
+      const chg = planHordeCharges(liveState.boardTelemetry, liveState, body);
+      const win = detectPlayerReactionWindow('HORDE_CHARGE_DECLARED', liveState);
+      liveState.pendingReactionWindow = (chg.declarations.length > 0 && win.open) ? win : null;
+
