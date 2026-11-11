@@ -448,3 +448,58 @@
     return assignments;
   }
 
+  /**
+   * 4. Evaluates eligible Horde Charges (`<= 12"`) and builds `2D6` LCT mat roll jobs (or Misery #4 auto-12" moves).
+   *
+   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`).
+   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`).
+   * @param {object} [options={}] - Optional `{ withinRazorWireKeys }` applying `-2` Charge roll modifier.
+   * @returns {{declarations: Array<object>}}
+   */
+  function planHordeCharges(boardTelemetry = {}, matchState = {}, options = {}) {
+    const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
+    const razorWireSet = new Set(options.withinRazorWireKeys || []);
+    const hordeUnits = allUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
+    const playerUnits = allUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
+
+    const declarations = [];
+    for (const h of hordeUnits) {
+      let closestEnemy = null;
+      let minD = Infinity;
+      for (const p of playerUnits) {
+        const d = squadEdgeDistance(h, p);
+        if (d < minD) {
+          minD = d;
+          closestEnemy = p;
+        }
+      }
+      if (!closestEnemy || minD <= 2.0 || minD > 12.0) continue;
+
+      const moveProf = combatCore.resolveHordeMovementProfile(h, matchState, {
+        withinRazorWire: razorWireSet.has(h.squadKey)
+      });
+      if (h.advancedThisTurn && !moveProf.canChargeAfterAdvance) continue;
+
+      const uRadius = h.models?.[0]?.radiusInches || 0.63;
+      const eRadius = closestEnemy.models?.[0]?.radiusInches || 0.63;
+      const destStep = stepTowardPoint(h.pos || { x: 0, z: 0 }, closestEnemy.pos || { x: 0, z: 0 }, 24, uRadius + eRadius + 0.25);
+      const minEdgeRollNeeded = Math.max(2, Math.ceil(minD - 2.0));
+      const seqId = `chg_${h.squadKey || h.name}`;
+
+      const decl = {
+        sequenceId: seqId,
+        squadKey: h.squadKey || h.name,
+        attackerName: h.name,
+        guids: h.guids || (h.models || []).map(m => m.guid),
+        targetName: closestEnemy.name,
+        distanceInches: minD,
+        neededEdgeReachInches: Number(Math.max(0, minD - 2.0).toFixed(2)),
+        chargeRollMod: moveProf.chargeRollMod,
+        destX: destStep.x,
+        destZ: destStep.z,
+        facingY: destStep.facingY,
+        autoSucceeded: typeof moveProf.autoCharge === 'number',
+        lctCommand: null,
+        moveCommand: null
+      };
+
