@@ -169,3 +169,58 @@
     };
   }
 
+  /**
+   * Determines whether a Horde squad should Advance when out of effective gun or Charge range.
+   */
+  function shouldUnitAdvance(unit, moveProfile, distAfterNormalMove) {
+    if (moveProfile.canShootAfterAdvance && moveProfile.canChargeAfterAdvance) return true;
+    const rangedWeapons = (unit.weapons || []).filter(w => String(w.type || '').toLowerCase() !== 'melee');
+    const maxGunRange = rangedWeapons.reduce((mx, w) => Math.max(mx, Number(w.rangeInches) || 0), 0);
+    const allAssault = rangedWeapons.length > 0 && rangedWeapons.every(w => normalizeKwList(w.keywords).includes('ASSAULT'));
+
+    if (allAssault && distAfterNormalMove > 9) return true;
+    if (maxGunRange < distAfterNormalMove && distAfterNormalMove > 12) return true;
+    return false;
+  }
+
+  /**
+   * 2. Plans deterministic Horde Movement, Advance eligibility, obstacle detours & Pre-Overwatch LOS snapshots.
+   * Records exact `(x, y, z)` model origins before moving so LOS-blocked moves can be reverted with one click.
+   *
+   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`, `objectives`).
+   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`).
+   * @param {object} [options={}] - Optional `{ obstacles, withinRazorWireKeys, spawnedSquadKeys }`.
+   * @returns {{plans: Array<object>, commands: Array<object>}}
+   */
+  function planHordeMovementPhase(boardTelemetry = {}, matchState = {}, options = {}) {
+    const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
+    const objectives = Array.isArray(boardTelemetry.objectives) ? boardTelemetry.objectives : [];
+    const obstacles = Array.isArray(options.obstacles) ? options.obstacles : [];
+    const razorWireSet = new Set(options.withinRazorWireKeys || []);
+    const spawnedSet = new Set(options.spawnedSquadKeys || []);
+
+    const hordeUnits = allUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
+    const playerUnits = allUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
+
+    const plans = [];
+    const commands = [];
+
+    for (const u of hordeUnits) {
+      const originModels = (u.models || []).map(m => ({
+        guid: m.guid,
+        x: Number(m.pos?.x) || 0,
+        y: Number(m.pos?.y) || 1.1,
+        z: Number(m.pos?.z) || 0
+      }));
+
+      // Check if already Engaged (<= 2.0" horizontal)
+      let closestPlayer = null;
+      let minPlayerDist = Infinity;
+      for (const p of playerUnits) {
+        const d = squadEdgeDistance(u, p);
+        if (d < minPlayerDist) {
+          minPlayerDist = d;
+          closestPlayer = p;
+        }
+      }
+
