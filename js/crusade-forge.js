@@ -297,75 +297,61 @@ function adjTourField(field, delta) {
 }
 
 function rollNewTourQuotas() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const d6 = Math.floor(Math.random() * 6) + 1;
-  const d3 = Math.floor(Math.random() * 3) + 1;
-  crusadeState.tourBattlesRem = d6 + 4;
-  crusadeState.tourWinsRem = d3 + 2;
+  _getVoxAudio()?.playDiceClatter?.();
+  const rolled = _forgeCore.rollTourQuotaValues();
+  crusadeState.tourBattlesRem = rolled.tourBattlesRem;
+  crusadeState.tourWinsRem = rolled.tourWinsRem;
 
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio?.playForgeAnvil) window.VoxAudio.playForgeAnvil();
-    const bEl = typeof document !== 'undefined' ? document.getElementById('tourBattlesRem') : null;
-    const wEl = typeof document !== 'undefined' ? document.getElementById('tourWinsRem') : null;
+  _scheduleForgeReveal(() => {
+    _getVoxAudio()?.playForgeAnvil?.();
+    const bEl = _getForgeEl('tourBattlesRem');
+    const wEl = _getForgeEl('tourWinsRem');
     if (bEl) bEl.textContent = String(crusadeState.tourBattlesRem);
     if (wEl) wEl.textContent = String(crusadeState.tourWinsRem);
-    if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
     updateStartOfTourPreview();
-    if (typeof saveCrusadeState === 'function') saveCrusadeState();
+    _syncPostForgeChange();
   }, 240);
 }
 
 function rollVictoryCommendationPts() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const d3 = Math.floor(Math.random() * 3) + 1;
-  crusadeState.commendationPts = (crusadeState.commendationPts || 0) + d3;
+  _getVoxAudio()?.playDiceClatter?.();
+  const rolled = _forgeCore.rollCommendationPointsGain(crusadeState.commendationPts);
+  crusadeState.commendationPts = rolled.commendationPts;
 
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio?.playRelicChoir) window.VoxAudio.playRelicChoir();
-    const cEl = typeof document !== 'undefined' ? document.getElementById('commendationPts') : null;
-    const noticeEl = typeof document !== 'undefined' ? document.getElementById('commRollNotice') : null;
+  _scheduleForgeReveal(() => {
+    _getVoxAudio()?.playRelicChoir?.();
+    const cEl = _getForgeEl('commendationPts');
+    const noticeEl = _getForgeEl('commRollNotice');
     if (cEl) cEl.textContent = String(crusadeState.commendationPts);
-    if (noticeEl) noticeEl.innerHTML = `<strong style="color:var(--green);">Rolled D3 = +${d3} Commendation Pts!</strong>`;
-    if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
+    if (noticeEl) noticeEl.innerHTML = `<strong style="color:var(--green);">Rolled D3 = +${rolled.gain} Commendation Pts!</strong>`;
     updateStartOfTourPreview();
-    if (typeof saveCrusadeState === 'function') saveCrusadeState();
+    _syncPostForgeChange();
   }, 240);
 }
 
 function toggleUpliftingPrimer() {
-  const cb = typeof document !== 'undefined' ? document.getElementById('upliftingPrimerToggle') : null;
+  const cb = _getForgeEl('upliftingPrimerToggle');
   crusadeState.upliftingPrimer = !!(cb && cb.checked);
   renderLogisticsAllocator();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
   updateStartOfTourPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
 }
 
 function adjLogisticsPt(catKey, delta) {
-  if (!crusadeState.logistics) {
-    crusadeState.logistics = { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
-  }
-  const maxTotal = crusadeState.upliftingPrimer ? 5 : 4;
-  const currentTotal = Object.values(crusadeState.logistics).reduce((a, b) => a + b, 0);
-  const currVal = crusadeState.logistics[catKey] || 0;
-  const nextVal = currVal + delta;
-
-  if (nextVal < 0 || nextVal > 2) return;
-  if (delta > 0 && currentTotal >= maxTotal) return;
-
-  crusadeState.logistics[catKey] = nextVal;
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playClank('card');
+  const res = _forgeCore.allocateLogisticsPoint(crusadeState.logistics, crusadeState.upliftingPrimer, catKey, delta);
+  if (!res.changed) return;
+  crusadeState.logistics = res.logistics;
+  _getVoxAudio()?.playClank?.('card');
   renderLogisticsAllocator();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
   updateStartOfTourPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
 }
 
 function renderLogisticsAllocator() {
   if (typeof document === 'undefined') return;
-  const grid = document.getElementById('logisticsAllocatorGrid');
-  const label = document.getElementById('logisticsAllocatedLabel');
-  const cb = document.getElementById('upliftingPrimerToggle');
+  const grid = _getForgeEl('logisticsAllocatorGrid');
+  const label = _getForgeEl('logisticsAllocatedLabel');
+  const cb = _getForgeEl('upliftingPrimerToggle');
   if (!grid) return;
 
   if (!crusadeState.logistics) {
