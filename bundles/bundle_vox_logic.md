@@ -183,6 +183,16 @@ function applyVoxFactionTheme(chan, persist = false) {
 async function selectConduit(chan, clearPendingCheck = false) {
   selectedChannel = chan;
   applyVoxFactionTheme(chan, false);
+  const dBoxReset = document.getElementById('directMessagesBox');
+  const iBoxReset = document.getElementById('interferencesBox');
+  if (dBoxReset && dBoxReset.dataset) {
+    dBoxReset.dataset.sig = '';
+    dBoxReset.dataset.rendered = '';
+  }
+  if (iBoxReset && iBoxReset.dataset) {
+    iBoxReset.dataset.sig = '';
+    iBoxReset.dataset.rendered = '';
+  }
   const cardA = document.getElementById('cardAlpha');
   const cardB = document.getElementById('cardBeta');
   const cardG = document.getElementById('cardGamma');
@@ -431,7 +441,7 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   let lastIdx = 0;
   let timerId = null;
 
-  function finishStream(shouldScroll = true) {
+  function finishStream() {
     if (timerId !== null) {
       clearTimeout(timerId);
       timerId = null;
@@ -442,17 +452,13 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
     } else {
       targetEl.textContent = rawStr;
     }
-    if (shouldScroll) {
-      const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
-      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
-    }
   }
 
-  activeStreamFinishers.push(() => finishStream(false));
+  activeStreamFinishers.push(() => finishStream());
 
-  // Allow clicking anywhere on a streaming message card to instantly finish typing it!
+  // Allow clicking anywhere on a streaming message card to instantly finish typing it in place!
   targetEl.onclick = () => {
-    if (targetEl.dataset.streaming === '1') finishStream(true);
+    if (targetEl.dataset.streaming === '1') finishStream();
   };
 
   function step() {
@@ -469,7 +475,7 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
       if (parentRect.height > 0 && elRect.height > 0) {
         const isVisible = elRect.bottom > parentRect.top && elRect.top < parentRect.bottom;
         if (!isVisible) {
-          finishStream(false);
+          finishStream();
           return;
         }
       }
@@ -490,7 +496,6 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
         window.VoxAudio.playTeletypeTick('incoming');
       }
 
-      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
       lastIdx = targetIdx;
     }
 
@@ -498,16 +503,11 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
       timerId = setTimeout(step, 16);
       activeStreamTimers.push(timerId);
     } else {
-      finishStream(true);
+      finishStream();
     }
   }
 
   step();
 }
 
-function escapeHtml(str) {
-  if (typeof document !== 'undefined') {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
 ````

@@ -121,7 +121,7 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
         </div>
       </div>
       <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn-ghost btn-sm" onclick="refreshTerminal(true)">🔄 Poll Warp</button>
+        <button class="btn-ghost btn-sm" onclick="refreshTerminal(false)">🔄 Poll Warp</button>
         <button class="btn-red btn-sm" onclick="lockTerminal()">🔒 Sever Link</button>
       </div>
     </div>
@@ -206,6 +206,7 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
   min-height: 480px;
   height: clamp(500px, 64vh, 720px);
   overflow-y: auto;
+  overflow-anchor: none;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -377,6 +378,7 @@ Complete markup and CRT phosphor styling for Astropathic Vox-Terminal and Condui
 /* Blinking Phosphor Block Cursor */
 .crt-cursor {
   display: inline-block;
+  overflow-anchor: none;
   width: 8px;
   height: 1em;
   background: currentColor;

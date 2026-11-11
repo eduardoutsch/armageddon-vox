@@ -50,6 +50,8 @@ const {
 } = require('./js/horde-autopilot-core.js');
 const {
   buildLosVerificationPrompt,
+  scrubGeminiThreadArtifacts,
+  isGeminiInterimThinkingText,
   parseOverwatchVerdict
 } = require('./js/tactica-overwatch-core.js');
 
@@ -80,6 +82,30 @@ function resolveTacticaThreadUrl(env = process.env) {
 }
 
 /**
+ * Pure helper: resolves the dedicated Chromium persistent profile directory for Tactica Daemon,
+ * strictly isolated from `chrome_vox_profile` so `vox_autopilot.bat` and `tactica_daemon.bat`
+ * can run simultaneously in separate Chromium instances without `ProcessSingleton` crashes.
+ *
+ * @param {object} [env=process.env] - Environment dictionary.
+ * @param {string} [baseDir=__dirname] - Base directory for relative profile folder resolution.
+ * @returns {string} Absolute path to Tactica's dedicated Chromium user-data-dir.
+ */
+function resolveTacticaProfileDir(env = process.env, baseDir = __dirname) {
+  const defaultDir = path.join(baseDir, 'chrome_tactica_profile');
+  const voxDir = path.resolve(baseDir, 'chrome_vox_profile');
+  const raw = env && typeof env.TACTICA_PROFILE_DIR === 'string' ? env.TACTICA_PROFILE_DIR.trim() : '';
+  if (!raw) return defaultDir;
+  const resolved = path.resolve(baseDir, raw);
+  if (
+    resolved.toLowerCase() === voxDir.toLowerCase() ||
+    path.basename(resolved).toLowerCase() === 'chrome_vox_profile'
+  ) {
+    return defaultDir;
+  }
+  return resolved;
+}
+
+/**
  * Pure helper: checks whether a Gemini web thread URL is a real configured URL
  * rather than an unedited `.env` template placeholder.
  *
@@ -95,21 +121,26 @@ function isUsableGeminiThreadUrl(url) {
 }
 
 /**
- * Launches a Playwright Chrome window locked strictly to `tacticaThreadUrl` (`TACTICA_THREAD_URL`),
- * never touching Alpha/Beta/Gamma narrative threads.
+ * Launches an isolated Playwright Chrome window (`chrome_tactica_profile`) locked strictly to
+ * `tacticaThreadUrl` (`TACTICA_THREAD_URL`), never sharing `chrome_vox_profile` or touching
+ * Alpha/Beta/Gamma narrative threads.
  *
  * @param {string} tacticaThreadUrl - Verified `TACTICA_THREAD_URL` from `.env`.
- * @returns {Promise<{queryThread: function(string, string=): Promise<string>, close: function(): Promise<void>}|null>}
+ * @param {object} [options={}] - Optional `env`, `baseDir`, `chromium`, and `onClose` overrides.
+ * @returns {Promise<{profileDir: string, queryThread: function(string, string=): Promise<string>, close: function(): Promise<void>}|null>}
  */
-async function launchTacticaBrowserSession(tacticaThreadUrl) {
+async function launchTacticaBrowserSession(tacticaThreadUrl, options = {}) {
   if (!isUsableGeminiThreadUrl(tacticaThreadUrl)) return null;
-  let chromium;
-  try {
-    ({ chromium } = require('playwright'));
-  } catch (e) {
-    return null;
+  let chromium = options.chromium;
+  if (!chromium) {
+    try {
+      ({ chromium } = require('playwright'));
+    } catch (e) {
+      return null;
+    }
   }
 
+  const profileDir = resolveTacticaProfileDir(options.env || process.env, options.baseDir || __dirname);
   const launchOpts = {
     headless: false,
     channel: 'chrome',
@@ -118,11 +149,9 @@ async function launchTacticaBrowserSession(tacticaThreadUrl) {
     viewport: { width: 1200, height: 840 }
   };
 
-  let context;
-  try {
-    context = await chromium.launchPersistentContext(path.join(__dirname, 'chrome_vox_profile'), launchOpts);
-  } catch (e) {
-    context = await chromium.launchPersistentContext(path.join(__dirname, 'chrome_tactica_profile'), launchOpts);
+  const context = await chromium.launchPersistentContext(profileDir, launchOpts);
+  if (typeof context.on === 'function' && typeof options.onClose === 'function') {
+    context.on('close', options.onClose);
   }
 
   const pages = context.pages();
@@ -172,17 +201,78 @@ async function launchTacticaBrowserSession(tacticaThreadUrl) {
       let lastText = '';
       let stable = 0;
       const started = Date.now();
-      while (Date.now() - started < 45000) {
-        await page.waitForTimeout(1000);
-        const count = await page.locator('model-response').count();
-        if (count <= prevCount) continue;
-        const txt = (await page.locator('model-response').nth(count - 1).innerText().catch(() => '')).trim();
-        if (!txt) continue;
-        if (txt === lastText) {
+      while (Date.now() - started < 90000) {
+        await page.waitForTimeout(1100);
+        const snap = await page.evaluate(() => {
+          const nodes = document.querySelectorAll('model-response');
+          if (!nodes || nodes.length === 0) return { count: 0, text: '', isGenerating: false };
+          const lastNode = nodes[nodes.length - 1];
+
+          const stopBtn = document.querySelector(
+            'button[aria-label*="Stop"], button[aria-label*="Parar"], button[aria-label*="Interromper"], button.stop-button'
+          );
+          const isGenerating = Boolean(
+            (stopBtn && stopBtn.offsetParent !== null) ||
+            lastNode.getAttribute('aria-busy') === 'true'
+          );
+
+          const clone = lastNode.cloneNode(true);
+          const junkSelectors = [
+            'model-thoughts',
+            '[data-test-id*="thought"]',
+            'thoughts-header',
+            '.thoughts-container',
+            '[class*="thought"]',
+            '.sr-only',
+            '.visually-hidden',
+            '.cdk-visually-hidden',
+            'source-footnote',
+            'sources-carousel',
+            'sources-list',
+            'citation-marker',
+            'sup',
+            '.citation',
+            '.source-chip',
+            'mat-chip',
+            '.code-block-decoration',
+            '.code-block-header',
+            '.code-header',
+            'button'
+          ];
+          junkSelectors.forEach((sel) => {
+            clone.querySelectorAll(sel).forEach((el) => el.remove());
+          });
+          clone.querySelectorAll('span, div, h1, h2, h3, h4, p').forEach((el) => {
+            if (el.children.length === 0) {
+              const t = (el.textContent || '').trim();
+              if (/^(?:O Gemini disse:?|Gemini said:?|Mostrar pensamento|Ocultar pensamento|Show thinking|Hide thinking|JSON|Plaintext|Texto simples|Copy code|Copiar código)$/i.test(t)) {
+                el.remove();
+              }
+            }
+          });
+
+          const bodyRoot = clone.querySelector('message-content, .model-response-text, .markdown');
+          return {
+            count: nodes.length,
+            text: bodyRoot ? (bodyRoot.textContent || '').trim() : '',
+            isGenerating
+          };
+        }).catch(() => ({ count: 0, text: '', isGenerating: false }));
+
+        if (snap.count <= prevCount) continue;
+        const cleaned = scrubGeminiThreadArtifacts(snap.text);
+        if (isGeminiInterimThinkingText(cleaned, { isGenerating: snap.isGenerating })) {
+          stable = 0;
+          continue;
+        }
+        if (cleaned === lastText) {
           stable += 1;
-          if (stable >= 2) return txt;
+          const looksCompleteJson = cleaned.includes('{') && cleaned.trim().endsWith('}');
+          if ((looksCompleteJson && stable >= 2) || stable >= 3) {
+            return cleaned;
+          }
         } else {
-          lastText = txt;
+          lastText = cleaned;
           stable = 0;
         }
       }
@@ -193,6 +283,7 @@ async function launchTacticaBrowserSession(tacticaThreadUrl) {
   };
 
   return {
+    profileDir,
     queryThread,
     close: () => context.close().catch(() => {})
   };
@@ -677,10 +768,27 @@ function createTacticaDaemon(options = {}) {
 
 if (require.main === module) {
   const daemon = createTacticaDaemon();
+  let activeSession = null;
+  const profileDir = resolveTacticaProfileDir();
+
+  const shutdownDaemon = async () => {
+    if (activeSession) {
+      const s = activeSession;
+      activeSession = null;
+      await s.close().catch(() => {});
+    }
+    await daemon.stop().catch(() => {});
+    process.exit(0);
+  };
+  process.once('SIGINT', shutdownDaemon);
+  process.once('SIGTERM', shutdownDaemon);
+  process.once('SIGBREAK', shutdownDaemon);
+
   daemon.start(DEFAULT_PORT).then(async (port) => {
     console.log('----------------------------------------------------------------');
     console.log('[SYSTEM DIAGNOSTICS // LCT TACTICA DAEMON & SCRIBE]');
     console.log(` -> HTTP DAEMON       : http://127.0.0.1:${port}`);
+    console.log(` -> BROWSER PROFILE   : ${path.basename(profileDir)} (ISOLATED from Vox chrome_vox_profile)`);
     if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
       console.log(` -> TACTICA_THREAD_URL: ${daemon.tacticaThreadUrl} (ISOLATED — ALPHA/BETA/GAMMA IGNORED)`);
     } else if (daemon.tacticaThreadUrl) {
@@ -691,22 +799,32 @@ if (require.main === module) {
     console.log('----------------------------------------------------------------');
 
     if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
-      const session = await launchTacticaBrowserSession(daemon.tacticaThreadUrl).catch((err) => {
-        console.warn(`[TACTICA THREAD WARNING] Could not open Playwright tab: ${err.message}`);
+      activeSession = await launchTacticaBrowserSession(daemon.tacticaThreadUrl, {
+        onClose: () => {
+          activeSession = null;
+          daemon.setThreadQueryFn(null);
+          console.log('[TACTICA BROWSER] Chrome window closed — LCT HTTP Scribe remains online.');
+        }
+      }).catch((err) => {
+        console.warn(`[TACTICA THREAD WARNING] Could not open chrome_tactica_profile window: ${err.message}`);
         return null;
       });
-      if (session) {
-        daemon.setThreadQueryFn(session.queryThread);
-        console.log('++ TACTICA GEMINI REFEREE THREAD LOCKED & READY ++');
+      if (activeSession) {
+        daemon.setThreadQueryFn(activeSession.queryThread);
+        console.log('++ TACTICA GEMINI REFEREE THREAD LOCKED & READY (Sign into Google once if prompted) ++');
       }
     }
     console.log(`+++ LCT TACTICA DAEMON & SCRIBE ONLINE [http://127.0.0.1:${port}] +++`);
+  }).catch((err) => {
+    console.error(`[TACTICA DAEMON PORT ERROR] Could not bind 127.0.0.1:${DEFAULT_PORT} (${err.code || err.message}). Is another tactica_daemon window already open?`);
+    process.exitCode = 1;
   });
 }
 
 module.exports = {
   createTacticaDaemon,
   resolveTacticaThreadUrl,
+  resolveTacticaProfileDir,
   isUsableGeminiThreadUrl,
   launchTacticaBrowserSession
 };

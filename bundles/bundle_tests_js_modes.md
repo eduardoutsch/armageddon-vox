@@ -617,4 +617,54 @@ test('vox pure: escapeHtml neutralizes hazardous characters', () => {
   assert.ok(safe.includes('&amp;'));
   assert.ok(safe.includes('&quot;'));
 });
+
+test('vox pure: computeNextMonitorScrollTop preserves reader scroll position on background refreshes', () => {
+  assert.equal(typeof voxModule.computeNextMonitorScrollTop, 'function');
+
+  // Background poll while user is reading at scrollTop=145 -> must keep 145, NOT yank to 920
+  assert.equal(
+    voxModule.computeNextMonitorScrollTop({
+      forceScroll: false,
+      hadPreviousRender: true,
+      showAllOlder: false,
+      previousScrollTop: 145,
+      scrollHeight: 920
+    }),
+    145
+  );
+
+  // Initial terminal unlock -> positions at bottom of recent log (or 0 if older expanded)
+  assert.equal(
+    voxModule.computeNextMonitorScrollTop({
+      forceScroll: false,
+      hadPreviousRender: false,
+      showAllOlder: false,
+      previousScrollTop: 0,
+      scrollHeight: 640
+    }),
+    640
+  );
+  assert.equal(
+    voxModule.computeNextMonitorScrollTop({
+      forceScroll: false,
+      hadPreviousRender: false,
+      showAllOlder: true,
+      previousScrollTop: 0,
+      scrollHeight: 640
+    }),
+    0
+  );
+
+  // Explicit user transmit -> scrolls to newly sent transmission
+  assert.equal(
+    voxModule.computeNextMonitorScrollTop({
+      forceScroll: true,
+      hadPreviousRender: true,
+      showAllOlder: false,
+      previousScrollTop: 145,
+      scrollHeight: 980
+    }),
+    980
+  );
+});
 ````

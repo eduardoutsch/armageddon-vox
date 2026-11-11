@@ -102,6 +102,29 @@ function resolveThreadUrls(env = process.env) {
   };
 }
 
+/**
+ * Pure helper: resolves the dedicated Chromium persistent profile directory for Vox Autopilot,
+ * strictly isolated from `chrome_tactica_profile` so both terminals can run simultaneously.
+ *
+ * @param {object} [env=process.env] - Environment dictionary.
+ * @param {string} [baseDir=__dirname] - Base directory for relative profile folder resolution.
+ * @returns {string} Absolute path to Vox Autopilot's dedicated Chromium user-data-dir.
+ */
+function resolveVoxProfileDir(env = process.env, baseDir = __dirname) {
+  const defaultDir = path.join(baseDir, 'chrome_vox_profile');
+  const tacticaDir = path.resolve(baseDir, 'chrome_tactica_profile');
+  const raw = env && typeof env.VOX_PROFILE_DIR === 'string' ? env.VOX_PROFILE_DIR.trim() : '';
+  if (!raw) return defaultDir;
+  const resolved = path.resolve(baseDir, raw);
+  if (
+    resolved.toLowerCase() === tacticaDir.toLowerCase() ||
+    path.basename(resolved).toLowerCase() === 'chrome_tactica_profile'
+  ) {
+    return defaultDir;
+  }
+  return resolved;
+}
+
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://dsfvhjjalexqpbzqoaqb.supabase.co').trim();
 const SERVICE_KEY = resolveServiceKey();
 
@@ -512,27 +535,4 @@ async function processSingleMessage(msg, targetPage, options = {}) {
   const otherChannel = isAlpha ? 'beta' : 'alpha';
   const originLabel = isAlpha
     ? 'LOWER DECKS VOX-BLEED (SANCTUARY OF ASH)'
-    : 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)';
-  const msgShortId = msg.id ? msg.id.slice(0, 8) : '00000000';
-
-  logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} | From:${msg.sender || 'Unknown'}`);
-  logFn(`   Payload: "${(msg.question || '').slice(0, 90)}..."`);
-
-  // THREAD DRIFT GUARD: Ensure the browser tab is still on the configured Notebook chat URL before typing!
-  const gammaUrl = options.gammaThreadUrl !== undefined ? options.gammaThreadUrl : GAMMA_THREAD_URL;
-  const expectedUrl = isAlpha
-    ? ALPHA_THREAD_URL
-    : (isGamma ? (gammaUrl || ALPHA_THREAD_URL) : BETA_THREAD_URL);
-  if (expectedUrl && typeof targetPage.goto === 'function' && typeof targetPage.url === 'function') {
-    const currentUrl = targetPage.url();
-    const expectedId = expectedUrl.split('/').filter(Boolean).pop();
-    if (expectedId && currentUrl !== 'https://gemini.google.com/test' && !currentUrl.includes(expectedId)) {
-      logFn(`[THREAD GUARD // ${channelTag}] Tab drifted to ${currentUrl} — snapping back to ${expectedUrl}...`);
-      await targetPage.goto(expectedUrl, { waitUntil: 'domcontentloaded' });
-      if (typeof targetPage.waitForSelector === 'function') {
-        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => { });
-      }
-      if (typeof targetPage.waitForTimeout === 'function') {
-        await targetPage.waitForTimeout(1500);
-      }
 ````

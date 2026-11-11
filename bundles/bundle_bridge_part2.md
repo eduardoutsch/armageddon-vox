@@ -10,6 +10,29 @@ Single-message dispatch, interference bleed routing, Supabase heartbeat, and mul
 ## File: `vox_bridge.js (Part 2: Queue Draining, Heartbeat & Playwright Runner, Lines 526-end)` <a id="file-voxbridgejspart2queuedrainingheartbeatplaywrightrunnerlines526end"></a>
 
 ````javascript
+    : 'RIVAL WARHOST VOX-BLEED (LORD COMMANDER JUNEBUG)';
+  const msgShortId = msg.id ? msg.id.slice(0, 8) : '00000000';
+
+  logFn(`\n[INCOMING TRANSMISSION -> ${channelTag}] MSG_ID: ${msgShortId} | From:${msg.sender || 'Unknown'}`);
+  logFn(`   Payload: "${(msg.question || '').slice(0, 90)}..."`);
+
+  // THREAD DRIFT GUARD: Ensure the browser tab is still on the configured Notebook chat URL before typing!
+  const gammaUrl = options.gammaThreadUrl !== undefined ? options.gammaThreadUrl : GAMMA_THREAD_URL;
+  const expectedUrl = isAlpha
+    ? ALPHA_THREAD_URL
+    : (isGamma ? (gammaUrl || ALPHA_THREAD_URL) : BETA_THREAD_URL);
+  if (expectedUrl && typeof targetPage.goto === 'function' && typeof targetPage.url === 'function') {
+    const currentUrl = targetPage.url();
+    const expectedId = expectedUrl.split('/').filter(Boolean).pop();
+    if (expectedId && currentUrl !== 'https://gemini.google.com/test' && !currentUrl.includes(expectedId)) {
+      logFn(`[THREAD GUARD // ${channelTag}] Tab drifted to ${currentUrl} — snapping back to ${expectedUrl}...`);
+      await targetPage.goto(expectedUrl, { waitUntil: 'domcontentloaded' });
+      if (typeof targetPage.waitForSelector === 'function') {
+        await targetPage.waitForSelector(MODEL_TURN_SELECTOR, { timeout: 15000 }).catch(() => { });
+      }
+      if (typeof targetPage.waitForTimeout === 'function') {
+        await targetPage.waitForTimeout(1500);
+      }
     }
   }
 
@@ -338,7 +361,12 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
   }
 }
 
-async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}) {
+async function runDualThreadCourier({
+  env = process.env,
+  baseDir = __dirname,
+  logFn = logGreen,
+  chromiumLauncher = chromium
+} = {}) {
   const { alphaThreadUrl, betaThreadUrl, gammaThreadUrl, extraThreadUrls } = resolveThreadUrls(env);
 
   if (!alphaThreadUrl || !betaThreadUrl) {
@@ -346,17 +374,26 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     return false;
   }
 
-  const profileDir = path.join(__dirname, 'chrome_vox_profile');
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false,
-    channel: 'chrome',
-    ignoreDefaultArgs: ['--enable-automation'],
-    args: [
-      '--disable-blink-features=AutomationControlled',
-      '--no-sandbox'
-    ],
-    viewport: { width: 1280, height: 860 }
-  });
+  const profileDir = resolveVoxProfileDir(env, baseDir);
+  let context;
+  try {
+    context = await chromiumLauncher.launchPersistentContext(profileDir, {
+      headless: false,
+      channel: 'chrome',
+      ignoreDefaultArgs: ['--enable-automation'],
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--no-sandbox'
+      ],
+      viewport: { width: 1280, height: 860 }
+    });
+  } catch (err) {
+    logFn(
+      `[BROWSER PROFILE LOCKED] Could not launch ${path.basename(profileDir)} (${err.message}). ` +
+      'Close any older Chrome window still holding chrome_vox_profile and relaunch vox_autopilot.bat.'
+    );
+    return false;
+  }
 
   const existingPages = context.pages();
   const alphaPage = existingPages[0] || await context.newPage();
@@ -490,6 +527,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
 module.exports = {
   resolveServiceKey,
   resolveThreadUrls,
+  resolveVoxProfileDir,
   routeSpeakerPersona,
   sanitizePlayerQueryForGemini,
   scrubArtifacts,

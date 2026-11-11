@@ -12,10 +12,12 @@ Automated verification for response scrubbing, persona routing, and Pattern 5 in
 ````javascript
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 
 const {
   resolveServiceKey,
   resolveThreadUrls,
+  resolveVoxProfileDir,
   routeSpeakerPersona,
   scrubArtifacts,
   extractCleanLastModelResponse,
@@ -530,6 +532,4 @@ test('processSingleMessage: triggers Pattern 5 intercept bleed for ROGUE SECTOR 
   assert.equal(interceptCalls[2].body.origin_hint, 'ORBITAL AUGUR ARRAY // PARALLEL SECTOR EVENT');
   assert.ok(interceptCalls[0].body.redacted_text.includes('[REDACTED]'));
   assert.ok(logged.some(m => m.includes('ALPHA & BETA & GAMMA')));
-});
-
 ````
