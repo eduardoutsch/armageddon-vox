@@ -221,3 +221,51 @@ test('selectHordeShootingTargets: enforces [ANTI-X], [PRECISION], [MELTA], Hidde
   assert.ok(flyOverride.length > 0, 'Misery #28 ignores terrain visibility');
 });
 
+test('planHordeCharges & resolveHordeChargeRoll: queues 2D6 LCT mat roll, applies Razor Wire -2 mod, and glides into Engagement Range', () => {
+  const board = {
+    objectives: [],
+    units: [
+      {
+        squadKey: 'HORDE::Eightbound',
+        name: 'Eightbound',
+        side: 'HORDE',
+        modelCount: 3,
+        guids: ['e1', 'e2', 'e3'],
+        pos: { x: 0, z: 9 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'e1', pos: { x: 0, z: 9 }, radiusInches: 0.78 }]
+      },
+      {
+        squadKey: 'PLAYER::Beserks',
+        name: 'Cthonian Beserks',
+        side: 'PLAYER',
+        pos: { x: 0, z: 0 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'c1', pos: { x: 0, z: 0 }, radiusInches: 0.63 }]
+      }
+    ]
+  };
+
+  const chargePlan = planHordeCharges(
+    board,
+    { factionName: 'World Eaters', activeMiseryIds: [] },
+    { withinRazorWireKeys: ['HORDE::Eightbound'] }
+  );
+  assert.equal(chargePlan.declarations.length, 1);
+  const decl = chargePlan.declarations[0];
+  // Edge-to-edge distance = 9 - 0.78 - 0.63 = 7.59"; Engagement Range is <= 2.0", so needed charge roll >= 6" (7.59 - 2.0 = 5.59 -> 6)
+  assert.equal(decl.chargeRollMod, -2, 'Razor Wire subtracts 2 from Charge rolls');
+  assert.equal(decl.lctCommand.action, 'LCT_MAT_ROLL');
+  assert.equal(decl.lctCommand.count, 2);
+
+  // Fail roll with Razor Wire: [4, 3] = 7 - 2 = 5 (< 5.59" needed to reach 2.0" Engagement Range)
+  const failed = resolveHordeChargeRoll(decl, [4, 3]);
+  assert.equal(failed.succeeded, false);
+  assert.equal(failed.moveCommand, null);
+
+  // Pass roll: [5, 5] = 10 - 2 = 8 (>= 5.59") -> glides into base-to-base!
+  const passed = resolveHordeChargeRoll(decl, [5, 5]);
+  assert.equal(passed.succeeded, true);
+  assert.equal(passed.moveCommand.action, 'MOVE_UNIT');
+});
+
