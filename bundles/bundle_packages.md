@@ -10,6 +10,7 @@ NPM package manifests, Cloudflare Pages deployment configs, repository documenta
 - [.gitignore](#file-gitignore)
 - [.env.example](#file-envexample)
 - [vox_autopilot.bat](#file-voxautopilotbat)
+- [tactica_daemon.bat](#file-tacticadaemonbat)
 
 ---
 
@@ -242,6 +243,7 @@ npm run bundle
 
 # Launch the local In-Match LCT Tactical Daemon & Disk Scribe (127.0.0.1:3030)
 npm run tactica:daemon
+# (or run tactica_daemon.bat on Windows)
 
 # Launch the local Astropathic Courier Gemini Bridge
 npm run vox:bridge
@@ -339,6 +341,7 @@ node_modules/
 scratch/
 match_logs/
 chrome_vox_profile/
+chrome_tactica_profile/
 .env
 .env.*
 !.env.example
@@ -356,11 +359,14 @@ SUPABASE_URL=https://<your-project-id>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
 
-# Astropathic Courier Gemini Notebook Thread URLs (Required for vox_bridge.js)
+# In-Match LCT Tactical Daemon Gemini Thread URL (Picked up ONLY by tactica_daemon.js / tactica_daemon.bat)
+TACTICA_THREAD_URL=https://gemini.google.com/app/<your-tactica-thread-id>
+
+# Astropathic Courier Gemini Notebook Thread URLs (Picked up by vox_bridge.js / vox_autopilot.bat; excludes TACTICA_THREAD_URL)
 ALPHA_THREAD_URL=https://gemini.google.com/app/<your-alpha-thread-id>
 BETA_THREAD_URL=https://gemini.google.com/app/<your-beta-thread-id>
 # Optional 3rd Conduit (Leagues of Votann Solo Black-Ledger — defaults to ALPHA_THREAD_URL if omitted)
-# GAMMA_THREAD_URL=https://gemini.google.com/app/<your-gamma-thread-id>
+GAMMA_THREAD_URL=https://gemini.google.com/app/<your-gamma-thread-id>
 
 # Optional Live 3D TTS Screen Vision Referee (for POST /overwatch/los-check in tactica_daemon.js)
 # GEMINI_API_KEY=AIzaSy...
@@ -371,7 +377,7 @@ BETA_THREAD_URL=https://gemini.google.com/app/<your-beta-thread-id>
 
 ## File: `vox_autopilot.bat` <a id="file-voxautopilotbat"></a>
 
-````text
+````batch
 @echo off
 setlocal
 cd /d "%~dp0"
@@ -407,4 +413,46 @@ echo Launching Dual-Thread Courier...
 node "%~dp0vox_bridge.js"
 node -e "require('./vox_bridge.js').publishServerHeartbeat('offline').catch(function(){})" >nul 2>nul
 pause
+````
+
+---
+
+## File: `tactica_daemon.bat` <a id="file-tacticadaemonbat"></a>
+
+````batch
+@echo off
+setlocal
+cd /d "%~dp0"
+color 0A
+title Segmentum Solar // In-Match LCT Tactical Daemon
+echo ================================================================
+echo  FIRES OF ARMAGEDDON // LCT TACTICA DAEMON ^& TTS BRIDGE
+echo  Active Directory: %CD%
+echo ================================================================
+
+where node >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] Node.js is not found in PATH! Please install Node.js 18+ to proceed.
+    pause
+    exit /b 1
+)
+
+where npm >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] npm is not found in PATH! Please ensure Node.js/npm is installed.
+    pause
+    exit /b 1
+)
+
+if not exist "%~dp0.env" (
+    if exist "%~dp0.env.example" (
+        echo [NOTICE] .env file not detected. Creating .env from .env.example template...
+        copy "%~dp0.env.example" "%~dp0.env" >nul
+    )
+)
+
+echo Launching In-Match LCT Tactical Daemon...
+call npm run tactica:daemon
+pause
+
 ````

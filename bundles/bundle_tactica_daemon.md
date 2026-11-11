@@ -1,10 +1,9 @@
-# 📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Test Suites
+# 📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Scribe Server
 
-Zero-dependency local HTTP LCT TTS dice-mat queue, Horde Autopilot & Overwatch Vision LOS routes, append-only JSONL chronicle scribe, and daemon integration tests (`tactica_daemon.js`, `tests/tactica_daemon.test.js`).
+Zero-dependency local HTTP LCT TTS dice-mat queue, TACTICA_THREAD_URL Playwright referee session, Horde Autopilot & Overwatch Vision LOS routes, and append-only JSONL chronicle scribe (`tactica_daemon.js`).
 
 ## 📑 Table of Contents
 - [tactica_daemon.js](#file-tacticadaemonjs)
-- [tests/tactica_daemon.test.js](#file-teststacticadaemontestjs)
 
 ---
 
@@ -23,7 +22,10 @@ Zero-dependency local HTTP LCT TTS dice-mat queue, Horde Autopilot & Overwatch V
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-try { require('dotenv').config(); } catch (e) {}
+try {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch (e) {}
 
 const {
   createInitialTacticaState,
@@ -52,6 +54,149 @@ const {
 } = require('./js/tactica-overwatch-core.js');
 
 const DEFAULT_PORT = Number(process.env.TACTICA_PORT) || 3030;
+const CHAT_INPUT_SELECTOR = 'rich-textarea div.ql-editor, div.ql-editor[contenteditable="true"], div[role="textbox"][contenteditable="true"], textarea';
+const SEND_BUTTON_SELECTOR = 'button.send-button, button[aria-label*="Send"], button[aria-label*="Enviar"]';
+
+/**
+ * Pure helper: resolves strictly the Tactica Daemon Gemini thread URL from `.env`,
+ * ignoring ALPHA_THREAD_URL, BETA_THREAD_URL, GAMMA_THREAD_URL, and all other Vox/Supabase URLs.
+ *
+ * @param {object} [env=process.env] - Environment dictionary.
+ * @returns {string} Trimmed Tactica thread URL, or empty string if unset.
+ */
+function resolveTacticaThreadUrl(env = process.env) {
+  if (!env || typeof env !== 'object') return '';
+  const candidates = [
+    env.TACTICA_THREAD_URL,
+    env.TACTICA_DAEMON_THREAD_URL,
+    env.TACTICA_DAEMON_URL
+  ];
+  for (const val of candidates) {
+    if (typeof val === 'string' && val.trim()) {
+      return val.trim();
+    }
+  }
+  return '';
+}
+
+/**
+ * Pure helper: checks whether a Gemini web thread URL is a real configured URL
+ * rather than an unedited `.env` template placeholder.
+ *
+ * @param {string} url - Candidate Gemini thread URL.
+ * @returns {boolean} True when ready for Playwright navigation.
+ */
+function isUsableGeminiThreadUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!/^https:\/\/gemini\.google\.com\/app\/[A-Za-z0-9_-]+/i.test(trimmed)) return false;
+  if (/YOUR_[A-Z0-9_]*HERE|<your-|PLACEHOLDER/i.test(trimmed)) return false;
+  return true;
+}
+
+/**
+ * Launches a Playwright Chrome window locked strictly to `tacticaThreadUrl` (`TACTICA_THREAD_URL`),
+ * never touching Alpha/Beta/Gamma narrative threads.
+ *
+ * @param {string} tacticaThreadUrl - Verified `TACTICA_THREAD_URL` from `.env`.
+ * @returns {Promise<{queryThread: function(string, string=): Promise<string>, close: function(): Promise<void>}|null>}
+ */
+async function launchTacticaBrowserSession(tacticaThreadUrl) {
+  if (!isUsableGeminiThreadUrl(tacticaThreadUrl)) return null;
+  let chromium;
+  try {
+    ({ chromium } = require('playwright'));
+  } catch (e) {
+    return null;
+  }
+
+  const launchOpts = {
+    headless: false,
+    channel: 'chrome',
+    ignoreDefaultArgs: ['--enable-automation'],
+    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+    viewport: { width: 1200, height: 840 }
+  };
+
+  let context;
+  try {
+    context = await chromium.launchPersistentContext(path.join(__dirname, 'chrome_vox_profile'), launchOpts);
+  } catch (e) {
+    context = await chromium.launchPersistentContext(path.join(__dirname, 'chrome_tactica_profile'), launchOpts);
+  }
+
+  const pages = context.pages();
+  const page = pages[0] || await context.newPage();
+  for (let i = 1; i < pages.length; i++) {
+    await pages[i].close().catch(() => {});
+  }
+
+  await page.goto(tacticaThreadUrl, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('model-response', { timeout: 15000 }).catch(() => {});
+
+  let lock = Promise.resolve();
+  const queryThread = (promptText, imageBase64 = '') => {
+    const task = lock.then(async () => {
+      if (!String(page.url() || '').startsWith(tacticaThreadUrl)) {
+        await page.goto(tacticaThreadUrl, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(1500);
+      }
+      const prevCount = await page.locator('model-response').count();
+
+      if (imageBase64) {
+        const tmpImg = path.join(__dirname, 'match_logs', '_los_frame.jpg');
+        const cleanB64 = String(imageBase64).replace(/^data:image\/\w+;base64,/, '');
+        fs.mkdirSync(path.dirname(tmpImg), { recursive: true });
+        fs.writeFileSync(tmpImg, Buffer.from(cleanB64, 'base64'));
+        const fileInput = page.locator('input[type="file"]').first();
+        if (await fileInput.count() > 0) {
+          await fileInput.setInputFiles(tmpImg).catch(() => {});
+          await page.waitForTimeout(800);
+        }
+      }
+
+      const input = page.locator(CHAT_INPUT_SELECTOR).first();
+      await input.click({ force: true });
+      await page.keyboard.press('Control+A');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.insertText(promptText);
+      await page.waitForTimeout(250);
+
+      const sendBtn = page.locator(SEND_BUTTON_SELECTOR).first();
+      if (await sendBtn.count() > 0 && await sendBtn.isEnabled().catch(() => false)) {
+        await sendBtn.click();
+      } else {
+        await page.keyboard.press('Enter');
+      }
+
+      let lastText = '';
+      let stable = 0;
+      const started = Date.now();
+      while (Date.now() - started < 45000) {
+        await page.waitForTimeout(1000);
+        const count = await page.locator('model-response').count();
+        if (count <= prevCount) continue;
+        const txt = (await page.locator('model-response').nth(count - 1).innerText().catch(() => '')).trim();
+        if (!txt) continue;
+        if (txt === lastText) {
+          stable += 1;
+          if (stable >= 2) return txt;
+        } else {
+          lastText = txt;
+          stable = 0;
+        }
+      }
+      return lastText;
+    });
+    lock = task.catch(() => {});
+    return task;
+  };
+
+  return {
+    queryThread,
+    close: () => context.close().catch(() => {})
+  };
+}
 
 /**
  * Creates a self-contained LCT Relay & Append-Only Chronicle Daemon instance.
@@ -60,9 +205,12 @@ const DEFAULT_PORT = Number(process.env.TACTICA_PORT) || 3030;
  * @returns {{server: http.Server, start: function(number=): Promise<number>, stop: function(): Promise<void>}}
  */
 function createTacticaDaemon(options = {}) {
+  const env = options.env || process.env;
+  const tacticaThreadUrl = resolveTacticaThreadUrl(env);
   const logDir = options.logDir || path.join(__dirname, 'match_logs');
   const statePath = path.join(logDir, 'live_state.json');
   const chroniclePath = path.join(logDir, 'match_chronicle.jsonl');
+  let activeThreadQueryFn = options.threadQueryFn || null;
 
   fs.mkdirSync(logDir, { recursive: true });
 
@@ -178,7 +326,9 @@ function createTacticaDaemon(options = {}) {
         ok: true,
         state: liveState,
         chronicle: readChronicleFromDisk(),
-        ttsQueueLength: ttsCommandQueue.length
+        ttsQueueLength: ttsCommandQueue.length,
+        tacticaThreadUrl,
+        tacticaThreadReady: Boolean(activeThreadQueryFn || isUsableGeminiThreadUrl(tacticaThreadUrl))
       });
     }
 
@@ -437,19 +587,25 @@ function createTacticaDaemon(options = {}) {
     if (req.method === 'POST' && urlPath === '/overwatch/los-check') {
       const body = await readJsonBody(req);
       const prompt = buildLosVerificationPrompt(liveState, body.transcript || '');
-      const apiKey = options.geminiApiKey ?? process.env.GEMINI_API_KEY ?? '';
-      const model = options.geminiModel || process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
+      const apiKey = options.geminiApiKey ?? env.GEMINI_API_KEY ?? '';
+      const model = options.geminiModel || env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
       const fetchImpl = options.visionFetchFn || (apiKey && typeof fetch === 'function' ? fetch : null);
 
       let verdict = {
         losBlocked: false,
         revertSquadKey: null,
         blockedPairs: [],
-        spokenReply: 'Offline LOS mode: add GEMINI_API_KEY in .env for automatic TTS screen vision, or click Revert Move manually.'
+        spokenReply: 'Offline LOS mode: configure TACTICA_THREAD_URL (or GEMINI_API_KEY) in .env for automatic TTS screen vision, or click Revert Move manually.'
       };
       let mode = 'offline';
 
-      if (fetchImpl) {
+      if (typeof activeThreadQueryFn === 'function') {
+        const rawText = await activeThreadQueryFn(prompt, body.imageBase64 || '');
+        if (rawText) {
+          verdict = parseOverwatchVerdict(rawText);
+          mode = 'gemini-thread';
+        }
+      } else if (fetchImpl) {
         const parts = [{ text: prompt }];
         if (body.imageBase64) {
           const cleanB64 = String(body.imageBase64).replace(/^data:image\/\w+;base64,/, '');
@@ -503,6 +659,10 @@ function createTacticaDaemon(options = {}) {
 
   return {
     server,
+    tacticaThreadUrl,
+    setThreadQueryFn(fn) {
+      activeThreadQueryFn = fn;
+    },
     start(port = DEFAULT_PORT) {
       return new Promise((resolve, reject) => {
         server.once('error', reject);
@@ -516,296 +676,39 @@ function createTacticaDaemon(options = {}) {
 }
 
 if (require.main === module) {
-  createTacticaDaemon().start(DEFAULT_PORT).then((port) => {
+  const daemon = createTacticaDaemon();
+  daemon.start(DEFAULT_PORT).then(async (port) => {
+    console.log('----------------------------------------------------------------');
+    console.log('[SYSTEM DIAGNOSTICS // LCT TACTICA DAEMON & SCRIBE]');
+    console.log(` -> HTTP DAEMON       : http://127.0.0.1:${port}`);
+    if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
+      console.log(` -> TACTICA_THREAD_URL: ${daemon.tacticaThreadUrl} (ISOLATED — ALPHA/BETA/GAMMA IGNORED)`);
+    } else if (daemon.tacticaThreadUrl) {
+      console.log(` -> TACTICA_THREAD_URL: ${daemon.tacticaThreadUrl} [PLACEHOLDER — replace YOUR_NEW_THREAD_ID_HERE in .env]`);
+    } else {
+      console.log(' -> TACTICA_THREAD_URL: NOT SET in .env (running in local LCT Scribe mode)');
+    }
+    console.log('----------------------------------------------------------------');
+
+    if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
+      const session = await launchTacticaBrowserSession(daemon.tacticaThreadUrl).catch((err) => {
+        console.warn(`[TACTICA THREAD WARNING] Could not open Playwright tab: ${err.message}`);
+        return null;
+      });
+      if (session) {
+        daemon.setThreadQueryFn(session.queryThread);
+        console.log('++ TACTICA GEMINI REFEREE THREAD LOCKED & READY ++');
+      }
+    }
     console.log(`+++ LCT TACTICA DAEMON & SCRIBE ONLINE [http://127.0.0.1:${port}] +++`);
   });
 }
 
-module.exports = { createTacticaDaemon };
-
-````
-
----
-
-## File: `tests/tactica_daemon.test.js` <a id="file-teststacticadaemontestjs"></a>
-
-````javascript
-/**
- * @fileoverview Integration tests for tactica_daemon.js LCT dice-mat queue, JSONL persistence & restarts.
- */
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const os = require('node:os');
-const path = require('node:path');
-const { createTacticaDaemon } = require('../tactica_daemon.js');
-
-async function postJson(baseUrl, route, body) {
-  const res = await fetch(`${baseUrl}${route}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return res.json();
-}
-
-test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll & /tts/dice-result and persists JSONL', async () => {
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'foa-lct-daemon-'));
-  const daemon1 = createTacticaDaemon({
-    logDir: tmpDir,
-    visionFetchFn: async () => ({
-      ok: true,
-      json: async () => ({
-        candidates: [{
-          content: {
-            parts: [{
-              text: '{"losBlocked":true,"revertSquadKey":"HORDE::Overlord","blockedPairs":["HORDE::Overlord->PLAYER::Krieg"],"spokenReply":"Ruin wall blocks LOS; reverting Overlord."}'
-            }]
-          }
-        }]
-      })
-    })
-  });
-  const port1 = await daemon1.start(0);
-  const url1 = `http://127.0.0.1:${port1}`;
-
-  try {
-    // CORS preflight & state endpoint
-    const optRes = await fetch(`${url1}/state`, { method: 'OPTIONS' });
-    assert.equal(optRes.status, 204);
-
-    await postJson(url1, '/session/sync', {
-      roomCode: 'HADES-44',
-      battleRound: 1,
-      phase: 'PLAYER_TURN',
-      factionName: 'Necrons',
-      playerCp: 2,
-      playerSp: 6,
-      activeMiseryIds: [30],
-      activeFortifications: ['FORT_TRENCH'],
-      zoneSpawns: ['10 Necron Warriors']
-    });
-
-    const stateSnap = await (await fetch(`${url1}/state`)).json();
-    assert.equal(stateSnap.ok, true);
-    assert.equal(stateSnap.state.roomCode, 'HADES-44');
-
-    // Reaction window trigger & resolution
-    const reactEvt = await postJson(url1, '/chronicle/append', {
-      phase: 'HORDE_MOVEMENT',
-      type: 'PHASE',
-      summary: 'Horde movement complete.',
-      reactionTrigger: 'END_OF_HORDE_MOVEMENT'
-    });
-    assert.equal(reactEvt.pendingReactionWindow.open, true);
-
-    const resolvedReact = await postJson(url1, '/reaction/resolve', {
-      choice: 'FIRE_OVERWATCH',
-      cpSpent: 1
-    });
-    assert.equal(resolvedReact.state.playerCp, 1);
-
-    // 1. Request Auto-Defender sequence -> must NOT resolve yet, must queue SAVES on /tts/poll!
-    const reqDef = await postJson(url1, '/combat/defend-request', {
-      unitName: 'Necron Warriors',
-      defender: { save: 4, woundsPerModel: 1, keywords: ['INFANTRY'] },
-      incomingAttack: { type: 'ranged', strength: 5, ap: -1, damage: 1 },
-      options: { numWounds: 2, damagePerWound: 1, startingModels: 10 }
-    });
-    assert.equal(reqDef.ok, true);
-    assert.equal(reqDef.sequence.stage, 'SAVES');
-
-    // TTS LCT poller fetches Stage 1 command (2x Saves at 5+)
-    const pollSaves = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollSaves.action, 'LCT_MAT_ROLL');
-    assert.equal(pollSaves.stage, 'SAVES');
-    assert.equal(pollSaves.count, 2);
-
-    // LCT mat finishes rolling [2 (fail), 6 (pass)] and posts back -> daemon queues Stage 2 FNP (1 die at 5+)
-    const resSaves = await postJson(url1, '/tts/dice-result', {
-      rollId: pollSaves.rollId,
-      sequenceId: pollSaves.sequenceId,
-      dice: [2, 6]
-    });
-    assert.equal(resSaves.sequence.stage, 'FNP');
-
-    const pollFnp = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollFnp.stage, 'FNP');
-    assert.equal(pollFnp.count, 1);
-
-    // LCT mat rolls [4 (fail FNP)] -> 1 Warrior slain -> daemon queues Stage 3 Misery #30 ON_DEATH (1 die at 4+)
-    const resFnp = await postJson(url1, '/tts/dice-result', {
-      rollId: pollFnp.rollId,
-      sequenceId: pollFnp.sequenceId,
-      dice: [4]
-    });
-    assert.equal(resFnp.sequence.stage, 'ON_DEATH');
-
-    const pollDeath = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollDeath.stage, 'ON_DEATH');
-    assert.equal(pollDeath.count, 1);
-
-    // LCT mat rolls [5 (triggers shoot-on-death!)] -> sequence completes and writes chronicle!
-    const resDeath = await postJson(url1, '/tts/dice-result', {
-      rollId: pollDeath.rollId,
-      sequenceId: pollDeath.sequenceId,
-      dice: [5]
-    });
-    assert.equal(resDeath.sequence.stage, 'COMPLETE');
-    assert.equal(resDeath.sequence.outcome.modelsSlain, 1);
-    assert.equal(resDeath.sequence.outcome.onDeathTriggers, 1);
-
-    // Queue is now IDLE
-    assert.equal(await (await fetch(`${url1}/tts/poll`)).text(), 'IDLE');
-
-    // Horde Attack sequence + standalone roll + custom command enqueue + 404 check
-    const reqAtk = await postJson(url1, '/combat/attack-request', {
-      attackerName: 'Immortals',
-      targetName: 'Cadians',
-      target: { toughness: 3 },
-      weapon: { type: 'ranged', attacks: 1, skill: 3, strength: 5, ap: -1, damage: 1 }
-    });
-    assert.equal(reqAtk.sequence.stage, 'HITS');
-    const pollHits = await (await fetch(`${url1}/tts/poll`)).json();
-    await postJson(url1, '/tts/dice-result', { sequenceId: pollHits.sequenceId, dice: [5] });
-    const pollWounds = await (await fetch(`${url1}/tts/poll`)).json();
-    const atkDone = await postJson(url1, '/tts/dice-result', { sequenceId: pollWounds.sequenceId, dice: [4] });
-    assert.equal(atkDone.sequence.stage, 'COMPLETE');
-
-    const standalone = await postJson(url1, '/tts/dice-result', { label: 'Battle-shock', dice: [6, 3] });
-    assert.equal(standalone.sequence, null);
-
-    const enq = await postJson(url1, '/tts/enqueue', { action: 'SPAWN_PING', zone: 1 });
-    assert.equal(enq.ok, true);
-    const popped = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(popped.action, 'SPAWN_PING');
-
-    // Raw TTS Yellowscribe objects telemetry parses datasheets, computes objective distance & locks Horde Warlord
-    const telRaw = await postJson(url1, '/tts/telemetry', {
-      objects: [
-        {
-          guid: 'w1',
-          name: '5/5 Technomancer',
-          tags: ['HORDE'],
-          pos: { x: 0, y: 1, z: 8 },
-          bounds: { x: 1.57, y: 2.0, z: 1.57 },
-          description: 'M: 6" T: 5 Sv: 3+ W: 5 Ld: 6+ OC: 2\nInvuln: 4+\nKeywords: Infantry, Character'
-        },
-        {
-          guid: 'obj1',
-          name: 'Objective 1',
-          pos: { x: 0, y: 1, z: 0 },
-          bounds: { x: 1.57, y: 0.1, z: 1.57 }
-        }
-      ]
-    });
-    assert.equal(telRaw.trackedUnits, 1);
-    assert.equal(telRaw.objectives, 1);
-    assert.equal(telRaw.warlord.name, 'Technomancer');
-    assert.ok(typeof telRaw.units[0].closestObjective.distanceInches === 'number');
-    assert.ok(telRaw.units[0].closestObjective.distanceInches > 6 && telRaw.units[0].closestObjective.distanceInches < 7);
-
-    // Subsequent pre-parsed units telemetry preserves locked Horde Warlord & sets up Autopilot check
-    const tel = await postJson(url1, '/tts/telemetry', {
-      units: [
-        {
-          squadKey: 'HORDE::Overlord',
-          guid: 'w2',
-          guids: ['w2'],
-          name: 'Overlord',
-          side: 'HORDE',
-          move: 5,
-          pos: { x: 0, z: 9 },
-          keywords: ['INFANTRY', 'CHARACTER'],
-          weapons: [{ name: 'Tachyon Arrow', type: 'ranged', rangeInches: 72, attacks: 1, skill: 2, strength: 16, ap: -5, damage: 'D6+2', keywords: [] }],
-          models: [{ guid: 'w2', pos: { x: 0, y: 1.1, z: 9 }, radiusInches: 0.78 }]
-        },
-        {
-          squadKey: 'PLAYER::Krieg',
-          guid: 'p1',
-          guids: ['p1'],
-          name: 'Death Korps',
-          side: 'PLAYER',
-          pos: { x: 0, z: 0 },
-          keywords: ['INFANTRY'],
-          models: [{ guid: 'p1', pos: { x: 0, y: 1.1, z: 0 }, radiusInches: 0.5 }]
-        }
-      ]
-    });
-    assert.equal(tel.warlord.name, 'Technomancer');
-
-    // Autopilot spawn-waves, select-shooting & movement -> enqueues SPAWN_WAVE & MOVE_UNIT
-    const spw = await postJson(url1, '/autopilot/spawn-waves', {
-      zoneSpawns: [{ zone: 1, bracketKey: '5-6', units: ['5 Immortals'] }]
-    });
-    assert.equal(spw.ok, true);
-    assert.equal((await (await fetch(`${url1}/tts/poll`)).json()).action, 'SPAWN_WAVE');
-
-    const sht = await postJson(url1, '/autopilot/select-shooting', {});
-    assert.equal(sht.ok, true);
-    assert.equal(sht.assignments.length, 1);
-
-    const mv = await postJson(url1, '/autopilot/plan-movement', {});
-    assert.equal(mv.ok, true);
-    assert.equal(mv.plans.length, 1);
-    const pollMv = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollMv.action, 'MOVE_UNIT');
-
-    const rev = await postJson(url1, '/autopilot/revert-move', { squadKey: 'HORDE::Overlord' });
-    assert.equal(rev.ok, true);
-    const pollRev = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollRev.action, 'REVERT_MOVE');
-
-    // Autopilot declare-charges -> queues 2D6 LCT_MAT_ROLL -> settled [6, 5] enqueues MOVE_UNIT
-    const chg = await postJson(url1, '/autopilot/declare-charges', {});
-    assert.equal(chg.declarations.length, 1);
-    const pollChgRoll = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollChgRoll.action, 'LCT_MAT_ROLL');
-    assert.equal(pollChgRoll.stage, 'CHARGE_ROLL');
-    const chgSettled = await postJson(url1, '/tts/dice-result', {
-      sequenceId: pollChgRoll.sequenceId,
-      dice: [6, 5]
-    });
-    assert.equal(chgSettled.chargeResult.succeeded, true);
-    const pollChgMove = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollChgMove.action, 'MOVE_UNIT');
-
-    const cons = await postJson(url1, '/autopilot/consolidate', {});
-    assert.equal(cons.ok, true);
-    assert.equal(cons.moves.length, 1);
-
-    // Overwatch LOS Check -> auto-enqueues REVERT_MOVE & filters blockedPairs from subsequent shooting!
-    const losRes = await postJson(url1, '/overwatch/los-check', {
-      transcript: 'Can Overlord see Krieg behind solid ruin?',
-      imageBase64: 'data:image/jpeg;base64,AAAA'
-    });
-    assert.equal(losRes.mode, 'gemini-vision');
-    assert.equal(losRes.verdict.losBlocked, true);
-    const pollLosRevert = await (await fetch(`${url1}/tts/poll`)).json();
-    assert.equal(pollLosRevert.action, 'REVERT_MOVE');
-
-    const shtAfterBlock = await postJson(url1, '/autopilot/select-shooting', {});
-    assert.equal(shtAfterBlock.assignments.length, 0, 'losBlockedPairs must filter out blocked HORDE::Overlord->PLAYER::Krieg');
-
-    const notFound = await fetch(`${url1}/unknown`);
-    assert.equal(notFound.status, 404);
-  } finally {
-    await daemon1.stop();
-  }
-
-  // 2. Restart daemon on same folder -> zero memory loss
-  const daemon2 = createTacticaDaemon({ logDir: tmpDir });
-  const port2 = await daemon2.start(0);
-  const url2 = `http://127.0.0.1:${port2}`;
-  try {
-    const compiled = await postJson(url2, '/chronicle/compile', { channel: 'alpha' });
-    assert.ok(compiled.report.includes('Necron Warriors'));
-    assert.ok(compiled.report.includes('Technomancer'));
-  } finally {
-    await daemon2.stop();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-  }
-});
+module.exports = {
+  createTacticaDaemon,
+  resolveTacticaThreadUrl,
+  isUsableGeminiThreadUrl,
+  launchTacticaBrowserSession
+};
 
 ````
