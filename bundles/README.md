@@ -27,7 +27,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_horde_combat.md`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | `js/horde-combat-modifiers.js` |
 | [`bundle_tactica.md`](bundle_tactica.md) | **In-Match LCT Tactical Console (View & UI)** | `pages/tactica.html`, `js/tactica.js` |
 | [`bundle_tactica_core.md`](bundle_tactica_core.md) | **In-Match LCT Tactical Functional Core** | `js/tactica-core.js`, `tests/js/tactica-core.test.js` |
-| [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Integration Tests** | `tactica_daemon.js`, `tests/tactica_daemon.test.js` |
+| [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe** | `tactica_daemon.js` |
 | [`bundle_tts_bridge.md`](bundle_tts_bridge.md) | **LCT TTS Orbital Auspex & Telemetry** | `js/tts-telemetry-core.js`, `tts/lct_horde_bridge.lua`, `tests/js/tts-telemetry-core.test.js` |
 | [`bundle_horde_autopilot.md`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | `js/horde-autopilot-core.js`, `tests/js/horde-autopilot-core.test.js` |
 | [`bundle_tactica_overwatch.md`](bundle_tactica_overwatch.md) | **Live Screen/Mic Overwatch & Crusade Handoff** | `js/tactica-overwatch-core.js`, `js/tactica-overwatch.js`, `tests/js/tactica-overwatch-core.test.js`, `tests/ui/tactica.test.js` |
@@ -60,17 +60,19 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_css_part2.md`](bundle_css_part2.md) | **Styles (Part 2: Navigation & Cards)** | `css/style.css` (Lines 751-1450) |
 | [`bundle_css_part3.md`](bundle_css_part3.md) | **Styles (Part 3: Spawner & Modals)** | `css/style.css` (Lines 1451-2150) |
 | [`bundle_css_part4.md`](bundle_css_part4.md) | **Styles (Part 4: Utilities & SVG)** | `css/style.css` (Lines 2151-end), `assets/favicon.svg` |
-| [`bundle_packages.md`](bundle_packages.md) | **Configs & Engineering Directives** | `package.json`, `wrangler.jsonc`, `README.md`, `AGENTS.md`, `.gitignore`, `.env.example`, `vox_autopilot.bat` |
-| [`bundle_bridge.md`](bundle_bridge.md) | **Courier WebSocket Bridge** | `vox_bridge.js` |
-| [`bundle_tests.md`](bundle_tests.md) | **Pages & Boundary Tests (Part 1: UI & Bundles)** | `tests/ui/pages.test.js` (Lines 1-558) |
-| [`bundle_tests_part2.md`](bundle_tests_part2.md) | **Pages & Boundary Tests (Part 2: Headless Playwright E2E)** | `tests/ui/pages.test.js` (Lines 559-end) |
+| [`bundle_packages.md`](bundle_packages.md) | **Configs & Engineering Directives** | `package.json`, `wrangler.jsonc`, `README.md`, `AGENTS.md`, `.gitignore`, `.env.example`, `vox_autopilot.bat`, `tactica_daemon.bat` |
+| [`bundle_bridge.md`](bundle_bridge.md) | **Courier Bridge (Part 1: Config & Routing)** | `vox_bridge.js` (Lines 1-525) |
+| [`bundle_bridge_part2.md`](bundle_bridge_part2.md) | **Courier Bridge (Part 2: Queue & Runner)** | `vox_bridge.js` (Lines 526-end) |
+| [`bundle_tests.md`](bundle_tests.md) | **Pages & Boundary Tests (Part 1: UI & Bundles)** | `tests/ui/pages.test.js` (Lines 1-565) |
+| [`bundle_tests_part2.md`](bundle_tests_part2.md) | **Pages, E2E & Tactica Daemon Tests (Part 2)** | `tests/ui/pages.test.js` (Lines 566-end), `tests/tactica_daemon.test.js` |
 | [`bundle_tests_ui_overview.md`](bundle_tests_ui_overview.md) | **UI Tests (Briefing & PvP)** | `tests/ui/briefing.test.js`, `tests/ui/pvp.test.js` |
 | [`bundle_tests_ui_roster_rogue.md`](bundle_tests_ui_roster_rogue.md) | **UI Tests (Rogue & Roster)** | `tests/ui/rogue.test.js`, `tests/ui/roster.test.js` |
 | [`bundle_tests_ui_crusade.md`](bundle_tests_ui_crusade.md) | **UI Tests (Crusade Command)** | `tests/ui/crusade.test.js`, `tests/js/horde-battle-stats.test.js` |
 | [`bundle_tests_ui_forge.md`](bundle_tests_ui_forge.md) | **UI Tests (Munitorum Forge)** | `tests/ui/crusade-forge.test.js` |
 | [`bundle_tests_ui_vox.md`](bundle_tests_ui_vox.md) | **UI Tests (Vox-Terminal Part 1)** | `tests/ui/vox.test.js` (Lines 1-550) |
 | [`bundle_tests_ui_vox_part2.md`](bundle_tests_ui_vox_part2.md) | **UI Tests (Vox-Terminal Part 2)** | `tests/ui/vox.test.js` (Lines 551-end) |
-| [`bundle_tests_bridge.md`](bundle_tests_bridge.md) | **Courier Bridge Tests** | `tests/vox_bridge.test.js` |
+| [`bundle_tests_bridge.md`](bundle_tests_bridge.md) | **Courier Bridge Tests (Part 1)** | `tests/vox_bridge.test.js` (Lines 1-522) |
+| [`bundle_tests_bridge_part2.md`](bundle_tests_bridge_part2.md) | **Courier Bridge Tests (Part 2)** | `tests/vox_bridge.test.js` (Lines 523-end) |
 | [`bundle_tests_js_spawner.md`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | `tests/js/spawner*.test.js` |
 | [`bundle_tests_ui_spawner.md`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner UI & Combat Mods)** | `tests/ui/spawner.test.js`, `tests/js/horde-combat-modifiers.test.js` |
 | [`bundle_tests_js_core.md`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | `tests/js/data.test.js`, `tests/js/rng.test.js`, `tests/js/vox-audio.test.js` |
