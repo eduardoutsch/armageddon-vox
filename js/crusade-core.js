@@ -61,3 +61,56 @@ var CrusadeCore = (function () {
       upgradeSectionTitle: '[2. BRÔKHYR GUILD-COUNCIL // BATTLE HONOURS, RELICS & SCARS]:',
       closingRequest: 'REQUEST FOR FANE-NODE VÔL-09 ("THE DEAF EAR"): Inscribe this Black-Ledger post-battle record into the deep-core Ancestor Vault, register all asset yields and contract rewards, and christen our upgraded Kin with permanent Kindred honours!'
     },
+    augur_alpha: {
+      targetVoxChannel: 'alpha',
+      isDistantAugur: true,
+      previewBeta: false,
+      scanningVessel: 'THE EXILE // SANCTUARY OF ASH'
+    },
+    augur_beta: {
+      targetVoxChannel: 'beta',
+      isDistantAugur: true,
+      previewBeta: true,
+      scanningVessel: 'LORD COMMANDER JUNEBUG'
+    }
+  };
+
+  /** Declarative D6 resource harvest mapping for Leagues of Votann post-battle prospecting. */
+  const VOTANN_HARVEST_RESOURCE_MAP = {
+    1: { key: 'rawMinerals', label: 'Raw Minerals' },
+    2: { key: 'biomatter', label: 'Biomatter' },
+    3: { key: 'energySources', label: 'Energy Sources' },
+    4: { key: 'galacticIntel', label: 'Galactic Intel' },
+    5: { key: 'rawMinerals', label: 'Choice Resource (Defaulted to Raw Minerals)' },
+    6: { key: 'rawMinerals', label: 'Choice Resource (Defaulted to Raw Minerals)' }
+  };
+
+  const VOTANN_ASSET_CYCLE = ['Locked', 'Active', 'Upgraded', 'Inactive'];
+  const TOMB_DRAIN_ORDER = ['translocation', 'reanimation', 'command'];
+
+  /** Ordered threshold table mapping numeric leftover SP to canonical Master Dossier option values. */
+  const LEFTOVER_SP_SALVAGE_TIERS = [
+    { min: 8, option: '8 Leftover SP → +1 RP or +100 pts Supply Limit' },
+    { min: 5, option: '5 Leftover SP → +2 XP to Surviving Unit' },
+    { min: 3, option: '3 Leftover SP → Bank 1v1 Supply Cache Token' },
+    { min: 2, option: '2 Leftover SP → Orbital Auspex Recon Probe (Reveal Adjacent Node)' },
+    { min: 0, option: '0 Leftover SP' }
+  ];
+
+  function _rollDie(sides, rng = Math.random) {
+    return Math.min(sides, Math.max(1, Math.floor(rng() * sides) + 1));
+  }
+
+  function _pickRandom(list, rng = Math.random) {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    const idx = Math.min(list.length - 1, Math.max(0, Math.floor(rng() * list.length)));
+    return { index: idx, item: list[idx] };
+  }
+
+  /**
+   * Clamps a non-negative integer counter after applying a signed delta.
+   */
+  function clampCounter(current, delta) {
+    return Math.max(0, (Number(current) || 0) + (Number(delta) || 0));
+  }
+
