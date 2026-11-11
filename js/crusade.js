@@ -686,67 +686,39 @@ function importHordeBattleStatsToCrusade() {
     const secCodeInput = _getMatrixEl('dossierSecretCode');
     if (secCodeInput) secCodeInput.value = patch.secretCode;
   }
-  if (stats.gameMode === 'SOLO') {
-    if (modeEl && !modeEl.value.includes('Solo')) {
-      modeEl.value = 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)';
-    }
+  if (patch.upgradedSoloModeNode && modeEl) {
+    modeEl.value = patch.upgradedSoloModeNode;
   }
-
-  if (Array.isArray(stats.fortifications) && typeof document !== 'undefined') {
-    const fortList = stats.fortifications.map(f => String(f).toLowerCase());
-    const fortHosp = document.getElementById('fortHosp');
-    if (fortHosp) fortHosp.checked = fortList.some(f => f.includes('hospital'));
-    const fortAmmo = document.getElementById('fortAmmo');
-    if (fortAmmo) fortAmmo.checked = fortList.some(f => f.includes('ammo'));
-    const fortTrench = document.getElementById('fortTrench');
-    if (fortTrench) fortTrench.checked = fortList.some(f => f.includes('trench'));
-    const fortFob = document.getElementById('fortFob');
-    if (fortFob) fortFob.checked = fortList.some(f => f.includes('fob') || f.includes('forward operating'));
+  if (typeof document !== 'undefined' && Array.isArray(stats.fortifications)) {
+    Object.entries(patch.fortifications).forEach(([id, checked]) => {
+      const el = _getMatrixEl(id);
+      if (el) el.checked = checked;
+    });
   }
+  const leftoverEl = _getMatrixEl('dossierLeftoverSp');
+  if (leftoverEl) leftoverEl.value = patch.leftoverSpOption;
 
-  const leftoverVal = Number(stats.leftoverSp) || 0;
-  const leftoverEl = typeof document !== 'undefined' ? document.getElementById('dossierLeftoverSp') : null;
-  if (leftoverEl) {
-    if (leftoverVal >= 8) leftoverEl.value = '8 Leftover SP → +1 RP or +100 pts Supply Limit';
-    else if (leftoverVal >= 5) leftoverEl.value = '5 Leftover SP → +2 XP to Surviving Unit';
-    else if (leftoverVal >= 3) leftoverEl.value = '3 Leftover SP → Bank 1v1 Supply Cache Token';
-    else if (leftoverVal >= 2) leftoverEl.value = '2 Leftover SP → Orbital Auspex Recon Probe (Reveal Adjacent Node)';
-    else leftoverEl.value = '0 Leftover SP';
-  }
-
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playPowerSurge === 'function') {
-    window.VoxAudio.playPowerSurge();
-  }
-
+  _getMatrixVox()?.playPowerSurge?.();
   saveCrusadeState();
   renderHordeStatsAttachmentCard();
   updateMasterDossierPreview();
   return true;
 }
 
-/**
- * Detaches the currently attached Horde Battle Stats from Crusade state.
- */
 function detachHordeBattleStatsFromCrusade() {
   crusadeState.attachedHordeStats = null;
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') {
-    window.VoxAudio.playClank('card');
-  }
+  _getMatrixVox()?.playClank?.('card');
   saveCrusadeState();
   renderHordeStatsAttachmentCard();
   updateMasterDossierPreview();
 }
 
-/**
- * Dumb UI renderer for the Attached Horde Battle Stats card.
- * Hides the card and disables importing when the selected battle mode is not Horde Mode.
- */
 function renderHordeStatsAttachmentCard() {
   if (typeof document === 'undefined') return;
-  const card = document.getElementById('hordeStatsAttachCard');
+  const card = _getMatrixEl('hordeStatsAttachCard');
   if (!card) return;
 
-  const modeEl = document.getElementById('dossierModeNode');
+  const modeEl = _getMatrixEl('dossierModeNode');
   const currentMode = modeEl ? modeEl.value : (crusadeState.dossierModeNode || 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)');
   if (!isHordeModeDossier(currentMode)) {
     if (card.style) {
