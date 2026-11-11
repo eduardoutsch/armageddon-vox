@@ -550,3 +550,67 @@
     };
   }
 
+  /**
+   * Executes Auto-Defender dice resolution (saves, multi-damage allocation, FNP shrugs, on-death & respawn rolls).
+   * Accepts either `rng` or explicit `preRolled*` arrays read directly from Tabletop Simulator dice mats.
+   *
+   * @param {object} defenseProfile - Output from `resolveHordeDefenseProfile`.
+   * @param {object} [options={}] - Wound batch, model state, RNG, and optional pre-rolled dice arrays.
+   * @returns {object} Detailed damage allocation, casualty, on-death, and respawn summary.
+   */
+  function resolveAutoDefenderRolls(defenseProfile, options = {}) {
+    const rng = typeof options.rng === 'function' ? options.rng : Math.random;
+    const rollD6 = () => Math.floor(rng() * 6) + 1;
+
+    const numWounds = Math.max(0, Number(options.numWounds) || 0);
+    const damagePerWound = Math.max(1, Number(options.damagePerWound) || 1);
+    const isMortal = Boolean(options.mortalWounds);
+    const wpm = defenseProfile.woundsPerModel || 1;
+    let remainingModels = Math.max(1, Number(options.startingModels) || 1);
+    let currentWounds = options.currentModelRemainingWounds
+      ? Math.min(wpm, Number(options.currentModelRemainingWounds))
+      : wpm;
+
+    const savesRolled = [];
+    let savesPassed = 0;
+    let unsavedWounds = 0;
+
+    if (isMortal) {
+      unsavedWounds = numWounds;
+    } else {
+      for (let i = 0; i < numWounds; i++) {
+        const d = Array.isArray(options.preRolledSaves) && options.preRolledSaves[i] !== undefined
+          ? options.preRolledSaves[i]
+          : rollD6();
+        savesRolled.push(d);
+        if (d >= 2 && d >= defenseProfile.saveTarget) {
+          savesPassed += 1;
+        } else {
+          unsavedWounds += 1;
+        }
+      }
+    }
+
+    const fnpRolls = [];
+    let fnpPassed = 0;
+    let finalDamageInflicted = 0;
+    let modelsSlain = 0;
+    let fnpIdx = 0;
+
+    for (let w = 0; w < unsavedWounds; w++) {
+      if (remainingModels <= 0) break;
+      let dmgLeft = damagePerWound;
+      if (defenseProfile.fnp) {
+        let afterFnp = 0;
+        for (let p = 0; p < damagePerWound; p++) {
+          const fd = Array.isArray(options.preRolledFnps) && options.preRolledFnps[fnpIdx] !== undefined
+            ? options.preRolledFnps[fnpIdx]
+            : rollD6();
+          fnpIdx += 1;
+          fnpRolls.push(fd);
+          if (fd >= defenseProfile.fnp) fnpPassed += 1;
+          else afterFnp += 1;
+        }
+        dmgLeft = afterFnp;
+      }
+
