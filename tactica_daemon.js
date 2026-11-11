@@ -10,7 +10,10 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-try { require('dotenv').config(); } catch (e) {}
+try {
+  require('dotenv').config({ path: path.join(__dirname, '.env') });
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch (e) {}
 
 const {
   createInitialTacticaState,
@@ -39,6 +42,62 @@ const {
 } = require('./js/tactica-overwatch-core.js');
 
 const DEFAULT_PORT = Number(process.env.TACTICA_PORT) || 3030;
+const CHAT_INPUT_SELECTOR = 'rich-textarea div.ql-editor, div.ql-editor[contenteditable="true"], div[role="textbox"][contenteditable="true"], textarea';
+const SEND_BUTTON_SELECTOR = 'button.send-button, button[aria-label*="Send"], button[aria-label*="Enviar"]';
+
+/**
+ * Pure helper: resolves strictly the Tactica Daemon Gemini thread URL from `.env`,
+ * ignoring ALPHA_THREAD_URL, BETA_THREAD_URL, GAMMA_THREAD_URL, and all other Vox/Supabase URLs.
+ *
+ * @param {object} [env=process.env] - Environment dictionary.
+ * @returns {string} Trimmed Tactica thread URL, or empty string if unset.
+ */
+function resolveTacticaThreadUrl(env = process.env) {
+  if (!env || typeof env !== 'object') return '';
+  const candidates = [
+    env.TACTICA_THREAD_URL,
+    env.TACTICA_DAEMON_THREAD_URL,
+    env.TACTICA_DAEMON_URL
+  ];
+  for (const val of candidates) {
+    if (typeof val === 'string' && val.trim()) {
+      return val.trim();
+    }
+  }
+  return '';
+}
+
+/**
+ * Pure helper: checks whether a Gemini web thread URL is a real configured URL
+ * rather than an unedited `.env` template placeholder.
+ *
+ * @param {string} url - Candidate Gemini thread URL.
+ * @returns {boolean} True when ready for Playwright navigation.
+ */
+function isUsableGeminiThreadUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!/^https:\/\/gemini\.google\.com\/app\/[A-Za-z0-9_-]+/i.test(trimmed)) return false;
+  if (/YOUR_[A-Z0-9_]*HERE|<your-|PLACEHOLDER/i.test(trimmed)) return false;
+  return true;
+}
+
+/**
+ * Launches a Playwright Chrome window locked strictly to `tacticaThreadUrl` (`TACTICA_THREAD_URL`),
+ * never touching Alpha/Beta/Gamma narrative threads.
+ *
+ * @param {string} tacticaThreadUrl - Verified `TACTICA_THREAD_URL` from `.env`.
+ * @returns {Promise<{queryThread: function(string, string=): Promise<string>, close: function(): Promise<void>}|null>}
+ */
+async function launchTacticaBrowserSession(tacticaThreadUrl) {
+  if (!isUsableGeminiThreadUrl(tacticaThreadUrl)) return null;
+  let chromium;
+  try {
+    ({ chromium } = require('playwright'));
+  } catch (e) {
+    return null;
+  }
+
 
 /**
  * Creates a self-contained LCT Relay & Append-Only Chronicle Daemon instance.
