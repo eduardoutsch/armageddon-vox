@@ -283,3 +283,53 @@
               ? leftCorner
               : rightCorner;
 
+            step = stepTowardPoint(u.pos || { x: 0, z: 0 }, pickCorner, moveBudgetInches, 0);
+            detouredAroundObstacle = true;
+            if ((u.modelCount || 1) > 10) requiresGhostRing = true;
+            break;
+          }
+        }
+      }
+
+      const guids = u.guids || originModels.map(m => m.guid);
+      const moveCmd = {
+        action: 'MOVE_UNIT',
+        squadKey: u.squadKey || u.name,
+        guids,
+        targetX: step.x,
+        targetZ: step.z,
+        facingY: step.facingY
+      };
+      commands.push(moveCmd);
+
+      if (requiresGhostRing) {
+        commands.push({
+          action: 'SPAWN_GHOST_RING',
+          targetX: step.x,
+          targetZ: step.z,
+          label: `${u.name} Waypoint`
+        });
+      }
+
+      plans.push({
+        squadKey: u.squadKey || u.name,
+        unitName: u.name,
+        guids,
+        status: 'MOVED_AWAITING_LOS_CHECK',
+        goalName: goalTarget.name,
+        moveBudgetInches,
+        advanced: wantsAdvance && extraAdvance > 0,
+        needsAdvanceMatRoll: wantsAdvance && extraAdvance === 0,
+        advanceRollMod: moveProfile.advanceRollMod,
+        targetX: step.x,
+        targetZ: step.z,
+        facingY: step.facingY,
+        detouredAroundObstacle,
+        requiresGhostRing,
+        originModels
+      });
+    }
+
+    return { plans, commands };
+  }
+
