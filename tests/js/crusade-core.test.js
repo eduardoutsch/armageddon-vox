@@ -57,3 +57,66 @@ test('State Initialization & Hydration: createInitialCrusadeState and hydrateCru
   assert.equal(hydrated.votann.assets.outpost1, 'Upgraded');
 });
 
+test('Declarative Lookup Tables: CRUSADE_TAB_DESCRIPTORS and DOSSIER_CHANNEL_PROFILES cover all tabs and conduits', () => {
+  assert.deepEqual(Object.keys(core.CRUSADE_TAB_DESCRIPTORS), ['board', 'forge', 'tour', 'tomb', 'votann']);
+  assert.equal(core.CRUSADE_TAB_DESCRIPTORS.tour.bodyThemeClass, 'theme-militarum');
+  assert.equal(core.CRUSADE_TAB_DESCRIPTORS.tomb.bodyThemeClass, 'theme-necron');
+  assert.equal(core.CRUSADE_TAB_DESCRIPTORS.votann.bodyThemeClass, 'theme-votann');
+
+  for (const ch of ['alpha', 'beta', 'gamma', 'augur_alpha', 'augur_beta']) {
+    assert.ok(core.DOSSIER_CHANNEL_PROFILES[ch], `Missing DOSSIER_CHANNEL_PROFILES entry for ${ch}`);
+  }
+  assert.equal(core.DOSSIER_CHANNEL_PROFILES.augur_alpha.targetVoxChannel, 'alpha');
+  assert.equal(core.DOSSIER_CHANNEL_PROFILES.augur_beta.targetVoxChannel, 'beta');
+});
+
+test('Pure Forge Rollers: deterministic traits, distinct 2xD6 weapon mods, relics, OOA tests, and battle scars', () => {
+  const catalogs = {
+    battleTraits: crusadeData.BATTLE_TRAIT_TABLES,
+    astraTraits: crusadeData.ASTRA_MILITARUM_TRAIT_TABLES,
+    necronTraits: crusadeData.NECRONS_TRAIT_TABLES,
+    votannTraits: crusadeData.VOTANN_TRAIT_TABLES,
+    weaponMods: crusadeData.WEAPON_MOD_TABLE,
+    relicVault: crusadeData.CRUSADE_RELIC_VAULT,
+    astraRelics: crusadeData.ASTRA_MILITARUM_RELIC_VAULT,
+    necronRelics: crusadeData.NECRONS_RELIC_VAULT,
+    votannRelics: crusadeData.VOTANN_RELIC_VAULT,
+    battleScars: crusadeData.BATTLE_SCAR_TABLE,
+    necronScars: crusadeData.NECRON_BATTLE_SCAR_TABLE,
+    votannScars: crusadeData.VOTANN_BATTLE_SCAR_TABLE
+  };
+
+  // Trait pick across Armageddon, AlphaCodex, BetaCodex, GammaCodex
+  const traitPick = core.rollBattleTraitPick('BetaCodex', 'Canoptek', catalogs, () => 0);
+  assert.equal(traitPick.poolTag, 'Necrons Codex');
+  assert.equal(traitPick.name, crusadeData.NECRONS_TRAIT_TABLES.Canoptek[0].name);
+
+  const gammaTrait = core.rollBattleTraitPick('GammaCodex', 'Infantry', catalogs, () => 0.99);
+  assert.equal(gammaTrait.poolTag, 'Leagues of Votann Codex');
+
+  // Weapon Mod pair guarantees 2 distinct mods even if RNG repeats 0.0 then 0.0 -> 0.5
+  const modPair = core.rollWeaponModPair(catalogs.weaponMods, makeSeqRng([0.0, 0.0, 0.4]));
+  assert.notEqual(modPair.pick1.roll, modPair.pick2.roll);
+  assert.ok(modPair.name.includes('+'));
+
+  // Relic pick
+  const relicPick = core.rollCrusadeRelicPick('AlphaCodex', 'Artificer', catalogs, () => 0);
+  assert.equal(relicPick.poolTag, 'AM Codex');
+  assert.equal(relicPick.name, crusadeData.ASTRA_MILITARUM_RELIC_VAULT.Artificer[0].name);
+
+  // Out of Action roll: 0.0 -> D6=1 (failed), 0.2 -> D6=2 (survived)
+  assert.deepEqual(core.evaluateOutOfActionRoll(() => 0.0), { roll: 1, survived: false });
+  assert.deepEqual(core.evaluateOutOfActionRoll(() => 0.2), { roll: 2, survived: true });
+
+  // Battle Scar pick
+  const scarPick = core.rollBattleScarPick('BetaCodex', catalogs, () => 0);
+  assert.equal(scarPick.poolTag, 'Necron Flaw');
+  assert.equal(scarPick.name, crusadeData.NECRON_BATTLE_SCAR_TABLE[0].name);
+
+  // Queued upgrade entry builder
+  const entry = core.createQueuedUpgradeEntry(traitPick, '  Immortal Squad  ', '  Held Node 2  ');
+  assert.equal(entry.unit, 'Immortal Squad');
+  assert.equal(entry.context, 'Held Node 2');
+  assert.equal(entry.name, traitPick.name);
+});
+
