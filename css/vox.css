@@ -25,6 +25,7 @@
   min-height: 480px;
   height: clamp(500px, 64vh, 720px);
   overflow-y: auto;
+  overflow-anchor: none;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -196,6 +197,7 @@
 /* Blinking Phosphor Block Cursor */
 .crt-cursor {
   display: inline-block;
+  overflow-anchor: none;
   width: 8px;
   height: 1em;
   background: currentColor;

@@ -1135,3 +1135,46 @@ test('vox: interferences retain distinct colors (crimson for target vs purple fo
   assert.ok(voxCss.includes('.rogue-intercept') || voxCss.includes('.sector-broadcast'), 'vox.css must define rogue/broadcast intercept styling');
 });
 
+test('vox: teletype streaming and background polling never pull down reader scrollTop while emerging text renders', async () => {
+  // 1. Streaming text into an element must NEVER overwrite scrollParent.scrollTop during typing or finish
+  const mockMonitor = { scrollTop: 42, scrollHeight: 950 };
+  const streamingCard = mockDocument.createElement('div');
+  streamingCard.closest = () => mockMonitor;
+
+  vox.streamTextIntoElement(streamingCard, '+++ LONG INCOMING DISPATCH +++\nLine 1\nLine 2\nLine 3', false);
+  assert.equal(mockMonitor.scrollTop, 42, 'Typing step must NOT yank scrollParent.scrollTop to scrollHeight');
+
+  streamingCard.onclick();
+  assert.equal(streamingCard.dataset.streaming, '0');
+  assert.equal(mockMonitor.scrollTop, 42, 'Finishing stream must NOT yank scrollParent.scrollTop to scrollHeight');
+
+  // 2. Background refreshTerminal(false) when new reply arrives preserves user scrollTop
+  mockElements.passInput.value = 'VermilionKey99';
+  await vox.handleSealAction();
+
+  mockMessages = [
+    { id: 'm_read_1', channel: 'alpha', sender: 'The Exile', question: 'Earlier report', reply: 'Earlier reply', status: 'answered' },
+    { id: 'm_read_2', channel: 'alpha', sender: 'The Exile', question: 'New report', reply: null, status: 'pending' }
+  ];
+  mockElements.directMessagesBox.scrollHeight = 800;
+  await vox.refreshTerminal(false);
+
+  // Simulate user scrolling up to scrollTop = 65 to read m_read_1 while Gemini replies to m_read_2
+  mockElements.directMessagesBox.scrollTop = 65;
+  mockElements.directMessagesBox.scrollHeight = 1200;
+  mockMessages = [
+    { id: 'm_read_1', channel: 'alpha', sender: 'The Exile', question: 'Earlier report', reply: 'Earlier reply', status: 'answered' },
+    { id: 'm_read_2', channel: 'alpha', sender: 'The Exile', question: 'New report', reply: 'New Campaign Master reply emerging below', status: 'answered' }
+  ];
+
+  await vox.refreshTerminal(false);
+  assert.equal(
+    mockElements.directMessagesBox.scrollTop,
+    65,
+    'Background poll with emerging reply must preserve user scrollTop (65) instead of pulling down to 1200'
+  );
+
+  // 3. CSS disables browser scroll anchoring on .crt-monitor-frame and .crt-cursor
+  assert.ok(voxCss.includes('overflow-anchor: none'), 'css/vox.css must set overflow-anchor: none so cursor growth never pulls viewport');
+});
+

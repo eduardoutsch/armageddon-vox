@@ -171,6 +171,16 @@ function applyVoxFactionTheme(chan, persist = false) {
 async function selectConduit(chan, clearPendingCheck = false) {
   selectedChannel = chan;
   applyVoxFactionTheme(chan, false);
+  const dBoxReset = document.getElementById('directMessagesBox');
+  const iBoxReset = document.getElementById('interferencesBox');
+  if (dBoxReset && dBoxReset.dataset) {
+    dBoxReset.dataset.sig = '';
+    dBoxReset.dataset.rendered = '';
+  }
+  if (iBoxReset && iBoxReset.dataset) {
+    iBoxReset.dataset.sig = '';
+    iBoxReset.dataset.rendered = '';
+  }
   const cardA = document.getElementById('cardAlpha');
   const cardB = document.getElementById('cardBeta');
   const cardG = document.getElementById('cardGamma');
@@ -419,7 +429,7 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   let lastIdx = 0;
   let timerId = null;
 
-  function finishStream(shouldScroll = true) {
+  function finishStream() {
     if (timerId !== null) {
       clearTimeout(timerId);
       timerId = null;
@@ -430,17 +440,13 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
     } else {
       targetEl.textContent = rawStr;
     }
-    if (shouldScroll) {
-      const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
-      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
-    }
   }
 
-  activeStreamFinishers.push(() => finishStream(false));
+  activeStreamFinishers.push(() => finishStream());
 
-  // Allow clicking anywhere on a streaming message card to instantly finish typing it!
+  // Allow clicking anywhere on a streaming message card to instantly finish typing it in place!
   targetEl.onclick = () => {
-    if (targetEl.dataset.streaming === '1') finishStream(true);
+    if (targetEl.dataset.streaming === '1') finishStream();
   };
 
   function step() {
@@ -457,7 +463,7 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
       if (parentRect.height > 0 && elRect.height > 0) {
         const isVisible = elRect.bottom > parentRect.top && elRect.top < parentRect.bottom;
         if (!isVisible) {
-          finishStream(false);
+          finishStream();
           return;
         }
       }
@@ -478,7 +484,6 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
         window.VoxAudio.playTeletypeTick('incoming');
       }
 
-      if (scrollParent) scrollParent.scrollTop = scrollParent.scrollHeight;
       lastIdx = targetIdx;
     }
 
@@ -486,7 +491,7 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
       timerId = setTimeout(step, 16);
       activeStreamTimers.push(timerId);
     } else {
-      finishStream(true);
+      finishStream();
     }
   }
 
@@ -684,6 +689,30 @@ function applyFocusedCardText(el, text, token, isFocused, isViewing, isRedacted)
   else el.textContent = safeText;
 }
 
+/**
+ * Pure helper: computes the next `scrollTop` for a CRT monitor container during refresh,
+ * preserving the reader's current scroll position on background polls so emerging text
+ * never pulls the viewport away from what the user is reading.
+ *
+ * @param {object} [params={}] - Scroll state descriptor.
+ * @returns {number} Target `scrollTop` value.
+ */
+function computeNextMonitorScrollTop({
+  forceScroll = false,
+  hadPreviousRender = false,
+  showAllOlder = false,
+  previousScrollTop = 0,
+  scrollHeight = 0
+} = {}) {
+  if (forceScroll) {
+    return scrollHeight;
+  }
+  if (!hadPreviousRender) {
+    return showAllOlder ? 0 : scrollHeight;
+  }
+  return Math.max(0, Number(previousScrollTop) || 0);
+}
+
 async function refreshTerminal(forceScroll = false) {
   checkVoxServerStatus().catch(() => {});
   if (!activePassphrase) return;
@@ -704,6 +733,7 @@ async function refreshTerminal(forceScroll = false) {
 
     if (msgs.length === 0) {
       pendingDirectStream = null;
+      dBox.dataset.rendered = '1';
       dBox.innerHTML = `<p style="color:#00ff88; text-align:center; margin-top:45px; opacity:0.7;">++ NO TRANSMISSIONS LOGGED ON THIS FREQUENCY YET ++<span class="crt-cursor"></span></p>`;
     } else {
       const totalCount = msgs.length;
@@ -712,9 +742,12 @@ async function refreshTerminal(forceScroll = false) {
 
       const stateSignature = `${showAllOlderMessages ? 'all' : 'recent'}_${visibleMsgs.map(m => `${m.id}:${m.status}`).join('|')}`;
       if (dBox.dataset.sig !== stateSignature) {
+        const hadPrevDirectRender = dBox.dataset.rendered === '1';
+        const prevDirectScrollTop = dBox.scrollTop || 0;
         clearStreamTimers();
         pendingDirectStream = null;
         dBox.dataset.sig = stateSignature;
+        dBox.dataset.rendered = '1';
         dBox.innerHTML = '';
 
         if (hasOlder) {
@@ -784,9 +817,13 @@ async function refreshTerminal(forceScroll = false) {
           dBox.appendChild(wrap);
         });
 
-        if (!showAllOlderMessages || forceScroll) {
-          dBox.scrollTop = dBox.scrollHeight;
-        }
+        dBox.scrollTop = computeNextMonitorScrollTop({
+          forceScroll,
+          hadPreviousRender: hadPrevDirectRender,
+          showAllOlder: showAllOlderMessages,
+          previousScrollTop: prevDirectScrollTop,
+          scrollHeight: dBox.scrollHeight
+        });
       }
     }
 
@@ -800,6 +837,7 @@ async function refreshTerminal(forceScroll = false) {
 
     if (ints.length === 0) {
       pendingInterferenceStream = null;
+      iBox.dataset.rendered = '1';
       iBox.innerHTML = `<p style="color:#fda4af; text-align:center; margin-top:45px; opacity:0.65;">++ NO PSYCHIC BLEED DETECTED IN THE IMMATERIUM ++</p>`;
     } else {
       const totalInts = ints.length;
@@ -808,8 +846,11 @@ async function refreshTerminal(forceScroll = false) {
 
       const intSig = `${showAllOlderInterferences ? 'all' : 'recent'}_${visibleInts.map(x => x.id).join('|')}`;
       if (iBox.dataset.sig !== intSig) {
+        const hadPrevIntRender = iBox.dataset.rendered === '1';
+        const prevIntScrollTop = iBox.scrollTop || 0;
         pendingInterferenceStream = null;
         iBox.dataset.sig = intSig;
+        iBox.dataset.rendered = '1';
         iBox.innerHTML = '';
 
         if (hasOlderInts) {
@@ -855,6 +896,14 @@ async function refreshTerminal(forceScroll = false) {
           const bodyEl = card.querySelector('.crt-int-body');
           applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt && !showAllOlderInterferences, viewingInterferences, true);
           iBox.appendChild(card);
+        });
+
+        iBox.scrollTop = computeNextMonitorScrollTop({
+          forceScroll: false,
+          hadPreviousRender: hadPrevIntRender,
+          showAllOlder: showAllOlderInterferences,
+          previousScrollTop: prevIntScrollTop,
+          scrollHeight: iBox.scrollHeight
         });
       }
     }
@@ -994,7 +1043,7 @@ var voxExports = {
   rpcCall, callRpc, checkPendingDossierBuffer, applyVoxFactionTheme, selectConduit,
   handleSealAction, flushPendingDossierIfAny, clearStreamTimers, streamTextIntoElement,
   escapeHtml, formatRedactedHtml, extractDynamicReplyCardMeta, formatTime, purgeVoxEntry,
-  isRogueSectorInterference, isVoxServerOnline, checkVoxServerStatus, refreshTerminal,
+  isRogueSectorInterference, isVoxServerOnline, checkVoxServerStatus, computeNextMonitorScrollTop, refreshTerminal,
   transmitQuestion, switchSubWindow, lockTerminal, initVoxTerminalPage
 };
 
