@@ -511,34 +511,5 @@ if (typeof window !== 'undefined') {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    crusadeState,
-    lastRolledItem,
-    switchCrusadeTab,
-    adjScore,
-    selectAllianceTree,
-    rollRandomBattleTrait,
-    rollRandomWeaponMod,
-    rollRandomRelic,
-    rollOutOfActionTest,
-    rollRandomBattleScar,
-    attachRollToDossier,
-    removeQueuedRoll,
-    clearQueuedRolls,
-    renderQueuedRolls,
-    adjTourField,
-    rollNewTourQuotas,
-    rollVictoryCommendationPts,
-    toggleUpliftingPrimer,
-    adjLogisticsPt,
-    renderLogisticsAllocator,
-    populateCommendationVault,
-    renderSelectedCommendationPreview,
-    attachCommendationToDossier,
-    buildLogisticsSummaryLine,
-    compileTourDispatch,
-    buildStartOfTourDossierString,
-    updateStartOfTourPreview,
-    transmitStartOfTourDossier
-  };
+  module.exports = crusadeForgeExports;
 }
