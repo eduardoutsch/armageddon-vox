@@ -58,3 +58,54 @@ test('planWaveSpawnCommands: builds SPAWN_WAVE commands from synced Mode 1 zoneS
   assert.equal(plan.commands[0].units[0].count, 5);
 });
 
+test('planHordeMovementPhase & buildMoveRevertCommand: stops outside 2" Engagement Range, detours/flags obstacles, auto-Advances out-of-range melee, and snapshots origin for LOS revert', () => {
+  const board = {
+    objectives: [{ name: 'Obj 1', pos: { x: 0, z: 0 }, radiusInches: 0.79 }],
+    units: [
+      {
+        squadKey: 'HORDE::Berzerkers',
+        name: 'Khorne Berzerkers',
+        side: 'HORDE',
+        modelCount: 15,
+        move: 6,
+        pos: { x: 0, z: 20 },
+        keywords: ['INFANTRY'],
+        weapons: [{ name: 'Chainblade', type: 'melee', rangeInches: 0, keywords: [] }],
+        models: [
+          { guid: 'b1', pos: { x: 0, y: 1.1, z: 20 }, radiusInches: 0.63 },
+          { guid: 'b2', pos: { x: 1.3, y: 1.1, z: 20 }, radiusInches: 0.63 }
+        ]
+      },
+      {
+        squadKey: 'PLAYER::Krieg',
+        name: 'Death Korps',
+        side: 'PLAYER',
+        modelCount: 10,
+        pos: { x: 0, z: -5 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'k1', pos: { x: 0, y: 1.1, z: -5 }, radiusInches: 0.5 }]
+      }
+    ]
+  };
+
+  // World Eaters (+2" Move = 8") + Misery #4 (auto-Advance 6" = 14" total move)
+  const moveRes = planHordeMovementPhase(
+    board,
+    { factionName: 'World Eaters', activeMiseryIds: [4] },
+    { obstacles: [{ name: 'Central Ruin', minX: -3, maxX: 3, minZ: 8, maxZ: 12, solid: true }] }
+  );
+
+  assert.equal(moveRes.plans.length, 1);
+  const p = moveRes.plans[0];
+  assert.equal(p.advanced, true, 'Out-of-range melee unit must automatically Advance');
+  assert.equal(p.moveBudgetInches, 14);
+  assert.equal(p.originModels.length, 2, 'Must record exact origin coordinates for Pre-Overwatch LOS revert');
+  assert.equal(p.detouredAroundObstacle || p.requiresGhostRing, true, 'Must detect solid ruin blocking straight path');
+  assert.equal(p.requiresGhostRing, true, 'Blob >10 models detouring around obstacle emits SPAWN_GHOST_RING');
+
+  // Test Pre-Overwatch LOS Revert command generation
+  const revertCmd = buildMoveRevertCommand(p);
+  assert.equal(revertCmd.action, 'REVERT_MOVE');
+  assert.deepEqual(revertCmd.models[0], { guid: 'b1', x: 0, y: 1.1, z: 20 });
+  assert.equal(buildMoveRevertCommand(null), null);
+
