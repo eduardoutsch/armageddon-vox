@@ -304,3 +304,61 @@
     };
   }
 
+  /**
+   * Resolves all Hit, Wound, Strength, AP, Attack-count, and Keyword modifiers for a Horde attack.
+   *
+   * @param {object} [attacker={}] - Attacking Horde unit state (`chargedThisTurn`).
+   * @param {object} [target={}] - Targeted Defender unit profile (`toughness`, `keywords`, `battleShocked`, `hasGrudgeMark`).
+   * @param {object} [weapon={}] - Weapon profile (`type`, `skill`, `strength`, `ap`, `keywords`).
+   * @param {object} [matchState={}] - Active Horde match state (`factionName`, `activeMiseryIds`/`activeMiseries`).
+   * @param {object} [context={}] - Situational flags (`within6OfFriendlyOfficer`, `tauGlassesPassed`, `within6OfDeathGuard`).
+   * @returns {object} Resolved offensive attack profile enforcing +/-1 Hit and Wound caps.
+   */
+  function resolveHordeAttackModifiers(attacker = {}, target = {}, weapon = {}, matchState = {}, context = {}) {
+    const facMod = HORDE_FACTION_COMBAT_MODS[matchState.factionName] || {};
+    const miseries = extractActiveMiseryMods(matchState);
+    const isMelee = String(weapon.type || '').toLowerCase() === 'melee';
+    const isRanged = !isMelee;
+    const targetKws = normalizeKeywords(target.keywords);
+    const weaponKws = new Set(normalizeKeywords(weapon.keywords));
+
+    let skillImprove = 0;
+    let rawHitMod = 0;
+    let rawWoundMod = 0;
+    let strengthMod = 0;
+    let apImprove = 0;
+    let attacksMod = 0;
+    let rerollHits = 'NONE';
+    let rerollWounds = 'NONE';
+    let ignoreCover = weaponKws.has('IGNORES COVER') || weaponKws.has('IGNORE COVER');
+    let requiresTauGlassesRoll = false;
+
+    // 1. Faction rules
+    if (facMod.rerollHitOnes) rerollHits = 'ONES';
+    if (isMelee && Array.isArray(facMod.meleeKeywords)) {
+      facMod.meleeKeywords.forEach(k => weaponKws.add(k.toUpperCase()));
+    }
+    if (isRanged && Array.isArray(facMod.rangedKeywords)) {
+      facMod.rangedKeywords.forEach(k => weaponKws.add(k.toUpperCase()));
+    }
+    if (isRanged && facMod.rangedBsImprove) {
+      skillImprove += facMod.rangedBsImprove;
+    }
+    if (isRanged && facMod.conditionalOfficerAuraBsImprove && context.within6OfFriendlyOfficer) {
+      skillImprove += facMod.conditionalOfficerAuraBsImprove;
+    }
+    if (isRanged && facMod.onSelectToShootRoll) {
+      if (context.tauGlassesPassed === true) {
+        skillImprove += facMod.onSelectToShootRoll.rangedBsImprove;
+      } else if (context.tauGlassesPassed === undefined) {
+        requiresTauGlassesRoll = true;
+      }
+    }
+    if (isMelee && facMod.antiMonsterVehicleMelee && hasAnyKw(targetKws, ['VEHICLE', 'MONSTER'])) {
+      rawHitMod += facMod.antiMonsterVehicleMelee.hitMod;
+      strengthMod += facMod.antiMonsterVehicleMelee.strengthMod;
+    }
+    if (facMod.vsChaosHitMod && hasAnyKw(targetKws, ['CHAOS'])) {
+      rawHitMod += facMod.vsChaosHitMod;
+    }
+    if (facMod.vsImperiumRerollHitAndWoundOnes && hasAnyKw(targetKws, ['IMPERIUM'])) {
