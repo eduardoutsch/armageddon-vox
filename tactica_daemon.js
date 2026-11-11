@@ -539,13 +539,29 @@ function createTacticaDaemon(options = {}) {
       return sendJson(res, 200, { ok: true, queued: cmd, queueLength: ttsCommandQueue.length });
     }
 
+    if (req.method === 'POST' && urlPath === '/tts/set-side') {
+      const body = await readJsonBody(req);
+      const nextSide = String(body.side || 'PLAYER').toUpperCase() === 'HORDE' ? 'HORDE' : 'PLAYER';
+      const guids = Array.isArray(body.guids) ? body.guids : [];
+      const units = liveState.boardTelemetry?.units || [];
+      units.forEach(u => {
+        if (u.squadKey === body.squadKey || (guids.length > 0 && u.guids?.some(g => guids.includes(g)))) {
+          u.side = nextSide;
+        }
+      });
+      cmdCounter += 1;
+      ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'SET_UNIT_SIDE', side: nextSide, guids });
+      savePersistedState();
+      return sendJson(res, 200, { ok: true, units });
+    }
+
     if (req.method === 'POST' && urlPath === '/tts/telemetry') {
       const body = await readJsonBody(req);
       let units = Array.isArray(body.units) ? body.units : [];
       let objectives = Array.isArray(body.objectives) ? body.objectives : [];
 
       if (Array.isArray(body.objects)) {
-        const normalized = normalizeTtsBoardScan(body);
+        const normalized = normalizeTtsBoardScan(body, { hordeFactionName: liveState.factionName });
         units = normalized.units;
         objectives = normalized.objectives;
       }
