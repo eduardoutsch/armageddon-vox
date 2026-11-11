@@ -350,10 +350,14 @@ test('roster: saveRosterPageState and initRosterPage preserve and restore form a
   }));
 
   mockLocalStorage.setItem(roster.CUSTOM_POOL_STORAGE_KEY, JSON.stringify({
-    b34: 'Custom Chaff A, B',
-    b56: 'Custom Elites C',
-    b79: 'Custom Heavy D',
-    b10: 'Custom Super-Heavy E'
+    byFaction: {
+      'Space Marines': {
+        b34: 'Custom Chaff A, B',
+        b56: 'Custom Elites C',
+        b79: 'Custom Heavy D',
+        b10: 'Custom Super-Heavy E'
+      }
+    }
   }));
 
   roster.initRosterPage();
@@ -391,6 +395,8 @@ test('roster: syncPoolsToSupabaseCloud sends pool payload to Supabase RPC and up
 test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supabase RPC', async () => {
   enableCloudMock = true;
   lastFetchUrl = null;
+  mockLocalStorage.clear();
+  mockElements.bracketFactionPicker.value = 'Space Marines';
 
   cloudSyncChimesPlayed = 0;
   const ok = await roster.pullSharedPoolsFromCloud();
@@ -403,7 +409,8 @@ test('roster: pullSharedPoolsFromCloud pulls pool and nemesis status from Supaba
   assert.equal(mockElements.nemStatus2.value, 'slain');
 
   const savedPool = JSON.parse(mockLocalStorage.getItem(roster.CUSTOM_POOL_STORAGE_KEY));
-  assert.equal(savedPool.b34, 'Cloud Gaunts 20');
+  assert.equal(savedPool.b34, undefined, 'Must not spread flat root keys in localStorage');
+  assert.equal(savedPool.byFaction['Space Marines'].b34, 'Cloud Gaunts 20');
 
   enableCloudMock = false;
 });
@@ -619,6 +626,23 @@ test('roster: formatTtsUnitList formats copyable Tabletop Simulator preparation 
 test('roster: renderFactionBracketTable populates TTS unit types preview and count', () => {
   storageStore.clear();
   mockElements.bracketFactionPicker.value = 'Space Marines';
+
+  // Unconfigured faction must show empty warning and 0 TTS unit types (zero hardcoded defaults)
+  roster.renderFactionBracketTable();
+  assert.equal(mockElements.ttsFactionName.textContent, 'Space Marines');
+  assert.equal(mockElements.ttsUnitCount.textContent, '0');
+  assert.ok(mockElements.factionBracketDisplay.innerHTML.includes('⚠️ Horde Pool Empty for Space Marines'));
+
+  // Seeded byFaction pool populates preview and count
+  mockLocalStorage.setItem(roster.CUSTOM_POOL_STORAGE_KEY, JSON.stringify({
+    byFaction: {
+      'Space Marines': {
+        b34: '5 Assault Intercessors',
+        b56: '3 Bladeguard Veterans',
+        b10: '1 Land Raider Redeemer'
+      }
+    }
+  }));
   roster.renderFactionBracketTable();
 
   assert.equal(mockElements.ttsFactionName.textContent, 'Space Marines');
@@ -637,11 +661,20 @@ test('roster: copyTtsUnitTypesList copies checklist to clipboard and flashes not
     }
   };
 
+  mockLocalStorage.setItem(roster.CUSTOM_POOL_STORAGE_KEY, JSON.stringify({
+    byFaction: {
+      'Space Marines': {
+        b56: '3 Bladeguard Veterans',
+        b10: '1 Land Raider Redeemer'
+      }
+    }
+  }));
   mockElements.bracketFactionPicker.value = 'Space Marines';
   roster.renderFactionBracketTable();
   roster.copyTtsUnitTypesList();
 
   assert.ok(copiedText && copiedText.includes('TABLETOP SIMULATOR (TTS) PREPARATION // SPACE MARINES'));
+  assert.ok(copiedText.includes('[ ] Bladeguard Veterans'));
   assert.equal(mockElements.ttsCopyNotice.classList.contains('hidden'), false);
 });
 
