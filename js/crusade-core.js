@@ -176,3 +176,67 @@ var CrusadeCore = (function () {
     return hydrateCrusadeState(base, overrides);
   }
 
+  /**
+   * Pure state hydrator merging a persisted JSON snapshot onto an existing Crusade state
+   * while preserving nested sub-objects (`logistics`, `tombSystems`, `votann`).
+   */
+  function hydrateCrusadeState(baseState, savedSnapshot) {
+    const base = baseState || createInitialCrusadeState();
+    if (!savedSnapshot || typeof savedSnapshot !== 'object') return base;
+    return {
+      ...base,
+      ...savedSnapshot,
+      queuedRolls: Array.isArray(savedSnapshot.queuedRolls)
+        ? savedSnapshot.queuedRolls.slice()
+        : (Array.isArray(base.queuedRolls) ? base.queuedRolls.slice() : []),
+      logistics: { ...(base.logistics || {}), ...(savedSnapshot.logistics || {}) },
+      tombSystems: { ...(base.tombSystems || {}), ...(savedSnapshot.tombSystems || {}) },
+      votann: createInitialVotannState({ ...(base.votann || {}), ...(savedSnapshot.votann || {}) })
+    };
+  }
+
+  // ===========================================================================
+  // QUARTERMASTER FORGE ROLLERS (PURE & RNG-INJECTABLE)
+  // ===========================================================================
+  function rollBattleTraitPick(poolKey, unitType, catalogs = {}, rng = Math.random) {
+    const uType = unitType || 'Infantry';
+    const poolLookup = {
+      AlphaCodex: { tag: 'AM Codex', tables: catalogs.astraTraits },
+      BetaCodex: { tag: 'Necrons Codex', tables: catalogs.necronTraits },
+      GammaCodex: { tag: 'Leagues of Votann Codex', tables: catalogs.votannTraits },
+      Armageddon: { tag: 'Armageddon', tables: catalogs.battleTraits }
+    };
+    const chosen = poolLookup[poolKey] || poolLookup.Armageddon;
+    const fallbackTables = catalogs.battleTraits || {};
+    const activeTables = chosen.tables || fallbackTables;
+    const table = activeTables[uType] || activeTables.Infantry || fallbackTables.Infantry || [];
+    const picked = _pickRandom(table, rng)?.item || { d6: 1, name: 'Default Trait', desc: 'No trait found' };
+
+    return {
+      category: `Battle Trait (${uType})`,
+      roll: `D6 = ${picked.d6}`,
+      d6: picked.d6,
+      name: picked.name,
+      desc: picked.desc,
+      poolTag: chosen.tag
+    };
+  }
+
+  function rollWeaponModPair(modsTable = [], rng = Math.random) {
+    const first = _pickRandom(modsTable, rng);
+    let second = _pickRandom(modsTable, rng);
+    while (second && first && second.index === first.index && modsTable.length > 1) {
+      second = _pickRandom(modsTable, rng);
+    }
+    const m1 = first?.item || { d6: 1, name: 'Brutal', desc: '+1 Strength' };
+    const m2 = second?.item || { d6: 2, name: 'Master-Worked', desc: '+1 Damage' };
+    return {
+      category: 'Weapon Modification (2x D6)',
+      roll: `D6 = ${m1.d6} & ${m2.d6}`,
+      name: `${m1.name} + ${m2.name}`,
+      desc: `[${m1.name}: ${m1.desc}] + [${m2.name}: ${m2.desc}]`,
+      pick1: { ...m1, roll: m1.d6 },
+      pick2: { ...m2, roll: m2.d6 }
+    };
+  }
+
