@@ -217,3 +217,44 @@ function executeLctMatRoll(cmd)
             end
         end
 
+        Wait.time(function()
+            Wait.condition(function()
+                local settledDice = getDiceInMatBounds(bounds)
+                local pips = {}
+                for i = 1, math.min(count, #settledDice) do
+                    table.insert(pips, settledDice[i].getValue())
+                end
+                local payload = JSON.encode({
+                    rollId = cmd.rollId,
+                    sequenceId = cmd.sequenceId,
+                    label = cmd.label,
+                    dice = pips
+                })
+                WebRequest.custom(BRIDGE_URL .. "/tts/dice-result", "POST", true, payload, { ["Content-Type"] = "application/json" }, function()
+                    isRollingMat = false
+                end)
+            end, function()
+                local active = getDiceInMatBounds(bounds)
+                if #active < count then return false end
+                for _, d in ipairs(active) do
+                    if not d.resting then return false end
+                end
+                return true
+            end, 7.0, function()
+                isRollingMat = false
+            end)
+        end, 0.45)
+    end, 0.25)
+end
+
+-- Raycasts terrain surface height and smoothly glides squad models (used in Step 5 Horde Autopilot)
+function getSurfaceY(x, z, halfH)
+    local hits = Physics.cast({ origin = {x = x, y = 25, z = z}, direction = {x = 0, y = -1, z = 0}, type = 1, max_distance = 30 })
+    for _, hit in ipairs(hits) do
+        if hit.hit_object ~= self and hit.hit_object.tag ~= "Figurine" and hit.hit_object.tag ~= "Dice" then
+            return hit.point.y + (halfH or 0.15)
+        end
+    end
+    return 1.1
+end
+
