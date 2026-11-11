@@ -403,20 +403,20 @@ var activeRosterTab = 'nemesis';
           </tr>
         </thead>
         <tbody>
-          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${fmtRow(customP.b34, refTable.b34)}</td></tr>
-          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${fmtRow(customP.b56, refTable.b56)}</td></tr>
-          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${fmtRow(customP.b79, refTable.b79)}</td></tr>
-          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${fmtRow(customP.b10, refTable.b10)}</td></tr>
-          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${fmtRow(customP.b13, refTable.b13)}</td></tr>
+          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${fmtRow(customP.b34)}</td></tr>
+          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${fmtRow(customP.b56)}</td></tr>
+          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${fmtRow(customP.b79)}</td></tr>
+          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${fmtRow(customP.b10)}</td></tr>
+          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${fmtRow(customP.b13)}</td></tr>
         </tbody>
       </table>
     `;
 
-    renderTtsUnitTypes(facName, customP, refTable);
+    renderTtsUnitTypes(facName, customP);
   }
 
   /**
-   * Pure helper: normalizes raw unit text by stripping leading dice or model quantities.
+   * Pure helper: normalizes raw unit text by stripping leading dice/model quantities and embarked transport tags.
    *
    * @param {string} raw - Raw unit text.
    * @returns {string} Cleaned unit name.
@@ -424,7 +424,8 @@ var activeRosterTab = 'nemesis';
   function normalizeUnitType(raw) {
     if (!raw) return '';
     let s = String(raw).trim();
-    s = s.replace(/^(?:\d+D\d+|\d+x|\d+|-|\+|D\d+)\s*/i, '');
+    s = s.replace(/\[([^\]]+)\]\s*$/, '').trim();
+    s = s.replace(/^(?:\d*D\d+(?:\s*\+\s*\d+)?|\d+x?|-|\+)\s+/i, '');
     return s.trim();
   }
 
@@ -479,18 +480,30 @@ var activeRosterTab = 'nemesis';
       }
     }
 
+    const addToken = (tok) => {
+      const clean = normalizeUnitType(tok);
+      if (clean && clean.length > 1) {
+        const lowerKey = clean.toLowerCase();
+        if (!unitMap.has(lowerKey)) {
+          unitMap.set(lowerKey, clean);
+        }
+      }
+    };
+
     const unitMap = new Map();
     for (const entry of rawEntries) {
       if (!entry) continue;
-      const subUnits = String(entry).split('+');
-      for (const sub of subUnits) {
-        const clean = normalizeUnitType(sub);
-        if (clean && clean.length > 1) {
-          const lowerKey = clean.toLowerCase();
-          if (!unitMap.has(lowerKey)) {
-            unitMap.set(lowerKey, clean);
-          }
+      let working = String(entry);
+      const embarkedMatches = [...working.matchAll(/\[([^\]]+)\]/g)];
+      for (const m of embarkedMatches) {
+        for (const embSub of m[1].split(/(?<!\b\d*d\d+\s*)\+/i)) {
+          addToken(embSub);
         }
+      }
+      working = working.replace(/\[[^\]]+\]/g, '');
+      const subUnits = working.split(/(?<!\b\d*d\d+\s*)\+/i);
+      for (const sub of subUnits) {
+        addToken(sub);
       }
     }
 
@@ -513,9 +526,9 @@ var activeRosterTab = 'nemesis';
   }
 
   /**
-   * Renders the TTS unit types checklist tags and count badge for the currently selected faction.
+   * Renders the TTS unit types checklist tags and count badge strictly from the faction's configured pool.
    */
-  function renderTtsUnitTypes(facName, customP, refTable) {
+  function renderTtsUnitTypes(facName, customP) {
     if (typeof document === 'undefined') return;
     const box = document.getElementById('ttsUnitTypesBox');
     const countEl = document.getElementById('ttsUnitCount');
@@ -524,16 +537,7 @@ var activeRosterTab = 'nemesis';
 
     if (nameEl) nameEl.textContent = facName;
 
-    const hasCustom = Boolean(
-      (customP?.b34 && customP.b34.trim()) ||
-      (customP?.b56 && customP.b56.trim()) ||
-      (customP?.b79 && customP.b79.trim()) ||
-      (customP?.b10 && customP.b10.trim()) ||
-      (customP?.b13 && customP.b13.trim())
-    );
-    const activeSource = hasCustom ? customP : refTable;
-    const unitTypes = extractUniqueUnitTypes(activeSource);
-
+    const unitTypes = extractUniqueUnitTypes(customP);
     if (countEl) countEl.textContent = String(unitTypes.length);
 
     if (unitTypes.length === 0) {
@@ -556,18 +560,7 @@ var activeRosterTab = 'nemesis';
     const picker = document.getElementById('bracketFactionPicker');
     const facName = picker?.value || 'Space Marines';
     const customP = getFactionPoolFromStore(facName);
-    const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined') ? HORDE_FACTION_SPAWN_TABLES : (typeof ROSTER_SPAWN_TABLES !== 'undefined' ? ROSTER_SPAWN_TABLES : {});
-    const refTable = tables[facName] || {};
-
-    const hasCustom = Boolean(
-      (customP?.b34 && customP.b34.trim()) ||
-      (customP?.b56 && customP.b56.trim()) ||
-      (customP?.b79 && customP.b79.trim()) ||
-      (customP?.b10 && customP.b10.trim()) ||
-      (customP?.b13 && customP.b13.trim())
-    );
-    const activeSource = hasCustom ? customP : refTable;
-    const unitTypes = extractUniqueUnitTypes(activeSource);
+    const unitTypes = extractUniqueUnitTypes(customP);
     const text = formatTtsUnitList(facName, unitTypes);
 
     const nav = (typeof window !== 'undefined' && window.navigator) ? window.navigator : (typeof navigator !== 'undefined' ? navigator : null);
