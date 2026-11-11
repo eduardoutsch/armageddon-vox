@@ -281,14 +281,20 @@
       const raw = localStorage.getItem('foa_horde_session_v1');
       if (raw) {
         const s = JSON.parse(raw);
+        const nextRound = Math.max(1, Number(s.battleRound) || 1);
+        const roundChanged = nextRound !== Number(clientState.battleRound);
+        if (roundChanged) {
+          clientState.activePlayerBuffs = [];
+        }
         const patch = {
           roomCode: s.seed || clientState.roomCode,
-          battleRound: Math.max(1, Number(s.battleRound) || 1),
+          battleRound: nextRound,
           factionName: s.activeHordeFactionName || clientState.factionName,
           playerCp: s.cp !== undefined ? Number(s.cp) : clientState.playerCp,
           playerSp: s.sp !== undefined ? Number(s.sp) : clientState.playerSp,
           activeMiseryIds: Array.isArray(s.activeMiseries) ? s.activeMiseries.map(m => m.id) : [],
-          zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : []
+          zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : [],
+          ...(roundChanged ? { activePlayerBuffs: [] } : {})
         };
         Object.assign(clientState, patch);
         try {
@@ -305,8 +311,12 @@
   }
 
   async function setConsolePhaseAndTrigger(phase, reactionTrigger = null) {
-    const rndEl = document.getElementById('tacticaRoundSelect');
+    const prevRound = Number(clientState.battleRound) || 1;
+    const rndEl = typeof document !== 'undefined' ? document.getElementById('tacticaRoundSelect') : null;
     if (rndEl && rndEl.value) clientState.battleRound = Number(rndEl.value) || clientState.battleRound;
+    if (Number(clientState.battleRound) !== prevRound) {
+      clientState.activePlayerBuffs = [];
+    }
     clientState.phase = phase;
     const summary = `Entered ${phase} (Round ${clientState.battleRound}).`;
 
@@ -674,19 +684,36 @@
   }
 
   /**
-   * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`).
+   * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`),
+   * applying any active Player Stratagem defensive buffs (such as Smokescreen `-1` to Hit) for the target.
    */
   async function fireAutopilotWeaponOnMat(idx) {
     const asgn = (clientState.lastShootingAssignments || [])[idx];
     if (!asgn) return null;
     const units = clientState.boardTelemetry?.units || [];
     const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
+    const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
+      ? resolvePlayerUnitDefensiveBuffs(asgn.targetName, clientState.activePlayerBuffs, clientState.battleRound)
+      : { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
+    const baseTarget = asgn.target || { toughness: 4 };
+    const targetWithBuffs = {
+      ...baseTarget,
+      hitMod: (Number(baseTarget.hitMod) || 0) + unitBuff.hitMod,
+      worsenAp: (Number(baseTarget.worsenAp) || 0) + unitBuff.worsenAp,
+      hasCover: Boolean(baseTarget.hasCover || unitBuff.cover),
+      invuln: unitBuff.invuln6 ? Math.min(Number(baseTarget.invuln) || 7, 6) : (baseTarget.invuln || null)
+    };
     const payload = {
       attackerName: asgn.attackerName,
       targetName: asgn.targetName,
       attacker,
-      target: asgn.target || { toughness: 4 },
-      weapon: asgn.weapon
+      target: targetWithBuffs,
+      weapon: asgn.weapon,
+      context: {
+        targetHitMod: targetWithBuffs.hitMod,
+        targetWorsenAp: targetWithBuffs.worsenAp,
+        targetHasCover: targetWithBuffs.hasCover
+      }
     };
     try {
       const res = await daemonRequest('/combat/attack-request', 'POST', payload);
@@ -797,10 +824,18 @@
       initTacticaPage
     });
     if (typeof window.addEventListener === 'function') {
-      window.addEventListener('DOMContentLoaded', initTacticaPage);
-      window.addEventListener('vox:page-swapped', () => {
+      if (window._foaTacticaInit && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('DOMContentLoaded', window._foaTacticaInit);
+      }
+      if (window._foaTacticaSwapped && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('vox:page-swapped', window._foaTacticaSwapped);
+      }
+      window._foaTacticaInit = initTacticaPage;
+      window._foaTacticaSwapped = () => {
         if (typeof document !== 'undefined' && document.getElementById('tacticaChronicleBox')) initTacticaPage();
-      });
+      };
+      window.addEventListener('DOMContentLoaded', window._foaTacticaInit);
+      window.addEventListener('vox:page-swapped', window._foaTacticaSwapped);
     }
   }
 

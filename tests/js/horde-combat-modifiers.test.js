@@ -344,5 +344,24 @@ test('Edge cases: Tau Glasses, Officer Aura, Custodes/CSM/Aeldari/Drukhari/Tyran
   assert.equal(mwOutcome.savesRolled.length, 0, 'Mortal wounds bypass normal saves');
   assert.equal(mwOutcome.fnpPassed, 2);
   assert.equal(mwOutcome.finalDamageInflicted, 0);
+
+  // Target defensive Stratagem modifiers (Smokescreen -1 to Hit & Void Armour worsen AP by 1)
+  const vsSmokescreen = resolveHordeAttackModifiers(
+    {},
+    { toughness: 5, hitMod: -1 },
+    { type: 'ranged', skill: 3, strength: 7, ap: -1 },
+    { factionName: 'Imperial Knights' }
+  );
+  assert.equal(vsSmokescreen.netHitMod, -1, 'Target Smokescreen hitMod -1 must apply -1 to Horde attack netHitMod');
+
+  const vsSmokescreenPlusBonus = resolveHordeAttackModifiers(
+    {},
+    { toughness: 5, battleShocked: true, hitMod: -1 },
+    { type: 'ranged', skill: 3, strength: 7, ap: -2, worsenAp: 0 },
+    { factionName: 'Chaos Knights' },
+    { targetHitMod: -1, targetWorsenAp: 1 }
+  );
+  assert.equal(vsSmokescreenPlusBonus.netHitMod, 0, '+1 Horde bonus and -1 Smokescreen must cancel to 0 without double-counting');
+  assert.equal(vsSmokescreenPlusBonus.apPenetration, 1, 'Void Armour targetWorsenAp=1 must worsen AP -2 to AP -1');
 });
 

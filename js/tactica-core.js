@@ -101,6 +101,7 @@
       playerSp: overrides.playerSp !== undefined ? Number(overrides.playerSp) : 0,
       activeMiseryIds: Array.isArray(overrides.activeMiseryIds) ? [...overrides.activeMiseryIds] : [],
       activeFortifications: Array.isArray(overrides.activeFortifications) ? [...overrides.activeFortifications] : [],
+      activePlayerBuffs: Array.isArray(overrides.activePlayerBuffs) ? [...overrides.activePlayerBuffs] : [],
       zoneSpawns: Array.isArray(overrides.zoneSpawns) ? [...overrides.zoneSpawns] : [],
       hordeWarlord: overrides.hordeWarlord || null,
       pendingReactionWindow: overrides.pendingReactionWindow || null,
@@ -448,6 +449,39 @@
   }
 
   /**
+   * Pure helper: aggregates active current-round Player Stratagem defensive buffs (such as Smokescreen
+   * `-1` to Hit, Go to Ground Cover/6++, or Void Armour AP worsen) matching a targeted Player squad.
+   *
+   * @param {string} [targetName=''] - Targeted Player unit name.
+   * @param {Array<object>} [activePlayerBuffs=[]] - Active Player Stratagem buff descriptors.
+   * @param {number|null} [currentRound=null] - Current Battle Round (ignores stale buffs from prior rounds).
+   * @returns {{hitMod: number, worsenAp: number, cover: boolean, invuln6: boolean}}
+   */
+  function resolvePlayerUnitDefensiveBuffs(targetName = '', activePlayerBuffs = [], currentRound = null) {
+    const out = { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
+    if (!Array.isArray(activePlayerBuffs) || activePlayerBuffs.length === 0) return out;
+    const tNorm = String(targetName || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+    for (const b of activePlayerBuffs) {
+      if (!b || typeof b !== 'object') continue;
+      if (currentRound !== null && b.battleRound !== undefined && Number(b.battleRound) !== Number(currentRound)) {
+        continue;
+      }
+      if (b.targetUnit) {
+        const bNorm = String(b.targetUnit).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+        if (bNorm && tNorm && bNorm !== tNorm && !tNorm.includes(bNorm) && !bNorm.includes(tNorm)) {
+          continue;
+        }
+      }
+      out.hitMod += Number(b.hitMod) || 0;
+      out.worsenAp += Number(b.worsenAp) || 0;
+      if (b.cover) out.cover = true;
+      if (b.invuln6) out.invuln6 = true;
+    }
+    return out;
+  }
+
+  /**
    * Initializes a deterministic multi-stage LCT dice-mat sequence for Horde Shooting/Melee Attacks.
    */
   function createHordeAttackRollSequence(request = {}, matchState = {}) {
@@ -456,12 +490,27 @@
     const targetName = String(request.targetName || 'Player Unit').trim();
     const matSide = request.matSide || 'RED';
     const weapon = request.weapon || {};
+    const rawContext = request.context || {};
+    const stateBuff = resolvePlayerUnitDefensiveBuffs(
+      targetName,
+      matchState.activePlayerBuffs,
+      matchState.battleRound ?? null
+    );
+    const mergedContext = {
+      ...rawContext,
+      ...(rawContext.targetHitMod === undefined && request.target?.hitMod === undefined && stateBuff.hitMod !== 0
+        ? { targetHitMod: stateBuff.hitMod }
+        : {}),
+      ...(rawContext.targetWorsenAp === undefined && request.target?.worsenAp === undefined && stateBuff.worsenAp !== 0
+        ? { targetWorsenAp: stateBuff.worsenAp }
+        : {})
+    };
     const attackMods = combatCore.resolveHordeAttackModifiers(
       request.attacker || {},
       request.target || {},
       weapon,
       matchState,
-      request.context || {}
+      mergedContext
     );
 
     const totalAttacks = Math.max(0, (Number(weapon.attacks) || 1) + attackMods.attacksMod);
@@ -702,6 +751,7 @@
     assignHordeWarlordIfEligible,
     createDefenseRollSequence,
     advanceDefenseRollSequence,
+    resolvePlayerUnitDefensiveBuffs,
     createHordeAttackRollSequence,
     advanceHordeAttackRollSequence,
     compileTacticaPostMatchReport

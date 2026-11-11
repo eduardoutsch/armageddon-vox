@@ -311,8 +311,44 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.equal(tactica.getTacticaClientState().playerCp, 2, 'Vocal stratagem must deduct 1 CP');
   assert.ok(els.tacticaChronicleBox.innerHTML.includes('Void Armour on Einhyr Hearthguard'), 'Must fuzzy-match scanned PLAYER unit name into chronicle');
   const syncedSession = JSON.parse(store.get('foa_horde_session_v1'));
-  assert.equal(syncedSession.cp, 2, 'Updated CP must sync back to foa_horde_session_v1');
+  assert.equal(syncedSession.cp, 2, 'Updated CP must deduct 1 CP into foa_horde_session_v1');
   assert.equal(syncedSession.stratCount, 1, '1+ CP Stratagem must increment stratCount for Secret #20');
+
+  // Vocal Smokescreen (-1 to Hit) worsens Horde LCT Mat Hit threshold (3+ -> 4+) and clears on Round advance
+  tactica.getTacticaClientState().boardTelemetry.units = [
+    {
+      squadKey: 'HORDE::Armiger Helverin',
+      name: 'Armiger Helverin',
+      side: 'HORDE',
+      modelCount: 1,
+      pos: { x: 0, z: 12 },
+      models: [{ guid: 'helv1', pos: { x: 0, z: 12 }, radiusInches: 1.95 }],
+      weapons: [{ name: 'Armiger autocannon', type: 'ranged', rangeInches: 48, attacks: 4, skill: 3, strength: 9, ap: -1, damage: 3, keywords: [] }]
+    },
+    {
+      squadKey: 'PLAYER::Einhyr Hearthguard',
+      name: 'Einhyr Hearthguard',
+      side: 'PLAYER',
+      modelCount: 5,
+      toughness: 6,
+      save: 2,
+      pos: { x: 0, z: -4 },
+      models: [{ guid: 'hg1', pos: { x: 0, z: -4 }, radiusInches: 0.78 }]
+    }
+  ];
+  await overwatch.dispatchSpokenOrTypedCommand('Smokescreen on Hearthguard - 1cp');
+  await tactica.triggerAutopilotShooting();
+  const smokeSeq = await tactica.fireAutopilotWeaponOnMat(0);
+  assert.ok(smokeSeq && smokeSeq.nextCommand, 'Must queue LCT mat Hit roll for Armiger Helverin -> Einhyr Hearthguard');
+  assert.equal(smokeSeq.nextCommand.threshold, 4, 'Smokescreen (-1 to Hit) must worsen Armiger Helverin BS 3+ to 4+ on LCT mat');
+
+  // Advancing Battle Round clears activePlayerBuffs so BS 3+ returns to 3+
+  els.tacticaRoundSelect.value = '3';
+  await tactica.setConsolePhaseAndTrigger('COMMAND_SPAWN');
+  assert.equal((tactica.getTacticaClientState().activePlayerBuffs || []).length, 0, 'Advancing Battle Round must clear expired activePlayerBuffs');
+  await tactica.triggerAutopilotShooting();
+  const freshRoundSeq = await tactica.fireAutopilotWeaponOnMat(0);
+  assert.equal(freshRoundSeq.nextCommand.threshold, 3, 'After Round advance clears Smokescreen, BS 3+ must roll 3+ on LCT mat');
 
   delete globalThis.localStorage;
   delete globalThis.document;
