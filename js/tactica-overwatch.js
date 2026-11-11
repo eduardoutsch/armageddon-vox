@@ -130,3 +130,73 @@
       await runOverwatchLosCheck(parsed.transcript);
     }
 
+    syncOverwatchAlertsFromState();
+    return parsed;
+  }
+
+  function startPushToTalkMic() {
+    if (typeof window === 'undefined') return false;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const outBox = typeof document !== 'undefined' ? document.getElementById('overwatchVerdictBox') : null;
+    if (!SR) {
+      if (outBox) outBox.innerHTML = '⚠️ Web Speech API mic not supported in this browser; type commands in the box instead.';
+      return false;
+    }
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    if (outBox) outBox.innerHTML = '🎙️ Listening... speak a command or LOS question now.';
+    rec.onresult = (ev) => {
+      const spoken = ev.results?.[0]?.[0]?.transcript || '';
+      dispatchSpokenOrTypedCommand(spoken);
+    };
+    rec.start();
+    return true;
+  }
+
+  function syncOverwatchAlertsFromState() {
+    const w = typeof window !== 'undefined' ? window : globalThis;
+    const state = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : null;
+    if (!state) return;
+
+    // 1. Voice reaction callout
+    const win = state.pendingReactionWindow;
+    if (win && win.open) {
+      const rKey = `${state.battleRound}_${win.triggerKey}_${win.playerCp}`;
+      if (rKey !== lastAnnouncedReactionKey) {
+        lastAnnouncedReactionKey = rKey;
+        speakOverwatchLine(buildReactionVoiceCallout(win));
+      }
+    }
+
+    // 2. Render 6+ Big-Bracket Warp-Breach Intrusion alerts
+    const intBox = typeof document !== 'undefined' ? document.getElementById('tacticaIntrusionAlertBox') : null;
+    const breaches = detectActiveIntrusionZones(state.zoneSpawns || []);
+    if (intBox) {
+      if (breaches.length === 0) {
+        intBox.classList.add('hidden');
+        intBox.innerHTML = '';
+      } else {
+        intBox.classList.remove('hidden');
+        const sig = breaches.map(b => `${b.waveId || b.zone}:${b.intrusionRoll}`).join('|');
+        if (sig !== lastSirenSignature) {
+          lastSirenSignature = sig;
+          if (w.VoxAudio && typeof w.VoxAudio.playWarpSiren === 'function') w.VoxAudio.playWarpSiren();
+          speakOverwatchLine(`Warning! Warp-Breach Intrusion detected in Spawn Zone ${breaches[0].zone}!`);
+        }
+        intBox.innerHTML = breaches.map(b => `
+          <div style="margin-bottom:6px;">
+            <strong style="color:var(--red);">⚡ WARP-BREACH INTRUSION (D6 = ${b.intrusionRoll}) — Spawn Zone ${b.zone} • ${b.bracketLabel}</strong>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+              <button type="button" class="btn-red btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'alpha')">📡 Ping Vox (Alpha)</button>
+              <button type="button" class="btn-ghost btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'beta')">📡 Ping Vox (Beta)</button>
+              <button type="button" class="btn-ghost btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'gamma')">📡 Ping Vox (Gamma)</button>
+              <button type="button" class="btn-ghost btn-sm" onclick="pingIntrusionFromTactica(${b.zone}, '${b.bracketLabel}', 'distant')">🛰️ Ping Vox (Distant)</button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
