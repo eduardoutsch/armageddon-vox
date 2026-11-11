@@ -90,6 +90,29 @@ function resolveThreadUrls(env = process.env) {
   };
 }
 
+/**
+ * Pure helper: resolves the dedicated Chromium persistent profile directory for Vox Autopilot,
+ * strictly isolated from `chrome_tactica_profile` so both terminals can run simultaneously.
+ *
+ * @param {object} [env=process.env] - Environment dictionary.
+ * @param {string} [baseDir=__dirname] - Base directory for relative profile folder resolution.
+ * @returns {string} Absolute path to Vox Autopilot's dedicated Chromium user-data-dir.
+ */
+function resolveVoxProfileDir(env = process.env, baseDir = __dirname) {
+  const defaultDir = path.join(baseDir, 'chrome_vox_profile');
+  const tacticaDir = path.resolve(baseDir, 'chrome_tactica_profile');
+  const raw = env && typeof env.VOX_PROFILE_DIR === 'string' ? env.VOX_PROFILE_DIR.trim() : '';
+  if (!raw) return defaultDir;
+  const resolved = path.resolve(baseDir, raw);
+  if (
+    resolved.toLowerCase() === tacticaDir.toLowerCase() ||
+    path.basename(resolved).toLowerCase() === 'chrome_tactica_profile'
+  ) {
+    return defaultDir;
+  }
+  return resolved;
+}
+
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://dsfvhjjalexqpbzqoaqb.supabase.co').trim();
 const SERVICE_KEY = resolveServiceKey();
 
@@ -851,7 +874,12 @@ async function publishServerHeartbeat(status = 'online', options = {}) {
   }
 }
 
-async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}) {
+async function runDualThreadCourier({
+  env = process.env,
+  baseDir = __dirname,
+  logFn = logGreen,
+  chromiumLauncher = chromium
+} = {}) {
   const { alphaThreadUrl, betaThreadUrl, gammaThreadUrl, extraThreadUrls } = resolveThreadUrls(env);
 
   if (!alphaThreadUrl || !betaThreadUrl) {
@@ -859,17 +887,26 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
     return false;
   }
 
-  const profileDir = path.join(__dirname, 'chrome_vox_profile');
-  const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false,
-    channel: 'chrome',
-    ignoreDefaultArgs: ['--enable-automation'],
-    args: [
-      '--disable-blink-features=AutomationControlled',
-      '--no-sandbox'
-    ],
-    viewport: { width: 1280, height: 860 }
-  });
+  const profileDir = resolveVoxProfileDir(env, baseDir);
+  let context;
+  try {
+    context = await chromiumLauncher.launchPersistentContext(profileDir, {
+      headless: false,
+      channel: 'chrome',
+      ignoreDefaultArgs: ['--enable-automation'],
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--no-sandbox'
+      ],
+      viewport: { width: 1280, height: 860 }
+    });
+  } catch (err) {
+    logFn(
+      `[BROWSER PROFILE LOCKED] Could not launch ${path.basename(profileDir)} (${err.message}). ` +
+      'Close any older Chrome window still holding chrome_vox_profile and relaunch vox_autopilot.bat.'
+    );
+    return false;
+  }
 
   const existingPages = context.pages();
   const alphaPage = existingPages[0] || await context.newPage();
@@ -1003,6 +1040,7 @@ async function runDualThreadCourier({ env = process.env, logFn = logGreen } = {}
 module.exports = {
   resolveServiceKey,
   resolveThreadUrls,
+  resolveVoxProfileDir,
   routeSpeakerPersona,
   sanitizePlayerQueryForGemini,
   scrubArtifacts,

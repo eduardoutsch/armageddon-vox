@@ -8,6 +8,8 @@ const assert = require('node:assert/strict');
 const {
   parseSpokenTacticaIntent,
   buildLosVerificationPrompt,
+  scrubGeminiThreadArtifacts,
+  isGeminiInterimThinkingText,
   parseOverwatchVerdict,
   buildReactionVoiceCallout,
   detectActiveIntrusionZones,
@@ -142,4 +144,49 @@ test('compileTacticaCrusadeSnapshot: aggregates chronicle kills, reactions, Mise
   assert.equal(snap.secretObjective.code, 'L2Y');
   assert.equal(snap.hordeWarlord.alive, false);
 });
+
+test('scrubGeminiThreadArtifacts & isGeminiInterimThinkingText: strips "O Gemini disse" anywhere and rejects thinking/streaming states', () => {
+  assert.equal(typeof scrubGeminiThreadArtifacts, 'function');
+  assert.equal(typeof isGeminiInterimThinkingText, 'function');
+
+  // Exact interim thinking strings observed in live Portuguese/English Gemini 2.5 Thinking UI
+  const interim1 = scrubGeminiThreadArtifacts('Processing: Determining if terrain blocks visibility O Gemini disse');
+  assert.equal(interim1.includes('O Gemini disse'), false);
+  assert.equal(isGeminiInterimThinkingText(interim1), true, 'Must treat "Processing: Determining..." as interim thinking');
+
+  const interim2 = scrubGeminiThreadArtifacts('Determining if large rulebooks are supported O Gemini disse');
+  assert.equal(interim2.includes('O Gemini disse'), false);
+  assert.equal(isGeminiInterimThinkingText(interim2), true, 'Must treat "Determining if..." thought header as interim thinking');
+
+  const adjacentNoSpace = scrubGeminiThreadArtifacts('Mostrar pensamentoDetermining if terrain blocks visibilityO Gemini disse');
+  assert.equal(adjacentNoSpace.includes('O Gemini disse'), false);
+  assert.equal(adjacentNoSpace.includes('Mostrar pensamento'), false);
+  assert.equal(isGeminiInterimThinkingText(adjacentNoSpace), true);
+
+  const emptyAfterLabel = scrubGeminiThreadArtifacts('  O Gemini disse:  ');
+  assert.equal(emptyAfterLabel, '');
+  assert.equal(isGeminiInterimThinkingText(emptyAfterLabel), true, 'Empty body after stripping O Gemini disse must keep waiting');
+
+  // Active streaming button still present on page
+  assert.equal(
+    isGeminiInterimThinkingText('{"losBlocked":true', { isGenerating: true }),
+    true,
+    'Must keep waiting while Gemini Stop/streaming indicator is active'
+  );
+
+  // Completed real responses (JSON and conversational prose)
+  const finalJson = scrubGeminiThreadArtifacts(
+    'O Gemini disse\nJSON\nCopiar código\n{"losBlocked":true,"revertSquadKey":"HORDE::Paladin","blockedPairs":[],"spokenReply":"Solid ruin blocks LOS."}'
+  );
+  assert.equal(isGeminiInterimThinkingText(finalJson, { isGenerating: false }), false);
+  const verdict = parseOverwatchVerdict(
+    'O Gemini disse\n{"losBlocked":false,"revertSquadKey":null,"blockedPairs":[],"spokenReply":"Clear sightline past low rubble."}'
+  );
+  assert.equal(verdict.spokenReply, 'Clear sightline past low rubble.');
+
+  const proseVerdict = parseOverwatchVerdict('O Gemini disse: Yes, I can hear you loud and clear and am ready to verify line of sight.');
+  assert.equal(proseVerdict.spokenReply.includes('O Gemini disse'), false);
+  assert.equal(isGeminiInterimThinkingText(proseVerdict.spokenReply, { isGenerating: false }), false);
+});
+
 

@@ -1,9 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 
 const {
   resolveServiceKey,
   resolveThreadUrls,
+  resolveVoxProfileDir,
   routeSpeakerPersona,
   scrubArtifacts,
   extractCleanLastModelResponse,
@@ -1001,5 +1003,37 @@ test('processSingleMessage: channel=gamma logs GAMMA channelTag, guards against 
   assert.deepEqual(gotoUrls, ['https://gemini.google.com/app/793dd9d2bd84ad35'], 'Must snap drifted gamma tab back to expected gamma thread URL');
   assert.equal(dispatchedPrompts.length, 2, 'Must send initial prompt and self-heal recovery prompt on refusal');
   assert.ok(dispatchedPrompts[1].includes('Fane-Node Vôl-09') && dispatchedPrompts[1].includes('Commander Omega - The Ledger of Embers'));
+});
+
+test('resolveVoxProfileDir & runDualThreadCourier: isolates chrome_vox_profile from chrome_tactica_profile and handles locked profile without crashing', async () => {
+  assert.equal(typeof resolveVoxProfileDir, 'function');
+  const baseDir = path.resolve(__dirname, '..');
+  assert.equal(resolveVoxProfileDir({}, baseDir), path.join(baseDir, 'chrome_vox_profile'));
+  assert.equal(
+    resolveVoxProfileDir({ VOX_PROFILE_DIR: path.join(baseDir, 'chrome_tactica_profile') }, baseDir),
+    path.join(baseDir, 'chrome_vox_profile'),
+    'Must guard against colliding with chrome_tactica_profile'
+  );
+
+  const logs = [];
+  const attemptedDirs = [];
+  const ok = await runDualThreadCourier({
+    env: {
+      ALPHA_THREAD_URL: 'https://gemini.google.com/app/alpha123',
+      BETA_THREAD_URL: 'https://gemini.google.com/app/beta456'
+    },
+    baseDir,
+    logFn: (m) => logs.push(m),
+    chromiumLauncher: {
+      launchPersistentContext: async (dir) => {
+        attemptedDirs.push(dir);
+        throw new Error('Target page, context or browser has been closed');
+      }
+    }
+  });
+
+  assert.equal(ok, false);
+  assert.deepEqual(attemptedDirs, [path.join(baseDir, 'chrome_vox_profile')]);
+  assert.ok(logs.some((l) => l.includes('BROWSER PROFILE LOCKED')), 'Must log friendly profile-locked diagnostic instead of crashing');
 });
 

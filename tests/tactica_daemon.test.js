@@ -10,7 +10,9 @@ const path = require('node:path');
 const {
   createTacticaDaemon,
   resolveTacticaThreadUrl,
-  isUsableGeminiThreadUrl
+  resolveTacticaProfileDir,
+  isUsableGeminiThreadUrl,
+  launchTacticaBrowserSession
 } = require('../tactica_daemon.js');
 
 async function postJson(baseUrl, route, body) {
@@ -313,6 +315,55 @@ test('resolveTacticaThreadUrl: strictly selects TACTICA_THREAD_URL and ignores A
   assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/YOUR_NEW_THREAD_ID_HERE'), false);
   assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/<your-tactica-thread-id>'), false);
   assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/tactica999'), true);
+});
+
+test('resolveTacticaProfileDir & launchTacticaBrowserSession: strictly isolates chrome_tactica_profile from chrome_vox_profile so both terminals run concurrently without crashing', async () => {
+  assert.equal(typeof resolveTacticaProfileDir, 'function');
+  const baseDir = path.resolve(__dirname, '..');
+  const defaultDir = resolveTacticaProfileDir({}, baseDir);
+  assert.equal(defaultDir, path.join(baseDir, 'chrome_tactica_profile'));
+  assert.notEqual(defaultDir, path.join(baseDir, 'chrome_vox_profile'));
+
+  // Guard against accidental .env collision pointing Tactica at chrome_vox_profile
+  const guardedDir = resolveTacticaProfileDir(
+    { TACTICA_PROFILE_DIR: path.join(baseDir, 'chrome_vox_profile') },
+    baseDir
+  );
+  assert.equal(guardedDir, path.join(baseDir, 'chrome_tactica_profile'));
+
+  const launchedDirs = [];
+  const mockPage = {
+    goto: async () => {},
+    waitForSelector: async () => {},
+    url: () => 'https://gemini.google.com/app/tactica999',
+    close: async () => {}
+  };
+  const mockChromium = {
+    launchPersistentContext: async (dir) => {
+      launchedDirs.push(dir);
+      return {
+        pages: () => [mockPage],
+        newPage: async () => mockPage,
+        on: () => {},
+        close: async () => {}
+      };
+    }
+  };
+
+  const session = await launchTacticaBrowserSession('https://gemini.google.com/app/tactica999', {
+    env: {},
+    baseDir,
+    chromium: mockChromium
+  });
+  assert.ok(session, 'Must return active Tactica browser session');
+  assert.equal(launchedDirs.length, 1, 'Must launch Chromium strictly once');
+  assert.equal(launchedDirs[0], path.join(baseDir, 'chrome_tactica_profile'));
+  assert.equal(
+    launchedDirs.some((d) => d.includes('chrome_vox_profile')),
+    false,
+    'Must NEVER touch chrome_vox_profile'
+  );
+  await session.close();
 });
 
 

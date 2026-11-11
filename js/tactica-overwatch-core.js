@@ -81,13 +81,55 @@
   }
 
   /**
+   * Pure helper: strips Gemini Web UI accessibility headers ("O Gemini disse", "Gemini said"),
+   * code-fence chrome ("Copiar código", "Copy code", "JSON"), and Notebook citation chips.
+   *
+   * @param {string} [rawText=''] - Raw DOM text extracted from a Gemini `<model-response>` node.
+   * @returns {string} Cleaned model text without UI chrome.
+   */
+  function scrubGeminiThreadArtifacts(rawText = '') {
+    if (!rawText) return '';
+    return String(rawText)
+      .replace(/(?:O Gemini disse|Gemini said)\s*:?/gi, '')
+      .replace(/(?:Mostrar pensamento|Ocultar pensamento|Show thinking|Hide thinking)\s*:?/gi, '')
+      .replace(/\[cite:\s*[\d,\s]+\]/gi, '')
+      .replace(/[ \t]*\bMD\b(?:\s*\+\s*\d+)?/g, '')
+      .replace(/^\s*\+\s*\d+\s*$/gm, '')
+      .replace(/^\s*(?:Plaintext|Texto simples|Text|Markdown|JSON|Copy code|Copiar código)\s*$/gim, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  /**
+   * Pure helper: detects whether extracted Gemini Web text is still an interim thinking/loading
+   * status (e.g. `<model-thoughts>` header or active Stop button) rather than the final reply.
+   *
+   * @param {string} [cleanedText=''] - Text after `scrubGeminiThreadArtifacts`.
+   * @param {{isGenerating?: boolean}} [meta={}] - Live DOM streaming metadata.
+   * @returns {boolean} True when the poller must keep waiting instead of returning early.
+   */
+  function isGeminiInterimThinkingText(cleanedText = '', meta = {}) {
+    if (meta && meta.isGenerating) return true;
+    const trimmed = scrubGeminiThreadArtifacts(cleanedText);
+    if (!trimmed) return true;
+    if (
+      trimmed.length < 180 &&
+      /^(?:processing:|thinking\b|pensando\b|analisando\b|searching\b|buscando\b|conectando\b|connecting\b|loading\b|carregando\b|determining\b|checking\b|verifying\b|analyzing\b|reading\b|looking\s+up\b|consulting\b)/i.test(trimmed)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Parses a structured JSON (or fenced JSON) Overwatch verdict with graceful prose fallback.
    *
    * @param {string} [rawResponse=''] - Model response string.
    * @returns {{losBlocked: boolean, revertSquadKey: string|null, blockedPairs: string[], spokenReply: string}}
    */
   function parseOverwatchVerdict(rawResponse = '') {
-    const raw = String(rawResponse || '').trim();
+    const raw = scrubGeminiThreadArtifacts(rawResponse);
     if (!raw) {
       return { losBlocked: false, revertSquadKey: null, blockedPairs: [], spokenReply: 'No Overwatch response received.' };
     }
@@ -249,6 +291,8 @@
   return {
     parseSpokenTacticaIntent,
     buildLosVerificationPrompt,
+    scrubGeminiThreadArtifacts,
+    isGeminiInterimThinkingText,
     parseOverwatchVerdict,
     buildReactionVoiceCallout,
     detectActiveIntrusionZones,
