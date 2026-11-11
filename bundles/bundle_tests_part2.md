@@ -1,15 +1,20 @@
 # 📦 Fires of Armageddon // Bundle: Pages & Boundary Tests (Part 2: Headless Playwright E2E)
 
-Headless browser E2E verification, cockpit controls, and multi-CP stratagem validation (`tests/ui/pages.test.js` lines 559 to end).
+Headless browser E2E verification, cockpit controls, and multi-CP stratagem validation (`tests/ui/pages.test.js` lines 566 to end).
 
 ## 📑 Table of Contents
-- [tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 559-1100)](#file-testsuipagestestjspart2headlessplaywrighte2elines5591100)
+- [tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)](#file-testsuipagestestjspart2headlessplaywrighte2elines5661100)
 
 ---
 
-## File: `tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 559-1100)` <a id="file-testsuipagestestjspart2headlessplaywrighte2elines5591100"></a>
+## File: `tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)` <a id="file-testsuipagestestjspart2headlessplaywrighte2elines5661100"></a>
 
 ````javascript
+});
+
+test('Documentation Boundary: README.md and bundles/README.md provide technical architecture deep-dives and explicit AI involvement disclosures', () => {
+  const rootReadme = readPage('README.md');
+  const bundlesReadme = readPage('bundles/README.md');
 
   // Root README technical sections & AI involvement disclosure
   assert.ok(rootReadme.includes('System Architecture'), 'README.md must include a System Architecture section');

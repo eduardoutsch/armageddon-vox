@@ -495,6 +495,8 @@ test('Roster: compileNemesisDossier compiles Alpha and Beta dossiers with correc
 test('Roster: normalizeUnitType and deduplicateSimilarUnits strip quantities and merge shorthand units', () => {
   assert.equal(normalizeUnitType('5 Bladeguard Veterans'), 'Bladeguard Veterans');
   assert.equal(normalizeUnitType('1D3 Chaos Spawns'), 'Chaos Spawns');
+  assert.equal(normalizeUnitType('D3+1 Scarabs'), 'Scarabs');
+  assert.equal(normalizeUnitType('1 Chimera [10 Kasrkin]'), 'Chimera');
   assert.equal(normalizeUnitType('2x Armiger Warglaives'), 'Armiger Warglaives');
 
   const deduplicated = deduplicateSimilarUnits([
