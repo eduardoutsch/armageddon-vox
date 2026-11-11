@@ -129,3 +129,54 @@
         <button type="button" class="btn-red" onclick="queueConsoleAutoDefender()">🎲 Queue Roll on LCT TTS Dice Mat</button>
       </div>
 
+      <div id="tacticaPendingRollBox" class="card hidden" style="margin-top:10px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.08);"></div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <input id="tacticaManualPipsInput" placeholder="Offline fallback: enter settled LCT mat pips (e.g. 5, 2, 4, 6)" style="flex:1; padding:8px; background:#0b0d13;">
+        <button type="button" class="btn-ghost btn-sm" onclick="submitSettledMatPips()">✓ Apply Settled Pips</button>
+      </div>
+      <div id="defResultBox" style="margin-top:10px; font-size:0.88rem; color:var(--text);"></div>
+    </div>
+
+    <!-- 3. PERSISTENT ROUND 1–6 BLACK-BOX CHRONICLE -->
+    <div class="card" style="margin-bottom:14px;">
+      <h3>📜 Persistent Match Chronicle (Round 1–6 Disk Scribe)</h3>
+      <div id="tacticaChronicleBox" style="max-height:240px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); margin-bottom:8px;"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="tacticaNoteInput" placeholder="Log tactical event, LOS ruling, or heroic moment..." style="flex:1; padding:8px; background:#0b0d13;">
+        <button type="button" class="btn-ghost" onclick="appendConsoleNote()">+ Log Event</button>
+      </div>
+    </div>
+
+    <!-- 4. OPTIONAL POST-MATCH EXPORT TO VOX -->
+    <div class="card">
+      <h3>📡 Optional Post-Match Chronicle Export</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <select id="tacticaReportChannel" style="padding:8px; background:#0b0d13;">
+          <option value="alpha">Conduit Alpha (The Exile)</option>
+          <option value="beta">Conduit Beta (Lord Commander Junebug)</option>
+          <option value="gamma">Conduit Gamma (Kâhl Hârkyn)</option>
+        </select>
+        <input id="tacticaOutcomeInput" placeholder="Outcome (e.g. Survived Round 6 Final Stand)" style="flex:1; padding:8px; background:#0b0d13;">
+        <button type="button" class="btn-ghost" onclick="compileAndPreviewMatchReport()">📝 Compile Full R1–R6 Report</button>
+      </div>
+      <pre id="tacticaCompiledPreview" class="master-dossier-preview vox-preview-alpha" style="min-height:80px; white-space:pre-wrap;"></pre>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+        <button type="button" class="launch-btn" style="flex:1; margin:0;" onclick="sendCompiledReportToVox()">📡 Queue Compiled Match File into Astropathic Vox →</button>
+        <button type="button" class="btn-green" onclick="exportTacticaToCrusade()">🏆 Export Telemetry to Mode 5 Crusade →</button>
+      </div>
+      <div id="tacticaCrusadeExportNotice" class="hidden" style="margin-top:8px; font-size:0.84rem; color:var(--green);"></div>
+    </div>
+  </div>
+
+  <script src="../js/spawner.js"></script>
+  <script src="../js/horde-combat-modifiers.js"></script>
+  <script src="../js/tts-telemetry-core.js"></script>
+  <script src="../js/horde-autopilot-core.js"></script>
+  <script src="../js/tactica-core.js"></script>
+  <script src="../js/tactica.js"></script>
+  <script src="../js/tactica-overwatch-core.js"></script>
+  <script src="../js/tactica-overwatch.js"></script>
+  <script src="../js/vox-audio.js"></script>
+</body>
+</html>
+
