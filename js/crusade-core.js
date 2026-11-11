@@ -364,3 +364,59 @@ var CrusadeCore = (function () {
       };
     });
 
+    return { allocated, maxTotal, allocatedLabel: `${allocated} / ${maxTotal}`, cards };
+  }
+
+  function formatLogisticsSummaryLine(state = {}, categories = []) {
+    const log = state.logistics || { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
+    const surplus = [];
+    const def = [];
+    (categories || []).forEach((c) => {
+      const v = log[c.key] || 0;
+      const shortName = c.title.split(' ')[1] || c.title;
+      if (v === 2) surplus.push(shortName);
+      if (v === 0) def.push(shortName);
+    });
+    return `Battles Rem: ${state.tourBattlesRem || 0} | Wins Rem: ${state.tourWinsRem || 0} | Commendation Pts: ${state.commendationPts || 0} | Surplus: [${surplus.length ? surplus.join(', ') : 'None'}] | Deficiency: [${def.length ? def.join(', ') : 'None'}]`;
+  }
+
+  function compileTourDispatch(input = {}) {
+    const battles = typeof input.tourBattlesRem === 'number' ? input.tourBattlesRem : 0;
+    const wins = typeof input.tourWinsRem === 'number' ? input.tourWinsRem : 0;
+    const commPts = typeof input.commendationPts === 'number' ? input.commendationPts : 0;
+    const log = input.logistics || { lexmechanicus: 1, materiel: 1, tithePool: 1, morale: 1 };
+    const maxPts = input.upliftingPrimer ? 5 : 4;
+    const notes = String(input.notes || '').trim();
+
+    const lines = [
+      '+++ DEPARTMENTO MUNITORUM // TOUR OF DUTY & LOGISTICS ALLOCATION DISPATCH +++',
+      '• REPORTING COMMANDER: THE EXILE // THE SANCTUARY OF ASH (044TH KRIEG)',
+      `• OPERATIONAL QUOTAS: ${battles} Battles Required // ${wins} Victories Required`,
+      `• MUNITORUM LOGISTICS ALLOCATION (${maxPts} PTS): Lexmechanicus: ${log.lexmechanicus || 0} | Materiel: ${log.materiel || 0} | Tithe Pool: ${log.tithePool || 0} | Morale: ${log.morale || 0}`,
+      `• ACTIVE COMMENDATION TALLY: ${commPts} CmP`
+    ];
+    if (notes) lines.push(`• REGIMENTAL DEPLOYMENT DIRECTIVE: "${notes}"`);
+    lines.push(
+      '------------------------------------------------',
+      'REQUEST FOR LOGIS-PREFECT VANE: Please register this Tour of Duty operational quota and Munitorum Regulation 884-Alpha logistics distribution in the orbital ledger!'
+    );
+    return lines.join('\n');
+  }
+
+  // ===========================================================================
+  // TAB 4: NECRONS TOMB WORLD AWAKENING MATRIX
+  // ===========================================================================
+  function allocateTombSystemPoint(tombSystems, powerReservesAllocated, sysKey, delta) {
+    const baseSys = tombSystems || { command: 1, reanimation: 1, translocation: 0 };
+    const maxTotal = powerReservesAllocated ? 4 : 3;
+    const currentTotal = Object.values(baseSys).reduce((a, b) => a + b, 0);
+    const currVal = baseSys[sysKey] || 0;
+    const nextVal = currVal + delta;
+
+    if (nextVal < 0 || nextVal > 3 || (delta > 0 && currentTotal >= maxTotal)) {
+      return { changed: false, tombSystems: { ...baseSys }, allocated: currentTotal, maxTotal };
+    }
+    const updated = { ...baseSys, [sysKey]: nextVal };
+    return { changed: true, tombSystems: updated, allocated: currentTotal + delta, maxTotal };
+  }
+
