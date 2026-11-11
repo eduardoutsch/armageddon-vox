@@ -236,3 +236,71 @@
     return 5;
   }
 
+  /**
+   * Resolves a Horde unit's effective movement, terrain keywords, and post-move eligibility.
+   *
+   * @param {object} [unit={}] - Horde unit datasheet characteristics (`move`, `scoutsInches`, `keywords`).
+   * @param {object} [matchState={}] - Active Horde match state (`factionName`, `activeMiseryIds`/`activeMiseries`).
+   * @param {object} [context={}] - Turn & board context (`spawnedThisTurn`, `didIngress`, `withinRazorWire`).
+   * @returns {object} Deterministic movement profile for tabletop or TTS AI execution.
+   */
+  function resolveHordeMovementProfile(unit = {}, matchState = {}, context = {}) {
+    const facMod = HORDE_FACTION_COMBAT_MODS[matchState.factionName] || {};
+    const miseries = extractActiveMiseryMods(matchState);
+    const kws = new Set(normalizeKeywords(unit.keywords));
+
+    let baseMove = Number(unit.move) || 6;
+    let effectiveMove = baseMove + (facMod.moveMod || 0);
+
+    let scoutsApplied = 0;
+    const scoutsDist = Number(unit.scoutsInches) || 0;
+    if (scoutsDist > 0 && context.spawnedThisTurn && !context.didIngress) {
+      scoutsApplied = scoutsDist;
+      effectiveMove += scoutsDist;
+    }
+
+    let advanceRollMod = 0;
+    let chargeRollMod = 0;
+    if (context.withinRazorWire) {
+      const wire = FORTIFICATION_COMBAT_MODS.MARKER_WIRE;
+      effectiveMove = Math.max(wire.minMove, effectiveMove + wire.moveMod);
+      advanceRollMod += wire.advanceMod;
+      chargeRollMod += wire.chargeMod;
+    }
+
+    let canShootAfterAdvance = Boolean(facMod.canShootAfterAdvance);
+    let canChargeAfterAdvance = Boolean(facMod.canChargeAfterAdvance);
+    const canShootAfterFallBack = Boolean(facMod.canShootAfterFallBack);
+    const canChargeAfterFallBack = Boolean(facMod.canChargeAfterFallBack);
+    let autoAdvance = null;
+    let autoCharge = null;
+    let ignoreTerrainVisibility = false;
+
+    for (const m of miseries) {
+      if (m.canShootAfterAdvance) canShootAfterAdvance = true;
+      if (m.canChargeAfterAdvance) canChargeAfterAdvance = true;
+      if (typeof m.autoAdvance === 'number') autoAdvance = m.autoAdvance;
+      if (typeof m.autoCharge === 'number') autoCharge = m.autoCharge;
+      if (m.hordeIgnoreTerrainVisibility) ignoreTerrainVisibility = true;
+      if (Array.isArray(m.hordeUnitKeywords)) {
+        m.hordeUnitKeywords.forEach(kw => kws.add(kw.toUpperCase()));
+      }
+    }
+
+    return {
+      baseMove,
+      effectiveMove: Math.max(1, effectiveMove),
+      scoutsApplied,
+      canShootAfterAdvance,
+      canChargeAfterAdvance,
+      canShootAfterFallBack,
+      canChargeAfterFallBack,
+      autoAdvance,
+      autoCharge,
+      advanceRollMod,
+      chargeRollMod,
+      ignoreTerrainVisibility,
+      keywords: Array.from(kws)
+    };
+  }
+
