@@ -721,3 +721,64 @@ var CrusadeCore = (function () {
       ? formatHordeTelemetry(input.hordeBattleStats)
       : '';
 
+    const unitLines = queuedRolls.length > 0
+      ? queuedRolls.map((q, i) => `  ${i + 1}. [${q.unit}] → ${q.category}: ${q.name} (${q.roll})\n     • Battlefield Context: "${q.context}"`).join('\n')
+      : '  • None attached this battle.';
+
+    if (isDistantAugurEngagement(chan, modeNode)) {
+      const augurProfile = (chan === 'augur_beta' || chan === 'beta')
+        ? DOSSIER_CHANNEL_PROFILES.augur_beta
+        : DOSSIER_CHANNEL_PROFILES.augur_alpha;
+      const forceName = distantForce || 'Unspecified Distant Auxiliary Detachment';
+      const lines = [
+        '+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++',
+        `• SCANNING SENSOR ARRAY: ORBITAL AUGUR ARRAY (Relayed via ${augurProfile.scanningVessel})`,
+        `• ENGAGED FORCES (IN THE DISTANCE): ${forceName} (Neither Main Player Fielded)`,
+        `• ENGAGEMENT CLASSIFICATION: ${modeNode}`,
+        `• OUTCOME & SURVIVAL: ${outcome}`,
+        `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
+        `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
+        `• LEFTOVER SP SALVAGE: ${leftover}`,
+        '• STRATEGIC POINTS & ALLIANCE IMPACT: Zero Alliance SPt Shift (Off-Roster Narrative Telemetry)',
+        '• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)'
+      ];
+      if (statsSection) lines.push(statsSection);
+      lines.push(
+        '------------------------------------------------',
+        '• OBSERVED REMOTE UNIT UPGRADES, RELICS & BATTLE SCARS ("STORIES IN THE ASH-STORM"):',
+        unitLines,
+        '------------------------------------------------',
+        `• ORBITAL AUGUR AFTER-ACTION LOG: "${notes}"`,
+        '------------------------------------------------',
+        'REQUEST FOR CAMPAIGN MASTER: Please emit an Astropathic Vox Decree logging this distant solo horde breach caught in the distance by our orbital augurs. As neither main player participated, no Alliance SPts are shifted—please chronicle the narrative fate of this remote detachment and christen custom in-universe Lore Names & Backstories for their attached unit Upgrades, Relics, and Battle Scars!'
+      );
+      return lines.join('\n');
+    }
+
+    const profile = DOSSIER_CHANNEL_PROFILES[chan] || DOSSIER_CHANNEL_PROFILES.alpha;
+    const lines = [
+      profile.headerLine,
+      `• REPORTING COMMANDER: ${profile.commanderLabel}`,
+      `• ENGAGEMENT & SECTOR NODE: ${modeNode}`,
+      `• OUTCOME & SURVIVAL: ${outcome}`,
+      `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
+      `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
+      `• LEFTOVER SP SALVAGE: ${leftover}`
+    ];
+
+    const factionTelemetry = input[profile.telemetryKey] || options.factionTelemetryLine || '';
+    if (factionTelemetry) lines.push(`${profile.telemetryPrefix}${factionTelemetry}`);
+    if (statsSection) lines.push(statsSection);
+
+    lines.push(
+      '------------------------------------------------',
+      profile.upgradeSectionTitle,
+      unitLines,
+      '------------------------------------------------',
+      `• COMMANDER'S AFTER-ACTION LOG: "${notes}"`,
+      '------------------------------------------------',
+      profile.closingRequest
+    );
+    return lines.join('\n');
+  }
+
