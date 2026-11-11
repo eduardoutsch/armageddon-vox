@@ -656,3 +656,55 @@
       ? `${state.hordeWarlord.name} (${state.hordeWarlord.alive === false ? 'Slain' : 'Survived'} • Spawned R${state.hordeWarlord.roundSpawned || 1})`
       : 'None Spawned';
 
+    const lines = [
+      '+++ IN-MATCH TACTICAL BLACK-BOX CHRONICLE // AFTER-ACTION SUMMARY +++',
+      `• REPORTING COMMANDER: ${cmdr}`,
+      `• ROOM SEED & HORDE ADVERSARY: ${state.roomCode || 'HADES-1'} // ${state.factionName || 'Horde'}`,
+      `• MATCH OUTCOME: ${outcome}`,
+      `• HORDE WARLORD TELEMETRY: ${wl}`,
+      `• FINAL DEFENDER RESERVES: ${state.playerSp || 0} SP • ${state.playerCp || 0} CP`,
+      '------------------------------------------------'
+    ];
+
+    const grouped = new Map();
+    for (const e of (chronicleEntries || [])) {
+      if (!e || !e.summary) continue;
+      const r = Number(e.battleRound) || 0;
+      if (!grouped.has(r)) grouped.set(r, []);
+      grouped.get(r).push(e);
+    }
+
+    const sortedRounds = Array.from(grouped.keys()).sort((a, b) => a - b);
+    if (sortedRounds.length === 0) {
+      lines.push('• [NO TACTICAL EVENTS RECORDED IN CHRONICLE]');
+    } else {
+      for (const r of sortedRounds) {
+        lines.push(r === 0 ? '[DEPLOYMENT & PRE-GAME]:' : `[BATTLE ROUND ${r}]:`);
+        for (const ev of grouped.get(r)) {
+          lines.push(`  • [${ev.phase || 'PHASE'} // ${ev.type}] ${ev.summary}`);
+        }
+      }
+    }
+
+    lines.push(
+      '------------------------------------------------',
+      'REQUEST FOR CAMPAIGN MASTER: Archive this complete Round-by-Round Tactical Black-Box Chronicle into the campaign record (Pattern 2)!'
+    );
+    return lines.join('\n');
+  }
+
+  return {
+    TACTICA_PHASES,
+    REACTION_WINDOW_DEFS,
+    createInitialTacticaState,
+    formatChronicleEntry,
+    detectPlayerReactionWindow,
+    assignHordeWarlordIfEligible,
+    createDefenseRollSequence,
+    advanceDefenseRollSequence,
+    createHordeAttackRollSequence,
+    advanceHordeAttackRollSequence,
+    compileTacticaPostMatchReport
+  };
+});
+
