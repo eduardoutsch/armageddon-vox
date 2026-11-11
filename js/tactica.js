@@ -334,3 +334,54 @@
     return clientState.pendingDiceSequence;
   }
 
+  async function appendConsoleNote() {
+    const inp = document.getElementById('tacticaNoteInput');
+    const text = (inp?.value || '').trim();
+    if (!text) return;
+    if (inp) inp.value = '';
+    try {
+      const res = await daemonRequest('/chronicle/append', 'POST', { type: 'NOTE', summary: text });
+      localChronicle.push(res.entry);
+    } catch (e) {
+      localChronicle.push(formatChronicleEntry({ type: 'NOTE', summary: text }, clientState));
+    }
+    renderTacticaConsole();
+  }
+
+  async function compileAndPreviewMatchReport() {
+    const channel = document.getElementById('tacticaReportChannel')?.value || 'alpha';
+    const outcome = document.getElementById('tacticaOutcomeInput')?.value || '';
+    try {
+      const res = await daemonRequest('/chronicle/compile', 'POST', { channel, outcome });
+      lastCompiledReport = res.report;
+    } catch (e) {
+      lastCompiledReport = compileTacticaPostMatchReport(clientState, localChronicle, { channel, outcome });
+    }
+    const prev = document.getElementById('tacticaCompiledPreview');
+    if (prev) prev.textContent = lastCompiledReport;
+    return lastCompiledReport;
+  }
+
+  function sendCompiledReportToVox() {
+    const channel = document.getElementById('tacticaReportChannel')?.value || 'alpha';
+    if (!lastCompiledReport) {
+      lastCompiledReport = compileTacticaPostMatchReport(clientState, localChronicle, { channel });
+    }
+    if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
+      window.VoxAudio.transmitToVox(channel, lastCompiledReport);
+    }
+  }
+
+  /**
+   * Enqueues a `SCAN_BOARD` request onto the LCT daemon poll queue for the TTS Beacon token.
+   */
+  async function requestTtsBoardScan() {
+    try {
+      await daemonRequest('/tts/enqueue', 'POST', { action: 'SCAN_BOARD' });
+      daemonOnline = true;
+    } catch (e) {
+      daemonOnline = false;
+    }
+    renderTacticaConsole();
+  }
+
