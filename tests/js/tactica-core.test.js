@@ -116,3 +116,59 @@ test('Defense LCT Sequence: chains SAVES -> FNP -> ON_DEATH -> GSC_RESPAWN stric
   assert.equal(seq.outcome.onDeathTriggers, 1);
   assert.equal(advanceDefenseRollSequence(seq, []).stage, 'COMPLETE');
 
+  // GSC squad wipe chains into Stage 4 GSC_RESPAWN (5+)
+  const gscState = createInitialTacticaState({ factionName: 'Genestealer Cults', activeMiseryIds: [] });
+  let gscSeq = createDefenseRollSequence({
+    sequenceId: 'seq_gsc',
+    unitName: 'Neophyte Hybrids',
+    defender: { save: 5, woundsPerModel: 1, keywords: ['INFANTRY'] },
+    incomingAttack: { type: 'ranged', strength: 4, ap: -2, damage: 1 },
+    options: { numWounds: 1, damagePerWound: 1, startingModels: 1 }
+  }, gscState);
+  gscSeq = advanceDefenseRollSequence(gscSeq, [1]); // Failed save -> wiped -> needs 1D6 GSC respawn
+  assert.equal(gscSeq.stage, 'GSC_RESPAWN');
+  assert.equal(gscSeq.nextCommand.count, 1);
+  gscSeq = advanceDefenseRollSequence(gscSeq, [5]);
+  assert.equal(gscSeq.stage, 'COMPLETE');
+  assert.equal(gscSeq.outcome.gscRespawnTriggered, true);
+
+  // Mortal wounds spill over models (with and without FNP) & 0-wound no-op
+  assert.equal(createDefenseRollSequence({ options: { numWounds: 0 } }, state).stage, 'COMPLETE');
+  let mwSeq = createDefenseRollSequence({
+    unitName: 'Lychguard',
+    defender: { save: 3, woundsPerModel: 2, keywords: ['INFANTRY'] },
+    options: { numWounds: 2, damagePerWound: 2, startingModels: 2, mortalWounds: true }
+  }, state);
+  assert.equal(mwSeq.stage, 'FNP');
+  mwSeq = advanceDefenseRollSequence(mwSeq, [1, 2, 5, 1]); // 3 unshrugged MW -> 1 slain, 1 left at 1W
+  assert.equal(mwSeq.outcome.modelsSlain, 1);
+  assert.equal(mwSeq.outcome.currentModelRemainingWounds, 1);
+
+  const mwNoFnp = createDefenseRollSequence({
+    unitName: 'Cultists',
+    defender: { save: 6, woundsPerModel: 1 },
+    options: { numWounds: 2, damagePerWound: 1, startingModels: 3, mortalWounds: true }
+  }, createInitialTacticaState({ factionName: 'Chaos Space Marines' }));
+  assert.equal(mwNoFnp.stage, 'COMPLETE');
+  assert.equal(mwNoFnp.outcome.modelsSlain, 2);
+});
+
+test('Horde Attack LCT Sequence: chains HITS -> HIT_REROLLS -> WOUNDS with Lethal, Sustained & Devastating keywords', () => {
+  const state = createInitialTacticaState({ factionName: 'Space Marines', activeMiseryIds: [16, 17] });
+  // Space Marines re-roll 1s to Hit; Misery #16 [DEVASTATING WOUNDS]; Misery #17 [SUSTAINED HITS 1, LETHAL HITS 1]
+  let atk = createHordeAttackRollSequence({
+    sequenceId: 'seq_atk_1',
+    attackerName: 'Intercessors',
+    targetName: 'Krieg Infantry',
+    target: { toughness: 3, keywords: ['INFANTRY'] },
+    weapon: { type: 'ranged', attacks: 4, skill: 3, strength: 4, ap: -1, damage: 1, keywords: [] }
+  }, state);
+
+  assert.equal(atk.stage, 'HITS');
+  assert.equal(atk.nextCommand.count, 4);
+
+  // Roll [6 (Crit: 1 Lethal auto-wound + 1 Sustained normal hit), 4 (normal hit), 1 (reroll!), 2 (miss)]
+  atk = advanceHordeAttackRollSequence(atk, [6, 4, 1, 2]);
+  assert.equal(atk.stage, 'HIT_REROLLS');
+  assert.equal(atk.nextCommand.count, 1, 'Only the unmodified 1 is re-rolled for Space Marines');
+
