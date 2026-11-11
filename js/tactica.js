@@ -385,3 +385,51 @@
     renderTacticaConsole();
   }
 
+  /**
+   * Populates the Horde Auto-Defender form inputs directly from a scanned Yellowscribe squad on the LCT table.
+   */
+  function selectTelemetryUnitForDefense(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || typeof document === 'undefined') return null;
+
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = String(v);
+    };
+    setVal('defUnitName', u.name || 'Horde Unit');
+    setVal('defSaveInput', u.save || 4);
+    setVal('defInvulnInput', u.invuln || 0);
+    setVal('defWpmInput', u.woundsPerModel || 1);
+    setVal('defKeywordsInput', Array.isArray(u.keywords) && u.keywords.length > 0 ? u.keywords.join(', ') : 'INFANTRY');
+    setVal('defModelsInput', u.modelCount || 1);
+    const spCheck = document.getElementById('defInSpawnCheck');
+    if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
+    return u;
+  }
+
+  function setAutopilotHtml(html) {
+    if (typeof document === 'undefined') return;
+    const box = document.getElementById('tacticaAutopilotBox');
+    if (box) box.innerHTML = html;
+  }
+
+  /**
+   * 1. Clones off-board `HORDE_TEMPLATE` miniatures into active Mode 1 Spawn Zones.
+   */
+  async function triggerAutopilotSpawnWaves() {
+    let plan;
+    try {
+      const res = await daemonRequest('/autopilot/spawn-waves', 'POST', { zoneSpawns: clientState.zoneSpawns });
+      daemonOnline = true;
+      plan = res;
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      plan = planWaveSpawnCommands(clientState.zoneSpawns);
+      localChronicle.push(formatChronicleEntry({ type: 'SPAWN_WAVE', summary: plan.summary }, clientState));
+    }
+    setAutopilotHtml(`<strong>🧟 Wave Spawn Queue:</strong> ${plan.summary}`);
+    renderTacticaConsole();
+    return plan;
+  }
+
