@@ -1002,6 +1002,159 @@ test('app: rollAllSpawnZones generates fresh intrusionRoll values on repeat roll
   document.getElementById('extraSpawnMod').value = '0';
 });
 
+test('app: evaluateWarpBreachIntrusions routes [10-12] breaches to playUnboundBreachAlert and [13+] breaches to playWarpSiren', () => {
+  let apexSirenCount = 0;
+  let midBreachCount = 0;
+  globalThis.window.VoxAudio = {
+    playWarpSiren: () => { apexSirenCount++; },
+    playUnboundBreachAlert: () => { midBreachCount++; }
+  };
+
+  const container = document.getElementById('spawnResultsContainer');
+  const origQueryAll = container.querySelectorAll;
+  const origMulberry = globalThis.mulberry32;
+  globalThis.mulberry32 = () => () => 0.99; // Intrusion roll = 6
+
+  try {
+    // 1. [10-12] breach alone -> must play less-intense playUnboundBreachAlert, NOT playWarpSiren
+    document.getElementById('seedInput').value = 'TIER-10-12-TEST';
+    document.getElementById('spawnerBtnRound').textContent = '2';
+    app.currentZoneSpawns.length = 0;
+    app.currentZoneSpawns.push({
+      zone: 1,
+      waveId: 'w_mid_1',
+      bracketKey: '10-12',
+      bracketLabel: 'Bracket [10–12]',
+      intrusionRoll: 6,
+      units: ['1 Forgefiend']
+    });
+    container.querySelectorAll = (sel) => sel === '.spawn-zone' ? [{
+      textContent: 'Spawn Zone 1 • Bracket [10–12] (301–550 pts)',
+      style: {},
+      querySelector: () => null,
+      appendChild: () => {}
+    }] : [];
+
+    app.evaluateWarpBreachIntrusions();
+    assert.equal(midBreachCount, 1, 'Bracket [10–12] 6+ breach must trigger playUnboundBreachAlert');
+    assert.equal(apexSirenCount, 0, 'Bracket [10–12] 6+ breach must NOT trigger [13+] playWarpSiren');
+
+    // 2. [13+] breach -> must trigger full [13+] playWarpSiren
+    document.getElementById('seedInput').value = 'TIER-13-PLUS-TEST';
+    app.currentZoneSpawns.length = 0;
+    app.currentZoneSpawns.push({
+      zone: 1,
+      waveId: 'w_apex_1',
+      bracketKey: '13+',
+      bracketLabel: 'Bracket [13+]',
+      intrusionRoll: 6,
+      units: ['1 Khorne Lord of Skulls']
+    });
+    container.querySelectorAll = (sel) => sel === '.spawn-zone' ? [{
+      textContent: 'Spawn Zone 1 • Bracket [13+] (551+ pts)',
+      style: {},
+      querySelector: () => null,
+      appendChild: () => {}
+    }] : [];
+
+    app.evaluateWarpBreachIntrusions();
+    assert.equal(apexSirenCount, 1, 'Bracket [13+] 6+ breach must trigger terrifying playWarpSiren');
+    assert.equal(midBreachCount, 1, 'Bracket [13+] 6+ breach must not increment playUnboundBreachAlert');
+
+    // 3. Simultaneous [10-12] + [13+] breaches in same wave -> [13+] playWarpSiren wins
+    document.getElementById('seedInput').value = 'TIER-MIXED-TEST';
+    app.currentZoneSpawns.length = 0;
+    app.currentZoneSpawns.push(
+      { zone: 1, waveId: 'w_mix_1', bracketKey: '10-12', bracketLabel: 'Bracket [10–12]', intrusionRoll: 6, units: ['1 Forgefiend'] },
+      { zone: 2, waveId: 'w_mix_2', bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Angron'] }
+    );
+    container.querySelectorAll = (sel) => sel === '.spawn-zone' ? [
+      { textContent: 'Spawn Zone 1 • Bracket [10–12] (301–550 pts)', style: {}, querySelector: () => null, appendChild: () => {} },
+      { textContent: 'Spawn Zone 2 • Bracket [13+] (551+ pts)', style: {}, querySelector: () => null, appendChild: () => {} }
+    ] : [];
+
+    app.evaluateWarpBreachIntrusions();
+    assert.equal(apexSirenCount, 2, 'Mixed [10-12] + [13+] wave must escalate to playWarpSiren');
+    assert.equal(midBreachCount, 1, 'Mixed wave must not play lower-tier alert when [13+] is present');
+  } finally {
+    container.querySelectorAll = origQueryAll;
+    globalThis.mulberry32 = origMulberry;
+  }
+});
+
+test('app: Unbound Adversary (.warp-intrusion-alert) persists in #spawnResultsContainer across page switches (restoreSessionState) and sibling rollDownZone', () => {
+  let sirenDuringRestore = 0;
+  globalThis.window.VoxAudio = {
+    playWarpSiren: () => { sirenDuringRestore++; },
+    playUnboundBreachAlert: () => { sirenDuringRestore++; }
+  };
+
+  let cockpitMirrored = 0;
+  globalThis.window.mirrorSpawnerToCockpit = () => { cockpitMirrored++; };
+
+  document.getElementById('seedInput').value = 'PERSIST-BREACH-77';
+  app.startSession();
+  app.currentZoneSpawns.length = 0;
+  app.currentZoneSpawns.push(
+    {
+      zone: 1,
+      waveId: 'persist_z1',
+      bracketKey: '10-12',
+      bracketLabel: 'Bracket [10–12]',
+      pts: '301–550 pts',
+      diceStr: '2D6 (5, 5)',
+      totalMod: 1,
+      finalRoll: 11,
+      intrusionRoll: 6,
+      units: ['1 Forgefiend']
+    },
+    {
+      zone: 2,
+      waveId: 'persist_z2',
+      bracketKey: '13+',
+      bracketLabel: 'Bracket [13+]',
+      pts: '551+ pts',
+      diceStr: '2D6 (6, 6)',
+      totalMod: 1,
+      finalRoll: 13,
+      intrusionRoll: 3,
+      units: ['1 Khorne Lord of Skulls']
+    }
+  );
+  app.saveSessionState();
+
+  // Simulate navigating away from spawner.html (wiping DOM container) and navigating back (restoreSessionState)
+  const container = document.getElementById('spawnResultsContainer');
+  container.innerHTML = '';
+  sirenDuringRestore = 0;
+
+  const restored = app.restoreSessionState();
+  assert.equal(restored, true, 'restoreSessionState must succeed');
+  assert.ok(
+    container.innerHTML.includes('warp-intrusion-alert') &&
+    container.innerHTML.includes('ADVERSARY / NEMESIS HIJACK!') &&
+    container.innerHTML.includes('transmitHordeIntrusionPing'),
+    'Restoring spawner.html after page switch must preserve .warp-intrusion-alert popup in #spawnResultsContainer'
+  );
+  assert.ok(
+    container.innerHTML.includes('intrusion-badge-clean'),
+    'Restoring spawner.html must also preserve clean intrusion check note for non-6+ big brackets'
+  );
+  assert.equal(sirenDuringRestore, 0, 'Silent session restore on page switch must not re-blast intrusion siren');
+  assert.ok(cockpitMirrored >= 1, 'renderSpawnZones must also trigger mirrorSpawnerToCockpit when available');
+
+  // Rolling down Zone 2 must NOT erase Zone 1's active .warp-intrusion-alert popup!
+  app.rollDownZone(1);
+  assert.ok(
+    container.innerHTML.includes('warp-intrusion-alert') &&
+    container.innerHTML.includes('Spawn Zone 1'),
+    'rollDownZone on a sibling zone must preserve Zone 1 .warp-intrusion-alert popup'
+  );
+
+  delete globalThis.window.mirrorSpawnerToCockpit;
+});
+
+
 
 
 

@@ -960,6 +960,52 @@ function triggerZoneRollDown(idx) {
   return rollDownZone(idx);
 }
 
+/**
+ * Builds declarative Warp-Breach Intrusion alert or clean check markup for a Spawn Zone
+ * directly from its persisted state object (`currentZoneSpawns[idx]`), ensuring Unbound
+ * Adversary popups survive page switches, reloads, co-op syncs, and sibling Roll-Downs.
+ *
+ * @param {object} z - Persisted spawn zone descriptor
+ * @param {number} zoneNum - 1-based Spawn Zone index
+ * @returns {{ borderStyle: string, bannerHtml: string }}
+ */
+function buildZoneIntrusionBannerHtml(z, zoneNum) {
+  if (!z || typeof z !== 'object') return { borderStyle: '', bannerHtml: '' };
+  const isBigBracket = z.bracketKey === '10-12' || z.bracketKey === '13+';
+  if (!isBigBracket || typeof z.intrusionRoll !== 'number') {
+    return { borderStyle: '', bannerHtml: '' };
+  }
+
+  const cleanBracket = z.bracketLabel || (z.bracketKey === '13+' ? 'Bracket [13+]' : 'Bracket [10–12]');
+  if (z.intrusionRoll >= 6) {
+    return {
+      borderStyle: ' style="border-color: var(--red);"',
+      bannerHtml: `
+        <div class="warp-intrusion-alert" style="text-align:center;">
+          <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px; text-align:center;">
+            ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${z.intrusionRoll} (6+) — ADVERSARY / NEMESIS HIJACK!]
+          </div>
+          <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px; text-align:center;">
+            Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
+            <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${cleanBracket}', 'alpha')">🦅 Ping Vox (The Exile)</button>
+            <button type="button" class="btn-green btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${cleanBracket}', 'beta')">💀 Ping Tomb-Ship (Junebug)</button>
+            <button type="button" class="btn-gold btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${cleanBracket}', 'distant')">📡 Ping Vox (Distant Intercept)</button>
+          </div>
+        </div>
+      `
+    };
+  }
+
+  return {
+    borderStyle: '',
+    bannerHtml: `
+      <div class="intrusion-badge-clean" style="margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace; text-align:center;">[Warp-Breach Intrusion Check: D6 = ${z.intrusionRoll} (Needed 6+) — Standard Horde Wave Holds]</div>
+    `
+  };
+}
+
 function renderSpawnZones() {
   const container = document.getElementById('spawnResultsContainer');
   if (!container) return;
@@ -979,9 +1025,10 @@ function renderSpawnZones() {
     const modStr = z?.totalMod !== undefined ? ` | Mod: ${z.totalMod >= 0 ? '+' + z.totalMod : z.totalMod}` : '';
     const rollStr = z?.finalRoll !== undefined ? ` → <strong>Total: ${z.finalRoll}</strong>` : '';
     const unitsStr = Array.isArray(z?.units) ? z.units.join('  +  ') : (z?.units || '');
+    const intrusionUi = buildZoneIntrusionBannerHtml(z, zoneNum);
 
     return `
-      <div class="card spawn-zone">
+      <div class="card spawn-zone"${intrusionUi.borderStyle}>
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
           <span class="badge green">Spawn Zone ${zoneNum} • ${bracketLabel}${ptsStr}</span>
           <span class="hud-sub">${diceStr}${modStr}${rollStr}</span>
@@ -993,10 +1040,17 @@ function renderSpawnZones() {
               ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
             </button>
           </div>
-        ` : ''}
+        ` : ''}${intrusionUi.bannerHtml}
       </div>
     `;
   }).join('');
+
+  if (typeof window !== 'undefined' && typeof window.evaluateWarpBreachIntrusions === 'function') {
+    window.evaluateWarpBreachIntrusions({ silentAudio: isRestoring });
+  }
+  if (typeof window !== 'undefined' && typeof window.mirrorSpawnerToCockpit === 'function') {
+    window.mirrorSpawnerToCockpit();
+  }
 }
 
 // --- SP, CP & RESUPPLY SHOP ---
@@ -1590,7 +1644,6 @@ function applyRemoteSharedState(remoteState) {
     currentZoneSpawns = remoteState.currentZoneSpawns;
     if (currentZoneSpawns.length > 0) {
       renderSpawnZones();
-      if (typeof evaluateWarpBreachIntrusions === 'function') evaluateWarpBreachIntrusions();
     }
   }
 
@@ -1983,7 +2036,14 @@ if (typeof window !== 'undefined') {
     window.transmitIntrusionPing = transmitIntrusionPing;
   }
 
-  function evaluateWarpBreachIntrusions() {
+  /**
+   * Evaluates active Spawn Zone cards for 6+ Big-Bracket Warp-Breach Intrusions,
+   * ensuring idempotent DOM alerts and routing tiered audio (`playWarpSiren` for [13+],
+   * `playUnboundBreachAlert` for [10–12]) strictly once per wave signature.
+   *
+   * @param {{ silentAudio?: boolean }} [options]
+   */
+  function evaluateWarpBreachIntrusions(options = {}) {
     if (typeof document === 'undefined') return;
     const container = document.getElementById('spawnResultsContainer');
     if (!container) return;
@@ -1994,6 +2054,7 @@ if (typeof window !== 'undefined') {
     const roomStr = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
     const roundStr = (document.getElementById('spawnerBtnRound')?.textContent || '1').trim();
     let anyIntrusionTriggered = false;
+    let hasApex13Intrusion = false;
     const currentWaveIntrusions = [];
 
     cards.forEach((card, idx) => {
@@ -2026,6 +2087,9 @@ if (typeof window !== 'undefined') {
 
       if (intrusionRoll >= 6) {
         anyIntrusionTriggered = true;
+        if ((zoneObj && zoneObj.bracketKey === '13+') || /13\+/.test(bracketLabel)) {
+          hasApex13Intrusion = true;
+        }
         currentWaveIntrusions.push(`${roomStr}_R${roundStr}_Z${zoneNum}_${waveToken}_${intrusionRoll}`);
         if (!card.querySelector('.warp-intrusion-alert')) {
           card.style.borderColor = 'var(--red)';
@@ -2061,8 +2125,14 @@ if (typeof window !== 'undefined') {
     const waveSignature = currentWaveIntrusions.sort().join('|');
     if (anyIntrusionTriggered && waveSignature && waveSignature !== lastWarpSirenSeedKey) {
       lastWarpSirenSeedKey = waveSignature;
-      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpSiren === 'function') {
-        window.VoxAudio.playWarpSiren();
+      if (!(options && options.silentAudio) && typeof window !== 'undefined' && window.VoxAudio) {
+        if (hasApex13Intrusion && typeof window.VoxAudio.playWarpSiren === 'function') {
+          window.VoxAudio.playWarpSiren();
+        } else if (!hasApex13Intrusion && typeof window.VoxAudio.playUnboundBreachAlert === 'function') {
+          window.VoxAudio.playUnboundBreachAlert();
+        } else if (typeof window.VoxAudio.playWarpSiren === 'function') {
+          window.VoxAudio.playWarpSiren();
+        }
       }
     }
   }

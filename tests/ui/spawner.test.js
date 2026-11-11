@@ -277,3 +277,60 @@ test('UI Boundary: pages/spawner.html failing Secondary #17 wipes all fortificat
   }
 });
 
+test('UI Boundary: pages/spawner.html keeps Unbound Adversary (.warp-intrusion-alert) constant across page switching to tactica.html and back', async () => {
+  const browser = await launchTestBrowser();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    await page.addInitScript(() => {
+      window.confirm = () => true;
+    });
+    await page.route('**/rest/v1/rpc/**', route => route.abort());
+
+    const spawnerUrl = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    const tacticaUrl = 'file:///' + path.resolve(ROOT_DIR, 'pages/tactica.html').replace(/\\/g, '/');
+    await page.goto(spawnerUrl, { waitUntil: 'load' });
+
+    await page.evaluate(() => {
+      localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+        seed: 'BREACH-SWITCH-99',
+        selectedModeVal: 'solo',
+        isSoloMode: true,
+        battleRound: 2,
+        hasActiveSession: true,
+        activeTab: 1,
+        currentZoneSpawns: [{
+          zone: 1,
+          waveId: 'ui_wave_1',
+          bracketKey: '10-12',
+          bracketLabel: 'Bracket [10–12]',
+          pts: '301–550 pts',
+          diceStr: '2D6 (5, 5)',
+          totalMod: 1,
+          finalRoll: 11,
+          intrusionRoll: 6,
+          units: ['1 Forgefiend']
+        }]
+      }));
+      window.restoreSessionState();
+      if (typeof window.mirrorSpawnerToCockpit === 'function') window.mirrorSpawnerToCockpit();
+    });
+
+    // Switch away to tactica.html and confirm tactica shows the intrusion alert
+    await page.goto(tacticaUrl, { waitUntil: 'load' });
+    const tacticaAlertVisible = await page.$eval('#tacticaIntrusionAlertBox', el => !el.classList.contains('hidden') && el.innerText.includes('WARP-BREACH INTRUSION'));
+    assert.equal(tacticaAlertVisible, true, 'tactica.html must display the active 6+ Unbound Adversary alert');
+
+    // Switch back to spawner.html and confirm BOTH #spawnResultsContainer AND #cockpitSpawnMirrorBox keep the popup!
+    await page.goto(spawnerUrl, { waitUntil: 'load' });
+    await page.waitForTimeout(200);
+    const spawnerHasAlert = await page.$eval('#spawnResultsContainer', el => el.innerHTML.includes('warp-intrusion-alert'));
+    const cockpitHasAlert = await page.$eval('#cockpitSpawnMirrorBox', el => el.innerHTML.includes('warp-intrusion-alert'));
+    assert.equal(spawnerHasAlert, true, 'spawner.html #spawnResultsContainer must retain .warp-intrusion-alert after switching pages');
+    assert.equal(cockpitHasAlert, true, 'spawner.html #cockpitSpawnMirrorBox must retain .warp-intrusion-alert after switching pages');
+  } finally {
+    await browser.close();
+  }
+});
+
