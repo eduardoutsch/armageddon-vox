@@ -932,6 +932,40 @@ test('resolveThreadUrls: resolves gammaUrl when GAMMA_THREAD_URL is configured',
   assert.equal(urls.gammaThreadUrl, 'https://gemini.google.com/app/gamma');
 });
 
+test('resolveThreadUrls: picks up all non-Tactica *_THREAD_URL entries and strictly excludes TACTICA_THREAD_URL', () => {
+  const urls = resolveThreadUrls({
+    SUPABASE_URL: 'https://dsfvhjjalexqpbzqoaqb.supabase.co',
+    TACTICA_THREAD_URL: 'https://gemini.google.com/app/tactica-only-thread',
+    ALPHA_THREAD_URL: 'https://gemini.google.com/app/32b1c53a813d15a3',
+    BETA_THREAD_URL: 'https://gemini.google.com/app/0c0b15a075182321',
+    GAMMA_THREAD_URL: 'https://gemini.google.com/app/793dd9d2bd84ad35',
+    DELTA_THREAD_URL: 'https://gemini.google.com/app/delta999'
+  });
+
+  assert.equal(urls.alphaThreadUrl, 'https://gemini.google.com/app/32b1c53a813d15a3');
+  assert.equal(urls.betaThreadUrl, 'https://gemini.google.com/app/0c0b15a075182321');
+  assert.equal(urls.gammaThreadUrl, 'https://gemini.google.com/app/793dd9d2bd84ad35');
+  assert.deepEqual(urls.allVoxThreadUrls, {
+    alpha: 'https://gemini.google.com/app/32b1c53a813d15a3',
+    beta: 'https://gemini.google.com/app/0c0b15a075182321',
+    gamma: 'https://gemini.google.com/app/793dd9d2bd84ad35',
+    delta: 'https://gemini.google.com/app/delta999'
+  });
+  assert.equal(Object.values(urls.allVoxThreadUrls).includes('https://gemini.google.com/app/tactica-only-thread'), false);
+  assert.equal(urls.extraThreadUrls.length, 1);
+  assert.equal(urls.extraThreadUrls[0].channel, 'delta');
+  assert.equal(urls.extraThreadUrls[0].url, 'https://gemini.google.com/app/delta999');
+
+  // Even if someone accidentally points a Vox channel to the exact TACTICA_THREAD_URL, Vox excludes it
+  const accidentalDup = resolveThreadUrls({
+    TACTICA_THREAD_URL: 'https://gemini.google.com/app/tactica-only-thread',
+    ALPHA_THREAD_URL: 'https://gemini.google.com/app/32b1c53a813d15a3',
+    BETA_THREAD_URL: 'https://gemini.google.com/app/0c0b15a075182321',
+    GAMMA_THREAD_URL: 'https://gemini.google.com/app/tactica-only-thread'
+  });
+  assert.equal(accidentalDup.gammaThreadUrl, '', 'Must never allow Vox Autopilot to claim TACTICA_THREAD_URL');
+});
+
 test('processSingleMessage: channel=gamma logs GAMMA channelTag, guards against drift using GAMMA_THREAD_URL, and uses Fane-Node Vôl-09 self-heal recovery prompt on refusal', async () => {
   const logged = [];
   const gotoUrls = [];
