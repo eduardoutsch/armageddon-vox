@@ -159,3 +159,58 @@ test('resolveHordeAttackModifiers: resolves BS improvements, conditional faction
   assert.ok(dgMelee.keywords.includes('CLEAVE 1'));
 });
 
+test('resolveHordeDefenseProfile: resolves Necron/Knight FNP, Misery #5 Invuln, Misery #27, Cover, and Spawn Zone Stealth/Hidden', () => {
+  // 1. Necron Warriors (non-CHARACTER INFANTRY) in Spawn Zone vs ranged AP -1 attack with Misery #5 & #27
+  const necronDef = resolveHordeDefenseProfile(
+    { save: 4, invuln: null, woundsPerModel: 1, keywords: ['INFANTRY'] },
+    { type: 'ranged', strength: 5, ap: -1, damage: 1, distanceInches: 18, keywords: [] },
+    { factionName: 'Necrons', activeMiseryIds: [5, 27] },
+    { inSpawnZone: true }
+  );
+  assert.equal(necronDef.fnp, 5, 'Necron non-Character Infantry must get 5+ FNP');
+  assert.equal(necronDef.effectiveAttackerStrength, 4, 'Misery #27 subtracts 1 Strength');
+  assert.equal(necronDef.effectiveApPenetration, 0, 'Misery #27 worsens AP -1 to AP 0');
+  assert.equal(necronDef.hasCover, true, 'Spawn Zone grants Benefit of Cover');
+  assert.equal(necronDef.isHidden, true, 'Spawn Zone grants Hidden');
+  assert.equal(necronDef.maxVisibleRangeInches, 15, '11th Ed Hidden caps visibility at 15"');
+  assert.equal(necronDef.effectiveInvuln, 4, 'Misery #5 grants 4+ invuln');
+  assert.equal(necronDef.saveTarget, 3, '4+ Save with Cover against effective AP 0 improves to 3+');
+
+  // 2. Necron Overlord (CHARACTER) with existing 4+ Invuln under Misery #5 -> 3+ Invuln, no 5+ FNP
+  const overlordDef = resolveHordeDefenseProfile(
+    { save: 2, invuln: 4, woundsPerModel: 6, keywords: ['INFANTRY', 'CHARACTER'] },
+    { type: 'melee', strength: 8, ap: -3, damage: 2, keywords: [] },
+    { factionName: 'Necrons', activeMiseryIds: [5] }
+  );
+  assert.equal(overlordDef.fnp, null, 'Necron CHARACTER does not gain 5+ FNP');
+  assert.equal(overlordDef.effectiveInvuln, 3, 'Existing 4+ Invuln improves to 3+ under Misery #5');
+  assert.equal(overlordDef.saveTarget, 3);
+
+  // 3. 3+ Save vs AP 0 with Cover stays 3+ (Core Rule), Chaos Daemons >12" imposes -1 Hit
+  const daemonDef = resolveHordeDefenseProfile(
+    { save: 3, invuln: 5, woundsPerModel: 2, keywords: ['LEGIONES DAEMONICA', 'INFANTRY'] },
+    { type: 'ranged', strength: 4, ap: 0, damage: 1, distanceInches: 14, keywords: [] },
+    { factionName: 'Chaos Daemons', activeMiseryIds: [] },
+    { hasCover: true }
+  );
+  assert.equal(daemonDef.saveTarget, 3, '3+ Save cannot improve to 2+ from Cover against AP 0');
+  assert.equal(daemonDef.incomingHitMod, -1, 'Chaos Daemons >12" away impose -1 to ranged Hit');
+});
+
+test('resolveAutoDefenderRolls: executes saves, multi-damage FNP shrugs, Misery #30 shoot-on-death, and GSC 5+ respawn', () => {
+  const profile = resolveHordeDefenseProfile(
+    { save: 4, invuln: null, woundsPerModel: 2, keywords: ['INFANTRY'] },
+    { type: 'ranged', strength: 5, ap: -1, damage: 2, keywords: ['IGNORES COVER'] },
+    { factionName: 'Necrons', activeMiseryIds: [30] }
+  );
+  // Save needed: 5+ (4+ with AP -1, no cover). FNP: 5+. Wounds per model: 2.
+  const outcome = resolveAutoDefenderRolls(profile, {
+    numWounds: 3,
+    damagePerWound: 2,
+    startingModels: 2,
+    currentModelRemainingWounds: 2,
+    preRolledSaves: [5, 2, 3],       // 1 saved (5+), 2 failed (2, 3) -> 2 unsaved wounds x 2 dmg = 4 dmg points
+    preRolledFnps: [5, 2, 6, 1],     // 1st wound: [5(shrug), 2(take)] -> 1 dmg; 2nd wound: [6(shrug), 1(take)] -> 1 dmg => 1 model slain!
+    preRolledOnDeath: [4]            // 4+ triggers Misery #30 shoot/fight on death!
+  });
+
