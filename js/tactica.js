@@ -433,3 +433,67 @@
     return plan;
   }
 
+  /**
+   * 2. Computes deterministic Horde Movement & Advance vectors with one-click Pre-Overwatch LOS Revert buttons.
+   */
+  async function triggerAutopilotMovement() {
+    clientState.phase = 'HORDE_MOVEMENT';
+    let plans = [];
+    try {
+      const res = await daemonRequest('/autopilot/plan-movement', 'POST', {});
+      daemonOnline = true;
+      plans = res.plans || [];
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      const localRes = planHordeMovementPhase(clientState.boardTelemetry, clientState);
+      plans = localRes.plans || [];
+      localChronicle.push(formatChronicleEntry({
+        type: 'HORDE_MOVE',
+        summary: `Moved ${plans.length} Horde squad(s) — awaiting Pre-Overwatch LOS check.`
+      }, clientState));
+    }
+    clientState.lastMovementPlans = plans;
+
+    if (plans.length === 0) {
+      setAutopilotHtml('<span style="color:var(--muted);">No eligible Horde movement vectors found on board.</span>');
+    } else {
+      setAutopilotHtml(plans.map((p, idx) => {
+        if (p.status === 'ENGAGED_HOLD') {
+          return `<div style="padding:4px 0;"><strong>${p.unitName}</strong> — Engaged (&le;2.0"): Holding melee contact.</div>`;
+        }
+        const advTag = p.advanced ? ' <span class="badge red">ADVANCED</span>' : '';
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div>🏃 <strong>${p.unitName}</strong> &rarr; ${p.goalName} (${p.moveBudgetInches}" to X:${p.targetX}, Z:${p.targetZ})${advTag}</div>
+            <button type="button" class="btn-ghost btn-sm" onclick="revertAutopilotSquadMove(${idx})">↩️ Revert Move (No LOS)</button>
+          </div>
+        `;
+      }).join(''));
+    }
+    renderTacticaConsole();
+    return plans;
+  }
+
+  /**
+   * Reverts a planned Horde squad move back to its exact `(x, y, z)` origin before locking Movement for Overwatch.
+   */
+  async function revertAutopilotSquadMove(idx) {
+    const plans = clientState.lastMovementPlans || [];
+    const targetPlan = plans[idx];
+    if (!targetPlan) return null;
+    try {
+      const res = await daemonRequest('/autopilot/revert-move', 'POST', { squadKey: targetPlan.squadKey, planIndex: idx });
+      daemonOnline = true;
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      buildMoveRevertCommand(targetPlan);
+      localChronicle.push(formatChronicleEntry({
+        type: 'MOVE_REVERT',
+        summary: `Reverted ${targetPlan.unitName} to pre-move origin (No LOS).`
+      }, clientState));
+    }
+    setAutopilotHtml(`↩️ Reverted <strong>${targetPlan.unitName}</strong> to pre-move origin (No LOS).`);
+    renderTacticaConsole();
+    return targetPlan;
+  }
+
