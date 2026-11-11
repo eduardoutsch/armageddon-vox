@@ -23,6 +23,53 @@ var lastRolledItem = {
   scar: null
 };
 
+function _getForgeEl(id) {
+  return typeof document !== 'undefined' ? document.getElementById(id) : null;
+}
+
+function _getVoxAudio() {
+  return (typeof window !== 'undefined' && window.VoxAudio) ? window.VoxAudio : null;
+}
+
+function _scheduleForgeReveal(callback, delayMs) {
+  if (typeof setTimeout !== 'function') {
+    callback();
+    return;
+  }
+  const handle = setTimeout(callback, delayMs);
+  if (handle && typeof handle.unref === 'function') handle.unref();
+}
+
+function _resolveForgeCatalogs() {
+  const win = typeof window !== 'undefined' ? window : {};
+  return {
+    allianceTrees: (typeof ALLIANCE_TREES !== 'undefined' ? ALLIANCE_TREES : win.ALLIANCE_TREES) || _forgeData.ALLIANCE_TREES || {},
+    battleTraits: (typeof BATTLE_TRAIT_TABLES !== 'undefined' ? BATTLE_TRAIT_TABLES : win.BATTLE_TRAIT_TABLES) || _forgeData.BATTLE_TRAIT_TABLES || {},
+    astraTraits: (typeof ASTRA_MILITARUM_TRAIT_TABLES !== 'undefined' ? ASTRA_MILITARUM_TRAIT_TABLES : win.ASTRA_MILITARUM_TRAIT_TABLES) || _forgeData.ASTRA_MILITARUM_TRAIT_TABLES || {},
+    necronTraits: (typeof NECRONS_TRAIT_TABLES !== 'undefined' ? NECRONS_TRAIT_TABLES : win.NECRONS_TRAIT_TABLES) || _forgeData.NECRONS_TRAIT_TABLES || {},
+    votannTraits: (typeof VOTANN_TRAIT_TABLES !== 'undefined' ? VOTANN_TRAIT_TABLES : win.VOTANN_TRAIT_TABLES) || _forgeData.VOTANN_TRAIT_TABLES || {},
+    weaponMods: (typeof WEAPON_MOD_TABLE !== 'undefined' ? WEAPON_MOD_TABLE : win.WEAPON_MOD_TABLE) || _forgeData.WEAPON_MOD_TABLE || [],
+    relicVault: (typeof CRUSADE_RELIC_VAULT !== 'undefined' ? CRUSADE_RELIC_VAULT : win.CRUSADE_RELIC_VAULT) || _forgeData.CRUSADE_RELIC_VAULT || {},
+    astraRelics: (typeof ASTRA_MILITARUM_RELIC_VAULT !== 'undefined' ? ASTRA_MILITARUM_RELIC_VAULT : win.ASTRA_MILITARUM_RELIC_VAULT) || _forgeData.ASTRA_MILITARUM_RELIC_VAULT || {},
+    necronRelics: (typeof NECRONS_RELIC_VAULT !== 'undefined' ? NECRONS_RELIC_VAULT : win.NECRONS_RELIC_VAULT) || _forgeData.NECRONS_RELIC_VAULT || {},
+    votannRelics: (typeof VOTANN_RELIC_VAULT !== 'undefined' ? VOTANN_RELIC_VAULT : win.VOTANN_RELIC_VAULT) || _forgeData.VOTANN_RELIC_VAULT || {},
+    battleScars: (typeof BATTLE_SCAR_TABLE !== 'undefined' ? BATTLE_SCAR_TABLE : win.BATTLE_SCAR_TABLE) || _forgeData.BATTLE_SCAR_TABLE || [],
+    necronScars: (typeof NECRON_BATTLE_SCAR_TABLE !== 'undefined' ? NECRON_BATTLE_SCAR_TABLE : win.NECRON_BATTLE_SCAR_TABLE) || _forgeData.NECRON_BATTLE_SCAR_TABLE || [],
+    votannScars: (typeof VOTANN_BATTLE_SCAR_TABLE !== 'undefined' ? VOTANN_BATTLE_SCAR_TABLE : win.VOTANN_BATTLE_SCAR_TABLE) || _forgeData.VOTANN_BATTLE_SCAR_TABLE || [],
+    logisticsCategories: (typeof LOGISTICS_CATEGORIES !== 'undefined' ? LOGISTICS_CATEGORIES : win.LOGISTICS_CATEGORIES) || _forgeData.LOGISTICS_CATEGORIES || [],
+    commendationsVault: (typeof ASTRA_COMMENDATIONS_VAULT !== 'undefined' ? ASTRA_COMMENDATIONS_VAULT : win.ASTRA_COMMENDATIONS_VAULT) || _forgeData.ASTRA_COMMENDATIONS_VAULT || []
+  };
+}
+
+function _syncPostForgeChange() {
+  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
+  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+}
+
+/**
+ * Declaratively switches active Crusade tabs using `CRUSADE_TAB_DESCRIPTORS`
+ * and locks faction-specific tabs to their dedicated CSS palette.
+ */
 function switchCrusadeTab(which, persist = true) {
   crusadeState.activeTab = which;
   const tabBoard = document.getElementById('cruTabBoard');
