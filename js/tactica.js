@@ -497,3 +497,60 @@
     return targetPlan;
   }
 
+  /**
+   * 3. Computes Mode 3 Keyword-Driven Shooting Target Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`) & 11th Ed Hidden caps.
+   */
+  async function triggerAutopilotShooting() {
+    clientState.phase = 'HORDE_SHOOTING';
+    let assignments = [];
+    try {
+      const res = await daemonRequest('/autopilot/select-shooting', 'POST', {});
+      daemonOnline = true;
+      assignments = res.assignments || [];
+    } catch (e) {
+      assignments = selectHordeShootingTargets(clientState.boardTelemetry, clientState);
+    }
+    clientState.lastShootingAssignments = assignments;
+
+    if (assignments.length === 0) {
+      setAutopilotHtml('<span style="color:var(--muted);">No visible Player targets within Horde ranged weapon envelopes.</span>');
+    } else {
+      setAutopilotHtml(assignments.map((a, idx) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div>🎯 <strong>${a.attackerName}</strong> [${a.weapon.name}] &rarr; <strong>${a.targetName}</strong> (${a.distanceInches}")</div>
+          <button type="button" class="btn-red btn-sm" onclick="fireAutopilotWeaponOnMat(${idx})">🎲 Roll Attack on LCT Mat</button>
+        </div>
+      `).join(''));
+    }
+    renderTacticaConsole();
+    return assignments;
+  }
+
+  /**
+   * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`).
+   */
+  async function fireAutopilotWeaponOnMat(idx) {
+    const asgn = (clientState.lastShootingAssignments || [])[idx];
+    if (!asgn) return null;
+    const units = clientState.boardTelemetry?.units || [];
+    const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
+    const payload = {
+      attackerName: asgn.attackerName,
+      targetName: asgn.targetName,
+      attacker,
+      target: asgn.target || { toughness: 4 },
+      weapon: asgn.weapon
+    };
+    try {
+      const res = await daemonRequest('/combat/attack-request', 'POST', payload);
+      daemonOnline = true;
+      clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      const seq = createHordeAttackRollSequence(payload, clientState);
+      clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
+    }
+    renderTacticaConsole();
+    return clientState.pendingDiceSequence;
+  }
+
