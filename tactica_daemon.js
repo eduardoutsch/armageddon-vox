@@ -158,3 +158,61 @@ function createTacticaDaemon(options = {}) {
       return res.end();
     }
 
+    const urlPath = (req.url || '/').split('?')[0];
+
+    if (req.method === 'GET' && urlPath === '/state') {
+      return sendJson(res, 200, {
+        ok: true,
+        state: liveState,
+        chronicle: readChronicleFromDisk(),
+        ttsQueueLength: ttsCommandQueue.length
+      });
+    }
+
+    if (req.method === 'GET' && urlPath === '/tts/poll') {
+      if (ttsCommandQueue.length === 0) {
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        return res.end('IDLE');
+      }
+      return sendJson(res, 200, ttsCommandQueue.shift());
+    }
+
+    if (req.method === 'POST' && urlPath === '/session/sync') {
+      const body = await readJsonBody(req);
+      if (body.roomCode !== undefined) liveState.roomCode = String(body.roomCode).trim().toUpperCase();
+      if (body.battleRound !== undefined) liveState.battleRound = Number(body.battleRound);
+      if (body.phase !== undefined) liveState.phase = body.phase;
+      if (body.factionName !== undefined) liveState.factionName = body.factionName;
+      if (body.playerCp !== undefined) liveState.playerCp = Number(body.playerCp);
+      if (body.playerSp !== undefined) liveState.playerSp = Number(body.playerSp);
+      if (Array.isArray(body.activeMiseryIds)) liveState.activeMiseryIds = body.activeMiseryIds;
+      if (Array.isArray(body.activeFortifications)) liveState.activeFortifications = body.activeFortifications;
+      if (Array.isArray(body.zoneSpawns)) liveState.zoneSpawns = body.zoneSpawns;
+      savePersistedState();
+      return sendJson(res, 200, { ok: true, state: liveState });
+    }
+
+    if (req.method === 'POST' && urlPath === '/chronicle/append') {
+      const body = await readJsonBody(req);
+      if (body.phase) liveState.phase = body.phase;
+      const entry = appendEvent(body);
+      if (body.reactionTrigger) {
+        const win = detectPlayerReactionWindow(body.reactionTrigger, liveState);
+        liveState.pendingReactionWindow = win.open ? win : null;
+        savePersistedState();
+      }
+      return sendJson(res, 200, { ok: true, entry, pendingReactionWindow: liveState.pendingReactionWindow });
+    }
+
+    if (req.method === 'POST' && urlPath === '/reaction/resolve') {
+      const body = await readJsonBody(req);
+      const cpSpent = Math.max(0, Number(body.cpSpent) || 0);
+      liveState.playerCp = Math.max(0, (Number(liveState.playerCp) || 0) - cpSpent);
+      liveState.pendingReactionWindow = null;
+      const entry = appendEvent({
+        type: 'REACTION',
+        summary: body.summary || `Player resolved reaction: ${body.choice || 'PASS'} (-${cpSpent} CP).`
+      });
+      return sendJson(res, 200, { ok: true, state: liveState, entry });
+    }
+
