@@ -436,3 +436,77 @@ function createTacticaDaemon(options = {}) {
       };
       let mode = 'offline';
 
+      if (fetchImpl) {
+        const parts = [{ text: prompt }];
+        if (body.imageBase64) {
+          const cleanB64 = String(body.imageBase64).replace(/^data:image\/\w+;base64,/, '');
+          parts.push({ inline_data: { mime_type: body.mimeType || 'image/jpeg', data: cleanB64 } });
+        }
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const gRes = await fetchImpl(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] })
+        });
+        if (gRes && gRes.ok) {
+          const gJson = await gRes.json();
+          const rawText = gJson?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          verdict = parseOverwatchVerdict(rawText);
+          mode = 'gemini-vision';
+        }
+      }
+
+      if (verdict.blockedPairs.length > 0) {
+        liveState.losBlockedPairs = Array.from(new Set([...(liveState.losBlockedPairs || []), ...verdict.blockedPairs]));
+      }
+
+      let revertedCommand = null;
+      if (verdict.losBlocked && verdict.revertSquadKey && body.autoRevert !== false) {
+        const targetPlan = (liveState.lastMovementPlans || []).find(p => p.squadKey === verdict.revertSquadKey);
+        const revCmd = buildMoveRevertCommand(targetPlan);
+        if (revCmd) {
+          cmdCounter += 1;
+          revertedCommand = { id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...revCmd };
+          ttsCommandQueue.push(revertedCommand);
+        }
+      }
+
+      const entry = appendEvent({
+        type: 'OVERWATCH_LOS',
+        summary: `${verdict.spokenReply}${revertedCommand ? ` [Auto-Reverted ${verdict.revertSquadKey}]` : ''}`
+      });
+      return sendJson(res, 200, { ok: true, mode, verdict, revertedCommand, entry });
+    }
+
+    if (req.method === 'POST' && urlPath === '/chronicle/compile') {
+      const body = await readJsonBody(req);
+      const entries = readChronicleFromDisk();
+      const report = compileTacticaPostMatchReport(liveState, entries, body);
+      return sendJson(res, 200, { ok: true, report, entryCount: entries.length });
+    }
+
+    return sendJson(res, 404, { ok: false, error: 'Not found' });
+  });
+
+  return {
+    server,
+    start(port = DEFAULT_PORT) {
+      return new Promise((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(port, '127.0.0.1', () => resolve(server.address().port));
+      });
+    },
+    stop() {
+      return new Promise((resolve) => server.close(() => resolve()));
+    }
+  };
+}
+
+if (require.main === module) {
+  createTacticaDaemon().start(DEFAULT_PORT).then((port) => {
+    console.log(`+++ LCT TACTICA DAEMON & SCRIBE ONLINE [http://127.0.0.1:${port}] +++`);
+  });
+}
+
+module.exports = { createTacticaDaemon };
+
