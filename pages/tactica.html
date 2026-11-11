@@ -63,3 +63,69 @@
         <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_FIGHT', 'AFTER_HORDE_UNIT_FOUGHT')">⏸️ Counter-Offensive</button>
       </div>
 
+      <div id="tacticaReactionBanner" class="card hidden" style="margin-top:10px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.1);"></div>
+    </div>
+
+    <!-- 1B. LIVE LCT ORBITAL AUSPEX TELEMETRY -->
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+        <h3 style="margin:0;">🛰️ LCT Orbital Auspex Telemetry (Exact Edge-to-Edge Inches)</h3>
+        <button type="button" class="btn-ghost btn-sm" onclick="requestTtsBoardScan()">📡 Request LCT Board Scan</button>
+      </div>
+      <div id="tacticaTelemetryBox" style="max-height:200px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border);"></div>
+    </div>
+
+    <!-- 1C. DETERMINISTIC HORDE AUTOPILOT DECK -->
+    <div class="card" style="margin-bottom:14px;">
+      <h3>🤖 Horde Turn Autopilot (Shelf Cloning • Pre-LOS Revert • Keyword Priority • 11th Ed Consolidation)</h3>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="btn-green btn-sm" onclick="triggerAutopilotSpawnWaves()">🧟 1. Drop Wave Spawns</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotMovement()">🏃 2. Move Horde (Pre-LOS Preview)</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">✅ Lock Moves &amp; Open Overwatch</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotShooting()">🎯 3. Compute Shooting Priority</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotCharges()">⚡ 4. Declare Charges (&le;12")</button>
+        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotConsolidate()">⚔️ 5. 3" Consolidate</button>
+      </div>
+      <div id="tacticaAutopilotBox" style="background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); font-size:0.84rem; color:var(--text);">
+        Ready. Sync Mode 1 Session &amp; scan LCT board to pilot Horde waves automatically.
+      </div>
+    </div>
+
+    <!-- 1D. LIVE SCREEN & MICROPHONE OVERWATCH REFEREE + 6+ INTRUSION WATCHER -->
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+        <h3 style="margin:0;">🎙️ Live Screen &amp; Mic Overwatch (3D Ruin LOS • Hands-Free Voice • 6+ Intrusions)</h3>
+        <span id="overwatchScreenStatus" style="font-size:0.8rem; color:var(--muted);">📷 Screen Share: Disconnected</span>
+      </div>
+      <div id="tacticaIntrusionAlertBox" class="card hidden" style="margin-bottom:10px; border-left:4px solid var(--red); background:rgba(255,71,87,0.12);"></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <button type="button" class="btn-green btn-sm" onclick="toggleTtsScreenCapture()">🖥️ Share TTS Window</button>
+        <button type="button" class="btn-red btn-sm" onclick="startPushToTalkMic()">🎙️ Push-to-Talk Mic</button>
+        <button type="button" id="btnToggleOverwatchTts" class="btn-ghost btn-sm" onclick="toggleOverwatchVoiceOutput()">🔊 Voice Readout: ON</button>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <input id="overwatchQueryInput" placeholder="Voice/text command or 3D LOS check (e.g. 'Can Screamer-Killer see Krieg behind central ruin?')" style="flex:1; padding:8px; background:#0b0d13;">
+        <button type="button" class="btn-ghost btn-sm" onclick="dispatchSpokenOrTypedCommand(document.getElementById('overwatchQueryInput').value)">👁️ Verify LOS / Run</button>
+      </div>
+      <div id="overwatchVerdictBox" style="margin-top:8px; font-size:0.84rem; color:var(--text);"></div>
+    </div>
+
+    <!-- 2. HORDE AUTO-DEFENDER (QUEUES SAVES & FNP ON LCT TTS DICE MAT) -->
+    <div class="card" style="margin-bottom:14px;">
+      <h3>🛡️ Horde Auto-Defender (Queues Saves, FNP &amp; On-Death onto LCT Dice Mat)</h3>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-bottom:10px;">
+        <input id="defUnitName" placeholder="Unit" value="Necron Warriors" style="padding:8px; background:#0b0d13;">
+        <input id="defSaveInput" type="number" placeholder="Save (4)" value="4" style="padding:8px; background:#0b0d13;">
+        <input id="defInvulnInput" type="number" placeholder="Invuln (0=None)" value="0" style="padding:8px; background:#0b0d13;">
+        <input id="defWpmInput" type="number" placeholder="Wounds/Model" value="1" style="padding:8px; background:#0b0d13;">
+        <input id="defKeywordsInput" placeholder="Keywords" value="INFANTRY" style="padding:8px; background:#0b0d13;">
+        <input id="defModelsInput" type="number" placeholder="Models Alive" value="10" style="padding:8px; background:#0b0d13;">
+        <input id="defWoundsCountInput" type="number" placeholder="Incoming Wounds" value="4" style="padding:8px; background:#0b0d13;">
+        <input id="defApInput" type="number" placeholder="AP (e.g. -1)" value="-1" style="padding:8px; background:#0b0d13;">
+        <input id="defDmgInput" type="number" placeholder="Damage" value="1" style="padding:8px; background:#0b0d13;">
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <label style="display:inline-flex; align-items:center; gap:6px;"><input type="checkbox" id="defInSpawnCheck"> Unit in Spawn Zone (Cover + Hidden)</label>
+        <button type="button" class="btn-red" onclick="queueConsoleAutoDefender()">🎲 Queue Roll on LCT TTS Dice Mat</button>
+      </div>
+
