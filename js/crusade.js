@@ -285,81 +285,43 @@ function resetTombAwakeningTab() {
 // =============================================================================
 function ensureVotannState() {
   if (!crusadeState.votann) {
-    crusadeState.votann = {
-      rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0,
-      rare: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 },
-      expBacking: 'Lean Operation (Free // Max 5 Battles)',
-      expGoal: 'Farstryd Exploration (Prospecting 2+ XP in 3+ Battles → +3 XP Character & 1 Free Mining Outpost)',
-      expContract: 'Mining — Extraction: Minerals (60+ Raw Minerals → +1 Rare Raw Mineral)',
-      expBattles: 0, expWins: 0, expeditionsCompleted: 0,
-      goalProgress: 0,
-      expTotals: { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 },
-      assets: {}
-    };
-  }
-  if (crusadeState.votann.goalProgress === undefined) {
-    crusadeState.votann.goalProgress = 0;
-  }
-  if (!crusadeState.votann.expTotals) {
-    crusadeState.votann.expTotals = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+    crusadeState.votann = _matrixCore.createInitialVotannState();
+  } else {
+    Object.assign(crusadeState.votann, _matrixCore.createInitialVotannState(crusadeState.votann));
   }
   return crusadeState.votann;
 }
 
 function adjVotannRes(key, delta) {
   const v = ensureVotannState();
-  v[key] = Math.max(0, (v[key] || 0) + delta);
-  if (delta > 0) {
-    v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
-    v.expTotals[key] = (v.expTotals[key] || 0) + delta;
-  }
+  Object.assign(v, _matrixCore.adjustVotannResource(v, key, delta).votann);
   renderVotannTab();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  updateMasterDossierPreview();
+  saveCrusadeState();
 }
 
 function adjVotannRare(key, delta) {
   const v = ensureVotannState();
-  if (!v.rare) v.rare = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0 };
-  v.rare[key] = Math.max(0, (v.rare[key] || 0) + delta);
-  if (delta > 0) {
-    v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
-    v.expTotals.rare = (v.expTotals.rare || 0) + delta;
-  }
+  Object.assign(v, _matrixCore.adjustVotannRareResource(v, key, delta).votann);
   renderVotannTab();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  updateMasterDossierPreview();
+  saveCrusadeState();
 }
 
 function rollVotannPostBattleHarvest() {
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playDiceClatter();
+  _getMatrixVox()?.playDiceClatter?.();
   const v = ensureVotannState();
-  const mult = parseFloat((typeof document !== 'undefined' ? document.getElementById('votHarvestSizeSelect')?.value : '') || '1');
-  const typeRoll = Math.floor(Math.random() * 6) + 1;
-  const d6Amt = Math.floor(Math.random() * 6) + 1 + (mult === 2 ? Math.floor(Math.random() * 6) + 1 : 0);
-  let amt = mult === 0.5 ? d6Amt * 5 : d6Amt * 10;
-  const map = { 1: ['rawMinerals', 'Raw Minerals'], 2: ['biomatter', 'Biomatter'], 3: ['energySources', 'Energy Sources'], 4: ['galacticIntel', 'Galactic Intel'] };
-  const picked = map[typeRoll] || ['rawMinerals', 'Choice Resource (Defaulted to Raw Minerals)'];
-  if (picked[0] === 'rawMinerals') {
-    ['outpost1', 'outpost2', 'outpost3'].forEach(k => {
-      if (v.assets[k] === 'Active') amt += 20;
-      if (v.assets[k] === 'Upgraded') amt += 30;
-    });
-  }
-  v[picked[0]] = (v[picked[0]] || 0) + amt;
-  v.expTotals = v.expTotals || { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
-  v.expTotals[picked[0]] = (v.expTotals[picked[0]] || 0) + amt;
+  const mult = parseFloat(_getMatrixEl('votHarvestSizeSelect')?.value || '1');
+  const res = _matrixCore.calculateVotannHarvest(v, mult);
+  Object.assign(v, res.votann);
 
-  let bioBonus = '';
-  if (picked[0] !== 'biomatter' && (v.assets.biorecyc === 'Active' || v.assets.biorecyc === 'Upgraded')) {
-    v.biomatter = (v.biomatter || 0) + 20;
-    v.expTotals.biomatter = (v.expTotals.biomatter || 0) + 20;
-    bioBonus = ' (+20 Biomatter from Biorecyc Fabricator)';
+  const bioSuffix = res.bioBonus > 0 ? ` (+${res.bioBonus} Biomatter from Biorecyc Fabricator)` : '';
+  const notice = _getMatrixEl('votHarvestNotice');
+  if (notice) {
+    notice.innerHTML = `<strong style="color:var(--gold);">Rolled D6=${res.resRoll}: +${res.finalGain} ${res.targetLabel}${bioSuffix}!</strong>`;
   }
-  const notice = typeof document !== 'undefined' ? document.getElementById('votHarvestNotice') : null;
-  if (notice) notice.innerHTML = `<strong style="color:var(--gold);">Rolled D6=${typeRoll}: +${amt} ${picked[1]}${bioBonus}!</strong>`;
   renderVotannTab();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  saveCrusadeState();
 }
 
 function rollVotannRareResourceCheck() {
