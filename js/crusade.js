@@ -452,71 +452,58 @@ function buildVotannSummaryLine() {
 }
 
 function compileVotannDispatch(input = {}) {
-  const v = input.votann || ensureVotannState();
-  const activeAssets = Object.entries(v.assets || {})
-    .filter(([, st]) => st === 'Active' || st === 'Upgraded')
-    .map(([k, st]) => `${k} (${st})`).join(', ') || 'None yet';
-  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('votannDispatchNotes')?.value) || '').trim();
-  const lines = [
-    `+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++`,
-    `• REPORTING WARLORD: KÂHL HÂRKYN // THE LEDGER OF EMBERS (1,200 PTS)`,
-    `• EXPEDITION CHARTER: ${v.expBacking} | Progress: ${v.expBattles} Battles (${v.expWins} Wins)`,
-    `• EXPEDITION GOAL: ${v.expGoal}`,
-    `• GOAL CONDITION TRACKER: ${v.goalProgress || 0} / 3`,
-    `• GUILD CONTRACT: ${v.expContract}`,
-    `• EXPEDITION TOTAL (CURRENT RUN): Minerals: ${v.expTotals?.rawMinerals || 0} | Biomatter: ${v.expTotals?.biomatter || 0} | Energy: ${v.expTotals?.energySources || 0} | Intel: ${v.expTotals?.galacticIntel || 0}`,
-    `• FUNDAMENTAL VAULT: Raw Minerals: ${v.rawMinerals} | Biomatter: ${v.biomatter} | Energy Sources: ${v.energySources} | Galactic Intel: ${v.galacticIntel}`,
-    `• RARE RESOURCE VAULT: Minerals: ${v.rare?.rawMinerals || 0} | Biomatter: ${v.rare?.biomatter || 0} | Energy: ${v.rare?.energySources || 0} | Intel: ${v.rare?.galacticIntel || 0}`,
-    `• ACTIVE KINDRED ASSETS: ${activeAssets}`
-  ];
-  if (notes) lines.push(`• CLAIM-RECKONER FIELD LOG: "${notes}"`);
-  lines.push(
-    `------------------------------------------------`,
-    `DIRECTIVE FOR FANE-NODE VÔL-09 ("THE DEAF EAR"): Inscribe this Black-Ledger resource tally and Expedition progress into the deep-core Ancestor Vault without alerting Geostationary Zenith-09!`
-  );
-  return lines.join('\n');
+  const hasExplicitNotes = Object.prototype.hasOwnProperty.call(input, 'notes');
+  return _matrixCore.compileVotannDispatch({
+    votann: input.votann || ensureVotannState(),
+    notes: hasExplicitNotes ? input.notes : (_getMatrixEl('votannDispatchNotes')?.value || '')
+  });
 }
 
 function updateVotannDispatchPreview() {
-  const box = document.getElementById('votannDispatchPreviewBox');
+  const box = _getMatrixEl('votannDispatchPreviewBox');
   if (box) box.textContent = compileVotannDispatch();
 }
 
 function transmitVotannDispatch() {
   const payload = compileVotannDispatch();
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-    window.VoxAudio.transmitToVox('gamma', payload);
-  }
+  _getMatrixVox()?.transmitToVox?.('gamma', payload);
 }
 
-/**
- * Resets all Crusade Master Battle Dossier form fields, checkboxes, and attached
- * unit progression rolls back to their clean default state.
- */
+// =============================================================================
+// TAB 2: MASTER POST-BATTLE DOSSIER, HORDE TELEMETRY & PERSISTENCE ADAPTERS
+// =============================================================================
 function resetMasterDossierForm() {
-  const vals = {
-    dossierChannel: 'alpha', dossierModeNode: 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)',
+  const defaults = {
+    dossierChannel: 'alpha',
+    dossierModeNode: 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)',
     dossierOutcome: 'Survived Round 6 Final Stand & Completed Secret Objective (+5 SPts)',
-    dossierSecretCode: '', dossierSecretTag: 'Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)',
-    dossierLeftoverSp: '0 Leftover SP', dossierBattleNotes: '', dossierDistantForce: ''
+    dossierSecretCode: '',
+    dossierSecretTag: 'Action / Relic Tag (Free Battle Trait, Weapon Mod, or Relic)',
+    dossierLeftoverSp: '0 Leftover SP',
+    dossierBattleNotes: '',
+    dossierDistantForce: ''
   };
-  Object.entries(vals).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.value = val; });
-  ['fortHosp', 'fortAmmo', 'fortTrench', 'fortFob'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  Object.entries(defaults).forEach(([id, val]) => {
+    const el = _getMatrixEl(id);
+    if (el) el.value = val;
+  });
+  ['fortHosp', 'fortAmmo', 'fortTrench', 'fortFob'].forEach((id) => {
+    const el = _getMatrixEl(id);
+    if (el) el.checked = false;
+  });
+
   crusadeState.queuedRolls = [];
   crusadeState.dossierDistantForce = '';
   crusadeState.dossierChannel = 'alpha';
   crusadeState.attachedHordeStats = null;
-  if (typeof renderHordeStatsAttachmentCard === 'function') renderHordeStatsAttachmentCard();
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playClank === 'function') window.VoxAudio.playClank('card');
+
+  renderHordeStatsAttachmentCard();
+  _getMatrixVox()?.playClank?.('card');
   if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
   updateMasterDossierPreview();
   saveCrusadeState();
 }
 
-/**
- * Toggles the visibility of the Distant Engaged Force field based on whether
- * an Orbital Augur conduit or a Distant Solo Horde mode is currently selected.
- */
 function updateDistantForceVisibility() {
   const chan = document.getElementById('dossierChannel')?.value || 'alpha';
   const mode = document.getElementById('dossierModeNode')?.value || '';
