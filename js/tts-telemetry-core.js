@@ -232,3 +232,57 @@
     return 'HORDE';
   }
 
+  /**
+   * Converts a raw TTS `getAllObjects()` snapshot into grouped squads, parsed datasheets & exact distances.
+   */
+  function normalizeTtsBoardScan(rawScan = {}) {
+    const rawObjects = Array.isArray(rawScan.objects) ? rawScan.objects : [];
+    const spawnZones = Array.isArray(rawScan.spawnZones) ? rawScan.spawnZones : [];
+    const objectives = [];
+    const squadBuckets = new Map();
+
+    for (const obj of rawObjects) {
+      if (!obj || !obj.name) continue;
+      const cleanName = stripTtsMarkup(obj.name);
+      const tags = Array.isArray(obj.tags) ? obj.tags.map(t => String(t).toUpperCase()) : [];
+
+      if (tags.includes('OBJECTIVE') || /^obj(?:ective)?\b/i.test(cleanName)) {
+        objectives.push({
+          guid: obj.guid || null,
+          name: cleanName,
+          pos: obj.pos || { x: 0, y: 0, z: 0 },
+          radiusInches: inferBaseRadiusInches({ baseDiameterMm: 40, bounds: obj.bounds })
+        });
+        continue;
+      }
+
+      const side = inferSide(obj);
+      const parsedName = parseModelNameAndWounds(cleanName);
+      const squadKey = obj.squadId || `${side}::${parsedName.baseName}`;
+      const radiusInches = inferBaseRadiusInches(obj);
+
+      if (!squadBuckets.has(squadKey)) {
+        const ds = parseDatasheetFromTts(obj.description, obj.gmNotes);
+        squadBuckets.set(squadKey, {
+          squadKey,
+          guid: obj.guid || null,
+          guids: [],
+          name: parsedName.baseName,
+          side,
+          modelCount: 0,
+          totalRemainingWounds: 0,
+          woundsPerModel: parsedName.maxWounds || ds.woundsPerModel || 1,
+          move: ds.move,
+          toughness: ds.toughness,
+          save: ds.save,
+          invuln: ds.invuln,
+          fnp: ds.fnp,
+          leadership: ds.leadership,
+          oc: ds.oc,
+          scoutsInches: ds.scoutsInches,
+          keywords: ds.keywords,
+          weapons: ds.weapons,
+          models: []
+        });
+      }
+
