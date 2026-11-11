@@ -479,3 +479,63 @@ var CrusadeCore = (function () {
     };
   }
 
+  function formatTombMatrixSummaryLine(state = {}) {
+    const sys = state.tombSystems || { command: 1, reanimation: 1, translocation: 0 };
+    const maxTotal = state.powerReservesAllocated ? 4 : 3;
+    const total = (sys.command || 0) + (sys.reanimation || 0) + (sys.translocation || 0);
+    const masterStr = total >= 3 ? 'MASTER ONLINE' : (total > 0 ? 'AWAKENING' : 'DORMANT');
+    return `Allocated: ${total}/${maxTotal} Pts (Command: ${sys.command || 0}, Reanimation: ${sys.reanimation || 0}, Translocation: ${sys.translocation || 0}) | Status: [${masterStr}] | Agendas Logged: ${state.tombAgendasCompleted || 0} | Awakening Cycles: ${state.tombAwakeningCycles || 0}`;
+  }
+
+  function compileTombAwakeningDossier(input = {}) {
+    const sys = input.tombSystems || {};
+    const cmd = sys.command || 0;
+    const reanim = sys.reanimation || 0;
+    const trans = sys.translocation || 0;
+    const allocatedPts = typeof input.allocatedPts === 'number' ? input.allocatedPts : (cmd + reanim + trans);
+    const maxPts = input.powerReservesAllocated ? 4 : 3;
+    const fmtSys = (n) => (n > 0 ? `ACTIVE (${n} Pt${n > 1 ? 's' : ''})` : 'INACTIVE (0 Pts)');
+    const notes = String(input.notes || '').trim();
+
+    const lines = [
+      '+++ TOMB-SHIP MASTER MATRIX // TOMB WORLD AWAKENING & SYSTEM ALLOCATION DISPATCH +++',
+      '• REPORTING PHAERON: LORD COMMANDER JUNEBUG // TOMB-SHIP INTERLINK',
+      `• AWAKENING POINTS ALLOCATED: ${allocatedPts} / ${maxPts} Awakening Points Active`,
+      `• COMMAND SYSTEM (SUBJUGATION DECREE): ${fmtSys(cmd)}`,
+      `• REANIMATION SYSTEM (IMMORTAL SERVITUDE): ${fmtSys(reanim)}`,
+      `• TRANSLOCATION SYSTEM (RELENTLESS EXPANSION): ${fmtSys(trans)}`,
+      `• MASTER SYSTEM STATUS: ${allocatedPts >= 3 ? 'ONLINE (1D3 Power Drain Ready)' : 'DORMANT (Requires 3/3 Points)'}`
+    ];
+    if (notes) lines.push(`• CRYPTEK CONCLAVE DIRECTIVE: "${notes}"`);
+    lines.push(
+      '------------------------------------------------',
+      'REQUEST FOR TOMB-SHIP MASTER MATRIX & CRYPTEK CONCLAVE: Please lock these Dynastic Awakening System power allocations into our Tomb-Ship hypercircuits and confirm our active Master System protocols!'
+    );
+    return lines.join('\n');
+  }
+
+  // ===========================================================================
+  // TAB 5: LEAGUES OF VOTANN EXPEDITIONS & RESOURCE VAULT
+  // ===========================================================================
+  function adjustVotannResource(votannState, key, delta) {
+    const v = createInitialVotannState(votannState);
+    v[key] = clampCounter(v[key], delta);
+    if (delta > 0) v.expTotals[key] = (v.expTotals[key] || 0) + delta;
+    return { votann: v };
+  }
+
+  function adjustVotannRareResource(votannState, key, delta) {
+    const v = createInitialVotannState(votannState);
+    v.rare[key] = clampCounter(v.rare[key], delta);
+    if (delta > 0) v.expTotals.rare = (v.expTotals.rare || 0) + delta;
+    return { votann: v };
+  }
+
+  function calculateVotannHarvest(votannState, sizeMultiplier = 1, rng = Math.random) {
+    const v = createInitialVotannState(votannState);
+    const mult = Number(sizeMultiplier) || 1;
+    const resRoll = _rollDie(6, rng);
+    const d6Amt = _rollDie(6, rng) + (mult === 2 ? _rollDie(6, rng) : 0);
+    const baseAmount = mult === 0.5 ? d6Amt * 5 : d6Amt * 10;
+    const target = VOTANN_HARVEST_RESOURCE_MAP[resRoll] || VOTANN_HARVEST_RESOURCE_MAP[1];
+
