@@ -235,3 +235,45 @@
     renderTacticaConsole();
   }
 
+  /**
+   * Queues a multi-stage Horde Auto-Defender roll sequence onto the LCT TTS Dice Mat.
+   */
+  async function queueConsoleAutoDefender() {
+    if (typeof document === 'undefined') return null;
+    const payload = {
+      unitName: (document.getElementById('defUnitName')?.value || 'Horde Squad').trim(),
+      defender: {
+        save: Number(document.getElementById('defSaveInput')?.value) || 4,
+        invuln: Number(document.getElementById('defInvulnInput')?.value) || null,
+        woundsPerModel: Number(document.getElementById('defWpmInput')?.value) || 1,
+        keywords: (document.getElementById('defKeywordsInput')?.value || 'INFANTRY').split(',').map(s => s.trim()).filter(Boolean)
+      },
+      incomingAttack: {
+        type: 'ranged',
+        strength: 4,
+        ap: Number(document.getElementById('defApInput')?.value) || 0,
+        damage: Number(document.getElementById('defDmgInput')?.value) || 1
+      },
+      context: { inSpawnZone: Boolean(document.getElementById('defInSpawnCheck')?.checked) },
+      options: {
+        numWounds: Number(document.getElementById('defWoundsCountInput')?.value) || 1,
+        damagePerWound: Number(document.getElementById('defDmgInput')?.value) || 1,
+        startingModels: Number(document.getElementById('defModelsInput')?.value) || 10
+      }
+    };
+
+    try {
+      const res = await daemonRequest('/combat/defend-request', 'POST', payload);
+      daemonOnline = true;
+      clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
+      if (res.entry) localChronicle.push(res.entry);
+      if (res.sequence.stage === 'COMPLETE') renderCompletedDefenseSummary(res.sequence);
+    } catch (e) {
+      const seq = createDefenseRollSequence(payload, clientState);
+      clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
+      if (seq.stage === 'COMPLETE') renderCompletedDefenseSummary(seq);
+    }
+    renderTacticaConsole();
+    return clientState.pendingDiceSequence;
+  }
+
