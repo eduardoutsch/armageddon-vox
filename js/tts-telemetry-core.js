@@ -286,3 +286,77 @@
         });
       }
 
+      const bucket = squadBuckets.get(squadKey);
+      bucket.guids.push(obj.guid);
+      bucket.modelCount += 1;
+      const curW = parsedName.currentWounds !== null ? parsedName.currentWounds : bucket.woundsPerModel;
+      bucket.totalRemainingWounds += curW;
+      bucket.models.push({
+        guid: obj.guid,
+        pos: obj.pos || { x: 0, y: 0, z: 0 },
+        radiusInches,
+        currentWounds: curW
+      });
+    }
+
+    const units = Array.from(squadBuckets.values()).map(u => {
+      const sumX = u.models.reduce((acc, m) => acc + (Number(m.pos.x) || 0), 0);
+      const sumZ = u.models.reduce((acc, m) => acc + (Number(m.pos.z) || 0), 0);
+      const center = {
+        x: Number((sumX / u.modelCount).toFixed(2)),
+        z: Number((sumZ / u.modelCount).toFixed(2))
+      };
+      const inSpawnZone = u.models.every(m => isPointInZones(m.pos, spawnZones)) && spawnZones.length > 0;
+      return { ...u, pos: center, inSpawnZone };
+    });
+
+    // Compute exact squad-to-objective & squad-to-enemy minimum edge-to-edge distances
+    for (const u of units) {
+      let closestObj = null;
+      for (const o of objectives) {
+        let minD = Infinity;
+        for (const m of u.models) {
+          const d = measureEdgeToEdgeInches(m.pos, m.radiusInches, o.pos, o.radiusInches);
+          if (d < minD) minD = d;
+        }
+        if (!closestObj || minD < closestObj.distanceInches) {
+          closestObj = { name: o.name, distanceInches: minD, withinControlRange: minD <= 3.0 };
+        }
+      }
+      u.closestObjective = closestObj;
+
+      let closestEnemy = null;
+      for (const other of units) {
+        if (other.side === u.side) continue;
+        let minEnemyD = Infinity;
+        for (const m1 of u.models) {
+          for (const m2 of other.models) {
+            const d = measureEdgeToEdgeInches(m1.pos, m1.radiusInches, m2.pos, m2.radiusInches);
+            if (d < minEnemyD) minEnemyD = d;
+          }
+        }
+        if (!closestEnemy || minEnemyD < closestEnemy.distanceInches) {
+          closestEnemy = {
+            name: other.name,
+            guid: other.guid,
+            distanceInches: minEnemyD,
+            withinEngagementRange: minEnemyD <= 2.0
+          };
+        }
+      }
+      u.closestEnemy = closestEnemy;
+    }
+
+    return { units, objectives };
+  }
+
+  return {
+    stripTtsMarkup,
+    parseModelNameAndWounds,
+    parseDatasheetFromTts,
+    inferBaseRadiusInches,
+    measureEdgeToEdgeInches,
+    normalizeTtsBoardScan
+  };
+});
+
