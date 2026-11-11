@@ -36,17 +36,57 @@ function resolveServiceKey(env = process.env) {
   return '';
 }
 
+function isTacticaEnvKey(key) {
+  return /^(?:TACTICA|LCT_TACTICA)(?:_|$)/i.test(String(key || '').trim());
+}
+
 function resolveThreadUrls(env = process.env) {
-  const alpha = (env && typeof env.ALPHA_THREAD_URL === 'string' ? env.ALPHA_THREAD_URL : '').trim();
-  const beta = (env && typeof env.BETA_THREAD_URL === 'string' ? env.BETA_THREAD_URL : '').trim();
-  const gamma = (env && typeof env.GAMMA_THREAD_URL === 'string' ? env.GAMMA_THREAD_URL : '').trim();
+  const safeEnv = env && typeof env === 'object' ? env : {};
+  const tacticaExcluded = [
+    safeEnv.TACTICA_THREAD_URL,
+    safeEnv.TACTICA_DAEMON_THREAD_URL,
+    safeEnv.TACTICA_DAEMON_URL
+  ]
+    .map((v) => (typeof v === 'string' ? v.trim() : ''))
+    .find(Boolean) || '';
+
+  const sanitizeVoxUrl = (val) => {
+    const trimmed = typeof val === 'string' ? val.trim() : '';
+    if (!trimmed) return '';
+    if (tacticaExcluded && trimmed === tacticaExcluded) return '';
+    return trimmed;
+  };
+
+  const alpha = sanitizeVoxUrl(safeEnv.ALPHA_THREAD_URL);
+  const beta = sanitizeVoxUrl(safeEnv.BETA_THREAD_URL);
+  const gamma = sanitizeVoxUrl(safeEnv.GAMMA_THREAD_URL);
+
+  const allVoxThreadUrls = {};
+  if (alpha) allVoxThreadUrls.alpha = alpha;
+  if (beta) allVoxThreadUrls.beta = beta;
+  if (gamma) allVoxThreadUrls.gamma = gamma;
+
+  const extraThreadUrls = [];
+  for (const [key, rawVal] of Object.entries(safeEnv)) {
+    if (!/_THREAD_URL$/i.test(key)) continue;
+    if (isTacticaEnvKey(key)) continue;
+    if (/^(?:ALPHA|BETA|GAMMA)_THREAD_URL$/i.test(key)) continue;
+    const cleaned = sanitizeVoxUrl(rawVal);
+    if (!cleaned) continue;
+    const channel = key.replace(/_THREAD_URL$/i, '').toLowerCase();
+    allVoxThreadUrls[channel] = cleaned;
+    extraThreadUrls.push({ channel, envKey: key, url: cleaned });
+  }
+
   return {
     alphaThreadUrl: alpha,
     betaThreadUrl: beta,
     gammaThreadUrl: gamma,
     alphaUrl: alpha,
     betaUrl: beta,
-    gammaUrl: gamma
+    gammaUrl: gamma,
+    extraThreadUrls,
+    allVoxThreadUrls
   };
 }
 
@@ -56,7 +96,8 @@ const SERVICE_KEY = resolveServiceKey();
 const {
   alphaThreadUrl: ALPHA_THREAD_URL,
   betaThreadUrl: BETA_THREAD_URL,
-  gammaThreadUrl: GAMMA_THREAD_URL
+  gammaThreadUrl: GAMMA_THREAD_URL,
+  extraThreadUrls: EXTRA_THREAD_URLS
 } = resolveThreadUrls();
 
 logGreen('----------------------------------------------------------------');
