@@ -957,6 +957,51 @@ test('app: startSession preserves room-synced horde faction and spawns if alread
   assert.equal(app.currentZoneSpawns.length, 1, 'startSession must not wipe existing room-synced spawns');
 });
 
+test('app: rollAllSpawnZones generates fresh intrusionRoll values on repeat rolls in the same round', () => {
+  document.getElementById('seedInput').value = 'HADES-INTRUSION';
+  document.getElementById('spawnZoneCountSelect').value = '3';
+  document.getElementById('hordeFactionSelect').value = 'World Eaters';
+  document.getElementById('extraSpawnMod').value = '10'; // Force [13+] Big Bracket
+  localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify({
+    byFaction: {
+      'World Eaters': {
+        b10: '1 Angron',
+        b13: '1 Khorne Lord of Skulls'
+      }
+    }
+  }));
+
+  const seenIntrusionRolls = new Set();
+  for (let i = 0; i < 20; i++) {
+    app.rollAllSpawnZones();
+    for (const z of app.currentZoneSpawns) {
+      assert.ok(z.waveId, 'Zone spawn must include unique waveId');
+      assert.ok(Array.isArray(z.parsedWave), 'Zone spawn must include parsedWave array');
+      if (z.unmod === 2) {
+        assert.equal(z.bracketKey, 'NONE');
+        assert.equal(z.intrusionRoll, null);
+      } else {
+        assert.equal(typeof z.intrusionRoll, 'number', 'Big bracket must pre-roll numeric intrusionRoll');
+        seenIntrusionRolls.add(z.intrusionRoll);
+      }
+    }
+  }
+  assert.ok(seenIntrusionRolls.size > 1, 'Re-rolling spawns in the same round must roll fresh 1D6 intrusion checks');
+
+  // Verify rollDownZone clears intrusionRoll and re-parses wave on a [13+] zone
+  const bigIdx = app.currentZoneSpawns.findIndex(z => z.bracketKey === '13+');
+  if (bigIdx !== -1) {
+    app.rollDownZone(bigIdx);
+    const rolledDownZ = app.currentZoneSpawns[bigIdx];
+    assert.equal(rolledDownZ.intrusionRoll, null, 'Rolled-down wave must clear intrusionRoll');
+    assert.equal(rolledDownZ.units.length, 2);
+    assert.equal(rolledDownZ.parsedWave.length, 2);
+    assert.equal(rolledDownZ.parsedWave[0].templateName, 'Angron');
+  }
+
+  document.getElementById('extraSpawnMod').value = '0';
+});
+
 
 
 
