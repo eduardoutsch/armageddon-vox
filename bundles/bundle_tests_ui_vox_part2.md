@@ -597,44 +597,69 @@ test('vox: interferences retain distinct colors (crimson for target vs purple fo
   assert.ok(voxCss.includes('.rogue-intercept') || voxCss.includes('.sector-broadcast'), 'vox.css must define rogue/broadcast intercept styling');
 });
 
-test('vox: teletype streaming and background polling never pull down reader scrollTop while emerging text renders', async () => {
-  // 1. Streaming text into an element must NEVER overwrite scrollParent.scrollTop during typing or finish
-  const mockMonitor = { scrollTop: 42, scrollHeight: 950 };
+test('vox: teletype streaming and background polling never pull down reader scrollTop while STILL playing full animation and sound off-camera', async () => {
+  // 1. Even when targetEl is off-camera below the user's current scroll viewport, streamTextIntoElement MUST keep
+  //    animating (`dataset.streaming === '1'`) and playing `incoming` teletype ticks WITHOUT dragging `scrollTop`!
+  tickEvents = [];
+  const mockMonitor = {
+    scrollTop: 42,
+    scrollHeight: 950,
+    getBoundingClientRect: () => ({ top: 100, bottom: 660, height: 560 })
+  };
   const streamingCard = mockDocument.createElement('div');
   streamingCard.closest = () => mockMonitor;
+  streamingCard.getBoundingClientRect = () => ({ top: 980, bottom: 1040, height: 60 }); // Below camera!
 
   vox.streamTextIntoElement(streamingCard, '+++ LONG INCOMING DISPATCH +++\nLine 1\nLine 2\nLine 3', false);
+  assert.equal(streamingCard.dataset.streaming, '1', 'Off-camera emerging message MUST keep animating instead of aborting early');
+  assert.ok(tickEvents.includes('incoming'), 'Off-camera emerging message MUST still play incoming teletype audio ticks');
   assert.equal(mockMonitor.scrollTop, 42, 'Typing step must NOT yank scrollParent.scrollTop to scrollHeight');
 
   streamingCard.onclick();
   assert.equal(streamingCard.dataset.streaming, '0');
   assert.equal(mockMonitor.scrollTop, 42, 'Finishing stream must NOT yank scrollParent.scrollTop to scrollHeight');
 
-  // 2. Background refreshTerminal(false) when new reply arrives preserves user scrollTop
+  // 2. Background refreshTerminal(false) when user scrolled up (even with Older Messages expanded!)
+  //    preserves scrollTop AND still animates + plays sound for a newly arrived unseen reply
   mockElements.passInput.value = 'VermilionKey99';
   await vox.handleSealAction();
 
   mockMessages = [
-    { id: 'm_read_1', channel: 'alpha', sender: 'The Exile', question: 'Earlier report', reply: 'Earlier reply', status: 'answered' },
-    { id: 'm_read_2', channel: 'alpha', sender: 'The Exile', question: 'New report', reply: null, status: 'pending' }
+    { id: 'm_read_0', channel: 'alpha', sender: 'The Exile', question: 'Old 0', reply: 'Rep 0', status: 'answered' },
+    { id: 'm_read_1', channel: 'alpha', sender: 'The Exile', question: 'Old 1', reply: 'Rep 1', status: 'answered' },
+    { id: 'm_read_2', channel: 'alpha', sender: 'The Exile', question: 'Old 2', reply: 'Rep 2', status: 'answered' },
+    { id: 'm_read_3', channel: 'alpha', sender: 'The Exile', question: 'New report', reply: null, status: 'pending' }
   ];
   mockElements.directMessagesBox.scrollHeight = 800;
   await vox.refreshTerminal(false);
 
-  // Simulate user scrolling up to scrollTop = 65 to read m_read_1 while Gemini replies to m_read_2
+  // User expands older messages and scrolls up to scrollTop = 65 to read m_read_0 while Gemini replies to m_read_3
+  vox.toggleOlderMessages();
+  await vox.refreshTerminal(false);
   mockElements.directMessagesBox.scrollTop = 65;
-  mockElements.directMessagesBox.scrollHeight = 1200;
+  mockElements.directMessagesBox.scrollHeight = 1400;
+  tickEvents = [];
+
   mockMessages = [
-    { id: 'm_read_1', channel: 'alpha', sender: 'The Exile', question: 'Earlier report', reply: 'Earlier reply', status: 'answered' },
-    { id: 'm_read_2', channel: 'alpha', sender: 'The Exile', question: 'New report', reply: 'New Campaign Master reply emerging below', status: 'answered' }
+    { id: 'm_read_0', channel: 'alpha', sender: 'The Exile', question: 'Old 0', reply: 'Rep 0', status: 'answered' },
+    { id: 'm_read_1', channel: 'alpha', sender: 'The Exile', question: 'Old 1', reply: 'Rep 1', status: 'answered' },
+    { id: 'm_read_2', channel: 'alpha', sender: 'The Exile', question: 'Old 2', reply: 'Rep 2', status: 'answered' },
+    { id: 'm_read_3', channel: 'alpha', sender: 'The Exile', question: 'New report', reply: 'New Campaign Master reply emerging below', status: 'answered' }
   ];
 
   await vox.refreshTerminal(false);
   assert.equal(
     mockElements.directMessagesBox.scrollTop,
     65,
-    'Background poll with emerging reply must preserve user scrollTop (65) instead of pulling down to 1200'
+    'Background poll with emerging reply must preserve user scrollTop (65) instead of pulling down to 1400'
   );
+  const latestWrap = mockElements.directMessagesBox.children[mockElements.directMessagesBox.children.length - 1];
+  const latestReplyBody = latestWrap.children[1].children[0];
+  assert.equal(latestReplyBody.dataset.streaming, '1', 'Newly arrived unseen reply must still animate even while user reads older messages above');
+  assert.ok(tickEvents.includes('incoming'), 'Newly arrived unseen reply must still play incoming teletype sound');
+
+  // Reset older toggle for cleanliness
+  vox.toggleOlderMessages();
 
   // 3. CSS disables browser scroll anchoring on .crt-monitor-frame and .crt-cursor
   assert.ok(voxCss.includes('overflow-anchor: none'), 'css/vox.css must set overflow-anchor: none so cursor growth never pulls viewport');

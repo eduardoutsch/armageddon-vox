@@ -10,23 +10,6 @@ Real-time Teletype typewriter audio streaming, CRT message rendering, and interf
 ## File: `js/vox.js (Part 2: CRT Monitors & Streams)` <a id="file-jsvoxjspart2crtmonitorsstreams"></a>
 
 ````javascript
-function escapeHtml(str) {
-  if (typeof document !== 'undefined') {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  }
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function formatRedactedHtml(raw) {
-  return escapeHtml(raw).replace(
-    /\[REDACTED\]/gi,
     '<span class="censor-bar">▓▓REDACTED▓▓</span>'
   );
 }
@@ -298,7 +281,7 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-q-body crt-msg-body"></div>
           `;
           const qBody = msgCard.querySelector('.crt-q-body');
-          applyFocusedCardText(qBody, m.question, `q_${m.id}`, isLatestMsg && !hasReply && !showAllOlderMessages, viewingDirect, false);
+          applyFocusedCardText(qBody, m.question, `q_${m.id}`, isLatestMsg && !hasReply, viewingDirect, false);
           wrap.appendChild(msgCard);
 
           if (hasReply) {
@@ -317,7 +300,7 @@ async function refreshTerminal(forceScroll = false) {
               <div class="crt-r-body crt-msg-body"></div>
             `;
             const rBody = repCard.querySelector('.crt-r-body');
-            applyFocusedCardText(rBody, cleanBody, `r_${m.id}`, isLatestMsg && !showAllOlderMessages, viewingDirect, false);
+            applyFocusedCardText(rBody, cleanBody, `r_${m.id}`, isLatestMsg, viewingDirect, false);
             wrap.appendChild(repCard);
           } else {
             const pend = document.createElement('div');
@@ -406,7 +389,7 @@ async function refreshTerminal(forceScroll = false) {
             <div class="crt-int-body crt-msg-body"></div>
           `;
           const bodyEl = card.querySelector('.crt-int-body');
-          applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt && !showAllOlderInterferences, viewingInterferences, true);
+          applyFocusedCardText(bodyEl, ix.redacted_text, `int_${ix.id}`, isLatestInt, viewingInterferences, true);
           iBox.appendChild(card);
         });
 
@@ -460,14 +443,14 @@ function switchSubWindow(which) {
   if (btn1) btn1.classList.toggle('active', isDirect);
   if (btn2) btn2.classList.toggle('active', !isDirect);
 
-  if (isDirect && pendingDirectStream && !showAllOlderMessages) {
+  if (isDirect && pendingDirectStream) {
     const { el, text, token } = pendingDirectStream;
     pendingDirectStream = null;
     if (!seenTokens.has(token)) {
       markTokenSeen(token);
       streamTextIntoElement(el, text, false);
     }
-  } else if (!isDirect && pendingInterferenceStream && !showAllOlderInterferences) {
+  } else if (!isDirect && pendingInterferenceStream) {
     const { el, text, token } = pendingInterferenceStream;
     pendingInterferenceStream = null;
     if (!seenTokens.has(token)) {

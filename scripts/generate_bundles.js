@@ -514,7 +514,7 @@ compileBundle(
 compileBundle(
   '📦 Fires of Armageddon // Bundle: UI Tests (Astropathic Vox-Terminal Part 2)',
   'Terminal display streaming, faction theme isolation, and interference rendering test suite (`tests/ui/vox.test.js` lines 551 to end).',
-  [{ file: 'tests/ui/vox.test.js', label: 'tests/ui/vox.test.js (Part 2: Terminal Display, Theme & Interference Tests, Lines 551-end)', startLine: 551, endLine: 1200 }],
+  [{ file: 'tests/ui/vox.test.js', label: 'tests/ui/vox.test.js (Part 2: Terminal Display, Theme & Interference Tests, Lines 551-end)', startLine: 551, endLine: 1350 }],
   path.join(BUNDLES_DIR, 'bundle_tests_ui_vox_part2.md')
 );
 

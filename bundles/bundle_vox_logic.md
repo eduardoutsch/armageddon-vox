@@ -464,23 +464,6 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   function step() {
     if (targetEl.dataset.streaming !== '1') return;
 
-    const scrollParent = targetEl.closest('.crt-messages') || targetEl.closest('.crt-monitor-frame');
-    if (
-      scrollParent &&
-      typeof targetEl.getBoundingClientRect === 'function' &&
-      typeof scrollParent.getBoundingClientRect === 'function'
-    ) {
-      const elRect = targetEl.getBoundingClientRect();
-      const parentRect = scrollParent.getBoundingClientRect();
-      if (parentRect.height > 0 && elRect.height > 0) {
-        const isVisible = elRect.bottom > parentRect.top && elRect.top < parentRect.bottom;
-        if (!isVisible) {
-          finishStream();
-          return;
-        }
-      }
-    }
-
     const elapsedMs = Date.now() - startTime;
     const targetIdx = Math.min(rawStr.length, Math.max(lastIdx + 1, Math.floor((elapsedMs / 1000) * charsPerSecond)));
 
@@ -510,4 +493,21 @@ function streamTextIntoElement(targetEl, fullString, isHtmlRedacted = false) {
   step();
 }
 
+function escapeHtml(str) {
+  if (typeof document !== 'undefined') {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatRedactedHtml(raw) {
+  return escapeHtml(raw).replace(
+    /\[REDACTED\]/gi,
 ````
