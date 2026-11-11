@@ -614,3 +614,54 @@
         dmgLeft = afterFnp;
       }
 
+      if (dmgLeft > 0) {
+        finalDamageInflicted += dmgLeft;
+        if (dmgLeft >= currentWounds) {
+          modelsSlain += 1;
+          remainingModels -= 1;
+          currentWounds = wpm;
+        } else {
+          currentWounds -= dmgLeft;
+        }
+      }
+    }
+
+    // Misery #30: 4+ Shoot / Fight on Death per slain model
+    const onDeathRolls = [];
+    let onDeathTriggers = 0;
+    if (defenseProfile.shootOrFightOnDeathThreshold && modelsSlain > 0) {
+      for (let m = 0; m < modelsSlain; m++) {
+        const od = Array.isArray(options.preRolledOnDeath) && options.preRolledOnDeath[m] !== undefined
+          ? options.preRolledOnDeath[m]
+          : rollD6();
+        onDeathRolls.push(od);
+        if (od >= defenseProfile.shootOrFightOnDeathThreshold) onDeathTriggers += 1;
+      }
+    }
+
+    const unitDestroyed = remainingModels <= 0;
+    let gscRespawnRoll = null;
+    let gscRespawnTriggered = false;
+    if (unitDestroyed && defenseProfile.gscRespawnThreshold) {
+      gscRespawnRoll = typeof options.preRolledRespawn === 'number' ? options.preRolledRespawn : rollD6();
+      gscRespawnTriggered = gscRespawnRoll >= defenseProfile.gscRespawnThreshold;
+    }
+
+    return {
+      savesRolled,
+      savesPassed,
+      unsavedWounds,
+      fnpRolls,
+      fnpPassed,
+      finalDamageInflicted,
+      modelsSlain,
+      remainingModels: Math.max(0, remainingModels),
+      currentModelRemainingWounds: remainingModels > 0 ? currentWounds : 0,
+      unitDestroyed,
+      onDeathRolls,
+      onDeathTriggers,
+      gscRespawnRoll,
+      gscRespawnTriggered
+    };
+  }
+
