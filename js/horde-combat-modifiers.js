@@ -665,3 +665,43 @@
     };
   }
 
+  /**
+   * Aggregates active Misery debuffs and Fortification bonuses affecting a Player unit.
+   *
+   * @param {object} [matchState={}] - Active Horde match state (`activeMiseryIds`/`activeMiseries`, `activeFortifications`).
+   * @param {object} [context={}] - Player unit base movement and fortification proximity flags.
+   * @returns {object} Player unit combat and movement modifier summary.
+   */
+  function resolvePlayerModifiers(matchState = {}, context = {}) {
+    const miseries = extractActiveMiseryMods(matchState);
+    const forts = new Set(Array.isArray(matchState.activeFortifications) ? matchState.activeFortifications : []);
+
+    let effectiveMove = Number(context.baseMove) || 6;
+    let advanceRollMod = 0;
+    let chargeRollMod = 0;
+    let stratagemsLocked = false;
+    let battleShockAutoFail = false;
+    let forceRerollHitSixes = false;
+    let rangedStrengthMod = 0;
+    let rangedApImprove = 0;
+    let meleeStrengthMod = 0;
+    let meleeApImprove = 0;
+    let rangedDefenseFnp = null;
+    const rangedKeywords = new Set();
+
+    for (const m of miseries) {
+      if (m.playerMoveMod) {
+        effectiveMove = Math.max(m.playerMinMove || 1, effectiveMove + m.playerMoveMod);
+      }
+      if (m.playerAdvanceMod) advanceRollMod += m.playerAdvanceMod;
+      if (m.playerChargeMod) chargeRollMod += m.playerChargeMod;
+      if (m.playerStratagemsLocked) stratagemsLocked = true;
+      if (m.playerBattleShockAutoFail) battleShockAutoFail = true;
+      if (m.playerForceRerollHitSixes) forceRerollHitSixes = true;
+      if (m.playerRangedStrengthMod) rangedStrengthMod += m.playerRangedStrengthMod;
+      if (m.playerRangedApImprove) rangedApImprove += m.playerRangedApImprove;
+      if (Array.isArray(m.playerRangedKeywords)) {
+        m.playerRangedKeywords.forEach(k => rangedKeywords.add(k.toUpperCase()));
+      }
+    }
+
