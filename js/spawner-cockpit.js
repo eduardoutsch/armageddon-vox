@@ -830,27 +830,13 @@
       window.startSession = wrappedStartSession;
     }
 
-    // Wrap rollAllSpawnZones for Misery #7 (Unlucky Night 3D6 Drop Lowest)
+    // Wrap rollAllSpawnZones for Misery #7 banner sync & cockpit mirroring (single 3D6 roll happens inside app.js)
     if (typeof window.rollAllSpawnZones === 'function' && !window.rollAllSpawnZones._isUnluckyNightWrapped) {
       const origRollAllSpawnZones = window.rollAllSpawnZones;
       const wrappedRoll = function () {
         ensureMiserySpawnerControls();
         syncMiserySpawnerBanner();
         const res = origRollAllSpawnZones.apply(this, arguments);
-
-        if (isUnluckyNightActive() && typeof document !== 'undefined') {
-          const container = document.getElementById('spawnResultsContainer');
-          if (container) {
-            container.querySelectorAll('.spawn-zone').forEach(card => {
-              const d = [1, 2, 3].map(() => Math.floor(Math.random() * 6) + 1).sort((a, b) => b - a);
-              const unmod3d6 = d[0] + d[1];
-              const badge = document.createElement('div');
-              badge.style.cssText = 'margin-top:6px; padding:4px 8px; background:rgba(255,71,87,0.16); border:1px solid var(--red); border-radius:6px; font-size:0.76rem; color:#fecdd3;';
-              badge.innerHTML = `🎲 <strong>#7 Unlucky Night (3D6 Drop Lowest):</strong> Rolled [${d[0]}, ${d[1]}, <s>${d[2]}</s>] → Base 2D6 = <strong>${unmod3d6}</strong>`;
-              card.appendChild(badge);
-            });
-          }
-        }
         mirrorSpawnerToCockpit();
         return res;
       };

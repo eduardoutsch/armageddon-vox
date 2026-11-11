@@ -225,3 +225,32 @@ test('Spawner Cockpit: resolveSecondaryOutcome on Secondary #17 failure triggers
   delete globalThis.window;
   delete globalThis.document;
 });
+
+test('Spawner Cockpit: Misery #7 wrapper does NOT append a duplicate 3D6 roll badge to spawn cards', () => {
+  const cockpit = require('../../js/spawner-cockpit.js');
+  let badgeAppended = false;
+  let baseRollCalled = false;
+
+  const mockCard = { appendChild: () => { badgeAppended = true; } };
+  globalThis.document = {
+    getElementById: (id) => {
+      if (id === 'spawnResultsContainer') return { querySelectorAll: () => [mockCard], innerHTML: '' };
+      if (id === 'unluckyNightSpawnerCheck') return { checked: true };
+      return null;
+    },
+    querySelectorAll: () => []
+  };
+  globalThis.window = {
+    state: { activeMiseries: [{ id: 7, name: 'Unlucky Night' }] },
+    rollAllSpawnZones: function () { baseRollCalled = true; }
+  };
+
+  cockpit.bindSpawnerCockpitWrappers();
+  globalThis.window.rollAllSpawnZones();
+
+  assert.equal(baseRollCalled, true, 'Must invoke underlying rollAllSpawnZones');
+  assert.equal(badgeAppended, false, 'Must NOT roll or append a conflicting second 3D6 badge');
+
+  delete globalThis.document;
+  delete globalThis.window;
+});
