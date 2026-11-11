@@ -71,3 +71,75 @@ test('buildLosVerificationPrompt & parseOverwatchVerdict: embeds Misery #28 / co
   assert.equal(parseOverwatchVerdict('').losBlocked, false);
 });
 
+test('buildReactionVoiceCallout & detectActiveIntrusionZones: announces CP options and flags 6+ Big-Bracket breaches', () => {
+  assert.equal(buildReactionVoiceCallout(null), '');
+  const callout = buildReactionVoiceCallout({
+    open: true,
+    title: 'End of Horde Movement Phase',
+    playerCp: 2,
+    eligibleStratagems: [{ name: 'Fire Overwatch (24", 6+ Snap Shots)', cpCost: 1 }]
+  });
+  assert.ok(callout.includes('2 Command Points') && callout.includes('Fire Overwatch'));
+
+  const breaches = detectActiveIntrusionZones([
+    { zone: 1, bracketKey: '7-9', bracketLabel: 'Bracket [7–9]', intrusionRoll: null },
+    { zone: 2, bracketKey: '10-12', bracketLabel: 'Bracket [10–12]', intrusionRoll: 5 },
+    { zone: 3, bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6 }
+  ]);
+  assert.equal(breaches.length, 1);
+  assert.equal(breaches[0].zone, 3);
+
+  const gammaPing = buildIntrusionVoxPayload({
+    zoneNum: 3,
+    bracketLabel: 'Bracket [13+]',
+    channel: 'gamma',
+    roomCode: 'EMBER-09',
+    battleRound: 4,
+    factionName: 'Orks'
+  });
+  assert.ok(gammaPing.includes('FANE-NODE VÔL-09') && gammaPing.includes('EMBER-09'));
+
+  const alphaPing = buildIntrusionVoxPayload({ zoneNum: 1, bracketLabel: '[10–12]', channel: 'alpha', roomCode: 'HADES-1' });
+  assert.ok(alphaPing.includes('THE EXILE'));
+  const betaPing = buildIntrusionVoxPayload({ zoneNum: 1, bracketLabel: '[10–12]', channel: 'beta', roomCode: 'HADES-1' });
+  assert.ok(betaPing.includes('JUNEBUG'));
+  const distPing = buildIntrusionVoxPayload({ zoneNum: 2, bracketLabel: '[13+]', channel: 'distant', roomCode: 'HADES-1' });
+  assert.ok(distPing.includes('ORBITAL AUGUR ARRAY'));
+});
+
+test('compileTacticaCrusadeSnapshot: aggregates chronicle kills, reactions, Misery cards & Warlord status for Mode 5 Crusade', () => {
+  const state = {
+    roomCode: 'GOLGOTHA-44',
+    battleRound: 6,
+    factionName: 'World Eaters',
+    playerSp: 10,
+    playerCp: 1,
+    activeMiseryIds: [5, 30],
+    hordeWarlord: { name: 'Lord Invocatus', roundSpawned: 2, alive: false }
+  };
+  const chronicle = [
+    { type: 'AUTO_DEFENDER', summary: 'Wiped Berzerkers', details: { outcome: { unitDestroyed: true, modelsSlain: 10 } } },
+    { type: 'AUTO_DEFENDER', summary: 'Slain Invocatus', details: { outcome: { unitDestroyed: true, modelsSlain: 1 } } },
+    { type: 'REACTION', summary: 'Player activated FIRE_OVERWATCH (-1 CP).' },
+    { type: 'REACTION', summary: 'Player passed reaction window.' }
+  ];
+  const spawnerSession = {
+    selectedModeVal: 'solo',
+    spSpentThisRound: 6,
+    activeMiseries: [{ id: 5, name: 'Untouchable' }, { id: 30, name: 'Aim for the Heads' }],
+    activeCard: { code: 'L2Y', name: '11 - Show Off', tags: 'End of Game' }
+  };
+
+  const snap = compileTacticaCrusadeSnapshot(state, chronicle, spawnerSession);
+  assert.equal(snap.hordeKills, 2);
+  assert.equal(snap.stratagemsUsed, 1);
+  assert.equal(snap.roundsPlayed, 6);
+  assert.equal(snap.hordeFaction, 'World Eaters');
+  assert.equal(snap.roomSeed, 'GOLGOTHA-44');
+  assert.equal(snap.gameMode, 'SOLO');
+  assert.equal(snap.leftoverSp, 10);
+  assert.equal(snap.leftoverCp, 1);
+  assert.equal(snap.secretObjective.code, 'L2Y');
+  assert.equal(snap.hordeWarlord.alive, false);
+});
+
