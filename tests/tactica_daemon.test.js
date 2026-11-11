@@ -7,7 +7,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createTacticaDaemon } = require('../tactica_daemon.js');
+const {
+  createTacticaDaemon,
+  resolveTacticaThreadUrl,
+  isUsableGeminiThreadUrl
+} = require('../tactica_daemon.js');
 
 async function postJson(baseUrl, route, body) {
   const res = await fetch(`${baseUrl}${route}`, {
@@ -275,4 +279,41 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('tactica_daemon.bat: Windows launcher script switches to repo directory and invokes npm run tactica:daemon', () => {
+  const batPath = path.resolve(__dirname, '../tactica_daemon.bat');
+  assert.equal(fs.existsSync(batPath), true, 'tactica_daemon.bat must exist in /dealer root');
+  const content = fs.readFileSync(batPath, 'utf8');
+  assert.ok(content.includes('cd /d "%~dp0"'), 'Must switch working directory to script folder');
+  assert.ok(content.includes('npm run tactica:daemon'), 'Must execute npm run tactica:daemon');
+  assert.ok(content.includes('pause'), 'Must pause on exit so terminal diagnostics remain readable');
+});
+
+test('resolveTacticaThreadUrl: strictly selects TACTICA_THREAD_URL and ignores Alpha/Beta/Gamma/Supabase URLs', () => {
+  assert.equal(typeof resolveTacticaThreadUrl, 'function');
+  assert.equal(typeof isUsableGeminiThreadUrl, 'function');
+
+  const resolved = resolveTacticaThreadUrl({
+    SUPABASE_URL: 'https://dsfvhjjalexqpbzqoaqb.supabase.co',
+    TACTICA_THREAD_URL: '  https://gemini.google.com/app/tactica999  ',
+    ALPHA_THREAD_URL: 'https://gemini.google.com/app/32b1c53a813d15a3',
+    BETA_THREAD_URL: 'https://gemini.google.com/app/0c0b15a075182321',
+    GAMMA_THREAD_URL: 'https://gemini.google.com/app/793dd9d2bd84ad35'
+  });
+  assert.equal(resolved, 'https://gemini.google.com/app/tactica999');
+
+  const withoutTactica = resolveTacticaThreadUrl({
+    SUPABASE_URL: 'https://dsfvhjjalexqpbzqoaqb.supabase.co',
+    ALPHA_THREAD_URL: 'https://gemini.google.com/app/32b1c53a813d15a3',
+    BETA_THREAD_URL: 'https://gemini.google.com/app/0c0b15a075182321',
+    GAMMA_THREAD_URL: 'https://gemini.google.com/app/793dd9d2bd84ad35'
+  });
+  assert.equal(withoutTactica, '', 'Must never fall back to ALPHA/BETA/GAMMA_THREAD_URL');
+
+  assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/YOUR_NEW_THREAD_ID_HERE'), false);
+  assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/<your-tactica-thread-id>'), false);
+  assert.equal(isUsableGeminiThreadUrl('https://gemini.google.com/app/tactica999'), true);
+});
+
+
 
