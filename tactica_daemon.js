@@ -29,6 +29,7 @@ const {
   compileTacticaPostMatchReport
 } = require('./js/tactica-core.js');
 const { normalizeTtsBoardScan } = require('./js/tts-telemetry-core.js');
+const { buildIngressFallbackCommand } = require('./js/horde-deepstrike-core.js');
 const {
   planWaveSpawnCommands,
   buildDisembarkWaveCommand,
@@ -477,10 +478,22 @@ function createTacticaDaemon(options = {}) {
         if (nextRoom && nextRoom !== liveState.roomCode) {
           liveState.boardTelemetry = { updatedAt: null, units: [], objectives: [] };
           liveState.squadGuidRegistry = {};
+          liveState.hordeReserves = [];
+          liveState.shelfTemplates = [];
         }
         liveState.roomCode = nextRoom;
       }
-      if (body.battleRound !== undefined) liveState.battleRound = Number(body.battleRound);
+      if (body.battleRound !== undefined) {
+        const nextRnd = Number(body.battleRound);
+        if (nextRnd !== liveState.battleRound && Array.isArray(liveState.boardTelemetry?.units)) {
+          if (liveState.boardTelemetry.units.some(u => u.didIngressThisTurn)) {
+            cmdCounter += 1;
+            ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'CLEAR_DEEP_STRUCK' });
+          }
+          liveState.boardTelemetry.units.forEach(u => { u.didIngressThisTurn = false; });
+        }
+        liveState.battleRound = nextRnd;
+      }
       if (body.phase !== undefined) liveState.phase = body.phase;
       if (roundOrPhaseChanged) {
         liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(
@@ -495,6 +508,8 @@ function createTacticaDaemon(options = {}) {
       if (Array.isArray(body.activeMiseryIds)) liveState.activeMiseryIds = body.activeMiseryIds;
       if (Array.isArray(body.activeFortifications)) liveState.activeFortifications = body.activeFortifications;
       if (Array.isArray(body.zoneSpawns)) liveState.zoneSpawns = body.zoneSpawns;
+      if (Array.isArray(body.hordeReserves)) liveState.hordeReserves = body.hordeReserves;
+      if (Array.isArray(body.shelfTemplates)) liveState.shelfTemplates = body.shelfTemplates;
       if (Array.isArray(body.activePlayerBuffs)) liveState.activePlayerBuffs = body.activePlayerBuffs;
       savePersistedState();
       return sendJson(res, 200, { ok: true, state: liveState });
@@ -653,6 +668,11 @@ function createTacticaDaemon(options = {}) {
         units = normalized.units;
         objectives = normalized.objectives;
         liveState.squadGuidRegistry = normalized.guidRegistry || {};
+        if (Array.isArray(normalized.shelfTemplates) && normalized.shelfTemplates.length > 0) {
+          liveState.shelfTemplates = normalized.shelfTemplates;
+        }
+      } else if (Array.isArray(body.shelfTemplates)) {
+        liveState.shelfTemplates = body.shelfTemplates;
       }
 
       liveState.boardTelemetry = { updatedAt: Date.now(), units, objectives };
@@ -677,13 +697,17 @@ function createTacticaDaemon(options = {}) {
       const body = await readJsonBody(req);
       liveState.phase = 'COMMAND_SPAWN';
       liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
-      const resPlan = planWaveSpawnCommands(body.zoneSpawns || liveState.zoneSpawns, body.spawnZones || []);
+      const resPlan = planWaveSpawnCommands(body.zoneSpawns || liveState.zoneSpawns, body.spawnZones || [], {
+        battleRound: liveState.battleRound,
+        shelfTemplates: body.shelfTemplates || liveState.shelfTemplates || []
+      });
+      liveState.hordeReserves = [...(liveState.hordeReserves || []), ...(resPlan.queuedReserves || [])];
       resPlan.commands.forEach(c => {
         cmdCounter += 1;
         ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...c });
       });
       const entry = appendEvent({ type: 'SPAWN_WAVE', summary: resPlan.summary });
-      return sendJson(res, 200, { ok: true, ...resPlan, entry, queueLength: ttsCommandQueue.length });
+      return sendJson(res, 200, { ok: true, ...resPlan, hordeReserves: liveState.hordeReserves, entry, queueLength: ttsCommandQueue.length });
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/disembark') {
@@ -716,15 +740,44 @@ function createTacticaDaemon(options = {}) {
       liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
       const moveRes = planHordeMovementPhase(liveState.boardTelemetry, liveState, body);
       liveState.lastMovementPlans = moveRes.plans;
+      liveState.hordeReserves = [];
       moveRes.commands.forEach(c => {
         cmdCounter += 1;
         ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...c });
       });
+      const ingressDrops = moveRes.ingressDrops || [];
+      liveState.lastIngressDrops = ingressDrops;
+      const ingressNote = ingressDrops.length > 0 ? ` + ${ingressDrops.length} Deep Strike Ingress drop(s)` : '';
       const entry = appendEvent({
         type: 'HORDE_MOVE',
-        summary: `Moved ${moveRes.plans.length} Horde squad(s) — awaiting Pre-Overwatch LOS check.`
+        summary: `Moved ${moveRes.plans.length} Horde squad(s)${ingressNote} — awaiting Pre-Overwatch LOS check.`
       });
-      return sendJson(res, 200, { ok: true, plans: moveRes.plans, entry, queueLength: ttsCommandQueue.length });
+      return sendJson(res, 200, { ok: true, plans: moveRes.plans, ingressDrops, entry, queueLength: ttsCommandQueue.length });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/fallback-ingress') {
+      const body = await readJsonBody(req);
+      const drops = liveState.lastIngressDrops || [];
+      const targetDrop = drops.find(d => body.reserveId && d.reserveId === body.reserveId) || drops[Number(body.dropIndex) || 0];
+      const cmd = buildIngressFallbackCommand(targetDrop);
+      if (!cmd) return sendJson(res, 400, { ok: false, error: 'No stored Deep Strike ingress drop' });
+      for (let i = ttsCommandQueue.length - 1; i >= 0; i--) {
+        if (ttsCommandQueue[i].action === 'DEEP_STRIKE_DROP' && ttsCommandQueue[i].reserveId === cmd.reserveId) {
+          ttsCommandQueue.splice(i, 1);
+        }
+      }
+      if (targetDrop) {
+        targetDrop.status = 'SCREENED_FALLBACK_SPAWN_ZONE';
+        targetDrop.targetX = cmd.targetX;
+        targetDrop.targetZ = cmd.targetZ;
+      }
+      cmdCounter += 1;
+      ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...cmd });
+      const entry = appendEvent({
+        type: 'INGRESS_FALLBACK',
+        summary: `Relocated ${cmd.unitLabel} to Spawn Zone ${cmd.zone} (3D terrain/ruin obstructed Deep Strike landing).`
+      });
+      return sendJson(res, 200, { ok: true, command: cmd, entry, queueLength: ttsCommandQueue.length });
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/revert-move') {

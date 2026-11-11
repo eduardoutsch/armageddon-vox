@@ -271,6 +271,29 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     assert.equal(disembarkRes.command.action, 'DISEMBARK_CARGO');
     assert.equal((await (await fetch(`${url1}/tts/poll`)).json()).action, 'DISEMBARK_CARGO');
 
+    // Round 2 Deep Strike reserve gating -> /autopilot/spawn-waves holds in hordeReserves -> /autopilot/plan-movement pops DEEP_STRIKE_DROP > 8.0"
+    await postJson(url1, '/session/sync', {
+      battleRound: 2,
+      zoneSpawns: [{ zone: 1, bracketKey: '7-9', units: ['5 Terminator Squad'] }]
+    });
+    const dsWave = await postJson(url1, '/autopilot/spawn-waves', {});
+    assert.equal(dsWave.commands.length, 0, 'Round 2 Terminator Squad must hold in Deep Strike reserves rather than immediate SPAWN_WAVE');
+    assert.equal(dsWave.queuedReserves.length, 1);
+    const stMid = await (await fetch(`${url1}/state`)).json();
+    assert.equal(stMid.state.hordeReserves.length, 1);
+
+    const dsMove = await postJson(url1, '/autopilot/plan-movement', {});
+    assert.equal(dsMove.ingressDrops.length, 1);
+    assert.ok(dsMove.ingressDrops[0].closestEnemyDistanceInches > 8.0);
+    // Drain Overlord's MOVE_UNIT then fallback Terminators' DEEP_STRIKE_DROP to Spawn Zone 1 via /autopilot/fallback-ingress
+    const firstPoll = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(firstPoll.action, 'MOVE_UNIT');
+    const fbIngress = await postJson(url1, '/autopilot/fallback-ingress', { dropIndex: 0 });
+    assert.equal(fbIngress.ok, true);
+    assert.equal(fbIngress.command.action, 'FALLBACK_INGRESS_TO_SPAWN');
+    const secondPoll = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(secondPoll.action, 'FALLBACK_INGRESS_TO_SPAWN', 'Fallback must replace unpolled DEEP_STRIKE_DROP and enqueue FALLBACK_INGRESS_TO_SPAWN');
+
     const sht = await postJson(url1, '/autopilot/select-shooting', {});
     assert.equal(sht.ok, true);
     assert.equal(sht.assignments.length, 1);
