@@ -664,3 +664,60 @@ var CrusadeCore = (function () {
     return lines.join('\n');
   }
 
+  // ===========================================================================
+  // TAB 2: MASTER POST-BATTLE DOSSIER & HORDE TELEMETRY IMPORT
+  // ===========================================================================
+  function isHordeModeDossier(modeNode) {
+    const mode = String(modeNode || '').trim();
+    if (!mode || /mode\s*2|1v1|pvp/i.test(mode)) return false;
+    return /mode\s*1|horde/i.test(mode);
+  }
+
+  function isDistantAugurEngagement(channel, modeNode) {
+    const chan = String(channel || 'alpha');
+    return chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(String(modeNode || ''));
+  }
+
+  function mapLeftoverSpToOption(leftoverSp) {
+    const val = Number(leftoverSp) || 0;
+    const match = LEFTOVER_SP_SALVAGE_TIERS.find((tier) => val >= tier.min);
+    return match ? match.option : '0 Leftover SP';
+  }
+
+  function deriveHordeTelemetryImportPatch(stats = {}, currentModeNode = '') {
+    const fortList = Array.isArray(stats.fortifications)
+      ? stats.fortifications.map((f) => String(f).toLowerCase())
+      : [];
+    const shouldUpgradeSolo = stats.gameMode === 'SOLO' && currentModeNode && !currentModeNode.includes('Solo');
+
+    return {
+      secretCode: (stats.secretObjective && stats.secretObjective.code) ? String(stats.secretObjective.code) : null,
+      leftoverSpOption: mapLeftoverSpToOption(stats.leftoverSp),
+      upgradedSoloModeNode: shouldUpgradeSolo ? 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)' : null,
+      fortifications: {
+        fortHosp: fortList.some((f) => f.includes('hospital')),
+        fortAmmo: fortList.some((f) => f.includes('ammo')),
+        fortTrench: fortList.some((f) => f.includes('trench')),
+        fortFob: fortList.some((f) => f.includes('fob') || f.includes('forward operating'))
+      }
+    };
+  }
+
+  function compileMasterDossier(input = {}, options = {}) {
+    const chan = input.channel || 'alpha';
+    const modeNode = input.modeNode || '';
+    const outcome = input.outcome || '';
+    const secCode = (input.secretCode || 'N/A').trim().toUpperCase();
+    const secTag = input.secretTag || 'None';
+    const leftover = input.leftoverSp || '0 Leftover SP';
+    const notes = (input.battleNotes || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
+    const forts = Array.isArray(input.fortifications) ? input.fortifications : [];
+    const fortStr = forts.length > 0 ? forts.join(', ') : 'None';
+    const queuedRolls = Array.isArray(input.queuedRolls) ? input.queuedRolls : [];
+    const distantForce = (input.distantForce || '').trim();
+    const allowHordeStats = modeNode ? isHordeModeDossier(modeNode) : true;
+    const formatHordeTelemetry = typeof options.formatHordeTelemetry === 'function' ? options.formatHordeTelemetry : null;
+    const statsSection = (allowHordeStats && input.hordeBattleStats && formatHordeTelemetry)
+      ? formatHordeTelemetry(input.hordeBattleStats)
+      : '';
+
