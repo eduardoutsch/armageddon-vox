@@ -226,3 +226,46 @@ test('Leagues of Votann Core: harvest multipliers + asset bonuses, rare check, a
   assert.equal(completed.rawMinerals, 140, 'Fundamental vault persists when expedition resets');
 });
 
+test('Master Dossier & Horde Telemetry Patch: declarative salvage tiers, fortification flags, and Gamma Votann channel', () => {
+  assert.equal(core.mapLeftoverSpToOption(9), '8 Leftover SP → +1 RP or +100 pts Supply Limit');
+  assert.equal(core.mapLeftoverSpToOption(5), '5 Leftover SP → +2 XP to Surviving Unit');
+  assert.equal(core.mapLeftoverSpToOption(3), '3 Leftover SP → Bank 1v1 Supply Cache Token');
+  assert.equal(core.mapLeftoverSpToOption(2), '2 Leftover SP → Orbital Auspex Recon Probe (Reveal Adjacent Node)');
+  assert.equal(core.mapLeftoverSpToOption(1), '0 Leftover SP');
+
+  const patch = core.deriveHordeTelemetryImportPatch(
+    {
+      leftoverSp: 6,
+      gameMode: 'SOLO',
+      secretObjective: { code: 'V99' },
+      fortifications: ['Field Hospital', 'Ammo Dump', 'Forward Operating Base']
+    },
+    'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)'
+  );
+  assert.equal(patch.secretCode, 'V99');
+  assert.equal(patch.leftoverSpOption, '5 Leftover SP → +2 XP to Surviving Unit');
+  assert.ok(patch.upgradedSoloModeNode.includes('Mode 1: Solo Horde Breach'));
+  assert.deepEqual(patch.fortifications, { fortHosp: true, fortAmmo: true, fortTrench: false, fortFob: true });
+
+  const gammaDossier = core.compileMasterDossier(
+    {
+      channel: 'gamma',
+      modeNode: 'Mode 1: Solo Horde Breach // Node 0 (Golgotha Arbor-Basin)',
+      outcome: 'Victory (+5 SPts)',
+      secretCode: 'V99',
+      secretTag: 'Wargear Tag',
+      leftoverSp: patch.leftoverSpOption,
+      battleNotes: 'Kin prospectors held the drill rig.',
+      votannSummary: 'Expeditions: 1 | Vault [M:40 B:20 E:10 I:0]',
+      queuedRolls: [],
+      hordeBattleStats: { hordeKills: 14, spEarned: 20, spSpent: 14, leftoverSp: 6, hordeFaction: 'Orks', roomSeed: 'VOT-1', gameMode: 'SOLO' }
+    },
+    {
+      formatHordeTelemetry: hordeStats.compileHordeBattleStatsDossierSection
+    }
+  );
+  assert.ok(gammaDossier.includes('+++ THRYMKÂL SALVAGE CONSORTIUM // MASTER POST-BATTLE DOSSIER & BLACK-LEDGER REPORT +++'));
+  assert.ok(gammaDossier.includes('KÂHL HÂRKYN // THE LEDGER OF EMBERS'));
+  assert.ok(gammaDossier.includes('KINDRED EXPEDITION & RESOURCE VAULT TELEMETRY: Expeditions: 1'));
+  assert.ok(gammaDossier.includes('• HORDE UNITS DESTROYED: 14 Units Slain'));
+});
