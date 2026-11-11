@@ -31,7 +31,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe** | `tactica_daemon.js` |
 | [`bundle_tts_bridge.md`](bundle_tts_bridge.md) | **LCT TTS Telemetry & Spatial Squad Core** | `js/tts-telemetry-core.js` |
 | [`bundle_tts_lua_beacon.md`](bundle_tts_lua_beacon.md) | **LCT TTS Orbital Auspex Lua Beacon** | `tts/lct_horde_bridge.lua` |
-| [`bundle_horde_autopilot.md`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | `js/horde-autopilot-core.js`, `tests/js/horde-autopilot-core.test.js` |
+| [`bundle_horde_autopilot.md`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | `js/horde-autopilot-core.js` |
 | [`bundle_tactica_overwatch.md`](bundle_tactica_overwatch.md) | **Live Overwatch & Vocal Stratagem Core** | `js/tactica-overwatch-core.js` |
 | [`bundle_tactica_overwatch_shell.md`](bundle_tactica_overwatch_shell.md) | **Live Screen, Neural Auspex & Push-to-Talk Shell** | `js/tactica-overwatch.js` |
 | [`bundle_data_rng.md`](bundle_data_rng.md) | **Data Schemas & Seeded RNG** | `js/data.js`, `js/rng.js` |
@@ -81,6 +81,7 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_tests_ui_spawner.md`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner UI & Combat Mods)** | `tests/ui/spawner.test.js`, `tests/js/horde-combat-modifiers.test.js` |
 | [`bundle_tests_tts_tactica.md`](bundle_tests_tts_tactica.md) | **Unit Tests (TTS Telemetry & Tactica)** | `tests/js/tts-telemetry-core.test.js`, `tests/js/tactica.test.js` |
 | [`bundle_tests_tactica_overwatch.md`](bundle_tests_tactica_overwatch.md) | **Unit Tests (Overwatch & Neural Auspex)** | `tests/js/tactica-overwatch-core.test.js`, `tests/js/tactica-overwatch.test.js` |
+| [`bundle_tests_horde_autopilot.md`](bundle_tests_horde_autopilot.md) | **Unit Tests (Horde Autopilot Core)** | `tests/js/horde-autopilot-core.test.js` |
 | [`bundle_tests_js_core.md`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | `tests/js/data.test.js`, `tests/js/rng.test.js`, `tests/js/vox-audio.test.js` |
 | [`bundle_tests_js_app.md`](bundle_tests_js_app.md) | **Unit Tests (App Engine Part 1)** | `tests/js/app.test.js` (Lines 1-519) |
 | [`bundle_tests_js_app_part2.md`](bundle_tests_js_app_part2.md) | **Unit Tests (App Engine Part 2)** | `tests/js/app.test.js` (Lines 520-end) |

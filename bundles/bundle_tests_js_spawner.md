@@ -15,7 +15,13 @@ Deterministic unit tests for spawner cards, cockpit telemetry, resupply table, a
 ````javascript
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { getBracketInfo, calculateRollDown, pickSyncedUnitFromBracket, parseSpawnWaveSpec } = require('../../js/spawner.js');
+const {
+  getBracketInfo,
+  calculateRollDown,
+  pickSyncedUnitFromBracket,
+  parseSpawnWaveSpec,
+  normalizeEmbarkedUnits
+} = require('../../js/spawner.js');
 const { mulberry32 } = require('../../js/rng.js');
 
 test('getBracketInfo: unmod 2 always results in No Spawn', () => {
@@ -203,6 +209,36 @@ test('parseSpawnWaveSpec: parses counts, dice expressions, + combos, and [Embark
   assert.deepEqual(parseSpawnWaveSpec('None'), []);
   assert.deepEqual(parseSpawnWaveSpec(null), []);
   assert.deepEqual(parseSpawnWaveSpec('⚠️ Necrons Pool Empty for Bracket [5-6] — Configure in Mode 4!'), []);
+
+  // Multi-unit Attached Cargo inside a Transport: [5 Kill Team + 1 Watch Master]
+  assert.deepEqual(parseSpawnWaveSpec('1 Corvus Blackstar [5 Kill Team + 1 Watch Master]', fixedRng), [
+    {
+      count: 1,
+      countExpr: '1',
+      templateName: 'Corvus Blackstar',
+      embarked: [
+        { count: 5, countExpr: '5', templateName: 'Kill Team', embarked: null },
+        { count: 1, countExpr: '1', templateName: 'Watch Master', embarked: null }
+      ]
+    }
+  ]);
+
+  assert.equal(typeof normalizeEmbarkedUnits, 'function');
+  assert.deepEqual(normalizeEmbarkedUnits(null), []);
+  assert.deepEqual(
+    normalizeEmbarkedUnits({ count: 10, countExpr: '10', templateName: 'Kasrkin', embarked: null }),
+    [{ count: 10, templateName: 'Kasrkin' }]
+  );
+  assert.deepEqual(
+    normalizeEmbarkedUnits([
+      { count: 5, templateName: 'Kill Team' },
+      { count: 1, templateName: 'Watch Master' }
+    ]),
+    [
+      { count: 5, templateName: 'Kill Team' },
+      { count: 1, templateName: 'Watch Master' }
+    ]
+  );
 });
 ````
 

@@ -252,6 +252,7 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_tests_tactica_daemon.md', check: 'tests/tactica_daemon.test.js' },
     { file: 'bundle_tests_tts_tactica.md', check: 'tests/js/tts-telemetry-core.test.js' },
     { file: 'bundle_tests_tactica_overwatch.md', check: 'tests/js/tactica-overwatch.test.js' },
+    { file: 'bundle_tests_horde_autopilot.md', check: 'tests/js/horde-autopilot-core.test.js' },
     { file: 'bundle_horde_autopilot.md', check: 'js/horde-autopilot-core.js' },
     { file: 'bundle_tactica_overwatch.md', check: 'js/tactica-overwatch-core.js' },
     { file: 'bundle_tactica_overwatch_shell.md', check: 'js/tactica-overwatch.js' },
@@ -574,5 +575,4 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     const isTabNemesisVisible = await page.evaluate(() => !document.getElementById('rosTabNemesis')?.classList.contains('hidden'));
     assert.equal(isTabNemesisVisible, true, 'Tab 1 panel must restore visibility on re-visited page');
 
-    // Filter out potential 401 Supabase unauthenticated RPC noise
 ````

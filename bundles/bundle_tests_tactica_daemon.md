@@ -27,6 +27,7 @@ const {
   createPlayerStratagemBuff,
   pruneExpiredPlayerBuffs,
   resolvePlayerUnitDefensiveBuffs,
+  selectTelemetryRowViewModels,
   formatChronicleEntry,
   detectPlayerReactionWindow,
   assignHordeWarlordIfEligible,
@@ -322,6 +323,54 @@ test('createPlayerStratagemBuff, pruneExpiredPlayerBuffs & resolvePlayerUnitDefe
   nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'PLAYER_TURN');
   assert.equal(nextTurnBuffs.length, 0, 'Must expire once Round 3 reaches PLAYER_TURN ("your next turn / shooting phase")');
 });
+
+test('selectTelemetryRowViewModels: pure MVVM selector projects unit badges, save brackets, and Embarked Transport actions without DOM', () => {
+  assert.equal(typeof selectTelemetryRowViewModels, 'function');
+  assert.deepEqual(selectTelemetryRowViewModels(null), []);
+
+  const vms = selectTelemetryRowViewModels([
+    {
+      squadKey: 'HORDE::Corvus Blackstar',
+      name: 'Corvus Blackstar',
+      side: 'HORDE',
+      modelCount: 1,
+      save: 3,
+      closestObjective: { name: 'Obj 2', distanceInches: 4.5 },
+      closestEnemy: { name: 'Hearthkyn Warriors #1', distanceInches: 9.2 },
+      embarkedCargo: [
+        { count: 5, templateName: 'Kill Team' },
+        { count: 1, templateName: 'Watch Master' }
+      ],
+      embarkedSummary: '5x Kill Team + 1x Watch Master'
+    },
+    {
+      squadKey: 'PLAYER::Hearthkyn Warriors #1',
+      name: 'Hearthkyn Warriors #1',
+      side: 'PLAYER',
+      modelCount: 10,
+      save: 4,
+      invuln: 5,
+      fnp: 6,
+      embarkedCargo: []
+    }
+  ]);
+
+  assert.equal(vms.length, 2);
+  assert.equal(vms[0].side, 'HORDE');
+  assert.equal(vms[0].sideBadgeClass, 'red');
+  assert.equal(vms[0].statsBracketText, '[x1 • Sv 3+]');
+  assert.equal(vms[0].hasEmbarkedCargo, true);
+  assert.equal(vms[0].embarkedBadgeText, '🚌 Embarked: 5x Kill Team + 1x Watch Master');
+  assert.equal(vms[0].canDisembark, true);
+  assert.equal(vms[0].canLoadAutoDefender, true);
+
+  assert.equal(vms[1].side, 'PLAYER');
+  assert.equal(vms[1].sideBadgeClass, 'blue');
+  assert.equal(vms[1].statsBracketText, '[x10 • Sv 4+/5++/FNP 6+]');
+  assert.equal(vms[1].hasEmbarkedCargo, false);
+  assert.equal(vms[1].canDisembark, false);
+  assert.equal(vms[1].canLoadAutoDefender, false);
+});
 ````
 
 ---
@@ -511,6 +560,36 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     assert.ok(typeof telRaw.units[0].closestObjective.distanceInches === 'number');
     assert.ok(telRaw.units[0].closestObjective.distanceInches > 6 && telRaw.units[0].closestObjective.distanceInches < 7);
 
+    // Consecutive /tts/telemetry scans lock duplicate-datasheet GUIDs across turns even when squads converge to 0.1" apart
+    const deployScan = await postJson(url1, '/tts/telemetry', {
+      objects: [
+        { guid: 'imm-a1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: -10, y: 1, z: 14 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' },
+        { guid: 'imm-b1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: 10, y: 1, z: 14 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' }
+      ]
+    });
+    assert.equal(deployScan.trackedUnits, 2);
+    const convergedScan = await postJson(url1, '/tts/telemetry', {
+      objects: [
+        { guid: 'imm-a1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: 0, y: 1, z: 2 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' },
+        { guid: 'imm-b1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: 1.3, y: 1, z: 2 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' }
+      ]
+    });
+    assert.equal(convergedScan.trackedUnits, 2, 'Daemon must preserve GUID-locked #1/#2 squads when they move 0.04" apart');
+
+    // Casualty off-mat on Scan 3 followed by Reanimation return on Scan 4 remembers dead GUID in squadGuidRegistry
+    await postJson(url1, '/tts/telemetry', {
+      objects: [
+        { guid: 'imm-b1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: 1.3, y: 1, z: 2 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' }
+      ]
+    });
+    const reanimatedScan = await postJson(url1, '/tts/telemetry', {
+      objects: [
+        { guid: 'imm-a1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: 0, y: 1, z: 2 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' },
+        { guid: 'imm-b1', name: '1/1 Immortals', tags: ['HORDE'], pos: { x: 1.3, y: 1, z: 2 }, bounds: { x: 1.26, y: 1.5, z: 1.26 }, description: 'M: 5" T: 5 Sv: 3+ W: 1\nKeywords: Infantry' }
+      ]
+    });
+    assert.equal(reanimatedScan.trackedUnits, 2, 'Daemon squadGuidRegistry must remember resurrected imm-a1 as Immortals #1');
+
     // Subsequent pre-parsed units telemetry preserves locked Horde Warlord & sets up Autopilot check
     const tel = await postJson(url1, '/tts/telemetry', {
       units: [
@@ -540,12 +619,37 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     });
     assert.equal(tel.warlord.name, 'Technomancer');
 
-    // Autopilot spawn-waves, select-shooting & movement -> enqueues SPAWN_WAVE & MOVE_UNIT
+    // Autopilot spawn-waves, disembark, select-shooting & movement -> enqueues SPAWN_WAVE, DISEMBARK_CARGO & MOVE_UNIT
     const spw = await postJson(url1, '/autopilot/spawn-waves', {
       zoneSpawns: [{ zone: 1, bracketKey: '5-6', units: ['5 Immortals'] }]
     });
     assert.equal(spw.ok, true);
     assert.equal((await (await fetch(`${url1}/tts/poll`)).json()).action, 'SPAWN_WAVE');
+
+    const badDisembark = await fetch(`${url1}/autopilot/disembark`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ squadKey: 'HORDE::Overlord' })
+    });
+    assert.equal(badDisembark.status, 400, 'Disembarking a unit without embarkedCargo must return 400');
+
+    const disembarkRes = await postJson(url1, '/autopilot/disembark', {
+      transportUnit: {
+        squadKey: 'HORDE::Corvus Blackstar',
+        guid: 'corvus-d1',
+        name: 'Corvus Blackstar',
+        side: 'HORDE',
+        pos: { x: 4, z: 12 },
+        models: [{ guid: 'corvus-d1', pos: { x: 4, z: 12 }, radiusInches: 2.0 }],
+        embarkedCargo: [
+          { count: 5, templateName: 'Kill Team' },
+          { count: 1, templateName: 'Watch Master' }
+        ]
+      }
+    });
+    assert.equal(disembarkRes.ok, true);
+    assert.equal(disembarkRes.command.action, 'DISEMBARK_CARGO');
+    assert.equal((await (await fetch(`${url1}/tts/poll`)).json()).action, 'DISEMBARK_CARGO');
 
     const sht = await postJson(url1, '/autopilot/select-shooting', {});
     assert.equal(sht.ok, true);

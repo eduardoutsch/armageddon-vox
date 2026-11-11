@@ -10,6 +10,7 @@ Headless browser E2E verification, cockpit controls, and cross-page navigation t
 ## File: `tests/ui/pages.test.js (Part 2: Headless Playwright E2E, Lines 566-1100)` <a id="file-testsuipagestestjspart2headlessplaywrighte2elines5661100"></a>
 
 ````javascript
+    // Filter out potential 401 Supabase unauthenticated RPC noise
     const syntaxErrors = pageErrors.filter((e) => !e.includes('401'));
     assert.deepEqual(syntaxErrors, [], 'Must encounter 0 page errors or syntax errors during seamless navigation');
   } finally {
