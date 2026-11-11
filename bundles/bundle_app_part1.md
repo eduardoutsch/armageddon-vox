@@ -15,7 +15,7 @@ Main horde application logic, state stores, and faction profile bindings (`js/ap
 if (typeof require !== 'undefined') {
   if (typeof HORDE_FACTIONS === 'undefined') Object.assign(globalThis, require('./data.js'));
   if (typeof hashString === 'undefined') Object.assign(globalThis, require('./rng.js'));
-  if (typeof getBracketInfo === 'undefined') Object.assign(globalThis, require('./spawner.js'));
+  if (typeof getBracketInfo === 'undefined' || typeof parseSpawnWaveSpec === 'undefined') Object.assign(globalThis, require('./spawner.js'));
 }
 
 let selectedModeVal = 'coop';

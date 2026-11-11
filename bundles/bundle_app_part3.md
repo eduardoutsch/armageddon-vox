@@ -10,6 +10,29 @@ DOM event handlers, Auspex telemetry HUD synchronization, and session state pers
 ## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)` <a id="file-jsappjspart3uitelemetrypersistencelines1401end"></a>
 
 ````javascript
+    void el.offsetWidth;
+  }
+  el.classList.add('card-synced-shake');
+  setTimeout(() => {
+    if (el && el.classList) el.classList.remove('card-synced-shake');
+  }, 600);
+}
+
+function updateSyncBadge(isLive, labelText) {
+  if (typeof document === 'undefined') return;
+  const badge = document.getElementById('spawnerSyncBadge');
+  if (badge) {
+    badge.textContent = labelText || (isLive ? '☁️ Room Live' : '☁️ Room Offline');
+    badge.classList.toggle('offline', !isLive);
+    badge.style.borderColor = isLive ? 'rgba(16, 185, 129, 0.55)' : 'rgba(255, 71, 87, 0.45)';
+    badge.style.color = isLive ? '#6ee7b7' : '#fca5a5';
+    badge.style.background = isLive ? 'rgba(16, 185, 129, 0.14)' : 'rgba(255, 71, 87, 0.12)';
+  }
+  const setupBadge = document.getElementById('setupSyncPill');
+  if (setupBadge && isLive) {
+    setupBadge.textContent = labelText || (activeHordeFaction
+      ? `☁️ Room Synced (${getActiveRoomCode()} • ${activeHordeFaction.name})`
+      : '☁️ Live Room Sync Active');
   }
 }
 
@@ -478,23 +501,14 @@ if (typeof window !== 'undefined') {
       if (!res || !res.ok) return;
       const data = await res.json();
       if (data && data.ok && data.horde_pool && typeof data.horde_pool === 'object' && Object.keys(data.horde_pool).length > 0) {
-        if (data.horde_pool.byFaction) {
-          const localRaw = localStorage.getItem('foa_custom_shelf_pool_v1');
-          let localPool = {};
-          try { localPool = localRaw ? JSON.parse(localRaw) : {}; } catch (e) {}
-          const mergedByFaction = {
-            ...(localPool.byFaction || {}),
-            ...data.horde_pool.byFaction
-          };
-          const mergedPool = {
-            ...localPool,
-            ...data.horde_pool,
-            byFaction: mergedByFaction
-          };
-          localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(mergedPool));
-        } else {
-          localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify(data.horde_pool));
-        }
+        const localRaw = localStorage.getItem('foa_custom_shelf_pool_v1');
+        let localPool = {};
+        try { localPool = localRaw ? JSON.parse(localRaw) : {}; } catch (e) {}
+        const mergedByFaction = {
+          ...(localPool.byFaction || {}),
+          ...(data.horde_pool.byFaction || {})
+        };
+        localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify({ byFaction: mergedByFaction }));
         renderLiveSpawnerBracketTable();
       }
     } catch (e) {}
@@ -512,22 +526,16 @@ if (typeof window !== 'undefined') {
       const raw = localStorage.getItem('foa_custom_shelf_pool_v1');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (facName && parsed.byFaction) {
-          pool = { ...pool, ...(parsed.byFaction[facName] || {}) };
-        } else if (!parsed.byFaction) {
+        if (facName && parsed.byFaction && parsed.byFaction[facName]) {
+          pool = { ...pool, ...parsed.byFaction[facName] };
+        } else if (!facName && !parsed.byFaction) {
           pool = { ...pool, ...parsed };
         }
       }
     } catch (e) {}
 
-    const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
-      ? HORDE_FACTION_SPAWN_TABLES
-      : ((typeof window !== 'undefined' && window.HORDE_FACTION_SPAWN_TABLES) ? window.HORDE_FACTION_SPAWN_TABLES : {});
-    const refTable = (facName && tables[facName]) ? tables[facName] : {};
-
-    const showVal = (val, refArr) => {
+    const showVal = (val) => {
       if (val && val.trim()) return val;
-      if (Array.isArray(refArr) && refArr.length > 0) return refArr.join(' • ');
       return `<span style="color:var(--red); font-style:italic;">⚠️ Horde Pool Empty${facName ? ' for ' + facName : ''} — Configure in Mode 4 (Roster)!</span>`;
     };
 
@@ -544,11 +552,11 @@ if (typeof window !== 'undefined') {
         </thead>
         <tbody>
           <tr><td><strong>[2] No Spawn</strong></td><td style="color:var(--muted);">Breach Holds (Unmodified 2 always spawns nothing)</td></tr>
-          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${showVal(pool.b34, refTable.b34)}</td></tr>
-          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${showVal(pool.b56, refTable.b56)}</td></tr>
-          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${showVal(pool.b79, refTable.b79)}</td></tr>
-          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10, refTable.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
-          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13, refTable.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[3–4] (0–75 pts)</strong></td><td>${showVal(pool.b34)}</td></tr>
+          <tr><td><strong>[5–6] (76–150 pts)</strong></td><td>${showVal(pool.b56)}</td></tr>
+          <tr><td><strong>[7–9] (151–300 pts)</strong></td><td>${showVal(pool.b79)}</td></tr>
+          <tr><td><strong>[10–12] (301–550 pts)</strong></td><td>${showVal(pool.b10)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
+          <tr><td><strong>[13+] (551+ pts)</strong></td><td>${showVal(pool.b13)} <br><span style="color:var(--red); font-size:0.74rem;">⚡ + 1D6 Warp-Breach Intrusion Check (6+ = Campaign Master Adversary/Nemesis!)</span></td></tr>
         </tbody>
       </table>
     `;
@@ -609,9 +617,15 @@ if (typeof window !== 'undefined') {
       const bracketMatch = text.match(/Bracket\s*\[[^\]]+\]/i);
       const bracketLabel = bracketMatch ? bracketMatch[0] : 'Bracket [10+]';
 
-      // Deterministic 1D6 roll seeded by Room Code + Round + Zone so both players see the exact same result!
+      const zoneObj = (Array.isArray(currentZoneSpawns) && typeof currentZoneSpawns[idx] === 'object')
+        ? currentZoneSpawns[idx]
+        : null;
+
       let intrusionRoll = 1;
-      if (typeof cyrb128 === 'function' && typeof mulberry32 === 'function') {
+      const waveToken = zoneObj?.waveId || 'dom';
+      if (zoneObj && typeof zoneObj.intrusionRoll === 'number') {
+        intrusionRoll = zoneObj.intrusionRoll;
+      } else if (typeof cyrb128 === 'function' && typeof mulberry32 === 'function') {
         const seedArr = cyrb128(`${roomStr}_INTRUSION_R${roundStr}_Z${zoneNum}`);
         const rng = mulberry32(seedArr[0]);
         intrusionRoll = Math.floor(rng() * 6) + 1;
@@ -624,7 +638,7 @@ if (typeof window !== 'undefined') {
 
       if (intrusionRoll >= 6) {
         anyIntrusionTriggered = true;
-        currentWaveIntrusions.push(`${roomStr}_R${roundStr}_Z${zoneNum}_${intrusionRoll}`);
+        currentWaveIntrusions.push(`${roomStr}_R${roundStr}_Z${zoneNum}_${waveToken}_${intrusionRoll}`);
         if (!card.querySelector('.warp-intrusion-alert')) {
           card.style.borderColor = 'var(--red)';
           const alertDiv = document.createElement('div');
@@ -746,18 +760,4 @@ if (typeof window !== 'undefined') {
             }
           }, 3500);
         }
-      } else {
-        if (spawnerCloudPollTimer) {
-          clearInterval(spawnerCloudPollTimer);
-          spawnerCloudPollTimer = null;
-        }
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', initSpawnerCloudPolling);
-    window.addEventListener('vox:page-swapped', initSpawnerCloudPolling);
-  }
-
-  if (typeof module !== 'undefined' && module.exports) {
-    Object.assign(module.exports, {
 ````
