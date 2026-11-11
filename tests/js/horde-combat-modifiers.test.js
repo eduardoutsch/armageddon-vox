@@ -214,3 +214,52 @@ test('resolveAutoDefenderRolls: executes saves, multi-damage FNP shrugs, Misery 
     preRolledOnDeath: [4]            // 4+ triggers Misery #30 shoot/fight on death!
   });
 
+  assert.equal(outcome.savesPassed, 1);
+  assert.equal(outcome.unsavedWounds, 2);
+  assert.equal(outcome.fnpPassed, 2);
+  assert.equal(outcome.finalDamageInflicted, 2);
+  assert.equal(outcome.modelsSlain, 1);
+  assert.equal(outcome.remainingModels, 1);
+  assert.equal(outcome.unitDestroyed, false);
+  assert.equal(outcome.onDeathTriggers, 1);
+
+  // GSC squad wipe triggers 5+ respawn roll
+  const gscProfile = resolveHordeDefenseProfile(
+    { save: 5, woundsPerModel: 1, keywords: ['INFANTRY'] },
+    { type: 'ranged', strength: 4, ap: -2, damage: 1 },
+    { factionName: 'Genestealer Cults', activeMiseryIds: [] }
+  );
+  const gscWipe = resolveAutoDefenderRolls(gscProfile, {
+    numWounds: 1,
+    damagePerWound: 1,
+    startingModels: 1,
+    preRolledSaves: [1],
+    preRolledRespawn: 5
+  });
+  assert.equal(gscWipe.unitDestroyed, true);
+  assert.equal(gscWipe.gscRespawnTriggered, true);
+});
+
+test('resolvePlayerModifiers: aggregates Misery debuffs and active Fortification buffs', () => {
+  const playerMods = resolvePlayerModifiers(
+    {
+      activeMiseryIds: [9, 22, 31, 35, 36],
+      activeFortifications: ['FORT_TRENCH', 'FORT_AMMO', 'FORT_SHIELD']
+    },
+    { baseMove: 5, whollyWithinTrench: true, whollyWithinAmmo: true, whollyWithinShield: true, attackerOutsideShield: true }
+  );
+
+  assert.equal(playerMods.effectiveMove, 4, 'Misery #36 -2" Move clamps at minimum 4"');
+  assert.equal(playerMods.advanceRollMod, -2);
+  assert.equal(playerMods.chargeRollMod, -2);
+  assert.equal(playerMods.stratagemsLocked, true);
+  assert.equal(playerMods.battleShockAutoFail, true);
+  assert.equal(playerMods.forceRerollHitSixes, true);
+  assert.equal(playerMods.rangedStrengthMod, 1);
+  assert.equal(playerMods.rangedApImprove, 1);
+  assert.ok(playerMods.rangedKeywords.includes('HAZARDOUS') && playerMods.rangedKeywords.includes('SUSTAINED HITS 1'));
+  assert.equal(playerMods.meleeStrengthMod, 1);
+  assert.equal(playerMods.meleeApImprove, 1);
+  assert.equal(playerMods.rangedDefenseFnp, 5);
+});
+
