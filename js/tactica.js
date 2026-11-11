@@ -554,3 +554,62 @@
     return clientState.pendingDiceSequence;
   }
 
+  /**
+   * 4. Declares eligible Horde Charges (`<= 12"`), opens Heroic Intervention, and queues `2D6` on the LCT Mat.
+   */
+  async function triggerAutopilotCharges() {
+    clientState.phase = 'HORDE_CHARGE';
+    let declarations = [];
+    try {
+      const res = await daemonRequest('/autopilot/declare-charges', 'POST', {});
+      daemonOnline = true;
+      declarations = res.declarations || [];
+      clientState.pendingReactionWindow = res.pendingReactionWindow;
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      const chg = planHordeCharges(clientState.boardTelemetry, clientState);
+      declarations = chg.declarations || [];
+      const win = detectPlayerReactionWindow('HORDE_CHARGE_DECLARED', clientState);
+      clientState.pendingReactionWindow = (declarations.length > 0 && win.open) ? win : null;
+      localChronicle.push(formatChronicleEntry({
+        type: 'HORDE_CHARGE',
+        summary: `Declared ${declarations.length} Horde charge(s).`
+      }, clientState));
+    }
+    clientState.pendingChargeDecl = declarations[0]?.lctCommand ? declarations[0] : null;
+    setAutopilotHtml(declarations.length === 0
+      ? '<span style="color:var(--muted);">No Horde units within 12" Charge eligibility.</span>'
+      : declarations.map(d => `<div>⚡ <strong>${d.attackerName}</strong> &rarr; <strong>${d.targetName}</strong> (${d.distanceInches}" edge-to-edge • ${d.autoSucceeded ? 'Auto-12" Charge!' : '2D6 Queued on LCT Mat'})</div>`).join(''));
+    renderTacticaConsole();
+    return declarations;
+  }
+
+  /**
+   * 5. Executes 11th Edition 3-Tier `3"` Consolidation (`ONGOING` -> `ENGAGING` -> `OBJECTIVE` -> `HOLD`).
+   */
+  async function triggerAutopilotConsolidate() {
+    clientState.phase = 'HORDE_FIGHT';
+    let moves = [];
+    try {
+      const res = await daemonRequest('/autopilot/consolidate', 'POST', {});
+      daemonOnline = true;
+      moves = res.moves || [];
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      const units = clientState.boardTelemetry?.units || [];
+      const objs = clientState.boardTelemetry?.objectives || [];
+      const horde = units.filter(u => u.side !== 'PLAYER');
+      const players = units.filter(u => u.side === 'PLAYER');
+      moves = horde.map(h => ({ unitName: h.name, ...planConsolidationMove(h, players, objs) }));
+      localChronicle.push(formatChronicleEntry({
+        type: 'CONSOLIDATE',
+        summary: `Resolved 3" Consolidation for ${moves.length} Horde unit(s).`
+      }, clientState));
+    }
+    setAutopilotHtml(moves.length === 0
+      ? '<span style="color:var(--muted);">No Horde units on board to consolidate.</span>'
+      : moves.map(m => `<div>⚔️ <strong>${m.unitName}</strong>: [${m.mode}]${m.targetName ? ` &rarr; ${m.targetName}` : ''}</div>`).join(''));
+    renderTacticaConsole();
+    return moves;
+  }
+
