@@ -884,6 +884,7 @@ Complete markup for 3-Way Alliance Scoreboard, Branching Narrative Trees, and Ma
 
 <script src="../js/vox-audio.js"></script>
 <script src="../js/crusade-data.js"></script>
+<script src="../js/crusade-core.js"></script>
 <script src="../js/horde-battle-stats.js"></script>
 <script src="../js/crusade-forge.js"></script>
 <script src="../js/crusade.js"></script>
