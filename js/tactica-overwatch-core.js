@@ -179,3 +179,39 @@
       ].join('\n');
     }
 
+    const isBeta = chan === 'beta';
+    return [
+      '+++ EMERGENCY AUSPEX PING: HORDE WARP-BREACH INTRUSION DETECTED +++',
+      `• MODE & ROOM SEED: Mode 1 (Horde Command // Room: ${room} // Battle Round ${round})`,
+      isBeta
+        ? '• TELEMETRY SOURCE: TOMB-SHIP OMNICIDAL AUSPEX [PHAERON JUNEBUG]'
+        : '• TELEMETRY SOURCE: MUNITORUM PERIMETER AUGUR [THE EXILE // 044TH KRIEG]',
+      `• BREACH VECTOR: Spawn Zone ${zoneNum} rolled ${cleanBracket} + [6+ WARP-BREACH INTRUSION] against ${fac}!`,
+      isBeta
+        ? '• REQUEST FOR TOMB-SHIP MASTER MATRIX: Execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and output a Pattern 3 Threat Manifestation Warrant with exact TTS miniature to spawn!'
+        : '• REQUEST FOR CAMPAIGN MASTER: Execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and output a Pattern 3 Ordo Malleus Threat Warrant with exact TTS miniature to spawn!'
+    ].join('\n');
+  }
+
+  /**
+   * Compiles live Tactica state + Round 1–6 chronicle into `foa_horde_battle_stats_v1` for Mode 5 (`crusade.html`).
+   *
+   * @param {object} [state={}] - Live Tactica match state.
+   * @param {Array<object>} [chronicleEntries=[]] - Persisted Round 1–6 chronicle entries.
+   * @param {object} [spawnerSession={}] - Optional Mode 1 `foa_horde_session_v1` object for secondary/secret card merge.
+   * @returns {object} `foa_horde_battle_stats_v1` telemetry snapshot.
+   */
+  function compileTacticaCrusadeSnapshot(state = {}, chronicleEntries = [], spawnerSession = {}) {
+    let chronicleUnitWipes = 0;
+    let chronicleStrats = 0;
+
+    for (const e of (chronicleEntries || [])) {
+      if (!e) continue;
+      if (e.type === 'AUTO_DEFENDER' && e.details?.outcome?.unitDestroyed) {
+        chronicleUnitWipes += 1;
+      }
+      if (e.type === 'REACTION' && !/passed\s+reaction/i.test(e.summary || '')) {
+        chronicleStrats += 1;
+      }
+    }
+
