@@ -215,3 +215,44 @@
       }
     }
 
+    const spLeft = Number(state.playerSp ?? spawnerSession.sp ?? 0);
+    const spSpent = Number(spawnerSession.spSpentThisRound ?? spawnerSession.spSpent ?? 0);
+    const spEarned = Math.max(Number(spawnerSession.spEarned || 0), spLeft + spSpent);
+    const isSolo = spawnerSession.selectedModeVal === 'solo' || spawnerSession.isSoloMode !== false;
+
+    const miseriesDrawn = Array.isArray(spawnerSession.activeMiseries) && spawnerSession.activeMiseries.length > 0
+      ? spawnerSession.activeMiseries.map(m => ({ id: m.id, name: m.name || `Misery #${m.id}` }))
+      : (state.activeMiseryIds || []).map(id => ({ id, name: `Misery #${id}` }));
+
+    return {
+      hordeKills: Math.max(chronicleUnitWipes, Number(spawnerSession.hordeKills) || 0),
+      spEarned,
+      spSpent,
+      leftoverSp: spLeft,
+      leftoverCp: Number(state.playerCp ?? spawnerSession.cp ?? 0),
+      stratagemsUsed: Math.max(chronicleStrats, Number(spawnerSession.stratCount) || 0),
+      roundsPlayed: Math.max(1, Number(state.battleRound) || 1),
+      hordeFaction: state.factionName || spawnerSession.activeHordeFactionName || 'Unknown Faction',
+      roomSeed: String(state.roomCode || spawnerSession.seed || 'HADES-1').trim().toUpperCase(),
+      gameMode: isSolo ? 'SOLO' : 'CO-OP',
+      miseriesDrawn,
+      miseriesNullified: Number(spawnerSession.miseriesNullified) || 0,
+      secondariesCompleted: Array.isArray(spawnerSession.secondariesCompleted) ? spawnerSession.secondariesCompleted : [],
+      secondariesFailed: Array.isArray(spawnerSession.secondariesFailed) ? spawnerSession.secondariesFailed : [],
+      secretObjective: spawnerSession.activeCard || null,
+      fortifications: Array.isArray(state.activeFortifications) ? state.activeFortifications : [],
+      hordeWarlord: state.hordeWarlord || null,
+      timestamp: Date.now()
+    };
+  }
+
+  return {
+    parseSpokenTacticaIntent,
+    buildLosVerificationPrompt,
+    parseOverwatchVerdict,
+    buildReactionVoiceCallout,
+    detectActiveIntrusionZones,
+    buildIntrusionVoxPayload,
+    compileTacticaCrusadeSnapshot
+  };
+});
