@@ -112,3 +112,71 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   await tactica.refreshDaemonState();
   assert.ok(els.tacticaDaemonBadge.textContent.includes('OFFLINE'));
 
+  // Reaction window & manual note offline fallback
+  await tactica.setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT');
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), false);
+  await tactica.resolveConsoleReaction('FIRE_OVERWATCH', 1);
+  assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), true);
+
+  els.tacticaNoteInput.value = 'Krieg squad held Eastern Bastion.';
+  await tactica.appendConsoleNote();
+  assert.ok(els.tacticaChronicleBox.innerHTML.includes('Eastern Bastion'));
+
+  // Queue Auto-Defender -> pauses awaiting 2D6 Saves on LCT mat (does NOT roll in JS!)
+  await tactica.queueConsoleAutoDefender();
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('SAVES'), 'Must display pending SAVES stage for LCT mat');
+
+  // Feed settled pips [2, 5] -> 1 fail triggers FNP stage (5+)
+  els.tacticaManualPipsInput.value = '2, 5';
+  await tactica.submitSettledMatPips();
+  assert.ok(els.tacticaPendingRollBox.innerHTML.includes('FNP'), 'Must advance to FNP stage');
+
+  // Feed settled FNP pip [6] -> shrugged! Sequence completes with 0 slain
+  els.tacticaManualPipsInput.value = '6';
+  await tactica.submitSettledMatPips();
+  assert.ok(els.defResultBox.innerHTML.includes('Slain: <strong style="color:var(--red);">0</strong>'));
+
+  await tactica.compileAndPreviewMatchReport();
+  tactica.sendCompiledReportToVox();
+  assert.ok(voxQueued && voxQueued.text.includes('ASHEN-11'));
+
+  // One-click Orbital Auspex Telemetry -> Auto-Defender population & Autopilot Move + LOS Revert
+  tactica.getTacticaClientState().boardTelemetry = {
+    objectives: [],
+    units: [
+      {
+        squadKey: 'HORDE::Skorpekh',
+        name: 'Skorpekh Destroyers',
+        side: 'HORDE',
+        modelCount: 3,
+        move: 8,
+        save: 3,
+        invuln: 0,
+        woundsPerModel: 3,
+        pos: { x: 0, z: 14 },
+        keywords: ['INFANTRY'],
+        weapons: [{ name: 'Gauss Blaster', type: 'ranged', rangeInches: 24, attacks: 2, skill: 3, strength: 5, ap: -2, damage: 2, keywords: [] }],
+        inSpawnZone: true,
+        models: [{ guid: 'sk1', pos: { x: 0, y: 1.1, z: 14 }, radiusInches: 0.98 }]
+      },
+      {
+        squadKey: 'PLAYER::Cadians',
+        name: 'Cadian Shock Troops',
+        side: 'PLAYER',
+        modelCount: 10,
+        toughness: 3,
+        pos: { x: 0, z: 4 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'cd1', pos: { x: 0, y: 1.1, z: 4 }, radiusInches: 0.55 }]
+      }
+    ]
+  };
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, bracketKey: '5-6', units: ['10 Necron Warriors'] }
+  ];
+  await tactica.requestTtsBoardScan();
+  assert.ok(els.tacticaTelemetryBox.innerHTML.includes('Skorpekh Destroyers'));
+  tactica.selectTelemetryUnitForDefense(0);
+  assert.equal(els.defUnitName.value, 'Skorpekh Destroyers');
+  assert.equal(els.defInSpawnCheck.checked, true);
+
