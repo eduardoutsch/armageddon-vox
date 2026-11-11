@@ -106,7 +106,14 @@ function parseSingleUnitToken(token, rng = Math.random) {
   const embarkedMatch = working.match(/\[([^\]]+)\]\s*$/);
   if (embarkedMatch) {
     working = working.slice(0, embarkedMatch.index).trim();
-    embarked = parseSingleUnitToken(embarkedMatch[1], rng);
+    const cargoParts = splitTopLevelWaveUnits(embarkedMatch[1])
+      .map(part => parseSingleUnitToken(part, rng))
+      .filter(Boolean);
+    if (cargoParts.length === 1) {
+      embarked = cargoParts[0];
+    } else if (cargoParts.length > 1) {
+      embarked = cargoParts;
+    }
   }
 
   // Match dice count (e.g., "1D3", "2D6+2", "D3") or integer count (e.g., "10", "10x")
@@ -193,8 +200,27 @@ function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
   return list[Math.floor(rng() * list.length)];
 }
 
+/**
+ * Pure normalizer converting a single embarked descriptor or multi-unit `[Bodyguard + Leader]`
+ * cargo array into a uniform `Array<{ count: number, templateName: string }>` list.
+ *
+ * @param {object|Array<object>|null} embarked - Parsed `embarked` field from `parseSpawnWaveSpec`.
+ * @returns {Array<{count: number, templateName: string}>} Normalized passenger descriptors.
+ */
+function normalizeEmbarkedUnits(embarked) {
+  if (!embarked) return [];
+  const rawList = Array.isArray(embarked) ? embarked : [embarked];
+  return rawList
+    .filter(item => item && item.templateName)
+    .map(item => ({
+      count: Math.max(1, Number(item.count) || 1),
+      templateName: String(item.templateName).trim()
+    }));
+}
+
 if (typeof window !== 'undefined') {
   window.parseSpawnWaveSpec = parseSpawnWaveSpec;
+  window.normalizeEmbarkedUnits = normalizeEmbarkedUnits;
 }
 
 // Dual export for Node.js test runner and browser global scope
@@ -205,6 +231,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getBracketInfo,
     calculateRollDown,
     pickSyncedUnitFromBracket,
-    parseSpawnWaveSpec
+    parseSpawnWaveSpec,
+    normalizeEmbarkedUnits
   };
 }
