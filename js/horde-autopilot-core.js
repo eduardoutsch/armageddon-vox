@@ -333,3 +333,60 @@
     return { plans, commands };
   }
 
+  /**
+   * Builds a `REVERT_MOVE` command restoring a Horde squad to its exact pre-move coordinates if LOS is blocked.
+   *
+   * @param {object} movePlan - Squad plan object produced by `planHordeMovementPhase`.
+   * @returns {object|null} `REVERT_MOVE` command or `null` if no snapshot exists.
+   */
+  function buildMoveRevertCommand(movePlan) {
+    if (!movePlan || !Array.isArray(movePlan.originModels)) return null;
+    return {
+      action: 'REVERT_MOVE',
+      squadKey: movePlan.squadKey,
+      unitName: movePlan.unitName,
+      models: movePlan.originModels.map(m => ({ guid: m.guid, x: m.x, y: m.y, z: m.z }))
+    };
+  }
+
+  /**
+   * Extracts the target keyword (`VEHICLE`, `INFANTRY`, `MONSTER`, etc.) from `[ANTI-X Y+]` weapon keywords.
+   */
+  function extractAntiKeyword(weaponKws) {
+    for (const kw of weaponKws) {
+      const m = kw.match(/^ANTI-([A-Z\s]+?)\s+\d\+$/) || kw.match(/^([A-Z\s]+?)\s+HUNTER$/);
+      if (m) return m[1].trim().toUpperCase();
+    }
+    return null;
+  }
+
+  /**
+   * 3. Selects legal ranged targets per weapon using Mode 3 Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`)
+   * and enforces 11th Edition Hidden (`15"`) / Gone to Ground (`12"`) visibility caps.
+   *
+   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`, `objectives`).
+   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`).
+   * @param {object} [options={}] - Optional `{ losBlockedPairs }` array of `'attackerKey->targetKey'` strings.
+   * @returns {Array<object>} Prioritized weapon-to-target firing assignments.
+   */
+  function selectHordeShootingTargets(boardTelemetry = {}, matchState = {}, options = {}) {
+    const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
+    const blockedSet = new Set(options.losBlockedPairs || []);
+    const miseryIds = Array.isArray(matchState.activeMiseryIds) ? matchState.activeMiseryIds.map(Number) : [];
+    const ignoreTerrainVis = miseryIds.includes(28);
+
+    const hordeUnits = allUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
+    const playerUnits = allUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
+    const assignments = [];
+
+    for (const attacker of hordeUnits) {
+      for (const baseWeapon of (attacker.weapons || [])) {
+        if (String(baseWeapon.type || '').toLowerCase() === 'melee') continue;
+        const range = Number(baseWeapon.rangeInches) || 0;
+        if (range <= 0) continue;
+
+        const candidates = [];
+        for (const target of playerUnits) {
+          const pairKey = `${attacker.squadKey || attacker.name}->${target.squadKey || target.name}`;
+          if (blockedSet.has(pairKey)) continue;
+
