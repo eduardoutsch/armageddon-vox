@@ -387,3 +387,52 @@ function createTacticaDaemon(options = {}) {
       const win = detectPlayerReactionWindow('HORDE_CHARGE_DECLARED', liveState);
       liveState.pendingReactionWindow = (chg.declarations.length > 0 && win.open) ? win : null;
 
+      if (chg.declarations[0]) {
+        const first = chg.declarations[0];
+        if (first.moveCommand) {
+          cmdCounter += 1;
+          ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...first.moveCommand });
+        } else if (first.lctCommand) {
+          liveState.pendingChargeDecl = first;
+          cmdCounter += 1;
+          ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...first.lctCommand });
+        }
+      }
+      const entry = appendEvent({
+        type: 'HORDE_CHARGE',
+        summary: `Declared ${chg.declarations.length} Horde charge(s).`
+      });
+      return sendJson(res, 200, { ok: true, declarations: chg.declarations, pendingReactionWindow: liveState.pendingReactionWindow, entry });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/consolidate') {
+      const units = liveState.boardTelemetry?.units || [];
+      const objs = liveState.boardTelemetry?.objectives || [];
+      const horde = units.filter(u => u.side !== 'PLAYER');
+      const players = units.filter(u => u.side === 'PLAYER');
+      const moves = horde.map(h => ({ unitName: h.name, ...planConsolidationMove(h, players, objs) }));
+      moves.forEach(m => {
+        if (m.moveCommand) {
+          cmdCounter += 1;
+          ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...m.moveCommand });
+        }
+      });
+      const entry = appendEvent({ type: 'CONSOLIDATE', summary: `Resolved 3" Consolidation for ${moves.length} Horde unit(s).` });
+      return sendJson(res, 200, { ok: true, moves, entry });
+    }
+
+    if (req.method === 'POST' && urlPath === '/overwatch/los-check') {
+      const body = await readJsonBody(req);
+      const prompt = buildLosVerificationPrompt(liveState, body.transcript || '');
+      const apiKey = options.geminiApiKey ?? process.env.GEMINI_API_KEY ?? '';
+      const model = options.geminiModel || process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
+      const fetchImpl = options.visionFetchFn || (apiKey && typeof fetch === 'function' ? fetch : null);
+
+      let verdict = {
+        losBlocked: false,
+        revertSquadKey: null,
+        blockedPairs: [],
+        spokenReply: 'Offline LOS mode: add GEMINI_API_KEY in .env for automatic TTS screen vision, or click Revert Move manually.'
+      };
+      let mode = 'offline';
+
