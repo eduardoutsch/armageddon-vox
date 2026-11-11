@@ -664,10 +664,38 @@ function createTacticaDaemon(options = {}) {
 }
 
 if (require.main === module) {
-  createTacticaDaemon().start(DEFAULT_PORT).then((port) => {
+  const daemon = createTacticaDaemon();
+  daemon.start(DEFAULT_PORT).then(async (port) => {
+    console.log('----------------------------------------------------------------');
+    console.log('[SYSTEM DIAGNOSTICS // LCT TACTICA DAEMON & SCRIBE]');
+    console.log(` -> HTTP DAEMON       : http://127.0.0.1:${port}`);
+    if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
+      console.log(` -> TACTICA_THREAD_URL: ${daemon.tacticaThreadUrl} (ISOLATED — ALPHA/BETA/GAMMA IGNORED)`);
+    } else if (daemon.tacticaThreadUrl) {
+      console.log(` -> TACTICA_THREAD_URL: ${daemon.tacticaThreadUrl} [PLACEHOLDER — replace YOUR_NEW_THREAD_ID_HERE in .env]`);
+    } else {
+      console.log(' -> TACTICA_THREAD_URL: NOT SET in .env (running in local LCT Scribe mode)');
+    }
+    console.log('----------------------------------------------------------------');
+
+    if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
+      const session = await launchTacticaBrowserSession(daemon.tacticaThreadUrl).catch((err) => {
+        console.warn(`[TACTICA THREAD WARNING] Could not open Playwright tab: ${err.message}`);
+        return null;
+      });
+      if (session) {
+        daemon.setThreadQueryFn(session.queryThread);
+        console.log('++ TACTICA GEMINI REFEREE THREAD LOCKED & READY ++');
+      }
+    }
     console.log(`+++ LCT TACTICA DAEMON & SCRIBE ONLINE [http://127.0.0.1:${port}] +++`);
   });
 }
 
-module.exports = { createTacticaDaemon };
+module.exports = {
+  createTacticaDaemon,
+  resolveTacticaThreadUrl,
+  isUsableGeminiThreadUrl,
+  launchTacticaBrowserSession
+};
 
