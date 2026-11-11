@@ -431,3 +431,59 @@
     };
   }
 
+  /**
+   * Resolves a Horde unit's defensive save, invulnerable save, Feel No Pain, visibility, and on-death hooks.
+   *
+   * @param {object} [defender={}] - Defending Horde unit datasheet (`save`, `invuln`, `fnp`, `woundsPerModel`, `keywords`).
+   * @param {object} [incomingAttack={}] - Incoming player weapon (`type`, `strength`, `ap`, `damage`, `distanceInches`, `keywords`).
+   * @param {object} [matchState={}] - Active Horde match state (`factionName`, `activeMiseryIds`/`activeMiseries`).
+   * @param {object} [context={}] - Positional state (`inSpawnZone`, `hasCover`, `isHidden`, `isGoneToGround`).
+   * @returns {object} Resolved defensive profile ready for `resolveAutoDefenderRolls`.
+   */
+  function resolveHordeDefenseProfile(defender = {}, incomingAttack = {}, matchState = {}, context = {}) {
+    const facMod = HORDE_FACTION_COMBAT_MODS[matchState.factionName] || {};
+    const miseries = extractActiveMiseryMods(matchState);
+    const unitKws = normalizeKeywords(defender.keywords);
+    const atkKws = normalizeKeywords(incomingAttack.keywords);
+    const isRanged = String(incomingAttack.type || 'ranged').toLowerCase() !== 'melee';
+
+    let incomingHitMod = 0;
+    let attackerStrengthMod = 0;
+    let apWorsen = 0;
+    let hasCover = Boolean(context.hasCover || defender.hasCover);
+    let isHidden = Boolean(context.isHidden || defender.isHidden);
+    let hasStealth = Boolean(defender.hasStealth);
+
+    // Spawn Zone Passive: Benefit of Cover + Hidden
+    if (context.inSpawnZone || defender.inSpawnZone) {
+      hasCover = true;
+      isHidden = true;
+    }
+
+    // Chaos Daemons Shadow Forms (-1 ranged hit outside 12")
+    const dist = Number(incomingAttack.distanceInches);
+    if (isRanged && facMod.rangedStealthBeyondInches && !Number.isNaN(dist) && dist > facMod.rangedStealthBeyondInches) {
+      incomingHitMod -= 1;
+    }
+
+    // Misery modifiers affecting defense
+    let untouchableActive = false;
+    let shootOrFightOnDeathThreshold = null;
+    for (const m of miseries) {
+      if (m.grantInvuln4OrImprove4To3) untouchableActive = true;
+      if (m.hordeStealth) hasStealth = true;
+      if (m.hordeHidden) isHidden = true;
+      if (m.incomingStrengthMod) attackerStrengthMod += m.incomingStrengthMod;
+      if (m.incomingApWorsen) apWorsen += m.incomingApWorsen;
+      if (m.shootOrFightOnDeathThreshold) shootOrFightOnDeathThreshold = m.shootOrFightOnDeathThreshold;
+    }
+
+    if (isRanged && hasStealth) incomingHitMod -= 1;
+
+    const ignoresCover = Boolean(
+      incomingAttack.ignoreCover ||
+      atkKws.includes('IGNORES COVER') ||
+      atkKws.includes('IGNORE COVER')
+    );
+    const effectiveCover = isRanged && hasCover && !ignoresCover;
+
