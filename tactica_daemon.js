@@ -38,3 +38,62 @@ const {
   parseOverwatchVerdict
 } = require('./js/tactica-overwatch-core.js');
 
+const DEFAULT_PORT = Number(process.env.TACTICA_PORT) || 3030;
+
+/**
+ * Creates a self-contained LCT Relay & Append-Only Chronicle Daemon instance.
+ *
+ * @param {object} [options={}] - Daemon configuration (`logDir` override for isolated test folders).
+ * @returns {{server: http.Server, start: function(number=): Promise<number>, stop: function(): Promise<void>}}
+ */
+function createTacticaDaemon(options = {}) {
+  const logDir = options.logDir || path.join(__dirname, 'match_logs');
+  const statePath = path.join(logDir, 'live_state.json');
+  const chroniclePath = path.join(logDir, 'match_chronicle.jsonl');
+
+  fs.mkdirSync(logDir, { recursive: true });
+
+  let liveState = createInitialTacticaState();
+  const ttsCommandQueue = [];
+  let cmdCounter = 0;
+
+  function loadPersistedState() {
+    if (fs.existsSync(statePath)) {
+      try {
+        liveState = createInitialTacticaState(JSON.parse(fs.readFileSync(statePath, 'utf8')));
+      } catch (e) {}
+    }
+  }
+
+  function savePersistedState() {
+    fs.writeFileSync(statePath, JSON.stringify(liveState, null, 2), 'utf8');
+  }
+
+  function readChronicleFromDisk() {
+    if (!fs.existsSync(chroniclePath)) return [];
+    const raw = fs.readFileSync(chroniclePath, 'utf8').trim();
+    if (!raw) return [];
+    return raw.split('\n').map(l => {
+      try { return JSON.parse(l); } catch (e) { return null; }
+    }).filter(Boolean);
+  }
+
+  function appendEvent(rawEvent) {
+    liveState.seqCounter = (Number(liveState.seqCounter) || 0) + 1;
+    const entry = formatChronicleEntry({ ...rawEvent, seq: liveState.seqCounter }, liveState);
+    fs.appendFileSync(chroniclePath, JSON.stringify(entry) + '\n', 'utf8');
+    savePersistedState();
+    return entry;
+  }
+
+  function queueNextSequenceCommand(seq) {
+    if (seq && seq.nextCommand) {
+      cmdCounter += 1;
+      ttsCommandQueue.push({
+        id: `lct_cmd_${Date.now()}_${cmdCounter}`,
+        createdAt: Date.now(),
+        ...seq.nextCommand
+      });
+    }
+  }
+
