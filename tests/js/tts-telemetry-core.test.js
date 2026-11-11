@@ -95,3 +95,63 @@ test('parseDatasheetFromTts: parses tabular & inline Yellowscribe/ForceOrg stats
   assert.ok(inlineDs.weapons[0].keywords.includes('HEAVY'));
 });
 
+test('measureEdgeToEdgeInches: subtracts 2D base radii from horizontal XZ distance', () => {
+  assert.equal(inferBaseRadiusInches(), 0.63);
+  // 32mm base (~1.26" diameter -> 0.63" radius) vs 40mm objective (~1.57" diameter -> 0.787" radius)
+  const r32 = inferBaseRadiusInches({ baseDiameterMm: 32 });
+  const r40 = inferBaseRadiusInches({ baseDiameterMm: 40 });
+  const dist = measureEdgeToEdgeInches({ x: 0, y: 1, z: 0 }, r32, { x: 5, y: 4, z: 0 }, r40);
+  // Vertical Y difference (1 vs 4) ignored in 2D horizontal distance; 5.0 - 0.63 - 0.787 = ~3.58"
+  assert.ok(Math.abs(dist - (5 - r32 - r40)) < 0.02);
+
+  // Overlapping bases clamp at 0"
+  assert.equal(measureEdgeToEdgeInches({ x: 0, z: 0 }, 1.0, { x: 0.5, z: 0 }, 1.0), 0);
+});
+
+test('normalizeTtsBoardScan: groups squad models, detects Spawn Zones, and computes closest enemy & objective inches', () => {
+  const rawScan = {
+    spawnZones: [{ id: 1, minX: -12, maxX: 12, minZ: 14, maxZ: 22 }],
+    objects: [
+      { guid: 'obj1', name: 'Objective 1', pos: { x: 0, y: 1, z: 0 }, bounds: { x: 1.57, y: 0.1, z: 1.57 } },
+      {
+        guid: 'h1',
+        name: '1/1 Necron Warriors',
+        tags: ['HORDE'],
+        pos: { x: 0, y: 1, z: 16 },
+        bounds: { x: 1.26, y: 1.5, z: 1.26 },
+        description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry, Battleline'
+      },
+      {
+        guid: 'h2',
+        name: '1/1 Necron Warriors',
+        tags: ['HORDE'],
+        pos: { x: 1.3, y: 1, z: 16 },
+        bounds: { x: 1.26, y: 1.5, z: 1.26 },
+        description: 'M: 5" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nKeywords: Infantry, Battleline'
+      },
+      {
+        guid: 'p1',
+        name: '14/14 Leman Russ Vanquisher',
+        tags: ['PLAYER'],
+        pos: { x: 0, y: 1, z: -4 },
+        bounds: { x: 3.0, y: 2.2, z: 4.5 },
+        description: 'M: 10" T: 11 Sv: 2+ W: 14 Ld: 7+ OC: 3\nKeywords: Vehicle, Imperium'
+      }
+    ]
+  };
+
+  const res = normalizeTtsBoardScan(rawScan);
+  assert.equal(res.objectives.length, 1);
+  assert.equal(res.units.length, 2, 'Two Necron Warrior models must group into 1 squad');
+
+  const warriors = res.units.find(u => u.name === 'Necron Warriors');
+  assert.ok(warriors);
+  assert.equal(warriors.side, 'HORDE');
+  assert.equal(warriors.modelCount, 2);
+  assert.equal(warriors.inSpawnZone, true);
+  assert.equal(warriors.save, 4);
+  assert.ok(warriors.closestEnemy && warriors.closestEnemy.name === 'Leman Russ Vanquisher');
+  assert.ok(warriors.closestEnemy.distanceInches > 17 && warriors.closestEnemy.distanceInches < 19);
+  assert.ok(warriors.closestObjective && warriors.closestObjective.name === 'Objective 1');
+});
+
