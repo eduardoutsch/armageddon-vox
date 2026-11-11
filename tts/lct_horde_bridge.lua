@@ -59,3 +59,49 @@ function tagSelectionAsPlayer(_, playerColor)
     pushBoardTelemetry()
 end
 
+function tagSelectionAsHorde(_, playerColor)
+    for _, obj in ipairs(Player[playerColor].getSelectedObjects()) do
+        obj.removeTag("PLAYER")
+        obj.addTag("HORDE")
+    end
+    broadcastToAll("🧟 Tagged selected models as HORDE.", {1, 0.45, 0.45})
+    pushBoardTelemetry()
+end
+
+-- Scans all miniatures and objectives on the LCT map and posts raw metadata to /tts/telemetry
+function pushBoardTelemetry()
+    local objectsPayload = {}
+    for _, obj in ipairs(getAllObjects()) do
+        if obj ~= self and not obj.isSmoothMoving() then
+            local name = obj.getName() or ""
+            local lname = string.lower(name)
+            local size = obj.getBoundsNormalized().size
+            local isObjMarker = obj.hasTag("OBJECTIVE") or string.find(lname, "^objective") or string.find(lname, "^obj ")
+            local isMini = (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or string.find(name, "%d+/%d+"))
+                           and size.x > 0.3 and size.x < 12 and size.z < 12
+
+            if isObjMarker or isMini then
+                local pos = obj.getPosition()
+                local tags = obj.getTags()
+                if isObjMarker then table.insert(tags, "OBJECTIVE") end
+                table.insert(objectsPayload, {
+                    guid = obj.getGUID(),
+                    name = name,
+                    description = obj.getDescription() or "",
+                    gmNotes = obj.getGMNotes() or "",
+                    tags = tags,
+                    pos = { x = pos.x, y = pos.y, z = pos.z },
+                    bounds = { x = size.x, y = size.y, z = size.z }
+                })
+            end
+        end
+    end
+
+    local body = JSON.encode({ objects = objectsPayload })
+    WebRequest.custom(BRIDGE_URL .. "/tts/telemetry", "POST", true, body, { ["Content-Type"] = "application/json" }, function(res)
+        if not res.is_error then
+            printToAll("📡 LCT Telemetry Synced (" .. #objectsPayload .. " tabletop objects).", {0.4, 0.95, 0.7})
+        end
+    end)
+end
+
