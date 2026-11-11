@@ -455,6 +455,75 @@ Web Audio API sound generation, procedural ambient drones, and Auspex channel os
   }
 
   /**
+   * 7b. Bracket [10–12] Unbound Adversary Breach Alert (301–550 pts)
+   * Synthesizes a tense, atmospheric Warp-rift perimeter warning using filtered triangle
+   * and sine oscillators—distinct and ominously tactical, yet noticeably less intense
+   * than the full Geller-field failure klaxon (`playWarpSiren`) reserved for [13+].
+   */
+  function playUnboundBreachAlert() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+
+    // Layer A: Filtered triangle Warp-rift pressure swell (145Hz -> 68Hz)
+    const rift = ctx.createOscillator();
+    const riftFilter = ctx.createBiquadFilter();
+    const riftGain = ctx.createGain();
+    rift.type = 'triangle';
+    rift.frequency.setValueAtTime(145, now);
+    rift.frequency.exponentialRampToValueAtTime(68, now + 0.50);
+
+    riftFilter.type = 'lowpass';
+    riftFilter.frequency.setValueAtTime(480, now);
+    riftFilter.Q.setValueAtTime(2.0, now);
+
+    riftGain.gain.setValueAtTime(0.13, now);
+    riftGain.gain.exponentialRampToValueAtTime(0.001, now + 0.54);
+
+    rift.connect(riftFilter);
+    riftFilter.connect(riftGain);
+    riftGain.connect(ctx.destination);
+    rift.start(now);
+    rift.stop(now + 0.56);
+
+    // Layer B: Dual-step Amber Perimeter Breach lock (triangle + soft sine harmonic)
+    [0, 0.24].forEach((offset) => {
+      const t = now + offset;
+      const lead = ctx.createOscillator();
+      const leadGain = ctx.createGain();
+      lead.type = 'triangle';
+      lead.frequency.setValueAtTime(392, t);
+      lead.frequency.linearRampToValueAtTime(523.25, t + 0.11);
+      lead.frequency.linearRampToValueAtTime(466.16, t + 0.21);
+
+      leadGain.gain.setValueAtTime(0.001, t);
+      leadGain.gain.linearRampToValueAtTime(0.085, t + 0.03);
+      leadGain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+      lead.connect(leadGain);
+      leadGain.connect(ctx.destination);
+      lead.start(t);
+      lead.stop(t + 0.23);
+
+      const harm = ctx.createOscillator();
+      const harmGain = ctx.createGain();
+      harm.type = 'sine';
+      harm.frequency.setValueAtTime(587.33, t);
+      harm.frequency.exponentialRampToValueAtTime(440, t + 0.20);
+
+      harmGain.gain.setValueAtTime(0.001, t);
+      harmGain.gain.linearRampToValueAtTime(0.045, t + 0.03);
+      harmGain.gain.exponentialRampToValueAtTime(0.001, t + 0.21);
+
+      harm.connect(harmGain);
+      harmGain.connect(ctx.destination);
+      harm.start(t);
+      harm.stop(t + 0.22);
+    });
+  }
+
+  /**
    * 8. Orbital Auspex Threat Lock (For PL 1-3 Unbound Adversaries & Anomaly Surges)
    */
   function playAuspexLock() {
@@ -791,73 +860,4 @@ Web Audio API sound generation, procedural ambient drones, and Auspex channel os
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(280, now);
-    osc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
-    gain.gain.setValueAtTime(0.16, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.32);
-  }
-
-  /**
-   * 19. Necron Gauss Disintegration Pulse
-   * Eerie tachyon/chronomantic green energy hum for Tomb-Ship interactions.
-   */
-  function playNecronGaussPulse() {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-
-    const beam = ctx.createOscillator();
-    const beamGain = ctx.createGain();
-    beam.type = 'sine';
-    beam.frequency.setValueAtTime(220, now);
-    beam.frequency.linearRampToValueAtTime(75, now + 0.24);
-    beamGain.gain.setValueAtTime(0.001, now);
-    beamGain.gain.linearRampToValueAtTime(0.15, now + 0.03);
-    beamGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
-    beam.connect(beamGain);
-    beamGain.connect(ctx.destination);
-    beam.start(now);
-    beam.stop(now + 0.28);
-
-    const flutter = ctx.createOscillator();
-    const flutterGain = ctx.createGain();
-    flutter.type = 'triangle';
-    flutter.frequency.setValueAtTime(880, now);
-    flutter.frequency.exponentialRampToValueAtTime(280, now + 0.14);
-    flutterGain.gain.setValueAtTime(0.06, now);
-    flutterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-    flutter.connect(flutterGain);
-    flutterGain.connect(ctx.destination);
-    flutter.start(now);
-    flutter.stop(now + 0.16);
-  }
-
-  /**
-   * 20. Stray Orbital Bombardment / Lance Strike / Macro-Cannon Barrage
-   * Screeching atmospheric descent, high-energy concussive detonation, and deep sub-bass seismic rumble.
-   */
-  function playOrbitalBombardment() {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-
-    // 1. High-altitude atmospheric tearing whistle (screech descending rapidly)
-    const whistle = ctx.createOscillator();
-    const whistleGain = ctx.createGain();
-    const whistleFilter = ctx.createBiquadFilter();
-    whistle.type = 'sawtooth';
-    whistle.frequency.setValueAtTime(2600, now);
-    whistle.frequency.exponentialRampToValueAtTime(140, now + 0.35);
-
-    whistleFilter.type = 'bandpass';
-    whistleFilter.frequency.setValueAtTime(1800, now);
-    whistleFilter.frequency.exponentialRampToValueAtTime(320, now + 0.35);
-    whistleFilter.Q.value = 3.5;
-
-    whistleGain.gain.setValueAtTime(0.01, now);
 ````

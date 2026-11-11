@@ -143,7 +143,7 @@ Per [`AGENTS.md`](AGENTS.md), the codebase enforces strict modularization and th
 
 ### 2. Procedural Web Audio Synthesizer & Seamless Router (`js/vox-audio.js`)
 - **Zero-Asset Web Audio API Synthesis**: Instead of loading external `.mp3` or `.wav` files, `VoxAudio` synthesizes all tactile UI feedback in real time using native `AudioContext` oscillator, gain, noise-buffer, and biquad-filter graphs:
-  - Mechanical cogitator key-clanks (`playClank`), CRT teletype bursts, Warp anomaly sirens (`playWarpSurge`), orbital auspex pings (`playAuspexPing`), and a continuous sub-bass shipboard ambient drone.
+  - Mechanical cogitator key-clanks (`playClank`), CRT teletype bursts, tiered Unbound Adversary Warp-Breach alerts (`playUnboundBreachAlert` filtered triangle/sine perimeter lock for Bracket `[10–12]` vs full sub-bass Geller-field failure `playWarpSiren` reserved for Bracket `[13+]` and PL 4 Apex Anomalies), orbital auspex locks (`playAuspexLock`), and a continuous sub-bass shipboard ambient drone.
 - **Seamless SPA-Style Page Router**: To prevent the browser from destroying the active `AudioContext` ambient drone when navigating between `.html` pages, `vox-audio.js` intercepts internal navigation clicks, fetches the target HTML document in the background, swaps the `.shell` / `<main>` DOM tree, and safely re-evaluates page scripts in a clean lifecycle.
 
 ### 3. Supabase RPC Backend, Cloud Pool Sync & Live Server Telemetry
@@ -222,7 +222,7 @@ armageddon-vox/
 ├── scripts/
 │   └── generate_bundles.js     # Automated compiler for /bundles/*.md AI context artifacts
 ├── bundles/                    # Modular Markdown codebase bundles for Gemini / NotebookLM
-└── tests/                      # 362 automated tests (Node:test + VM sandboxes + Playwright)
+└── tests/                      # 365 automated tests (Node:test + VM sandboxes + Playwright)
     ├── vox_bridge.test.js      # Courier prompt routing, scrubbing, queue & heartbeat tests
     ├── tactica_daemon.test.js  # LCT dice-mat polling, multi-stage sequence & JSONL restart tests
     ├── js/                     # Unit tests mirroring js/*.js
@@ -233,10 +233,10 @@ armageddon-vox/
 
 ## 🧪 Testing & Verification
 
-The repository maintains a strict **100% test pass target** (`362` tests across unit, daemon, courier, and headless browser UI suites) using Node's native test runner (`node:test`), `node:vm` lexical sandboxes, and headless Playwright Chromium/Edge integration:
+The repository maintains a strict **100% test pass target** (`365` tests across unit, daemon, courier, and headless browser UI suites) using Node's native test runner (`node:test`), `node:vm` lexical sandboxes, and headless Playwright Chromium/Edge integration:
 
 ```bash
-# Run the complete 362-test verification suite (unit + daemon + courier + headless browser E2E)
+# Run the complete 365-test verification suite (unit + daemon + courier + headless browser E2E)
 npm test
 
 # Regenerate and synchronize all modular Markdown bundles (<= 1000 lines) in /bundles/

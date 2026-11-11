@@ -505,7 +505,16 @@ Pure voice-command intent parser, multimodal 3D ruin LOS prompt/verdict helpers,
         const sig = breaches.map(b => `${b.waveId || b.zone}:${b.intrusionRoll}`).join('|');
         if (sig !== lastSirenSignature) {
           lastSirenSignature = sig;
-          if (w.VoxAudio && typeof w.VoxAudio.playWarpSiren === 'function') w.VoxAudio.playWarpSiren();
+          const hasApex13 = breaches.some(b => b.bracketKey === '13+' || /13\+/.test(String(b.bracketLabel || '')));
+          if (w.VoxAudio) {
+            if (hasApex13 && typeof w.VoxAudio.playWarpSiren === 'function') {
+              w.VoxAudio.playWarpSiren();
+            } else if (!hasApex13 && typeof w.VoxAudio.playUnboundBreachAlert === 'function') {
+              w.VoxAudio.playUnboundBreachAlert();
+            } else if (typeof w.VoxAudio.playWarpSiren === 'function') {
+              w.VoxAudio.playWarpSiren();
+            }
+          }
           speakOverwatchLine(`Warning! Warp-Breach Intrusion detected in Spawn Zone ${breaches[0].zone}!`);
         }
         intBox.innerHTML = breaches.map(b => `

@@ -265,6 +265,7 @@ class MockAudioContext {
     this.destination = new MockAudioNode();
     this.oscillators = [];
     this.gains = [];
+    MockAudioContext.lastInstance = this;
   }
   createOscillator() {
     const osc = new MockOscillator();
@@ -464,6 +465,26 @@ test('vox-audio: newly added Crusade & CRT sound synthesizers execute without th
     voxModule.playWarpSiren();
   }, 'playWarpSiren must execute smoothly');
 
+  assert.equal(typeof voxModule.playUnboundBreachAlert, 'function', 'playUnboundBreachAlert must be exported on voxModule');
+  const ctx = MockAudioContext.lastInstance;
+  const oscStartIdx = ctx.oscillators.length;
+  const gainStartIdx = ctx.gains.length;
+  assert.doesNotThrow(() => {
+    voxModule.playUnboundBreachAlert();
+  }, 'playUnboundBreachAlert must execute smoothly');
+  const breachOscs = ctx.oscillators.slice(oscStartIdx);
+  const breachGains = ctx.gains.slice(gainStartIdx);
+  assert.ok(breachOscs.length >= 3, 'playUnboundBreachAlert must synthesize layered breach oscillators');
+  assert.ok(
+    breachOscs.every(o => o.type === 'triangle' || o.type === 'sine'),
+    'playUnboundBreachAlert ([10-12] tier) must use softer triangle/sine waveforms rather than harsh sawtooth/square klaxons'
+  );
+  const maxBreachGain = Math.max(...breachGains.flatMap(g => g.gain.events.map(e => e.val)));
+  assert.ok(
+    maxBreachGain > 0.05 && maxBreachGain < 0.20,
+    `playUnboundBreachAlert peak gain (${maxBreachGain}) must be noticeably less intense than [13+] playWarpSiren (0.26)`
+  );
+
   assert.doesNotThrow(() => {
     voxModule.playAuspexLock();
   }, 'playAuspexLock must execute smoothly');
@@ -501,6 +522,7 @@ test('vox-audio: window.VoxAudio exposes complete public API for all game modes'
   assert.equal(typeof globalThis.window.VoxAudio.playScarHazard, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playDossierStamp, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playWarpSiren, 'function');
+  assert.equal(typeof globalThis.window.VoxAudio.playUnboundBreachAlert, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playAuspexLock, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.playCloudSyncChime, 'function');
   assert.equal(typeof globalThis.window.VoxAudio.navigateSeamlessly, 'function');

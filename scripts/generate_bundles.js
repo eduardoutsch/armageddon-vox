@@ -210,7 +210,7 @@ compileBundle(
 compileBundle(
   '📦 Fires of Armageddon // Bundle: App Engine (Part 3: UI Telemetry & Persistence)',
   'DOM event handlers, Auspex telemetry HUD synchronization, and session state persistence (`js/app.js` lines 1401 to end).',
-  [{ file: 'js/app.js', label: 'js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)', startLine: 1401, endLine: 2150 }],
+  [{ file: 'js/app.js', label: 'js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)', startLine: 1401, endLine: 2300 }],
   path.join(BUNDLES_DIR, 'bundle_app_part3.md')
 );
 

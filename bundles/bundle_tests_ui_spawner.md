@@ -291,6 +291,63 @@ test('UI Boundary: pages/spawner.html failing Secondary #17 wipes all fortificat
   }
 });
 
+test('UI Boundary: pages/spawner.html keeps Unbound Adversary (.warp-intrusion-alert) constant across page switching to tactica.html and back', async () => {
+  const browser = await launchTestBrowser();
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    await page.addInitScript(() => {
+      window.confirm = () => true;
+    });
+    await page.route('**/rest/v1/rpc/**', route => route.abort());
+
+    const spawnerUrl = 'file:///' + path.resolve(ROOT_DIR, 'pages/spawner.html').replace(/\\/g, '/');
+    const tacticaUrl = 'file:///' + path.resolve(ROOT_DIR, 'pages/tactica.html').replace(/\\/g, '/');
+    await page.goto(spawnerUrl, { waitUntil: 'load' });
+
+    await page.evaluate(() => {
+      localStorage.setItem('foa_horde_session_v1', JSON.stringify({
+        seed: 'BREACH-SWITCH-99',
+        selectedModeVal: 'solo',
+        isSoloMode: true,
+        battleRound: 2,
+        hasActiveSession: true,
+        activeTab: 1,
+        currentZoneSpawns: [{
+          zone: 1,
+          waveId: 'ui_wave_1',
+          bracketKey: '10-12',
+          bracketLabel: 'Bracket [10–12]',
+          pts: '301–550 pts',
+          diceStr: '2D6 (5, 5)',
+          totalMod: 1,
+          finalRoll: 11,
+          intrusionRoll: 6,
+          units: ['1 Forgefiend']
+        }]
+      }));
+      window.restoreSessionState();
+      if (typeof window.mirrorSpawnerToCockpit === 'function') window.mirrorSpawnerToCockpit();
+    });
+
+    // Switch away to tactica.html and confirm tactica shows the intrusion alert
+    await page.goto(tacticaUrl, { waitUntil: 'load' });
+    const tacticaAlertVisible = await page.$eval('#tacticaIntrusionAlertBox', el => !el.classList.contains('hidden') && el.innerText.includes('WARP-BREACH INTRUSION'));
+    assert.equal(tacticaAlertVisible, true, 'tactica.html must display the active 6+ Unbound Adversary alert');
+
+    // Switch back to spawner.html and confirm BOTH #spawnResultsContainer AND #cockpitSpawnMirrorBox keep the popup!
+    await page.goto(spawnerUrl, { waitUntil: 'load' });
+    await page.waitForTimeout(200);
+    const spawnerHasAlert = await page.$eval('#spawnResultsContainer', el => el.innerHTML.includes('warp-intrusion-alert'));
+    const cockpitHasAlert = await page.$eval('#cockpitSpawnMirrorBox', el => el.innerHTML.includes('warp-intrusion-alert'));
+    assert.equal(spawnerHasAlert, true, 'spawner.html #spawnResultsContainer must retain .warp-intrusion-alert after switching pages');
+    assert.equal(cockpitHasAlert, true, 'spawner.html #cockpitSpawnMirrorBox must retain .warp-intrusion-alert after switching pages');
+  } finally {
+    await browser.close();
+  }
+});
+
 ````
 
 ---
@@ -396,6 +453,8 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   els.tacticaRoundSelect.value = '2';
 
   let voxQueued = null;
+  let tacticaApexSirens = 0;
+  let tacticaMidAlerts = 0;
   globalThis.localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => store.set(k, String(v))
@@ -405,6 +464,8 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     addEventListener: () => {},
     VoxAudio: {
       playClank: () => {},
+      playWarpSiren: () => { tacticaApexSirens++; },
+      playUnboundBreachAlert: () => { tacticaMidAlerts++; },
       transmitToVox: (chan, text) => { voxQueued = { chan, text }; }
     }
   };
@@ -525,10 +586,20 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), true);
 
   tactica.getTacticaClientState().zoneSpawns = [
-    { zone: 1, bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Monolith'] }
+    { zone: 2, waveId: 't_mid_1', bracketKey: '10-12', bracketLabel: 'Bracket [10–12]', intrusionRoll: 6, units: ['3 Skorpekh Destroyers'] }
   ];
   overwatch.syncOverwatchAlertsFromState();
   assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  assert.equal(tacticaMidAlerts, 1, 'Tactica [10-12] 6+ breach must play playUnboundBreachAlert');
+  assert.equal(tacticaApexSirens, 0, 'Tactica [10-12] 6+ breach must NOT play [13+] playWarpSiren');
+
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, waveId: 't_apex_1', bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Monolith'] }
+  ];
+  overwatch.syncOverwatchAlertsFromState();
+  assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  assert.equal(tacticaApexSirens, 1, 'Tactica [13+] 6+ breach must play terrifying playWarpSiren');
+  assert.equal(tacticaMidAlerts, 1, 'Tactica [13+] 6+ breach must not increment playUnboundBreachAlert');
   overwatch.pingIntrusionFromTactica(1, 'Bracket [13+]', 'alpha');
   assert.ok(voxQueued && voxQueued.chan === 'alpha' && voxQueued.text.includes('EMERGENCY AUSPEX PING'));
 

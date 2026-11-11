@@ -272,6 +272,52 @@ function triggerZoneRollDown(idx) {
   return rollDownZone(idx);
 }
 
+/**
+ * Builds declarative Warp-Breach Intrusion alert or clean check markup for a Spawn Zone
+ * directly from its persisted state object (`currentZoneSpawns[idx]`), ensuring Unbound
+ * Adversary popups survive page switches, reloads, co-op syncs, and sibling Roll-Downs.
+ *
+ * @param {object} z - Persisted spawn zone descriptor
+ * @param {number} zoneNum - 1-based Spawn Zone index
+ * @returns {{ borderStyle: string, bannerHtml: string }}
+ */
+function buildZoneIntrusionBannerHtml(z, zoneNum) {
+  if (!z || typeof z !== 'object') return { borderStyle: '', bannerHtml: '' };
+  const isBigBracket = z.bracketKey === '10-12' || z.bracketKey === '13+';
+  if (!isBigBracket || typeof z.intrusionRoll !== 'number') {
+    return { borderStyle: '', bannerHtml: '' };
+  }
+
+  const cleanBracket = z.bracketLabel || (z.bracketKey === '13+' ? 'Bracket [13+]' : 'Bracket [10–12]');
+  if (z.intrusionRoll >= 6) {
+    return {
+      borderStyle: ' style="border-color: var(--red);"',
+      bannerHtml: `
+        <div class="warp-intrusion-alert" style="text-align:center;">
+          <div style="color:var(--red); font-weight:900; font-family:monospace; font-size:0.84rem; margin-bottom:4px; text-align:center;">
+            ⚡ [WARP-BREACH INTRUSION ROLLED: D6 = ${z.intrusionRoll} (6+) — ADVERSARY / NEMESIS HIJACK!]
+          </div>
+          <div style="font-size:0.8rem; color:#e2e8f0; margin-bottom:8px; text-align:center;">
+            Instead of the standard Horde unit above, an anomalous signature is tearing through <strong>Spawn Zone ${zoneNum}</strong>! Ping the Campaign Master on Vox to reveal the intruder:
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center;">
+            <button type="button" class="btn-red btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${cleanBracket}', 'alpha')">🦅 Ping Vox (The Exile)</button>
+            <button type="button" class="btn-green btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${cleanBracket}', 'beta')">💀 Ping Tomb-Ship (Junebug)</button>
+            <button type="button" class="btn-gold btn-sm" onclick="transmitHordeIntrusionPing(${zoneNum}, '${cleanBracket}', 'distant')">📡 Ping Vox (Distant Intercept)</button>
+          </div>
+        </div>
+      `
+    };
+  }
+
+  return {
+    borderStyle: '',
+    bannerHtml: `
+      <div class="intrusion-badge-clean" style="margin-top:6px; font-size:0.74rem; color:var(--muted); font-family:monospace; text-align:center;">[Warp-Breach Intrusion Check: D6 = ${z.intrusionRoll} (Needed 6+) — Standard Horde Wave Holds]</div>
+    `
+  };
+}
+
 function renderSpawnZones() {
   const container = document.getElementById('spawnResultsContainer');
   if (!container) return;
@@ -291,9 +337,10 @@ function renderSpawnZones() {
     const modStr = z?.totalMod !== undefined ? ` | Mod: ${z.totalMod >= 0 ? '+' + z.totalMod : z.totalMod}` : '';
     const rollStr = z?.finalRoll !== undefined ? ` → <strong>Total: ${z.finalRoll}</strong>` : '';
     const unitsStr = Array.isArray(z?.units) ? z.units.join('  +  ') : (z?.units || '');
+    const intrusionUi = buildZoneIntrusionBannerHtml(z, zoneNum);
 
     return `
-      <div class="card spawn-zone">
+      <div class="card spawn-zone"${intrusionUi.borderStyle}>
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
           <span class="badge green">Spawn Zone ${zoneNum} • ${bracketLabel}${ptsStr}</span>
           <span class="hud-sub">${diceStr}${modStr}${rollStr}</span>
@@ -305,10 +352,17 @@ function renderSpawnZones() {
               ⤵️ Roll Down (Spawn 2x Lower Bracket Units Instead)
             </button>
           </div>
-        ` : ''}
+        ` : ''}${intrusionUi.bannerHtml}
       </div>
     `;
   }).join('');
+
+  if (typeof window !== 'undefined' && typeof window.evaluateWarpBreachIntrusions === 'function') {
+    window.evaluateWarpBreachIntrusions({ silentAudio: isRestoring });
+  }
+  if (typeof window !== 'undefined' && typeof window.mirrorSpawnerToCockpit === 'function') {
+    window.mirrorSpawnerToCockpit();
+  }
 }
 
 // --- SP, CP & RESUPPLY SHOP ---
@@ -656,58 +710,4 @@ let currentRoomCode = '';
 let roomCodeChangeTimer = null;
 
 function getActiveRoomCode() {
-  return ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
-}
-
-async function onRoomCodeChanged(immediate = false) {
-  if (roomCodeChangeTimer) {
-    clearTimeout(roomCodeChangeTimer);
-    roomCodeChangeTimer = null;
-  }
-
-  const runSync = async () => {
-    const roomCode = getActiveRoomCode();
-    if (!roomCode) return false;
-
-    // Reset watermark when switching or pasting room codes
-    currentRoomCode = roomCode;
-    lastSyncedUpdatedAt = 0;
-    lastKnownStateSignature = '';
-
-    updateSyncBadge(true, `☁️ Connecting to Room (${roomCode})...`);
-
-    // 1. Try pulling existing live session from cloud FIRST
-    const pulled = await pollLiveSpawnerStateFromCloud(true);
-    if (pulled) {
-      return true;
-    }
-
-    // 2. If room does not exist in cloud, resolve deterministic faction for this seed
-    resolveRoomSyncedFaction(roomCode);
-    updateSyncBadge(true, `☁️ New Room Created (${roomCode})`);
-
-    // 3. Register the new room in Supabase so joining allies immediately sync
-    debouncedPushLiveSpawnerStateToCloud();
-    return false;
-  };
-
-  if (immediate) {
-    return await runSync();
-  } else {
-    roomCodeChangeTimer = setTimeout(runSync, 350);
-  }
-}
-
-let lastSyncedUpdatedAt = 0;
-let isPushingToCloud = false;
-let isPollingFromCloud = false;
-let pushCloudTimer = null;
-let hasCompletedInitialSync = false;
-let lastKnownStateSignature = '';
-let lastWarpSirenSeedKey = '';
-
-function triggerCardStaticShake(el) {
-  if (!el || !el.classList) return;
-  el.classList.remove('card-synced-shake');
-  if (typeof el.offsetWidth === 'number') {
 ````

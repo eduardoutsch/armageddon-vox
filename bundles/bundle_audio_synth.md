@@ -10,6 +10,75 @@ CRT cathode chimes, forge anvil clanks, mechanical dice clatter, and teletype ty
 ## File: `js/vox-audio.js (Part 2: Audio FX & Teletype Synth, Lines 851-1670)` <a id="file-jsvoxaudiojspart2audiofxteletypesynthlines8511670"></a>
 
 ````javascript
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(280, now);
+    osc.frequency.exponentialRampToValueAtTime(32, now + 0.28);
+    gain.gain.setValueAtTime(0.16, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.32);
+  }
+
+  /**
+   * 19. Necron Gauss Disintegration Pulse
+   * Eerie tachyon/chronomantic green energy hum for Tomb-Ship interactions.
+   */
+  function playNecronGaussPulse() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const beam = ctx.createOscillator();
+    const beamGain = ctx.createGain();
+    beam.type = 'sine';
+    beam.frequency.setValueAtTime(220, now);
+    beam.frequency.linearRampToValueAtTime(75, now + 0.24);
+    beamGain.gain.setValueAtTime(0.001, now);
+    beamGain.gain.linearRampToValueAtTime(0.15, now + 0.03);
+    beamGain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+    beam.connect(beamGain);
+    beamGain.connect(ctx.destination);
+    beam.start(now);
+    beam.stop(now + 0.28);
+
+    const flutter = ctx.createOscillator();
+    const flutterGain = ctx.createGain();
+    flutter.type = 'triangle';
+    flutter.frequency.setValueAtTime(880, now);
+    flutter.frequency.exponentialRampToValueAtTime(280, now + 0.14);
+    flutterGain.gain.setValueAtTime(0.06, now);
+    flutterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    flutter.connect(flutterGain);
+    flutterGain.connect(ctx.destination);
+    flutter.start(now);
+    flutter.stop(now + 0.16);
+  }
+
+  /**
+   * 20. Stray Orbital Bombardment / Lance Strike / Macro-Cannon Barrage
+   * Screeching atmospheric descent, high-energy concussive detonation, and deep sub-bass seismic rumble.
+   */
+  function playOrbitalBombardment() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // 1. High-altitude atmospheric tearing whistle (screech descending rapidly)
+    const whistle = ctx.createOscillator();
+    const whistleGain = ctx.createGain();
+    const whistleFilter = ctx.createBiquadFilter();
+    whistle.type = 'sawtooth';
+    whistle.frequency.setValueAtTime(2600, now);
+    whistle.frequency.exponentialRampToValueAtTime(140, now + 0.35);
+
+    whistleFilter.type = 'bandpass';
+    whistleFilter.frequency.setValueAtTime(1800, now);
+    whistleFilter.frequency.exponentialRampToValueAtTime(320, now + 0.35);
+    whistleFilter.Q.value = 3.5;
+
+    whistleGain.gain.setValueAtTime(0.01, now);
     whistleGain.gain.linearRampToValueAtTime(0.18, now + 0.08);
     whistleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
 
@@ -761,73 +830,4 @@ CRT cathode chimes, forge anvil clanks, mechanical dice clatter, and teletype ty
           videoId: videoId,
           startSeconds: startSeconds
         });
-      }
-
-      updateMusicUI(true);
-
-      if (musicRecoveryTimer) clearTimeout(musicRecoveryTimer);
-      musicRecoveryTimer = setTimeout(() => {
-        musicRecoveryTimer = null;
-        if (!wantMusic || !ytReady || isPlayerActuallyPlaying()) return;
-        if (fromUserGesture || hasUserInteracted) {
-          playNextRandomTrack();
-        } else if (ytPlayer && typeof ytPlayer.mute === 'function' && typeof ytPlayer.playVideo === 'function') {
-          // If browser blocked unmuted autoplay on initial load before any user gesture,
-          // pre-buffer muted so the very first pointerdown/click/keydown unmutes with zero delay.
-          try {
-            ytPlayer.mute();
-            ytPlayer.playVideo();
-          } catch (e) {}
-        }
-      }, 900);
-    } catch (err) {
-      console.warn('Vox-Caster resume exception, falling back to random:', err);
-      playNextRandomTrack();
-    }
-  }
-
-  function playNextRandomTrack() {
-    if (!ytPlayer || !ytReady) return;
-    try {
-      const currentId = localStorage.getItem(STORAGE_KEY_TRACK_ID);
-      const candidateList = VOX_TRACK_IDS.filter(id => id !== currentId);
-      const pool = candidateList.length > 0 ? candidateList : VOX_TRACK_IDS;
-      const nextIndex = Math.floor(Math.random() * pool.length);
-      const nextId = pool[nextIndex];
-
-      const fullListIndex = VOX_TRACK_IDS.indexOf(nextId);
-      localStorage.setItem(STORAGE_KEY_TRACK_ID, nextId);
-      localStorage.setItem(STORAGE_KEY_TRACK_INDEX, String(fullListIndex >= 0 ? fullListIndex : 0));
-      localStorage.setItem(STORAGE_KEY_TRACK_TIME, '0');
-
-      if (typeof ytPlayer.unMute === 'function') {
-        ytPlayer.unMute();
-      }
-      if (typeof ytPlayer.loadVideoById === 'function') {
-        ytPlayer.loadVideoById({
-          videoId: nextId,
-          startSeconds: 0
-        });
-      }
-      if (typeof ytPlayer.playVideo === 'function') {
-        ytPlayer.playVideo();
-      }
-
-      if (typeof ytPlayer.setVolume === 'function') {
-        ytPlayer.setVolume(35);
-      }
-      updateMusicUI(true);
-    } catch (err) {
-      console.warn('Vox-Caster playlist randomizer warning:', err);
-    }
-  }
-
-  function toggleMusic() {
-    hasUserInteracted = true;
-    // If user wanted music ON, but browser blocked initial autoplay on root load so nothing is playing yet,
-    // clicking VOX-AMBIENCE starts the music immediately instead of toggling it OFF!
-    if (wantMusic && ytReady && !isPlayerActuallyPlaying()) {
-      resumeOrStartMusic(true);
-      return;
-    }
 ````

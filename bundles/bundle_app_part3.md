@@ -10,6 +10,60 @@ DOM event handlers, Auspex telemetry HUD synchronization, and session state pers
 ## File: `js/app.js (Part 3: UI Telemetry & Persistence, Lines 1401-end)` <a id="file-jsappjspart3uitelemetrypersistencelines1401end"></a>
 
 ````javascript
+  return ((typeof document !== 'undefined' && document.getElementById('seedInput')?.value) || 'HADES-1').trim().toUpperCase();
+}
+
+async function onRoomCodeChanged(immediate = false) {
+  if (roomCodeChangeTimer) {
+    clearTimeout(roomCodeChangeTimer);
+    roomCodeChangeTimer = null;
+  }
+
+  const runSync = async () => {
+    const roomCode = getActiveRoomCode();
+    if (!roomCode) return false;
+
+    // Reset watermark when switching or pasting room codes
+    currentRoomCode = roomCode;
+    lastSyncedUpdatedAt = 0;
+    lastKnownStateSignature = '';
+
+    updateSyncBadge(true, `☁️ Connecting to Room (${roomCode})...`);
+
+    // 1. Try pulling existing live session from cloud FIRST
+    const pulled = await pollLiveSpawnerStateFromCloud(true);
+    if (pulled) {
+      return true;
+    }
+
+    // 2. If room does not exist in cloud, resolve deterministic faction for this seed
+    resolveRoomSyncedFaction(roomCode);
+    updateSyncBadge(true, `☁️ New Room Created (${roomCode})`);
+
+    // 3. Register the new room in Supabase so joining allies immediately sync
+    debouncedPushLiveSpawnerStateToCloud();
+    return false;
+  };
+
+  if (immediate) {
+    return await runSync();
+  } else {
+    roomCodeChangeTimer = setTimeout(runSync, 350);
+  }
+}
+
+let lastSyncedUpdatedAt = 0;
+let isPushingToCloud = false;
+let isPollingFromCloud = false;
+let pushCloudTimer = null;
+let hasCompletedInitialSync = false;
+let lastKnownStateSignature = '';
+let lastWarpSirenSeedKey = '';
+
+function triggerCardStaticShake(el) {
+  if (!el || !el.classList) return;
+  el.classList.remove('card-synced-shake');
+  if (typeof el.offsetWidth === 'number') {
     void el.offsetWidth;
   }
   el.classList.add('card-synced-shake');
@@ -202,7 +256,6 @@ function applyRemoteSharedState(remoteState) {
     currentZoneSpawns = remoteState.currentZoneSpawns;
     if (currentZoneSpawns.length > 0) {
       renderSpawnZones();
-      if (typeof evaluateWarpBreachIntrusions === 'function') evaluateWarpBreachIntrusions();
     }
   }
 
@@ -595,7 +648,14 @@ if (typeof window !== 'undefined') {
     window.transmitIntrusionPing = transmitIntrusionPing;
   }
 
-  function evaluateWarpBreachIntrusions() {
+  /**
+   * Evaluates active Spawn Zone cards for 6+ Big-Bracket Warp-Breach Intrusions,
+   * ensuring idempotent DOM alerts and routing tiered audio (`playWarpSiren` for [13+],
+   * `playUnboundBreachAlert` for [10–12]) strictly once per wave signature.
+   *
+   * @param {{ silentAudio?: boolean }} [options]
+   */
+  function evaluateWarpBreachIntrusions(options = {}) {
     if (typeof document === 'undefined') return;
     const container = document.getElementById('spawnResultsContainer');
     if (!container) return;
@@ -606,6 +666,7 @@ if (typeof window !== 'undefined') {
     const roomStr = (document.getElementById('seedInput')?.value || 'HADES-1').trim().toUpperCase();
     const roundStr = (document.getElementById('spawnerBtnRound')?.textContent || '1').trim();
     let anyIntrusionTriggered = false;
+    let hasApex13Intrusion = false;
     const currentWaveIntrusions = [];
 
     cards.forEach((card, idx) => {
@@ -638,6 +699,9 @@ if (typeof window !== 'undefined') {
 
       if (intrusionRoll >= 6) {
         anyIntrusionTriggered = true;
+        if ((zoneObj && zoneObj.bracketKey === '13+') || /13\+/.test(bracketLabel)) {
+          hasApex13Intrusion = true;
+        }
         currentWaveIntrusions.push(`${roomStr}_R${roundStr}_Z${zoneNum}_${waveToken}_${intrusionRoll}`);
         if (!card.querySelector('.warp-intrusion-alert')) {
           card.style.borderColor = 'var(--red)';
@@ -673,8 +737,14 @@ if (typeof window !== 'undefined') {
     const waveSignature = currentWaveIntrusions.sort().join('|');
     if (anyIntrusionTriggered && waveSignature && waveSignature !== lastWarpSirenSeedKey) {
       lastWarpSirenSeedKey = waveSignature;
-      if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.playWarpSiren === 'function') {
-        window.VoxAudio.playWarpSiren();
+      if (!(options && options.silentAudio) && typeof window !== 'undefined' && window.VoxAudio) {
+        if (hasApex13Intrusion && typeof window.VoxAudio.playWarpSiren === 'function') {
+          window.VoxAudio.playWarpSiren();
+        } else if (!hasApex13Intrusion && typeof window.VoxAudio.playUnboundBreachAlert === 'function') {
+          window.VoxAudio.playUnboundBreachAlert();
+        } else if (typeof window.VoxAudio.playWarpSiren === 'function') {
+          window.VoxAudio.playWarpSiren();
+        }
       }
     }
   }
@@ -760,4 +830,28 @@ if (typeof window !== 'undefined') {
             }
           }, 3500);
         }
+      } else {
+        if (spawnerCloudPollTimer) {
+          clearInterval(spawnerCloudPollTimer);
+          spawnerCloudPollTimer = null;
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initSpawnerCloudPolling);
+    window.addEventListener('vox:page-swapped', initSpawnerCloudPolling);
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    Object.assign(module.exports, {
+      updateRoundBanner,
+      syncSpawnerPoolFromSupabase,
+      renderLiveSpawnerBracketTable,
+      transmitHordeIntrusionPing,
+      transmitIntrusionPing,
+      evaluateWarpBreachIntrusions,
+      triggerCardStaticShake
+    });
+  }
+})();
 ````
