@@ -362,3 +362,72 @@
       rawHitMod += facMod.vsChaosHitMod;
     }
     if (facMod.vsImperiumRerollHitAndWoundOnes && hasAnyKw(targetKws, ['IMPERIUM'])) {
+      rerollHits = 'ONES';
+      rerollWounds = 'ONES';
+    }
+    if (facMod.vsOtherWoundMod && !hasAnyKw(targetKws, ['CHAOS', 'IMPERIUM'])) {
+      rawWoundMod += facMod.vsOtherWoundMod;
+    }
+    if (isMelee && facMod.chargeTurnMeleeAttacksMod && (context.chargedThisTurn || attacker.chargedThisTurn)) {
+      attacksMod += facMod.chargeTurnMeleeAttacksMod;
+    }
+    if (facMod.vsBattleShocked && (target.battleShocked || context.targetBattleShocked)) {
+      rawHitMod += facMod.vsBattleShocked.hitMod;
+      rawWoundMod += facMod.vsBattleShocked.woundMod;
+    }
+    if (isRanged && facMod.rangedApImprove) apImprove += facMod.rangedApImprove;
+    if (isMelee && facMod.meleeApImprove) apImprove += facMod.meleeApImprove;
+    if (facMod.vsGrudgeMarked && (target.hasGrudgeMark || context.targetHasGrudgeMark)) {
+      rawHitMod += facMod.vsGrudgeMarked.hitMod;
+      rawWoundMod += facMod.vsGrudgeMarked.woundMod;
+    }
+    if (isMelee && facMod.meleeStrengthMod) strengthMod += facMod.meleeStrengthMod;
+
+    // 2. Misery cards
+    for (const m of miseries) {
+      if (m.hordeHitMod) rawHitMod += m.hordeHitMod;
+      if (m.hordeWoundMod) rawWoundMod += m.hordeWoundMod;
+      if (m.hordeApImprove) apImprove += m.hordeApImprove;
+      if (m.hordeStrengthMod) strengthMod += m.hordeStrengthMod;
+      if (m.hordeRerollAllHits) rerollHits = 'ALL';
+      if (Array.isArray(m.hordeAttackKeywords)) {
+        m.hordeAttackKeywords.forEach(k => weaponKws.add(k.toUpperCase()));
+      }
+      if (isRanged && Array.isArray(m.hordeRangedKeywords)) {
+        m.hordeRangedKeywords.forEach(k => weaponKws.add(k.toUpperCase()));
+      }
+      if (isMelee && Array.isArray(m.hordeMeleeKeywords)) {
+        m.hordeMeleeKeywords.forEach(k => weaponKws.add(k.toUpperCase()));
+      }
+      if (isRanged && m.hordeRangedIgnoreCover) ignoreCover = true;
+    }
+
+    const dgDebuff = (facMod.enemyToughnessMod && (context.within6OfDeathGuard ?? isMelee))
+      ? facMod.enemyToughnessMod
+      : 0;
+    const effectiveTargetToughness = Math.max(1, (Number(target.toughness) || 4) + dgDebuff);
+    const effectiveStrength = Math.max(1, (Number(weapon.strength) || 4) + strengthMod);
+    const baseSkill = Number(weapon.skill) || 4;
+    const effectiveSkill = clamp(baseSkill - skillImprove, 2, 6);
+    const apPenetration = normalizeApPenetration(weapon.ap) + apImprove;
+
+    return {
+      effectiveSkill,
+      rawHitMod,
+      netHitMod: clamp(rawHitMod, -1, 1),
+      rerollHits,
+      effectiveStrength,
+      effectiveTargetToughness,
+      woundTarget: calculateWoundTarget(effectiveStrength, effectiveTargetToughness),
+      rawWoundMod,
+      netWoundMod: clamp(rawWoundMod, -1, 1),
+      rerollWounds,
+      apPenetration,
+      apSigned: apPenetration === 0 ? 0 : -apPenetration,
+      attacksMod,
+      ignoreCover,
+      requiresTauGlassesRoll,
+      keywords: Array.from(weaponKws)
+    };
+  }
+
