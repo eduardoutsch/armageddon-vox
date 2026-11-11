@@ -563,3 +563,36 @@
     };
   }
 
+  /**
+   * 5. Implements 11th Edition Core Rule 12.08 `3"` Consolidation Priority (`ONGOING` -> `ENGAGING` -> `OBJECTIVE` -> `HOLD`).
+   *
+   * @param {object} unit - Fighting Horde unit.
+   * @param {Array<object>} [enemyUnits=[]] - Active Player units on the board.
+   * @param {Array<object>} [objectives=[]] - Active Objective markers on the board.
+   * @returns {{mode: string, targetName: string|null, moveCommand: object|null}}
+   */
+  function planConsolidationMove(unit, enemyUnits = [], objectives = []) {
+    const guids = unit.guids || (unit.models || []).map(m => m.guid);
+    const uRadius = unit.models?.[0]?.radiusInches || 0.63;
+
+    let closestEnemy = null;
+    let minEnemyD = Infinity;
+    for (const e of enemyUnits) {
+      const d = squadEdgeDistance(unit, e);
+      if (d < minEnemyD) {
+        minEnemyD = d;
+        closestEnemy = e;
+      }
+    }
+
+    // Mode 1: Ongoing Consolidation (already Engaged <= 2.0")
+    if (closestEnemy && minEnemyD <= 2.0) {
+      const eRadius = closestEnemy.models?.[0]?.radiusInches || 0.63;
+      const step = stepTowardPoint(unit.pos || { x: 0, z: 0 }, closestEnemy.pos || { x: 0, z: 0 }, 3.0, uRadius + eRadius + 0.1);
+      return {
+        mode: 'ONGOING',
+        targetName: closestEnemy.name,
+        moveCommand: { action: 'MOVE_UNIT', guids, targetX: step.x, targetZ: step.z, facingY: step.facingY }
+      };
+    }
+
