@@ -105,3 +105,54 @@ function pushBoardTelemetry()
     end)
 end
 
+function pollTacticaDaemon()
+    if not pollEnabled or isRollingMat then return end
+    WebRequest.get(BRIDGE_URL .. "/tts/poll", function(req)
+        if req.is_error or not req.text or req.text == "" or req.text == "IDLE" then return end
+        local cmd = JSON.decode(req.text)
+        if not cmd then return end
+
+        if cmd.action == "LCT_MAT_ROLL" then
+            executeLctMatRoll(cmd)
+        elseif cmd.action == "SCAN_BOARD" then
+            pushBoardTelemetry()
+        elseif cmd.action == "MOVE_UNIT" then
+            executeSquadMove(cmd.guids or {}, cmd.targetX, cmd.targetZ, cmd.facingY)
+        elseif cmd.action == "SPAWN_WAVE" then
+            executeSpawnWave(cmd)
+        elseif cmd.action == "REVERT_MOVE" then
+            executeRevertMove(cmd)
+        elseif cmd.action == "SPAWN_GHOST_RING" then
+            spawnGhostRing(cmd)
+        end
+    end)
+end
+
+-- Discovers LCT's native Red/Blue Dice Mat controller object and clicks matching buttons if present
+function findLctDiceMatController(matSide)
+    local sideLower = string.lower(matSide or "RED")
+    for _, obj in ipairs(getAllObjects()) do
+        local n = string.lower(obj.getName() or "")
+        local btns = obj.getButtons()
+        if btns and #btns >= 4 and (string.find(n, "dice") or string.find(n, "roller")) then
+            if string.find(n, sideLower) or sideLower == "red" then
+                return obj, btns
+            end
+        end
+    end
+    return nil, nil
+end
+
+function clickMatButtonMatching(matObj, btns, pattern, playerColor)
+    if not matObj or not btns then return false end
+    for _, b in ipairs(btns) do
+        local lbl = string.lower(b.label or "")
+        local fn = string.lower(b.click_function or "")
+        if string.find(lbl, pattern) or string.find(fn, pattern) then
+            pcall(function() matObj.call(b.click_function, { matObj, playerColor, false }) end)
+            return true
+        end
+    end
+    return false
+end
+
