@@ -92,3 +92,70 @@ test('resolveHordeAttackModifiers: resolves BS improvements, conditional faction
   assert.equal(admechShot.apSigned, -1);
   assert.ok(admechShot.keywords.includes('ASSAULT'));
 
+  // 2. Grey Knights melee vs VEHICLE (-1 hit, +4 S)
+  const gkMelee = resolveHordeAttackModifiers(
+    {},
+    { toughness: 10, keywords: ['VEHICLE'] },
+    { type: 'melee', skill: 3, strength: 6, ap: -2, keywords: [] },
+    { factionName: 'Grey Knights', activeMiseryIds: [] }
+  );
+  assert.equal(gkMelee.effectiveStrength, 10);
+  assert.equal(gkMelee.woundTarget, 4);
+  assert.equal(gkMelee.netHitMod, -1);
+
+  // 3. Imperial Agents conditional target keywords (CHAOS vs IMPERIUM vs Xenos)
+  const iaVsChaos = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4, keywords: ['CHAOS', 'INFANTRY'] },
+    { type: 'ranged', skill: 4, strength: 4, ap: 0 },
+    { factionName: 'Imperial Agents', activeMiseryIds: [] }
+  );
+  assert.equal(iaVsChaos.netHitMod, 1);
+  assert.equal(iaVsChaos.netWoundMod, 0);
+
+  const iaVsImp = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4, keywords: ['IMPERIUM', 'INFANTRY'] },
+    { type: 'ranged', skill: 4, strength: 4, ap: 0 },
+    { factionName: 'Imperial Agents', activeMiseryIds: [] }
+  );
+  assert.equal(iaVsImp.rerollHits, 'ONES');
+  assert.equal(iaVsImp.rerollWounds, 'ONES');
+
+  const iaVsXenos = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4, keywords: ['NECRONS', 'INFANTRY'] },
+    { type: 'ranged', skill: 4, strength: 4, ap: 0 },
+    { factionName: 'Imperial Agents', activeMiseryIds: [] }
+  );
+  assert.equal(iaVsXenos.netWoundMod, 1);
+
+  // 4. Death Guard (-1 T within 6") + Chaos Knights/Votann +1 cap check + Misery #16/#17/#25/#26/#32/#33/#34
+  const loadedShot = resolveHordeAttackModifiers(
+    {},
+    { toughness: 5, keywords: ['INFANTRY'], battleShocked: true, hasGrudgeMark: true },
+    { type: 'ranged', skill: 4, strength: 4, ap: -1, keywords: [] },
+    { factionName: 'Leagues of Votann', activeMiseryIds: [2, 16, 17, 25, 26, 32, 33, 34] }
+  );
+  assert.equal(loadedShot.effectiveStrength, 5); // +1 S from Misery #34
+  assert.equal(loadedShot.woundTarget, 4); // S5 vs T5
+  assert.equal(loadedShot.netHitMod, 1, 'Stacked +2 Hit modifiers must clamp to +1');
+  assert.equal(loadedShot.netWoundMod, 1, 'Stacked +2 Wound modifiers must clamp to +1');
+  assert.equal(loadedShot.rerollHits, 'ALL');
+  assert.equal(loadedShot.ignoreCover, true);
+  for (const kw of ['DEVASTATING WOUNDS', 'SUSTAINED HITS 1', 'LETHAL HITS 1', 'MELTA 1', 'PRECISION', 'IGNORES COVER', 'BLAST 1', 'PSYCHIC']) {
+    assert.ok(loadedShot.keywords.includes(kw), `Expected keyword ${kw}`);
+  }
+
+  const dgMelee = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4, keywords: ['INFANTRY'] },
+    { type: 'melee', skill: 3, strength: 4, ap: 0 },
+    { factionName: 'Death Guard', activeMiseryIds: [33] },
+    { within6OfDeathGuard: true }
+  );
+  assert.equal(dgMelee.effectiveTargetToughness, 3);
+  assert.equal(dgMelee.woundTarget, 3); // S4 vs reduced T3
+  assert.ok(dgMelee.keywords.includes('CLEAVE 1'));
+});
+
