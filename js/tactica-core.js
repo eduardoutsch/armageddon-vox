@@ -114,11 +114,14 @@
       activeFortifications: Array.isArray(overrides.activeFortifications) ? [...overrides.activeFortifications] : [],
       activePlayerBuffs: Array.isArray(overrides.activePlayerBuffs) ? [...overrides.activePlayerBuffs] : [],
       zoneSpawns: Array.isArray(overrides.zoneSpawns) ? [...overrides.zoneSpawns] : [],
+      hordeReserves: Array.isArray(overrides.hordeReserves) ? [...overrides.hordeReserves] : [],
+      shelfTemplates: Array.isArray(overrides.shelfTemplates) ? [...overrides.shelfTemplates] : [],
       hordeWarlord: overrides.hordeWarlord || null,
       pendingReactionWindow: overrides.pendingReactionWindow || null,
       pendingDiceSequence: overrides.pendingDiceSequence || null,
       pendingChargeDecl: overrides.pendingChargeDecl || null,
       lastMovementPlans: Array.isArray(overrides.lastMovementPlans) ? [...overrides.lastMovementPlans] : [],
+      lastIngressDrops: Array.isArray(overrides.lastIngressDrops) ? [...overrides.lastIngressDrops] : [],
       lastShootingAssignments: Array.isArray(overrides.lastShootingAssignments) ? [...overrides.lastShootingAssignments] : [],
       losBlockedPairs: Array.isArray(overrides.losBlockedPairs) ? [...overrides.losBlockedPairs] : [],
       boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [] },
@@ -908,6 +911,10 @@
       const nearEnemy = u?.closestEnemy
         ? `${u.closestEnemy.name} (${u.closestEnemy.distanceInches}")`
         : 'None';
+      const didIngress = Boolean(
+        u?.didIngressThisTurn ||
+        (Array.isArray(u?.tags) && u.tags.some(t => String(t).toUpperCase() === 'DEEP_STRUCK'))
+      );
 
       return {
         index,
@@ -917,12 +924,48 @@
         name: u?.name || 'Unknown Unit',
         statsBracketText: `[x${modelCount} • ${savePart}]`,
         proximityText: `• Obj: ${nearObj} • Nearest Enemy: ${nearEnemy}`,
+        didIngressThisTurn: didIngress,
+        deepStruckBadgeText: didIngress ? '🪂 Deep Struck' : '',
         hasEmbarkedCargo: Boolean(embarkedSummary),
         embarkedBadgeText: embarkedSummary ? `🚌 Embarked: ${embarkedSummary}` : '',
         canDisembark: cargo.length > 0,
         canLoadAutoDefender: !isPlayer
       };
     });
+  }
+
+  /**
+   * Pure MVVM ViewModel selector projecting `state.hordeReserves` onto `#tacticaReservesStrip`
+   * and `#hordeStepBtn2` without DOM dependencies.
+   *
+   * @param {Array<object>} [hordeReserves=[]] - Queued Deep Strike / Pincer reserve descriptors.
+   * @returns {{visible: boolean, count: number, bannerText: string, bannerHtml: string, step2ButtonText: string}}
+   */
+  function selectReservesBannerViewModel(hordeReserves = []) {
+    if (!Array.isArray(hordeReserves) || hordeReserves.length === 0) {
+      return {
+        visible: false,
+        count: 0,
+        bannerText: '',
+        bannerHtml: '',
+        step2ButtonText: '2. Move & LOS'
+      };
+    }
+    const itemsText = hordeReserves.map(r => {
+      const distTag = r?.mode === 'PINCER_MANEUVER' ? '>3" Pincer' : '>8"';
+      return `${r?.unitLabel || 'Horde Squad'} (${distTag})`;
+    }).join(', ');
+    const itemsHtml = hordeReserves.map(r => {
+      const distTag = r?.mode === 'PINCER_MANEUVER' ? '&gt;3" Pincer' : '&gt;8"';
+      return `${r?.unitLabel || 'Horde Squad'} (${distTag})`;
+    }).join(' • ');
+    return {
+      visible: true,
+      count: hordeReserves.length,
+      bannerText: `🪂 Holding in Deep Strike Reserves (Drops in Step 2): ${itemsText}`,
+      bannerHtml: `🪂 <strong>Holding in Deep Strike Reserves (Drops in Step 2):</strong> ${itemsHtml}`,
+      step2ButtonText: `2. Move & Ingress (${hordeReserves.length} 🪂)`
+    };
   }
 
   return {
@@ -933,6 +976,7 @@
     createPlayerStratagemBuff,
     pruneExpiredPlayerBuffs,
     selectTelemetryRowViewModels,
+    selectReservesBannerViewModel,
     formatChronicleEntry,
     detectPlayerReactionWindow,
     assignHordeWarlordIfEligible,

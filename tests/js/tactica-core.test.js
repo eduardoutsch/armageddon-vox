@@ -31,6 +31,7 @@ test('Zero-JS-RNG Guard: tactica modules contain zero Math.random() calls (all d
   for (const rel of [
     'js/tactica-core.js',
     'js/tts-telemetry-core.js',
+    'js/horde-deepstrike-core.js',
     'js/horde-autopilot-core.js',
     'js/tactica-overwatch-core.js',
     'js/tactica-overwatch.js',
@@ -357,4 +358,41 @@ test('selectTelemetryRowViewModels: pure MVVM selector projects unit badges, sav
   assert.equal(vms[1].hasEmbarkedCargo, false);
   assert.equal(vms[1].canDisembark, false);
   assert.equal(vms[1].canLoadAutoDefender, false);
+  assert.equal(vms[1].didIngressThisTurn, false);
+  assert.equal(vms[1].deepStruckBadgeText, '');
+
+  const dsVms = selectTelemetryRowViewModels([
+    {
+      squadKey: 'HORDE::Terminator Squad',
+      name: 'Terminator Squad',
+      side: 'HORDE',
+      modelCount: 5,
+      save: 2,
+      invuln: 4,
+      didIngressThisTurn: true
+    }
+  ]);
+  assert.equal(dsVms[0].didIngressThisTurn, true);
+  assert.equal(dsVms[0].deepStruckBadgeText, '🪂 Deep Struck');
+
+  const { selectReservesBannerViewModel } = require('../../js/tactica-core.js');
+  assert.equal(typeof selectReservesBannerViewModel, 'function');
+  const idleBanner = selectReservesBannerViewModel([]);
+  assert.equal(idleBanner.visible, false);
+  assert.equal(idleBanner.step2ButtonText, '2. Move & LOS');
+
+  const activeBanner = selectReservesBannerViewModel([
+    { reserveId: 'r1', mode: 'STANDARD_DEEP_STRIKE', unitLabel: '5x Terminator Squad' },
+    { reserveId: 'r2', mode: 'PINCER_MANEUVER', unitLabel: '10x Hormagaunts' }
+  ]);
+  assert.equal(activeBanner.visible, true);
+  assert.equal(activeBanner.step2ButtonText, '2. Move & Ingress (2 🪂)');
+  assert.ok(activeBanner.bannerText.includes('Holding in Deep Strike Reserves (Drops in Step 2):'));
+  assert.ok(activeBanner.bannerText.includes('5x Terminator Squad (>8")'));
+  assert.ok(activeBanner.bannerText.includes('10x Hormagaunts (>3" Pincer)'));
+
+  const initSt = createInitialTacticaState({ hordeReserves: [{ reserveId: 'r1' }], shelfTemplates: [{ name: 'Terminators', hasDeepStrike: true }] });
+  assert.equal(initSt.hordeReserves.length, 1);
+  assert.equal(initSt.shelfTemplates.length, 1);
+  assert.deepEqual(initSt.lastIngressDrops, []);
 });
