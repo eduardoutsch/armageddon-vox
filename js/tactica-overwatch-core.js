@@ -118,3 +118,64 @@
     };
   }
 
+  /**
+   * Builds a concise spoken callout when a Player Stratagem Reaction Window opens.
+   *
+   * @param {object} win - Reaction window descriptor from `detectPlayerReactionWindow`.
+   * @returns {string} Spoken sentence or empty string when closed.
+   */
+  function buildReactionVoiceCallout(win) {
+    if (!win || !win.open) return '';
+    const names = (win.eligibleStratagems || []).map(s => s.name.split('(')[0].trim()).join(' or ');
+    return `${win.title}. You have ${win.playerCp} Command Points. ${names} available.`;
+  }
+
+  /**
+   * Filters synced `zoneSpawns` for Big-Bracket (`[10-12]` / `[13+]`) waves that rolled `6+` Intrusion.
+   *
+   * @param {Array<object>} [zoneSpawns=[]] - Active round zone spawns.
+   * @returns {Array<object>} Zones triggering a 6+ Warp-Breach Intrusion.
+   */
+  function detectActiveIntrusionZones(zoneSpawns = []) {
+    if (!Array.isArray(zoneSpawns)) return [];
+    return zoneSpawns.filter(z =>
+      z && (z.bracketKey === '10-12' || z.bracketKey === '13+') && Number(z.intrusionRoll) >= 6
+    );
+  }
+
+  /**
+   * Formats an emergency 6+ Horde Warp-Breach Intrusion dispatch for Conduit Alpha, Beta, Gamma, or Distant.
+   *
+   * @param {object} [params={}] - Intrusion context (`zoneNum`, `bracketLabel`, `channel`, `roomCode`, `battleRound`, `factionName`).
+   * @returns {string} Formatted Astropathic Vox payload.
+   */
+  function buildIntrusionVoxPayload(params = {}) {
+    const zoneNum = Number(params.zoneNum) || 1;
+    const rawBracket = String(params.bracketLabel || '[10–12]');
+    const cleanBracket = rawBracket.startsWith('Bracket') ? rawBracket : `Bracket ${rawBracket}`;
+    const chan = params.channel || 'alpha';
+    const room = String(params.roomCode || 'HADES-1').trim().toUpperCase();
+    const round = Number(params.battleRound) || 1;
+    const fac = params.factionName || 'Horde';
+
+    if (chan === 'distant') {
+      return [
+        '+++ ORBITAL AUGUR ARRAY // DISTANT WARP-BREACH ADVERSARY DETECTED +++',
+        `• MODE & ROOM SEED: Mode 1 (Distant Solo Horde Breach // Room: ${room} // Battle Round ${round})`,
+        `• THEATRE & SENSOR SWEEP: Distant Sector Grid ${zoneNum} // Orbital Augur Intercept (Neither Main Player Fielded)`,
+        `• REMOTE SECTOR & BRACKET: Distant Spawn Zone ${zoneNum} rolled ${cleanBracket} + [6+ WARP-BREACH INTRUSION]!`,
+        `• ACTIVE DISTANT ENEMY FACTION: ${fac}`,
+        '• REQUEST FOR CAMPAIGN MASTER: Execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) for this remote sector and broadcast the telemetry intercept to BOTH command networks!'
+      ].join('\n');
+    }
+
+    if (chan === 'gamma') {
+      return [
+        '+++ FANE-NODE VÔL-09 // SEISMIC WARP-BREACH INTRUSION ALERT +++',
+        `• MODE & ROOM SEED: Mode 1 (Solo Kindred Holdout // Room: ${room} // Battle Round ${round})`,
+        `• TELEMETRY SOURCE: SUB-THERMOSPHERIC GRUDGE-AUGUR [KÂHL HÂRKYN // NEEDGAÂRD OATHBAND]`,
+        `• BREACH VECTOR: Spawn Zone ${zoneNum} rolled ${cleanBracket} + [6+ WARP-BREACH INTRUSION] against ${fac}!`,
+        '• REQUEST FOR FANE-NODE VÔL-09: Execute the Contextual 3-Tier Intrusion Roll (NEMESIS.md) and output a Pattern 3 Seismic Grudge-Warrant with exact TTS miniature spawn instructions!'
+      ].join('\n');
+    }
+
