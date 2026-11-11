@@ -487,3 +487,66 @@
     );
     const effectiveCover = isRanged && hasCover && !ignoresCover;
 
+    const rawApPen = normalizeApPenetration(incomingAttack.ap);
+    const effectiveApPenetration = Math.max(0, rawApPen - apWorsen);
+    const effectiveAttackerStrength = Math.max(1, (Number(incomingAttack.strength) || 4) + attackerStrengthMod);
+
+    // Armor Save calculation (Core Rule: 3+ or better Save does not improve vs AP 0 from Cover)
+    const baseSave = Number(defender.save) || 6;
+    const coverBonus = (effectiveCover && !(baseSave <= 3 && effectiveApPenetration === 0)) ? 1 : 0;
+    const modifiedArmorSave = baseSave + effectiveApPenetration - coverBonus;
+
+    // Invulnerable Save + Misery #5 (Untouchable)
+    const baseInvuln = defender.invuln ? Number(defender.invuln) : null;
+    let effectiveInvuln = baseInvuln;
+    if (untouchableActive) {
+      if (baseInvuln === 4) effectiveInvuln = 3;
+      else if (!baseInvuln || baseInvuln > 4) effectiveInvuln = 4;
+    }
+
+    const bestSave = effectiveInvuln ? Math.min(modifiedArmorSave, effectiveInvuln) : modifiedArmorSave;
+    const saveTarget = Math.max(2, bestSave);
+
+    // Feel No Pain resolution (best of datasheet vs faction)
+    const fnpCandidates = [];
+    if (defender.fnp) fnpCandidates.push(Number(defender.fnp));
+    if (facMod.fnp) fnpCandidates.push(facMod.fnp);
+    if (facMod.conditionalFnp) {
+      const cf = facMod.conditionalFnp;
+      const excluded = hasAnyKw(unitKws, cf.excludeKeywords || []);
+      const included = hasAnyKw(unitKws, cf.requireAnyKeyword || []);
+      if (!excluded && included) fnpCandidates.push(cf.threshold);
+    }
+    const fnp = fnpCandidates.length > 0 ? Math.min(...fnpCandidates) : null;
+
+    // GSC 5+ Respawn eligibility
+    let gscRespawnThreshold = null;
+    if (facMod.respawnOnDestroy && hasAnyKw(unitKws, facMod.respawnOnDestroy.requireAnyKeyword)) {
+      gscRespawnThreshold = facMod.respawnOnDestroy.threshold;
+    }
+
+    // 11th Ed Hidden (15") / Gone to Ground (12") visibility cap
+    let maxVisibleRangeInches = null;
+    if (isRanged && isHidden) {
+      maxVisibleRangeInches = context.isGoneToGround ? 12 : 15;
+    }
+
+    return {
+      baseSave,
+      modifiedArmorSave,
+      effectiveInvuln,
+      saveTarget,
+      fnp,
+      hasCover: effectiveCover,
+      hasStealth,
+      isHidden,
+      maxVisibleRangeInches,
+      incomingHitMod: clamp(incomingHitMod, -1, 1),
+      effectiveAttackerStrength,
+      effectiveApPenetration,
+      woundsPerModel: Math.max(1, Number(defender.woundsPerModel) || 1),
+      shootOrFightOnDeathThreshold,
+      gscRespawnThreshold
+    };
+  }
+
