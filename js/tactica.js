@@ -188,6 +188,20 @@
       }
     }
 
+    const resVm = typeof selectReservesBannerViewModel === 'function'
+      ? selectReservesBannerViewModel(clientState.hordeReserves)
+      : { visible: false, bannerHtml: '', step2ButtonText: '2. Move & LOS' };
+    const resStrip = document.getElementById('tacticaReservesStrip');
+    if (resStrip) {
+      resStrip.classList.toggle('hidden', !resVm.visible);
+      resStrip.innerHTML = resVm.visible ? resVm.bannerHtml : '';
+    }
+    const stepBtn2 = document.getElementById('hordeStepBtn2');
+    if (stepBtn2) {
+      stepBtn2.textContent = resVm.step2ButtonText;
+      stepBtn2.style.borderColor = resVm.visible ? 'var(--purple)' : '';
+    }
+
     const units = clientState.boardTelemetry?.units || [];
     setTxt('tacticaUnitCountSummary', `${units.length} Unit${units.length === 1 ? '' : 's'}`);
 
@@ -224,6 +238,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:0.83rem;">
             <div>
               <span class="badge ${vm.sideBadgeClass}">${vm.side}</span> <strong>${vm.name}</strong> ${vm.statsBracketText}
+              ${vm.didIngressThisTurn ? `<span class="badge purple" style="margin-left:4px;">${vm.deepStruckBadgeText}</span>` : ''}
               ${vm.hasEmbarkedCargo ? `<span class="badge gold" style="margin-left:4px;">${vm.embarkedBadgeText}</span>` : ''}
               <span style="color:#94a3b8;">${vm.proximityText}</span>
             </div>
@@ -620,7 +635,7 @@
   }
 
   /**
-   * 1. Clones off-board `HORDE_TEMPLATE` miniatures into active Mode 1 Spawn Zones.
+   * 1. Clones off-board `HORDE_TEMPLATE` miniatures into active Mode 1 Spawn Zones (holding R2–R4 Deep Strike & Misery #13 waves in Reserves).
    */
   async function triggerAutopilotSpawnWaves() {
     setHordeTurnStep(1);
@@ -628,12 +643,24 @@
     pruneClientBuffs();
     let plan;
     try {
-      const res = await daemonRequest('/autopilot/spawn-waves', 'POST', { zoneSpawns: clientState.zoneSpawns });
+      const res = await daemonRequest('/autopilot/spawn-waves', 'POST', {
+        zoneSpawns: clientState.zoneSpawns,
+        shelfTemplates: clientState.shelfTemplates
+      });
       daemonOnline = true;
       plan = res;
+      if (Array.isArray(res.hordeReserves)) {
+        clientState.hordeReserves = res.hordeReserves;
+      } else if (Array.isArray(res.queuedReserves)) {
+        clientState.hordeReserves = [...(clientState.hordeReserves || []), ...res.queuedReserves];
+      }
       if (res.entry) localChronicle.push(res.entry);
     } catch (e) {
-      plan = planWaveSpawnCommands(clientState.zoneSpawns);
+      plan = planWaveSpawnCommands(clientState.zoneSpawns, [], {
+        battleRound: clientState.battleRound,
+        shelfTemplates: clientState.shelfTemplates || []
+      });
+      clientState.hordeReserves = [...(clientState.hordeReserves || []), ...(plan.queuedReserves || [])];
       localChronicle.push(formatChronicleEntry({ type: 'SPAWN_WAVE', summary: plan.summary }, clientState));
     }
     setAutopilotHtml(`<strong>🧟 Wave Spawn Queue:</strong> ${plan.summary}`);
@@ -641,47 +668,110 @@
     return plan;
   }
 
+  function renderAutopilotMovementAndIngress(plans = [], ingressDrops = []) {
+    if (plans.length === 0 && ingressDrops.length === 0) {
+      setAutopilotHtml('<span style="color:var(--muted);">No eligible Horde movement vectors found on board.</span>');
+      return;
+    }
+    const moveRows = plans.map((p, idx) => {
+      if (p.status === 'ENGAGED_HOLD') {
+        return `<div style="padding:4px 0;"><strong>${p.unitName}</strong> — Engaged (&le;2.0"): Holding melee contact.</div>`;
+      }
+      if (p.status === 'INGRESSED_HOLD') {
+        return `<div style="padding:4px 0;">🪂 <strong>${p.unitName}</strong> — Arrived from Deep Strike this turn: Holding position.</div>`;
+      }
+      const advTag = p.advanced ? ' <span class="badge red">ADVANCED</span>' : '';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div>🏃 <strong>${p.unitName}</strong> &rarr; ${p.goalName} (${p.moveBudgetInches}" to X:${p.targetX}, Z:${p.targetZ})${advTag}</div>
+          <button type="button" class="btn-ghost btn-sm" onclick="revertAutopilotSquadMove(${idx})">↩️ Revert Move (No LOS)</button>
+        </div>
+      `;
+    }).join('');
+    const dropRows = ingressDrops.map((d, idx) => {
+      if (d.status === 'SCREENED_FALLBACK_SPAWN_ZONE') {
+        return `<div style="padding:4px 0; color:#fbbf24;">🪂 <strong>Deep Strike Ingress:</strong> ${d.unitLabel} &rarr; Spawn Zone ${d.fallbackZone || 1} Fallback (X:${d.targetX}, Z:${d.targetZ})</div>`;
+      }
+      const modeTag = d.mode === 'PINCER_MANEUVER' ? 'Pincer &gt;3"' : 'Deep Strike &gt;8"';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div style="color:#e879f9;">🪂 <strong>Deep Strike Ingress (${modeTag}):</strong> ${d.unitLabel} @ (X:${d.targetX}, Z:${d.targetZ}) — ${d.closestEnemyDistanceInches}" from enemy</div>
+          <button type="button" class="btn-ghost btn-sm" onclick="fallbackAutopilotIngressDrop(${idx})">↩️ Fallback to Spawn Zone</button>
+        </div>
+      `;
+    }).join('');
+    const hasBoardIngress = ingressDrops.some(d => d.status === 'DROPPED_ON_BOARD');
+    const overwatchNote = hasBoardIngress
+      ? '<div style="margin-top:6px; font-size:0.78rem; color:var(--gold);">⚡ <strong>Fire Overwatch (1 CP):</strong> Newly set-up Deep Strike / Pincer units are eligible Overwatch targets right after setup!</div>'
+      : '';
+    setAutopilotHtml(moveRows + dropRows + overwatchNote);
+  }
+
   /**
-   * 2. Computes deterministic Horde Movement & Advance vectors with one-click Pre-Overwatch LOS Revert buttons.
+   * 2. Computes deterministic Horde Movement, Deep Strike Ingress drops & Advance vectors with one-click Pre-Overwatch LOS Revert & Ruin-Fallback buttons.
    */
   async function triggerAutopilotMovement() {
     setHordeTurnStep(2);
     clientState.phase = 'HORDE_MOVEMENT';
     pruneClientBuffs();
     let plans = [];
+    let ingressDrops = [];
     try {
       const res = await daemonRequest('/autopilot/plan-movement', 'POST', {});
       daemonOnline = true;
       plans = res.plans || [];
+      ingressDrops = res.ingressDrops || [];
+      clientState.hordeReserves = [];
       if (res.entry) localChronicle.push(res.entry);
     } catch (e) {
-      const localRes = planHordeMovementPhase(clientState.boardTelemetry, clientState);
+      const localRes = planHordeMovementPhase(clientState.boardTelemetry, clientState, {
+        hordeReserves: clientState.hordeReserves || []
+      });
       plans = localRes.plans || [];
+      ingressDrops = localRes.ingressDrops || [];
+      clientState.hordeReserves = [];
+      const ingressNote = ingressDrops.length > 0 ? ` + ${ingressDrops.length} Deep Strike Ingress drop(s)` : '';
       localChronicle.push(formatChronicleEntry({
         type: 'HORDE_MOVE',
-        summary: `Moved ${plans.length} Horde squad(s) — awaiting Pre-Overwatch LOS check.`
+        summary: `Moved ${plans.length} Horde squad(s)${ingressNote} — awaiting Pre-Overwatch LOS check.`
       }, clientState));
     }
     clientState.lastMovementPlans = plans;
-
-    if (plans.length === 0) {
-      setAutopilotHtml('<span style="color:var(--muted);">No eligible Horde movement vectors found on board.</span>');
-    } else {
-      setAutopilotHtml(plans.map((p, idx) => {
-        if (p.status === 'ENGAGED_HOLD') {
-          return `<div style="padding:4px 0;"><strong>${p.unitName}</strong> — Engaged (&le;2.0"): Holding melee contact.</div>`;
-        }
-        const advTag = p.advanced ? ' <span class="badge red">ADVANCED</span>' : '';
-        return `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
-            <div>🏃 <strong>${p.unitName}</strong> &rarr; ${p.goalName} (${p.moveBudgetInches}" to X:${p.targetX}, Z:${p.targetZ})${advTag}</div>
-            <button type="button" class="btn-ghost btn-sm" onclick="revertAutopilotSquadMove(${idx})">↩️ Revert Move (No LOS)</button>
-          </div>
-        `;
-      }).join(''));
-    }
+    clientState.lastIngressDrops = ingressDrops;
+    renderAutopilotMovementAndIngress(plans, ingressDrops);
     renderTacticaConsole();
     return plans;
+  }
+
+  /**
+   * Relocates a Deep Strike / Pincer ingress drop back to its rolled Spawn Zone if an unscanned 3D ruin blocks `(X, Z)`.
+   */
+  async function fallbackAutopilotIngressDrop(idx) {
+    const drops = clientState.lastIngressDrops || [];
+    const targetDrop = drops[idx];
+    if (!targetDrop) return null;
+    let cmd = null;
+    try {
+      const res = await daemonRequest('/autopilot/fallback-ingress', 'POST', { reserveId: targetDrop.reserveId, dropIndex: idx });
+      daemonOnline = true;
+      cmd = res.command || null;
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      cmd = typeof buildIngressFallbackCommand === 'function' ? buildIngressFallbackCommand(targetDrop) : null;
+      if (!cmd) return null;
+      localChronicle.push(formatChronicleEntry({
+        type: 'INGRESS_FALLBACK',
+        summary: `Relocated ${cmd.unitLabel} to Spawn Zone ${cmd.zone} (3D terrain/ruin obstructed Deep Strike landing).`
+      }, clientState));
+    }
+    if (cmd) {
+      targetDrop.status = 'SCREENED_FALLBACK_SPAWN_ZONE';
+      targetDrop.targetX = cmd.targetX;
+      targetDrop.targetZ = cmd.targetZ;
+    }
+    renderAutopilotMovementAndIngress(clientState.lastMovementPlans || [], drops);
+    renderTacticaConsole();
+    return cmd;
   }
 
   /**
@@ -874,6 +964,7 @@
       disembarkTelemetryTransport,
       triggerAutopilotSpawnWaves,
       triggerAutopilotMovement,
+      fallbackAutopilotIngressDrop,
       revertAutopilotSquadMove,
       triggerAutopilotShooting,
       fireAutopilotWeaponOnMat,
@@ -918,6 +1009,7 @@
     disembarkTelemetryTransport,
     triggerAutopilotSpawnWaves,
     triggerAutopilotMovement,
+    fallbackAutopilotIngressDrop,
     revertAutopilotSquadMove,
     triggerAutopilotShooting,
     fireAutopilotWeaponOnMat,
