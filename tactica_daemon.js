@@ -268,3 +268,61 @@ function createTacticaDaemon(options = {}) {
         return sendJson(res, 200, { ok: true, sequence: updated, queueLength: ttsCommandQueue.length });
       }
 
+      if (liveState.pendingChargeDecl && (!body.sequenceId || body.sequenceId === liveState.pendingChargeDecl.sequenceId)) {
+        const resolved = resolveHordeChargeRoll(liveState.pendingChargeDecl, dice);
+        liveState.pendingChargeDecl = null;
+        if (resolved.moveCommand) {
+          cmdCounter += 1;
+          ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...resolved.moveCommand });
+        }
+        const entry = appendEvent({
+          type: 'HORDE_CHARGE',
+          summary: `${resolved.attackerName} -> ${resolved.targetName} [LCT 2D6 = ${resolved.modifiedTotal}"]: ${resolved.succeeded ? 'CHARGE SUCCEEDED!' : 'Charge Failed.'}`
+        });
+        return sendJson(res, 200, { ok: true, chargeResult: resolved, entry });
+      }
+
+      const entry = appendEvent({
+        type: 'TTS_DICE',
+        summary: `LCT Mat Roll [${body.label || 'Check'}]: [${dice.join(', ')}]`
+      });
+      return sendJson(res, 200, { ok: true, sequence: null, entry });
+    }
+
+    if (req.method === 'POST' && urlPath === '/tts/enqueue') {
+      const body = await readJsonBody(req);
+      cmdCounter += 1;
+      const cmd = { id: `lct_cmd_${Date.now()}_${cmdCounter}`, createdAt: Date.now(), ...body };
+      ttsCommandQueue.push(cmd);
+      return sendJson(res, 200, { ok: true, queued: cmd, queueLength: ttsCommandQueue.length });
+    }
+
+    if (req.method === 'POST' && urlPath === '/tts/telemetry') {
+      const body = await readJsonBody(req);
+      let units = Array.isArray(body.units) ? body.units : [];
+      let objectives = Array.isArray(body.objectives) ? body.objectives : [];
+
+      if (Array.isArray(body.objects)) {
+        const normalized = normalizeTtsBoardScan(body);
+        units = normalized.units;
+        objectives = normalized.objectives;
+      }
+
+      liveState.boardTelemetry = { updatedAt: Date.now(), units, objectives };
+
+      const wlCheck = assignHordeWarlordIfEligible(liveState.hordeWarlord, units, liveState.battleRound);
+      if (wlCheck.newlyAssigned) {
+        liveState.hordeWarlord = wlCheck.warlord;
+        appendEvent({ type: 'WARLORD', summary: `Designated ${wlCheck.warlord.name} as Horde Warlord!` });
+      } else {
+        savePersistedState();
+      }
+      return sendJson(res, 200, {
+        ok: true,
+        warlord: liveState.hordeWarlord,
+        trackedUnits: units.length,
+        objectives: objectives.length,
+        units
+      });
+    }
+
