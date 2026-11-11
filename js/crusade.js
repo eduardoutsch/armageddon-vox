@@ -505,81 +505,23 @@ function resetMasterDossierForm() {
 }
 
 function updateDistantForceVisibility() {
-  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
-  const mode = document.getElementById('dossierModeNode')?.value || '';
-  const isDistant = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(mode);
-  const row = document.getElementById('dossierDistantForceRow');
+  const chan = _getMatrixEl('dossierChannel')?.value || 'alpha';
+  const mode = _getMatrixEl('dossierModeNode')?.value || '';
+  const row = _getMatrixEl('dossierDistantForceRow');
   if (row) {
-    row.style.display = isDistant ? 'block' : 'none';
+    row.style.display = _matrixCore.isDistantAugurEngagement(chan, mode) ? 'block' : 'none';
   }
 }
 
-/**
- * Pure predicate: determines whether the selected engagement mode in the
- * Master Battle Dossier represents a Mode 1 Horde Mode battle.
- *
- * @param {string} [modeNode] - Mode & Sector Node string from #dossierModeNode.
- * @returns {boolean} True only if the engagement is a Horde Mode battle.
- */
 function isHordeModeDossier(modeNode) {
-  const mode = String(modeNode || '').trim();
-  if (!mode) return false;
-  if (/mode\s*2|1v1|pvp/i.test(mode)) return false;
-  return /mode\s*1|horde/i.test(mode);
+  return _matrixCore.isHordeModeDossier(modeNode);
 }
 
-/**
- * Pure functional core: compiles the Master Post-Battle Dossier string from a plain data
- * object. Supports standard Player 1 / Player 2 engagements as well as Distant Solo Horde
- * Orbital Augur Telemetry where neither main player was fielded.
- *
- * @param {object} [input={}] - Plain Master Battle Dossier inputs.
- * @returns {string} Formatted teletype dossier payload for Astropathic Vox transmission.
- */
 function compileMasterDossier(input = {}) {
+  const compiler = typeof compileHordeBattleStatsDossierSection === 'function'
+    ? compileHordeBattleStatsDossierSection
+    : _compileHordeBattleStatsDossierSection;
   const chan = input.channel || 'alpha';
-  const modeNode = input.modeNode || '';
-  const outcome = input.outcome || '';
-  const secCode = (input.secretCode || 'N/A').trim().toUpperCase();
-  const secTag = input.secretTag || 'None';
-  const leftover = input.leftoverSp || '0 Leftover SP';
-  const notes = (input.battleNotes || 'Battle concluded. Awaiting Campaign Master chronicle.').trim();
-  const forts = Array.isArray(input.fortifications) ? input.fortifications : [];
-  const fortStr = forts.length > 0 ? forts.join(', ') : 'None';
-  const queuedRolls = Array.isArray(input.queuedRolls) ? input.queuedRolls : [];
-  const distantForce = (input.distantForce || '').trim();
-
-  const isDistantAugur = chan.startsWith('augur_') || /distant solo horde|augur telemetry|augur intercept/i.test(modeNode);
-  const allowHordeStats = modeNode ? isHordeModeDossier(modeNode) : true;
-
-  const unitLines = queuedRolls.length > 0
-    ? queuedRolls.map((q, i) =>
-        `  ${i + 1}. [${q.unit}] → ${q.category}: ${q.name} (${q.roll})\n     • Battlefield Context: "${q.context}"`
-      ).join('\n')
-    : '  • None attached this battle.';
-
-  if (isDistantAugur) {
-    const scanningVessel = (chan === 'augur_beta' || chan === 'beta')
-      ? 'LORD COMMANDER JUNEBUG'
-      : 'THE EXILE // SANCTUARY OF ASH';
-    const forceName = distantForce || 'Unspecified Distant Auxiliary Detachment';
-
-    const lines = [
-      `+++ MASTER POST-BATTLE DOSSIER // ORBITAL AUGUR TELEMETRY +++`,
-      `• SCANNING SENSOR ARRAY: ORBITAL AUGUR ARRAY (Relayed via ${scanningVessel})`,
-      `• ENGAGED FORCES (IN THE DISTANCE): ${forceName} (Neither Main Player Fielded)`,
-      `• ENGAGEMENT CLASSIFICATION: ${modeNode}`,
-      `• OUTCOME & SURVIVAL: ${outcome}`,
-      `• SECRET OBJECTIVE CODE: [${secCode}] // TAG: ${secTag}`,
-      `• EXTRACTED FORTIFICATIONS: ${fortStr}`,
-      `• LEFTOVER SP SALVAGE: ${leftover}`,
-      `• STRATEGIC POINTS & ALLIANCE IMPACT: Zero Alliance SPt Shift (Off-Roster Narrative Telemetry)`,
-      `• TOUR OF DUTY IMPACT: Zero Quota Deduction (Neither Main Player Fielded)`
-    ];
-
-    if (allowHordeStats && input.hordeBattleStats) {
-      const compiler = (typeof compileHordeBattleStatsDossierSection === 'function')
-        ? compileHordeBattleStatsDossierSection
         : _compileHordeBattleStatsDossierSection;
       const statsSection = compiler ? compiler(input.hordeBattleStats) : '';
       if (statsSection) {
