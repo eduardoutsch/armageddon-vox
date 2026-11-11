@@ -164,24 +164,19 @@ function renderTombAwakeningMatrix() {
 }
 
 function populateNecronDynasticVault() {
-  const sel = document.getElementById('necronVaultSelect');
+  const sel = _getMatrixEl('necronVaultSelect');
   if (!sel) return;
-  const vault = (typeof NECRON_DYNASTIC_VAULT !== 'undefined') ? NECRON_DYNASTIC_VAULT : (typeof window !== 'undefined' ? window.NECRON_DYNASTIC_VAULT : []);
-  sel.innerHTML = vault.map(item =>
-    `<option value="${item.id}">${item.name} — [${item.type}]</option>`
-  ).join('');
+  const vault = _resolveMatrixCatalogs().necronVault;
+  sel.innerHTML = vault.map((item) => `<option value="${item.id}">${item.name} — [${item.type}]</option>`).join('');
   renderSelectedNecronVaultPreview();
 }
 
-/**
- * Renders the currently selected Necron Dynastic Vault entry in #necronVaultPreviewBox.
- */
 function renderSelectedNecronVaultPreview() {
-  const sel = document.getElementById('necronVaultSelect');
-  const box = document.getElementById('necronVaultPreviewBox');
+  const sel = _getMatrixEl('necronVaultSelect');
+  const box = _getMatrixEl('necronVaultPreviewBox');
   if (!sel || !box) return;
-  const vault = (typeof NECRON_DYNASTIC_VAULT !== 'undefined') ? NECRON_DYNASTIC_VAULT : (typeof window !== 'undefined' ? window.NECRON_DYNASTIC_VAULT : []);
-  const pick = vault.find(item => item.id === sel.value) || vault[0];
+  const vault = _resolveMatrixCatalogs().necronVault;
+  const pick = vault.find((item) => item.id === sel.value) || vault[0];
   if (!pick) return;
   box.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
@@ -192,52 +187,34 @@ function renderSelectedNecronVaultPreview() {
   `;
 }
 
-/**
- * Attaches the selected Necron Dynastic Requisition, Awakening Agenda, or Master System
- * Protocol to the Master Battle Dossier queue and switches to Tab 2.
- */
 function attachNecronVaultToDossier() {
-  const sel = document.getElementById('necronVaultSelect');
+  const sel = _getMatrixEl('necronVaultSelect');
   if (!sel) return;
-  const vault = (typeof NECRON_DYNASTIC_VAULT !== 'undefined') ? NECRON_DYNASTIC_VAULT : (typeof window !== 'undefined' ? window.NECRON_DYNASTIC_VAULT : []);
-  const pick = vault.find(item => item.id === sel.value) || vault[0];
-  const unitName = (document.getElementById('necronRecipientUnit')?.value || 'Hypercrypt Phalanx').trim();
+  const vault = _resolveMatrixCatalogs().necronVault;
+  const pick = vault.find((item) => item.id === sel.value) || vault[0];
+  if (!pick) return;
+  const unitName = (_getMatrixEl('necronRecipientUnit')?.value || 'Hypercrypt Phalanx').trim();
 
   crusadeState.queuedRolls.push({
     unit: unitName,
     context: `Activated via Tomb World Awakening Matrix (${pick.type})`,
     category: pick.type,
-    roll: `Tomb World Protocol`,
+    roll: 'Tomb World Protocol',
     name: pick.name,
     desc: pick.desc
   });
 
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playRelicChoir();
+  _getMatrixVox()?.playRelicChoir?.();
   if (typeof renderQueuedRolls === 'function') renderQueuedRolls();
   updateMasterDossierPreview();
   saveCrusadeState();
   if (typeof switchCrusadeTab === 'function') switchCrusadeTab('forge');
 }
 
-/**
- * Builds a concise single-line summary of the Necron Tomb World Awakening Matrix state.
- *
- * @returns {string} Formatted Tomb World Matrix telemetry summary line.
- */
 function buildTombMatrixSummaryLine() {
-  const sys = crusadeState.tombSystems || { command: 1, reanimation: 1, translocation: 0 };
-  const maxTotal = crusadeState.powerReservesAllocated ? 4 : 3;
-  const total = (sys.command || 0) + (sys.reanimation || 0) + (sys.translocation || 0);
-  const masterStr = total >= 3 ? 'MASTER ONLINE' : (total > 0 ? 'AWAKENING' : 'DORMANT');
-  return `Allocated: ${total}/${maxTotal} Pts (Command: ${sys.command || 0}, Reanimation: ${sys.reanimation || 0}, Translocation: ${sys.translocation || 0}) | Status: [${masterStr}] | Agendas Logged: ${crusadeState.tombAgendasCompleted || 0} | Awakening Cycles: ${crusadeState.tombAwakeningCycles || 0}`;
+  return _matrixCore.formatTombMatrixSummaryLine(crusadeState);
 }
 
-/**
- * Pure functional core: compiles the Tomb World Awakening Matrix Dispatch string.
- *
- * @param {object} [input={}] - Plain Tomb World Awakening state snapshot.
- * @returns {string} Formatted Astropathic dispatch string for Commander Beta.
- */
 function compileTombAwakeningDossier(input = {}) {
   const sys = input.tombSystems || (typeof crusadeState !== 'undefined' ? crusadeState.tombSystems : {}) || {};
   const cmd = sys.command || 0;
