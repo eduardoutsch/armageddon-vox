@@ -124,77 +124,45 @@ function rollMasterSystemReset() {
   }, 240);
 }
 
-/**
- * Idempotently renders the 3 Tomb World Awakening Systems (Command, Reanimation,
- * Translocation) and updates Master System status indicators in Tab 4.
- */
 function renderTombAwakeningMatrix() {
   if (typeof document === 'undefined') return;
-  const grid = document.getElementById('tombMatrixGrid');
-  const label = document.getElementById('tombMatrixAllocatedLabel');
-  const statusEl = document.getElementById('tombMasterStatusVal');
-  const cb = document.getElementById('powerReservesToggle');
+  const grid = _getMatrixEl('tombMatrixGrid');
+  const label = _getMatrixEl('tombMatrixAllocatedLabel');
+  const statusEl = _getMatrixEl('tombMasterStatusVal');
+  const cb = _getMatrixEl('powerReservesToggle');
 
   if (!crusadeState.tombSystems) {
     crusadeState.tombSystems = { command: 1, reanimation: 1, translocation: 0 };
   }
+  const vm = _matrixCore.deriveTombMatrixViewModel(
+    crusadeState.tombSystems,
+    crusadeState.powerReservesAllocated,
+    _resolveMatrixCatalogs().tombSystems
+  );
+
   if (cb) cb.checked = !!crusadeState.powerReservesAllocated;
-
-  const maxTotal = crusadeState.powerReservesAllocated ? 4 : 3;
-  const currentTotal = Object.values(crusadeState.tombSystems).reduce((a, b) => a + b, 0);
-  if (label) label.textContent = `${currentTotal} / ${maxTotal}`;
-
-  const masterUnlocked = currentTotal >= 3;
+  if (label) label.textContent = vm.allocatedLabel;
   if (statusEl) {
-    if (masterUnlocked) {
-      statusEl.textContent = `🟢 MASTER ONLINE (${currentTotal} / ${maxTotal} PTS)`;
-      if (statusEl.style) statusEl.style.color = 'var(--green)';
-    } else if (currentTotal > 0) {
-      statusEl.textContent = `🟡 AWAKENING (${currentTotal} / ${maxTotal} PTS)`;
-      if (statusEl.style) statusEl.style.color = 'var(--gold)';
-    } else {
-      statusEl.textContent = `🔴 DORMANT STASIS (0 / ${maxTotal} PTS)`;
-      if (statusEl.style) statusEl.style.color = 'var(--red)';
-    }
+    statusEl.textContent = vm.masterStatusLabel;
+    if (statusEl.style) statusEl.style.color = vm.masterStatusColor;
   }
-
   if (!grid) return;
 
-  const systems = (typeof TOMB_WORLD_SYSTEMS !== 'undefined') ? TOMB_WORLD_SYSTEMS : (typeof window !== 'undefined' ? window.TOMB_WORLD_SYSTEMS : []);
-  grid.innerHTML = systems.map(sys => {
-    const pts = crusadeState.tombSystems[sys.key] || 0;
-    const sysMasterActive = masterUnlocked && pts >= 1;
-    const stateClass = pts >= 2 || sysMasterActive ? 'state-surplus' : (pts === 0 ? 'state-deficiency' : '');
-    const badgeHtml = pts === 3
-      ? `<span class="rule-tag" style="border-color:var(--green); color:var(--green);">🟢 MAX TIER 3 (3 PTS)</span>`
-      : (pts > 0
-        ? `<span class="rule-tag" style="border-color:var(--blue); color:var(--blue);">⚡ TIER ${pts} ONLINE (${pts} PT${pts === 1 ? '' : 'S'})</span>`
-        : `<span class="rule-tag" style="border-color:var(--red); color:var(--red);">🔴 DORMANT (0 PTS)</span>`);
-
-    const tiersHtml = sys.tiers.map((t, idx) => {
-      const unlocked = pts >= idx + 1;
-      const color = unlocked ? 'var(--green)' : 'var(--muted)';
-      const icon = unlocked ? '✓' : '🔒';
-      return `<div style="color:${color}; margin-bottom:4px;">${icon} ${t}</div>`;
-    }).join('');
-
-    const masterColor = sysMasterActive ? '#d8b4fe' : 'var(--muted)';
-    const masterPrefix = sysMasterActive ? '🟢 UNLOCKED — ' : '🔒 REQUIRES 3/3 MATRIX + 1 PT HERE — ';
-
+  grid.innerHTML = vm.cards.map((card) => {
+    const tiersHtml = card.tiers.map((t) =>
+      `<div style="color:${t.unlocked ? 'var(--green)' : 'var(--muted)'}; margin-bottom:4px;">${t.unlocked ? '✓' : '🔒'} ${t.text}</div>`
+    ).join('');
     return `
-      <div class="logistics-card ${stateClass}">
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;"><strong style="color:#fff; font-size:0.9rem;">${sys.title}</strong>${badgeHtml}</div>
-        <div class="hud-val-row" style="margin-bottom:8px;"><button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', -1)">−</button><span class="hud-num" style="color:var(--green); font-size:1.2rem;">${pts} / 3 PTS</span><button type="button" class="mini-btn" onclick="adjTombSystemPt('${sys.key}', 1)">+</button></div>
-        <div style="font-size:0.77rem; color:var(--gold); margin-bottom:6px;">${sys.agenda}</div>
+      <div class="logistics-card ${card.stateClass}">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin-bottom:8px;"><strong style="color:#fff; font-size:0.9rem;">${card.title}</strong><span class="rule-tag" style="border-color:${card.badgeColor}; color:${card.badgeColor};">${card.badgeText}</span></div>
+        <div class="hud-val-row" style="margin-bottom:8px;"><button type="button" class="mini-btn" onclick="adjTombSystemPt('${card.key}', -1)">−</button><span class="hud-num" style="color:var(--green); font-size:1.2rem;">${card.pts} / 3 PTS</span><button type="button" class="mini-btn" onclick="adjTombSystemPt('${card.key}', 1)">+</button></div>
+        <div style="font-size:0.77rem; color:var(--gold); margin-bottom:6px;">${card.agenda}</div>
         <div style="font-size:0.79rem; line-height:1.42; margin-bottom:6px;">${tiersHtml}</div>
-        <div style="font-size:0.78rem; line-height:1.4; color:${masterColor}; border-top:1px solid var(--border); padding-top:6px;"><strong>${masterPrefix}</strong>${sys.master}</div>
+        <div style="font-size:0.78rem; line-height:1.4; color:${card.masterColor}; border-top:1px solid var(--border); padding-top:6px;"><strong>${card.masterPrefix}</strong>${card.master}</div>
       </div>`;
   }).join('');
 }
 
-/**
- * Populates the Necron Dynastic Requisitions, Awakening Agendas & Master Protocols selector.
- */
 function populateNecronDynasticVault() {
   const sel = document.getElementById('necronVaultSelect');
   if (!sel) return;
