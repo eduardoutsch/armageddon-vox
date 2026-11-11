@@ -3,7 +3,7 @@
 if (typeof require !== 'undefined') {
   if (typeof HORDE_FACTIONS === 'undefined') Object.assign(globalThis, require('./data.js'));
   if (typeof hashString === 'undefined') Object.assign(globalThis, require('./rng.js'));
-  if (typeof getBracketInfo === 'undefined') Object.assign(globalThis, require('./spawner.js'));
+  if (typeof getBracketInfo === 'undefined' || typeof parseSpawnWaveSpec === 'undefined') Object.assign(globalThis, require('./spawner.js'));
 }
 
 let selectedModeVal = 'coop';
@@ -818,32 +818,42 @@ function renderSharedDecks() {
 // --- TAB 4: ROOM-SYNCED HORDE SPAWNER ---
 function saveCustomPool() {
   const el34 = document.getElementById('pool34');
-  if (!el34) return;
-  const pool = {
+  if (!el34 || typeof localStorage === 'undefined') return;
+  const fac = activeHordeFaction ? activeHordeFaction.name : (document.getElementById('hordeFactionSelect')?.value || '');
+  if (!fac) return;
+
+  let root = {};
+  try {
+    const raw = localStorage.getItem('foa_custom_shelf_pool_v1');
+    root = raw ? JSON.parse(raw) : {};
+  } catch (e) {}
+
+  const byFaction = { ...(root.byFaction || {}) };
+  byFaction[fac] = {
     b34: el34.value,
     b56: document.getElementById('pool56') ? document.getElementById('pool56').value : '',
     b79: document.getElementById('pool79') ? document.getElementById('pool79').value : '',
     b10: document.getElementById('pool10') ? document.getElementById('pool10').value : '',
     b13: document.getElementById('pool13') ? document.getElementById('pool13').value : ''
   };
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('armageddon_horde_pool', JSON.stringify(pool));
-  }
+  localStorage.setItem('foa_custom_shelf_pool_v1', JSON.stringify({ byFaction }));
   if (typeof alert === 'function') alert("Custom Shelf Pool saved!");
 }
 
 function loadCustomPool() {
   if (typeof localStorage === 'undefined') return;
-  const saved = localStorage.getItem('foa_custom_shelf_pool_v1') || localStorage.getItem('armageddon_horde_pool');
-  if (!saved) return;
+  const fac = activeHordeFaction ? activeHordeFaction.name : (document.getElementById('hordeFactionSelect')?.value || '');
+  const saved = localStorage.getItem('foa_custom_shelf_pool_v1');
+  let p = {};
   try {
-    const p = JSON.parse(saved);
-    if (p.b34 && document.getElementById('pool34')) document.getElementById('pool34').value = p.b34;
-    if (p.b56 && document.getElementById('pool56')) document.getElementById('pool56').value = p.b56;
-    if (p.b79 && document.getElementById('pool79')) document.getElementById('pool79').value = p.b79;
-    if (p.b10 && document.getElementById('pool10')) document.getElementById('pool10').value = p.b10;
-    if (p.b13 && document.getElementById('pool13')) document.getElementById('pool13').value = p.b13;
+    const parsed = saved ? JSON.parse(saved) : {};
+    p = (fac && parsed.byFaction && parsed.byFaction[fac]) ? parsed.byFaction[fac] : {};
   } catch (e) {}
+  if (document.getElementById('pool34')) document.getElementById('pool34').value = p.b34 || '';
+  if (document.getElementById('pool56')) document.getElementById('pool56').value = p.b56 || '';
+  if (document.getElementById('pool79')) document.getElementById('pool79').value = p.b79 || '';
+  if (document.getElementById('pool10')) document.getElementById('pool10').value = p.b10 || '';
+  if (document.getElementById('pool13')) document.getElementById('pool13').value = p.b13 || '';
 }
 
 function rollAllSpawnZones() {
@@ -894,9 +904,16 @@ function rollAllSpawnZones() {
     const finalRoll = unmod + totalMod;
     const bInfo = getBracketInfo(finalRoll, unmod);
     const unitPicked = (bInfo.key === 'NONE') ? 'None' : pickSyncedUnitFromBracket(bInfo.key, Math.random);
+    const isBigBracket = (bInfo.key === '10-12' || bInfo.key === '13+');
+    const intrusionRoll = isBigBracket ? (Math.floor(Math.random() * 6) + 1) : null;
+    const waveId = `${Date.now().toString(36)}_${z}_${Math.random().toString(36).slice(2, 6)}`;
+    const parsedWave = (typeof parseSpawnWaveSpec === 'function' && bInfo.key !== 'NONE')
+      ? parseSpawnWaveSpec(unitPicked, Math.random)
+      : [];
 
     currentZoneSpawns.push({
       zone: z,
+      waveId,
       diceStr,
       unmod,
       totalMod,
@@ -904,7 +921,9 @@ function rollAllSpawnZones() {
       bracketKey: bInfo.key,
       bracketLabel: bInfo.label,
       pts: bInfo.pts,
-      units: [unitPicked]
+      intrusionRoll,
+      units: [unitPicked],
+      parsedWave
     });
   }
 
@@ -928,7 +947,11 @@ function rollDownZone(idx) {
   z.bracketKey = nextKey;
   z.bracketLabel = bracketLabel;
   z.pts = pts;
+  z.intrusionRoll = null;
   z.units = newUnits;
+  z.parsedWave = (typeof parseSpawnWaveSpec === 'function')
+    ? newUnits.flatMap(u => parseSpawnWaveSpec(u, Math.random))
+    : [];
   renderSpawnZones();
   saveSessionState();
 }
