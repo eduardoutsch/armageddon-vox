@@ -175,3 +175,64 @@
     36: { id: 36, name: 'Flash Flood', playerMoveMod: -2, playerMinMove: 4, playerAdvanceMod: -2, playerChargeMod: -2 }
   };
 
+  /**
+   * Declarative lookup map for Fortifications, Battlefield Markers, and Spawn Zone passives.
+   */
+  const FORTIFICATION_COMBAT_MODS = {
+    SPAWN_ZONE: { name: 'Horde Spawn Zone', grantCover: true, grantHidden: true },
+    FORT_FOB: { name: 'Forward Operating Base', commandPhaseExtraSp: 1 },
+    FORT_WARP: { name: 'Warp-Relic Outpost', fightPhaseStartHordeMwWithin6: 3, engagedPlayerSplashMw: 1 },
+    FORT_TRENCH: { name: 'War Trench', playerMeleeStrengthMod: 1, playerMeleeApImprove: 1 },
+    FORT_HOSP: { name: 'Field Hospital', movementEndHealWounds: 3 },
+    FORT_JAMMER: { name: 'Jamming Station', hordeSpawnRollMod: -1 },
+    FORT_AMMO: { name: 'Ammo Dump', playerRangedKeywords: ['SUSTAINED HITS 1'] },
+    FORT_SHIELD: { name: 'Shield Generator', playerVsOutsideRangedFnp: 5 },
+    MARKER_MINE: { name: 'Minefield', triggerRangeInches: 6, mortalWounds: 'D6', removeAtDamageTally: 10 },
+    MARKER_WIRE: { name: 'Razor Wire', triggerRangeInches: 2, mortalWounds: 'D3', moveMod: -1, minMove: 5, advanceMod: -2, chargeMod: -2 },
+    MARKER_TELE: { name: 'Short Range Teleporter', interactRangeInches: 3, hordeDestroyRangeInches: 2 }
+  };
+
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
+
+  function normalizeKeywords(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map(k => String(k || '').trim().toUpperCase()).filter(Boolean);
+  }
+
+  function hasAnyKw(unitKws, targets) {
+    return targets.some(t => unitKws.includes(t.toUpperCase()));
+  }
+
+  function normalizeApPenetration(ap) {
+    if (ap === undefined || ap === null || ap === '') return 0;
+    const n = Number(ap);
+    if (Number.isNaN(n)) return 0;
+    return Math.abs(Math.trunc(n));
+  }
+
+  function extractActiveMiseryMods(matchState = {}) {
+    const ids = Array.isArray(matchState.activeMiseryIds)
+      ? matchState.activeMiseryIds
+      : (Array.isArray(matchState.activeMiseries) ? matchState.activeMiseries.map(m => m && m.id) : []);
+    return ids.map(id => MISERY_COMBAT_MODS[Number(id)]).filter(Boolean);
+  }
+
+  /**
+   * Standard Warhammer 40,000 Strength vs Toughness wound roll lookup (2+ to 6+).
+   *
+   * @param {number} strength - Effective weapon Strength.
+   * @param {number} toughness - Effective target Toughness.
+   * @returns {number} Minimum unmodified/modified D6 wound roll required (2–6).
+   */
+  function calculateWoundTarget(strength, toughness) {
+    const s = Math.max(1, Number(strength) || 1);
+    const t = Math.max(1, Number(toughness) || 1);
+    if (s >= t * 2) return 2;
+    if (s > t) return 3;
+    if (s === t) return 4;
+    if (s * 2 <= t) return 6;
+    return 5;
+  }
+
