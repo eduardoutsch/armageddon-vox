@@ -96,6 +96,8 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   els.tacticaRoundSelect.value = '2';
 
   let voxQueued = null;
+  let tacticaApexSirens = 0;
+  let tacticaMidAlerts = 0;
   globalThis.localStorage = {
     getItem: (k) => (store.has(k) ? store.get(k) : null),
     setItem: (k, v) => store.set(k, String(v))
@@ -105,6 +107,8 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     addEventListener: () => {},
     VoxAudio: {
       playClank: () => {},
+      playWarpSiren: () => { tacticaApexSirens++; },
+      playUnboundBreachAlert: () => { tacticaMidAlerts++; },
       transmitToVox: (chan, text) => { voxQueued = { chan, text }; }
     }
   };
@@ -225,10 +229,20 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.equal(els.tacticaReactionBanner.classList.contains('hidden'), true);
 
   tactica.getTacticaClientState().zoneSpawns = [
-    { zone: 1, bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Monolith'] }
+    { zone: 2, waveId: 't_mid_1', bracketKey: '10-12', bracketLabel: 'Bracket [10–12]', intrusionRoll: 6, units: ['3 Skorpekh Destroyers'] }
   ];
   overwatch.syncOverwatchAlertsFromState();
   assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  assert.equal(tacticaMidAlerts, 1, 'Tactica [10-12] 6+ breach must play playUnboundBreachAlert');
+  assert.equal(tacticaApexSirens, 0, 'Tactica [10-12] 6+ breach must NOT play [13+] playWarpSiren');
+
+  tactica.getTacticaClientState().zoneSpawns = [
+    { zone: 1, waveId: 't_apex_1', bracketKey: '13+', bracketLabel: 'Bracket [13+]', intrusionRoll: 6, units: ['1 Monolith'] }
+  ];
+  overwatch.syncOverwatchAlertsFromState();
+  assert.equal(els.tacticaIntrusionAlertBox.classList.contains('hidden'), false);
+  assert.equal(tacticaApexSirens, 1, 'Tactica [13+] 6+ breach must play terrifying playWarpSiren');
+  assert.equal(tacticaMidAlerts, 1, 'Tactica [13+] 6+ breach must not increment playUnboundBreachAlert');
   overwatch.pingIntrusionFromTactica(1, 'Bracket [13+]', 'alpha');
   assert.ok(voxQueued && voxQueued.chan === 'alpha' && voxQueued.text.includes('EMERGENCY AUSPEX PING'));
 
