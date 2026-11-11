@@ -580,56 +580,67 @@ function updateMasterDossierPreview() {
     crusadeState.attachedHordeStats = null;
   }
   renderHordeStatsAttachmentCard();
-  const box = document.getElementById('masterDossierPreviewBox');
-  const chan = document.getElementById('dossierChannel')?.value || 'alpha';
+
+  const box = _getMatrixEl('masterDossierPreviewBox');
+  const chan = _getMatrixEl('dossierChannel')?.value || 'alpha';
+  const profile = _matrixCore.DOSSIER_CHANNEL_PROFILES[chan] || _matrixCore.DOSSIER_CHANNEL_PROFILES.alpha;
   if (box) {
     box.textContent = buildMasterDossierString();
     if (box.classList && typeof box.classList.toggle === 'function') {
-      box.classList.toggle('vox-preview-beta', chan === 'beta' || chan === 'augur_beta');
-      box.classList.toggle('vox-preview-alpha', chan !== 'beta' && chan !== 'augur_beta');
+      box.classList.toggle('vox-preview-beta', !!profile.previewBeta);
+      box.classList.toggle('vox-preview-alpha', !profile.previewBeta);
     }
   }
   saveCrusadeState();
 }
 
 function transmitMasterBattleDossier() {
-  const chanVal = document.getElementById('dossierChannel')?.value || 'alpha';
-  const targetChan = chanVal.startsWith('augur_') ? chanVal.replace('augur_', '') : chanVal;
+  const chanVal = _getMatrixEl('dossierChannel')?.value || 'alpha';
+  const profile = _matrixCore.DOSSIER_CHANNEL_PROFILES[chanVal];
+  const targetChan = profile ? profile.targetVoxChannel : (chanVal.startsWith('augur_') ? chanVal.replace('augur_', '') : chanVal);
   const payload = buildMasterDossierString();
-  if (typeof window !== 'undefined' && window.VoxAudio && typeof window.VoxAudio.transmitToVox === 'function') {
-    window.VoxAudio.transmitToVox(targetChan, payload);
-  }
+  _getMatrixVox()?.transmitToVox?.(targetChan, payload);
+}
+
+function _resolveCrusadeStorageKey() {
+  if (typeof CRUSADE_STATE_KEY !== 'undefined') return CRUSADE_STATE_KEY;
+  if (typeof window !== 'undefined' && window.CRUSADE_STATE_KEY) return window.CRUSADE_STATE_KEY;
+  return _matrixData.CRUSADE_STATE_KEY || 'foa_crusade_quartermaster_v1';
 }
 
 function saveCrusadeState() {
   if (typeof document !== 'undefined') {
-    ['dossierDistantForce', 'dossierChannel', 'dossierModeNode'].forEach(id => {
-      const el = document.getElementById(id);
+    ['dossierDistantForce', 'dossierChannel', 'dossierModeNode'].forEach((id) => {
+      const el = _getMatrixEl(id);
       if (el) crusadeState[id] = el.value;
     });
   }
   try {
     if (typeof localStorage !== 'undefined') {
-      const stateKey = (typeof CRUSADE_STATE_KEY !== 'undefined') ? CRUSADE_STATE_KEY : (typeof window !== 'undefined' ? window.CRUSADE_STATE_KEY : 'foa_crusade_quartermaster_v1');
-      localStorage.setItem(stateKey, JSON.stringify(crusadeState));
+      localStorage.setItem(_resolveCrusadeStorageKey(), JSON.stringify(crusadeState));
     }
-  } catch (e) {}
+  } catch (_) {}
 }
 
 function initCrusadePage() {
   try {
-    const stateKey = (typeof CRUSADE_STATE_KEY !== 'undefined') ? CRUSADE_STATE_KEY : (typeof window !== 'undefined' ? window.CRUSADE_STATE_KEY : 'foa_crusade_quartermaster_v1');
-    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(stateKey) : null;
-    if (raw) crusadeState = Object.assign(crusadeState, JSON.parse(raw));
-  } catch (e) {}
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(_resolveCrusadeStorageKey()) : null;
+    if (raw) {
+      Object.assign(crusadeState, _matrixCore.hydrateCrusadeState(crusadeState, JSON.parse(raw)));
+    }
+  } catch (_) {}
 
-  ['dossierChannel', 'dossierModeNode', 'dossierDistantForce'].forEach(id => {
-    const el = document.getElementById(id);
+  ['dossierChannel', 'dossierModeNode', 'dossierDistantForce'].forEach((id) => {
+    const el = _getMatrixEl(id);
     if (el && crusadeState[id]) el.value = crusadeState[id];
   });
 
-  ['alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount', 'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts', 'toursCompletedCount', 'tombAgendasCompleted', 'tombAwakeningCycles'].forEach(k => {
-    const el = document.getElementById(k);
+  [
+    'alphaSP', 'alphaCP', 'alphaCacheCount', 'betaSP', 'betaCP', 'betaCacheCount',
+    'hordeSP', 'hordeCP', 'tourBattlesRem', 'tourWinsRem', 'commendationPts',
+    'toursCompletedCount', 'tombAgendasCompleted', 'tombAwakeningCycles'
+  ].forEach((k) => {
+    const el = _getMatrixEl(k);
     if (el && typeof crusadeState[k] === 'number') el.textContent = String(crusadeState[k]);
   });
 
@@ -649,15 +660,8 @@ function initCrusadePage() {
   updateVotannDispatchPreview();
 }
 
-/**
- * Imports the latest saved Horde Battle Stats from localStorage into Crusade state
- * and automatically pre-fills matching form fields (secret objective, fortifications,
- * leftover SP, and mode). Only permitted when reporting a Mode 1 Horde Mode battle.
- *
- * @returns {boolean} True if telemetry was imported, false if blocked or unavailable.
- */
 function importHordeBattleStatsToCrusade() {
-  const modeEl = typeof document !== 'undefined' ? document.getElementById('dossierModeNode') : null;
+  const modeEl = _getMatrixEl('dossierModeNode');
   const currentMode = modeEl ? modeEl.value : (crusadeState.dossierModeNode || 'Mode 1: Co-op Horde Breach // Node 0 (Golgotha Arbor-Basin)');
   if (!isHordeModeDossier(currentMode)) {
     if (typeof alert === 'function') {
@@ -666,7 +670,7 @@ function importHordeBattleStatsToCrusade() {
     return false;
   }
 
-  const loader = (typeof loadHordeBattleStats === 'function') ? loadHordeBattleStats : _loadHordeBattleStats;
+  const loader = typeof loadHordeBattleStats === 'function' ? loadHordeBattleStats : _loadHordeBattleStats;
   const stats = loader ? loader() : null;
   if (!stats) {
     if (typeof alert === 'function') {
@@ -674,11 +678,13 @@ function importHordeBattleStatsToCrusade() {
     }
     return false;
   }
-  crusadeState.attachedHordeStats = stats;
 
-  if (stats.secretObjective && stats.secretObjective.code) {
-    const secCodeInput = typeof document !== 'undefined' ? document.getElementById('dossierSecretCode') : null;
-    if (secCodeInput) secCodeInput.value = stats.secretObjective.code;
+  crusadeState.attachedHordeStats = stats;
+  const patch = _matrixCore.deriveHordeTelemetryImportPatch(stats, currentMode);
+
+  if (patch.secretCode) {
+    const secCodeInput = _getMatrixEl('dossierSecretCode');
+    if (secCodeInput) secCodeInput.value = patch.secretCode;
   }
   if (stats.gameMode === 'SOLO') {
     if (modeEl && !modeEl.value.includes('Solo')) {
