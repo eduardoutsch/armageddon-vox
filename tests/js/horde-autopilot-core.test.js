@@ -269,3 +269,41 @@ test('planHordeCharges & resolveHordeChargeRoll: queues 2D6 LCT mat roll, applie
   assert.equal(passed.moveCommand.action, 'MOVE_UNIT');
 });
 
+test('planConsolidationMove: enforces 11th Edition 3-Tier Consolidation priority (Ongoing -> Engaging -> Objective)', () => {
+  const mover = {
+    squadKey: 'HORDE::Orks',
+    name: 'Boyz',
+    guids: ['o1'],
+    pos: { x: 0, z: 0 },
+    models: [{ guid: 'o1', pos: { x: 0, z: 0 }, radiusInches: 0.63 }]
+  };
+
+  // Tier 1: Already Engaged (<= 2.0") -> Ongoing Consolidation toward base-to-base
+  const tier1 = planConsolidationMove(
+    mover,
+    [{ name: 'Krieg', pos: { x: 0, z: 2.5 }, models: [{ pos: { x: 0, z: 2.5 }, radiusInches: 0.5 }] }],
+    [{ name: 'Obj 1', pos: { x: -3, z: 0 }, radiusInches: 0.79 }]
+  );
+  assert.equal(tier1.mode, 'ONGOING');
+
+  // Tier 2: Unengaged, enemy at 3.8" edge-to-edge (3" move reaches <= 2.0" Engagement Range!) -> Engaging Consolidation
+  const tier2 = planConsolidationMove(
+    mover,
+    [{ name: 'Scout', pos: { x: 0, z: 5.0 }, models: [{ pos: { x: 0, z: 5.0 }, radiusInches: 0.63 }] }],
+    [{ name: 'Obj 1', pos: { x: -3, z: 0 }, radiusInches: 0.79 }]
+  );
+  assert.equal(tier2.mode, 'ENGAGING');
+
+  // Tier 3: Enemy too far (10"), Objective at 4.2" edge-to-edge (3" move reaches <= 3.0" Obj range!) -> Objective Consolidation
+  const tier3 = planConsolidationMove(
+    mover,
+    [{ name: 'Far Tank', pos: { x: 0, z: 14.0 }, models: [{ pos: { x: 0, z: 14.0 }, radiusInches: 1.5 }] }],
+    [{ name: 'Obj 1', pos: { x: 5.5, z: 0 }, radiusInches: 0.79 }]
+  );
+  assert.equal(tier3.mode, 'OBJECTIVE');
+
+  // Hold: neither enemy nor objective reachable
+  const hold = planConsolidationMove(mover, [], []);
+  assert.equal(hold.mode, 'HOLD');
+});
+
