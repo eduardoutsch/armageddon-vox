@@ -147,6 +147,10 @@
           <select id="quickStratTargetSelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;">
             <option value="">(Any / Untargeted)</option>
           </select>
+          <select id="quickStratDurationSelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;" title="99% of Stratagems last 1 Phase; select 1 Round for buffs lasting until your next Shooting phase / turn">
+            <option value="PHASE">This Phase</option>
+            <option value="ROUND">1 Round (Until Next Turn)</option>
+          </select>
           <button type="button" class="btn-ghost btn-sm" onclick="triggerQuickStratagem(0)">0 CP</button>
           <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(1)">1 CP</button>
           <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(2)">2 CP</button>

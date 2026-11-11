@@ -18,6 +18,7 @@ try {
 
 const {
   createInitialTacticaState,
+  pruneExpiredPlayerBuffs,
   formatChronicleEntry,
   detectPlayerReactionWindow,
   assignHordeWarlordIfEligible,
@@ -469,15 +470,17 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'POST' && urlPath === '/session/sync') {
       const body = await readJsonBody(req);
+      const roundOrPhaseChanged = body.battleRound !== undefined || body.phase !== undefined;
       if (body.roomCode !== undefined) liveState.roomCode = String(body.roomCode).trim().toUpperCase();
-      if (body.battleRound !== undefined) {
-        const nextRnd = Number(body.battleRound);
-        if (nextRnd !== Number(liveState.battleRound)) {
-          liveState.activePlayerBuffs = [];
-        }
-        liveState.battleRound = nextRnd;
-      }
+      if (body.battleRound !== undefined) liveState.battleRound = Number(body.battleRound);
       if (body.phase !== undefined) liveState.phase = body.phase;
+      if (roundOrPhaseChanged) {
+        liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(
+          liveState.activePlayerBuffs,
+          liveState.battleRound,
+          liveState.phase
+        );
+      }
       if (body.factionName !== undefined) liveState.factionName = body.factionName;
       if (body.playerCp !== undefined) liveState.playerCp = Number(body.playerCp);
       if (body.playerSp !== undefined) liveState.playerSp = Number(body.playerSp);
@@ -491,14 +494,16 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'POST' && urlPath === '/chronicle/append') {
       const body = await readJsonBody(req);
-      if (body.battleRound !== undefined) {
-        const nextRnd = Number(body.battleRound);
-        if (nextRnd !== Number(liveState.battleRound)) {
-          liveState.activePlayerBuffs = [];
-        }
-        liveState.battleRound = nextRnd;
-      }
+      const roundOrPhaseChanged = body.battleRound !== undefined || Boolean(body.phase);
+      if (body.battleRound !== undefined) liveState.battleRound = Number(body.battleRound);
       if (body.phase) liveState.phase = body.phase;
+      if (roundOrPhaseChanged) {
+        liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(
+          liveState.activePlayerBuffs,
+          liveState.battleRound,
+          liveState.phase
+        );
+      }
       const entry = appendEvent(body);
       if (body.reactionTrigger) {
         const win = detectPlayerReactionWindow(body.reactionTrigger, liveState);
@@ -648,6 +653,8 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'POST' && urlPath === '/autopilot/spawn-waves') {
       const body = await readJsonBody(req);
+      liveState.phase = 'COMMAND_SPAWN';
+      liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
       const resPlan = planWaveSpawnCommands(body.zoneSpawns || liveState.zoneSpawns, body.spawnZones || []);
       resPlan.commands.forEach(c => {
         cmdCounter += 1;
@@ -660,6 +667,7 @@ function createTacticaDaemon(options = {}) {
     if (req.method === 'POST' && urlPath === '/autopilot/plan-movement') {
       const body = await readJsonBody(req);
       liveState.phase = 'HORDE_MOVEMENT';
+      liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
       const moveRes = planHordeMovementPhase(liveState.boardTelemetry, liveState, body);
       liveState.lastMovementPlans = moveRes.plans;
       moveRes.commands.forEach(c => {
@@ -688,6 +696,7 @@ function createTacticaDaemon(options = {}) {
     if (req.method === 'POST' && urlPath === '/autopilot/select-shooting') {
       const body = await readJsonBody(req);
       liveState.phase = 'HORDE_SHOOTING';
+      liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
       const mergedBlocked = Array.from(new Set([
         ...(liveState.losBlockedPairs || []),
         ...(body.losBlockedPairs || [])
@@ -703,6 +712,7 @@ function createTacticaDaemon(options = {}) {
     if (req.method === 'POST' && urlPath === '/autopilot/declare-charges') {
       const body = await readJsonBody(req);
       liveState.phase = 'HORDE_CHARGE';
+      liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
       const chg = planHordeCharges(liveState.boardTelemetry, liveState, body);
       const win = detectPlayerReactionWindow('HORDE_CHARGE_DECLARED', liveState);
       liveState.pendingReactionWindow = (chg.declarations.length > 0 && win.open) ? win : null;
@@ -726,6 +736,8 @@ function createTacticaDaemon(options = {}) {
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/consolidate') {
+      liveState.phase = 'HORDE_FIGHT';
+      liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
       const units = liveState.boardTelemetry?.units || [];
       const objs = liveState.boardTelemetry?.objectives || [];
       const horde = units.filter(u => u.side !== 'PLAYER');

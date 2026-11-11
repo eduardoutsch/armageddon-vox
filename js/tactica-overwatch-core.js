@@ -101,10 +101,19 @@
   }
 
   /**
+   * Matches explicit 1-round / "until your next shooting phase" duration clauses.
+   * When absent, 99% of Stratagem buffs default to `'PHASE'` (expiring at the end of a single phase).
+   */
+  const ROUND_DURATION_REGEX = /(?:[-–—,\s]+)?\b(?:for\s+(?:the\s+|a\s+|one\s+|1\s+)?(?:whole\s+|full\s+|entire\s+)?round|all\s+round|full\s+round|whole\s+round|(?:1|one)\s+round|(?:until|till|'til)\s+(?:your\s+|my\s+|the\s+)?next\s+(?:shooting|command|movement|fight|charge|turn)(?:\s+phase)?|next\s+shooting\s+phase)\b/i;
+
+  /** Optional explicit single-phase suffix stripped cleanly when present. */
+  const PHASE_DURATION_REGEX = /(?:[-–—,\s]+)?\b(?:for\s+)?(?:this|the|one|1)\s+(?:shooting\s+|fight\s+|charge\s+|movement\s+)?phase\b/i;
+
+  /**
    * Parses Core & Faction-Specific Stratagem declarations such as:
-   *   - `"strategem Void Armour on Hearthguard - 2cp"`
-   *   - `"Stratagem Ancestral Sentence on Pioneers, one CP"`
-   *   - `"Using Void Armour for 1 CP"` / `"Spend 2 CP on Reactive Reprisal"`
+   *   - `"strategem Void Armour on Hearthguard - 2cp"` (`durationScope: 'PHASE'` default)
+   *   - `"Stratagem Suppressing Fire on Hearthguard until your next shooting phase - 1cp"` (`durationScope: 'ROUND'`)
+   *   - `"Using Cloud of Ash on Pioneers for the whole round, 1 CP"` (`durationScope: 'ROUND'`)
    *   - `"Fire Overwatch on Yaegirs"` (uses Core 1 CP default, or explicit override like `"- 0cp"`)
    *
    * @param {string} [rawInput=''] - Raw spoken or typed text.
@@ -122,6 +131,18 @@
     if (cpMatch) {
       explicitCp = parseInt(cpMatch[1], 10);
       text = (text.slice(0, cpMatch.index) + ' ' + text.slice(cpMatch.index + cpMatch[0].length)).trim();
+    }
+
+    let durationScope = 'PHASE';
+    const roundMatch = text.match(ROUND_DURATION_REGEX);
+    if (roundMatch) {
+      durationScope = 'ROUND';
+      text = (text.slice(0, roundMatch.index) + ' ' + text.slice(roundMatch.index + roundMatch[0].length)).trim();
+    } else {
+      const phaseMatch = text.match(PHASE_DURATION_REGEX);
+      if (phaseMatch) {
+        text = (text.slice(0, phaseMatch.index) + ' ' + text.slice(phaseMatch.index + phaseMatch[0].length)).trim();
+      }
     }
 
     const hasStratPrefix = /^(?:use\s+|using\s+|pop(?:ping)?\s+|spend(?:ing)?\s+|declare\s+|activate\s+)?strat[ae]gem\b/i.test(text);
@@ -145,13 +166,13 @@
 
     switch (coreKey) {
       case 'COUNTER_OFFENSIVE':
-        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Counter-Offensive', targetUnit, cpCost: explicitCp ?? 2, minRound: 1, buff: null };
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Counter-Offensive', targetUnit, cpCost: explicitCp ?? 2, minRound: 1, durationScope, buff: null };
       case 'RAPID_INGRESS':
-        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Rapid Ingress', targetUnit, cpCost: explicitCp ?? 1, minRound: 2, buff: null };
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Rapid Ingress', targetUnit, cpCost: explicitCp ?? 1, minRound: 2, durationScope, buff: null };
       case 'SMOKESCREEN':
-        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Smokescreen', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: { hitMod: -1, cover: true } };
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Smokescreen', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, durationScope, buff: { hitMod: -1, cover: true } };
       case 'GO_TO_GROUND':
-        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Go to Ground', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: { cover: true, invuln6: true } };
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Go to Ground', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, durationScope, buff: { cover: true, invuln6: true } };
       case 'FIRE_OVERWATCH':
       case 'HEROIC_INTERVENTION':
       case 'COMMAND_REROLL':
@@ -160,7 +181,7 @@
       case 'INSANE_BRAVERY':
       case 'EPIC_CHALLENGE': {
         const pretty = CORE_STRAT_NAMES[coreKey] || rawName.replace(/\b\w/g, c => c.toUpperCase());
-        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: pretty, targetUnit, cpCost: explicitCp ?? 1, minRound: 1, buff: null };
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: pretty, targetUnit, cpCost: explicitCp ?? 1, minRound: 1, durationScope, buff: null };
       }
       default: {
         const cleanFactionStrat = rawName.replace(/\b\w/g, c => c.toUpperCase()) || 'Faction Stratagem';
@@ -172,6 +193,7 @@
           targetUnit,
           cpCost: explicitCp ?? 1,
           minRound: 1,
+          durationScope,
           buff: inferFactionStratBuff(cleanFactionStrat)
         };
       }
@@ -274,6 +296,7 @@
           targetUnit: null,
           cpCost: s.cpCost,
           minRound: s.minRound || 1,
+          durationScope: ROUND_DURATION_REGEX.test(clean) ? 'ROUND' : 'PHASE',
           buff: s.buff || null,
           transcript: clean
         };

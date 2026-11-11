@@ -33,6 +33,17 @@
     'ROUND_END'
   ];
 
+  /** Numeric progression lookup for phase-scoped and "until next turn" buff expiration. */
+  const PHASE_ORDER_INDEX = {
+    COMMAND_SPAWN: 0,
+    HORDE_MOVEMENT: 1,
+    HORDE_SHOOTING: 2,
+    HORDE_CHARGE: 3,
+    HORDE_FIGHT: 4,
+    PLAYER_TURN: 5,
+    ROUND_END: 6
+  };
+
   /** Declarative lookup table of out-of-phase Player Stratagem reaction windows. */
   const REACTION_WINDOW_DEFS = {
     END_OF_HORDE_MOVEMENT: {
@@ -449,24 +460,154 @@
   }
 
   /**
-   * Pure helper: aggregates active current-round Player Stratagem defensive buffs (such as Smokescreen
-   * `-1` to Hit, Go to Ground Cover/6++, or Void Armour AP worsen) matching a targeted Player squad.
+   * Constructs a normalized Player Stratagem buff descriptor with explicit `PHASE` (99% default,
+   * lasting a single combat phase) vs `ROUND` ("for the round" / "until your next shooting phase")
+   * lifecycle metadata.
+   *
+   * @param {object} [parsedStrat={}] - Parsed Stratagem intent + `resolvedTarget`.
+   * @param {object} [state={}] - Current Tactica match state (`battleRound`, `phase`).
+   * @returns {object}
+   */
+  function createPlayerStratagemBuff(parsedStrat = {}, state = {}) {
+    const round = Math.max(1, Number(state.battleRound) || 1);
+    const curPhase = TACTICA_PHASES.includes(state.phase) ? state.phase : 'COMMAND_SPAWN';
+    const scope = String(parsedStrat.durationScope || 'PHASE').toUpperCase() === 'ROUND' ? 'ROUND' : 'PHASE';
+    const rawBuff = parsedStrat.buff || {};
+    const targetUnit = parsedStrat.resolvedTarget !== undefined ? parsedStrat.resolvedTarget : (parsedStrat.targetUnit || null);
+
+    if (scope === 'ROUND') {
+      const fromPlayerTurn = curPhase === 'PLAYER_TURN' || curPhase === 'ROUND_END';
+      return {
+        stratKey: parsedStrat.stratKey || 'FACTION_CUSTOM',
+        stratName: parsedStrat.stratName || 'Stratagem',
+        targetUnit,
+        durationScope: 'ROUND',
+        battleRound: round,
+        createdPhase: curPhase,
+        expiresRound: fromPlayerTurn ? round + 1 : round,
+        expiresAtPhase: fromPlayerTurn ? 'PLAYER_TURN' : 'END_OF_ROUND',
+        hitMod: Number(rawBuff.hitMod) || 0,
+        worsenAp: Number(rawBuff.worsenAp) || 0,
+        cover: Boolean(rawBuff.cover),
+        invuln6: Boolean(rawBuff.invuln6)
+      };
+    }
+
+    let activePhase = curPhase;
+    if (parsedStrat.stratKey === 'SMOKESCREEN' || parsedStrat.stratKey === 'GO_TO_GROUND') {
+      activePhase = 'HORDE_SHOOTING';
+    } else if (curPhase === 'COMMAND_SPAWN' || curPhase === 'HORDE_MOVEMENT' || curPhase === 'HORDE_SHOOTING') {
+      activePhase = 'HORDE_SHOOTING';
+    } else if (curPhase === 'HORDE_CHARGE' || curPhase === 'HORDE_FIGHT') {
+      activePhase = 'HORDE_FIGHT';
+    }
+    const curIdx = PHASE_ORDER_INDEX[curPhase] ?? 0;
+    const activeIdx = PHASE_ORDER_INDEX[activePhase] ?? curIdx;
+
+    return {
+      stratKey: parsedStrat.stratKey || 'FACTION_CUSTOM',
+      stratName: parsedStrat.stratName || 'Stratagem',
+      targetUnit,
+      durationScope: 'PHASE',
+      battleRound: round,
+      createdPhase: curPhase,
+      activePhase,
+      pendingUntilActivePhase: curIdx < activeIdx,
+      hitMod: Number(rawBuff.hitMod) || 0,
+      worsenAp: Number(rawBuff.worsenAp) || 0,
+      cover: Boolean(rawBuff.cover),
+      invuln6: Boolean(rawBuff.invuln6)
+    };
+  }
+
+  /**
+   * Pure lifecycle reducer: prunes expired `PHASE`-scoped buffs as soon as their single combat
+   * phase ends, while keeping `ROUND`-scoped buffs active across the round (or until the Player's
+   * next turn when declared during `PLAYER_TURN`).
+   *
+   * @param {Array<object>} [activePlayerBuffs=[]] - Active Player Stratagem buff list.
+   * @param {number} [currentRound=1] - Current Battle Round.
+   * @param {string} [currentPhase='COMMAND_SPAWN'] - Current phase key.
+   * @returns {Array<object>}
+   */
+  function pruneExpiredPlayerBuffs(activePlayerBuffs = [], currentRound = 1, currentPhase = 'COMMAND_SPAWN') {
+    if (!Array.isArray(activePlayerBuffs) || activePlayerBuffs.length === 0) return [];
+    const rnd = Math.max(1, Number(currentRound) || 1);
+    const phase = TACTICA_PHASES.includes(currentPhase) ? currentPhase : 'COMMAND_SPAWN';
+    const curIdx = PHASE_ORDER_INDEX[phase] ?? 0;
+    const kept = [];
+
+    for (const b of activePlayerBuffs) {
+      if (!b || typeof b !== 'object') continue;
+      const scope = String(b.durationScope || 'PHASE').toUpperCase();
+
+      if (scope === 'ROUND') {
+        const startRnd = Math.max(1, Number(b.battleRound) || rnd);
+        const expRnd = Math.max(startRnd, Number(b.expiresRound) || startRnd);
+        if (rnd < startRnd || rnd > expRnd) continue;
+        if (rnd === expRnd && b.expiresAtPhase && b.expiresAtPhase !== 'END_OF_ROUND') {
+          const expIdx = PHASE_ORDER_INDEX[b.expiresAtPhase] ?? 5;
+          if (curIdx >= expIdx) continue;
+        }
+        kept.push({ ...b });
+        continue;
+      }
+
+      const buffRnd = Math.max(1, Number(b.battleRound) || rnd);
+      if (rnd !== buffRnd) continue;
+      const targetPhase = b.activePhase || 'HORDE_SHOOTING';
+      const targetIdx = PHASE_ORDER_INDEX[targetPhase] ?? 2;
+
+      if (phase === targetPhase) {
+        kept.push({ ...b, pendingUntilActivePhase: false });
+      } else if (b.pendingUntilActivePhase && curIdx < targetIdx) {
+        kept.push({ ...b });
+      }
+    }
+    return kept;
+  }
+
+  /**
+   * Pure helper: aggregates active Player Stratagem defensive buffs (such as Smokescreen
+   * `-1` to Hit, Go to Ground Cover/6++, or Void Armour AP worsen) matching a targeted Player squad
+   * for the current Battle Round and Phase.
    *
    * @param {string} [targetName=''] - Targeted Player unit name.
    * @param {Array<object>} [activePlayerBuffs=[]] - Active Player Stratagem buff descriptors.
-   * @param {number|null} [currentRound=null] - Current Battle Round (ignores stale buffs from prior rounds).
+   * @param {number|null} [currentRound=null] - Current Battle Round.
+   * @param {string|null} [currentPhase=null] - Current Phase key.
    * @returns {{hitMod: number, worsenAp: number, cover: boolean, invuln6: boolean}}
    */
-  function resolvePlayerUnitDefensiveBuffs(targetName = '', activePlayerBuffs = [], currentRound = null) {
+  function resolvePlayerUnitDefensiveBuffs(targetName = '', activePlayerBuffs = [], currentRound = null, currentPhase = null) {
     const out = { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
     if (!Array.isArray(activePlayerBuffs) || activePlayerBuffs.length === 0) return out;
     const tNorm = String(targetName || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
     for (const b of activePlayerBuffs) {
       if (!b || typeof b !== 'object') continue;
-      if (currentRound !== null && b.battleRound !== undefined && Number(b.battleRound) !== Number(currentRound)) {
-        continue;
+      const scope = String(b.durationScope || 'PHASE').toUpperCase();
+
+      if (scope === 'ROUND') {
+        if (currentRound !== null) {
+          const rnd = Number(currentRound);
+          const startRnd = Number(b.battleRound ?? rnd);
+          const expRnd = Number(b.expiresRound ?? startRnd);
+          if (rnd < startRnd || rnd > expRnd) continue;
+          if (currentPhase && rnd === expRnd && b.expiresAtPhase && b.expiresAtPhase !== 'END_OF_ROUND') {
+            const curIdx = PHASE_ORDER_INDEX[currentPhase] ?? 0;
+            const expIdx = PHASE_ORDER_INDEX[b.expiresAtPhase] ?? 5;
+            if (curIdx >= expIdx) continue;
+          }
+        }
+      } else {
+        if (currentRound !== null && b.battleRound !== undefined && Number(b.battleRound) !== Number(currentRound)) {
+          continue;
+        }
+        if (currentPhase && b.activePhase && b.activePhase !== currentPhase) {
+          continue;
+        }
       }
+
       if (b.targetUnit) {
         const bNorm = String(b.targetUnit).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
         if (bNorm && tNorm && bNorm !== tNorm && !tNorm.includes(bNorm) && !bNorm.includes(tNorm)) {
@@ -494,7 +635,8 @@
     const stateBuff = resolvePlayerUnitDefensiveBuffs(
       targetName,
       matchState.activePlayerBuffs,
-      matchState.battleRound ?? null
+      matchState.battleRound ?? null,
+      matchState.phase || null
     );
     const mergedContext = {
       ...rawContext,
@@ -744,8 +886,11 @@
 
   return {
     TACTICA_PHASES,
+    PHASE_ORDER_INDEX,
     REACTION_WINDOW_DEFS,
     createInitialTacticaState,
+    createPlayerStratagemBuff,
+    pruneExpiredPlayerBuffs,
     formatChronicleEntry,
     detectPlayerReactionWindow,
     assignHordeWarlordIfEligible,

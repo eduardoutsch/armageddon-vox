@@ -61,7 +61,7 @@ test('speakOverwatchLine & triggerQuickStratagem: plays decoded /audio/speak MP3
   });
   [
     'quickStratCategorySelect', 'quickStratNameInput', 'quickStratCoreSelect',
-    'quickStratTargetSelect', 'overwatchVerdictBox', 'tacticaIntrusionAlertBox', 'btnToggleOverwatchTts'
+    'quickStratTargetSelect', 'quickStratDurationSelect', 'overwatchVerdictBox', 'tacticaIntrusionAlertBox', 'btnToggleOverwatchTts'
   ].forEach(id => { els[id] = makeEl(); });
 
   const clientState = {
@@ -118,7 +118,14 @@ test('speakOverwatchLine & triggerQuickStratagem: plays decoded /audio/speak MP3
     const stratRes = await overwatch.triggerQuickStratagem(1);
     assert.equal(stratRes.rejected, false);
     assert.equal(stratRes.resolvedTarget, 'Einhyr Hearthguard');
+    assert.equal(stratRes.durationScope, 'PHASE', 'Quick Stratagem must default to PHASE durationScope');
     assert.equal(clientState.playerCp, 1);
+
+    els.quickStratDurationSelect.value = 'ROUND';
+    const roundStratRes = await overwatch.triggerQuickStratagem(1);
+    assert.equal(roundStratRes.rejected, false);
+    assert.equal(roundStratRes.durationScope, 'ROUND', 'Quick Stratagem with ROUND selected must set ROUND durationScope');
+    assert.equal(clientState.playerCp, 0);
 
     clientState.activeMiseryIds = [22];
     const blocked = await overwatch.triggerQuickStratagem(0);

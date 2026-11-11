@@ -110,6 +110,23 @@ test('parsePlayerStratagem, matchPlayerUnitFromTelemetry & validatePlayerStratag
   assert.equal(smoke.intent, 'PLAYER_STRATAGEM');
   assert.equal(smoke.stratKey, 'SMOKESCREEN');
   assert.deepEqual(smoke.buff, { hitMod: -1, cover: true });
+  assert.equal(smoke.durationScope, 'PHASE', '99% of Stratagem buffs must default to PHASE durationScope');
+  assert.equal(voidArmour1.durationScope, 'PHASE', 'Faction Stratagems without explicit round wording must default to PHASE');
+
+  // Explicit 1-Round / "until your next shooting phase" Stratagem parsing
+  const nextShoot = parsePlayerStratagem('Stratagem Suppressing Fire on Hearthguard until your next shooting phase - 1cp');
+  assert.equal(nextShoot.intent, 'PLAYER_STRATAGEM');
+  assert.equal(nextShoot.stratName, 'Suppressing Fire');
+  assert.equal(nextShoot.targetUnit, 'Hearthguard');
+  assert.equal(nextShoot.cpCost, 1);
+  assert.equal(nextShoot.durationScope, 'ROUND', '"until your next shooting phase" must resolve to ROUND durationScope');
+
+  const wholeRound = parsePlayerStratagem('Using Cloud of Ash on Pioneers for the whole round, 1 CP');
+  assert.equal(wholeRound.intent, 'PLAYER_STRATAGEM');
+  assert.equal(wholeRound.stratName, 'Cloud Of Ash');
+  assert.equal(wholeRound.targetUnit, 'Pioneers');
+  assert.equal(wholeRound.cpCost, 1);
+  assert.equal(wholeRound.durationScope, 'ROUND', '"for the whole round" must resolve to ROUND durationScope');
 
   // Fuzzy PLAYER unit matching
   const boardUnits = [

@@ -8,8 +8,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   TACTICA_PHASES,
+  PHASE_ORDER_INDEX,
   REACTION_WINDOW_DEFS,
   createInitialTacticaState,
+  createPlayerStratagemBuff,
+  pruneExpiredPlayerBuffs,
+  resolvePlayerUnitDefensiveBuffs,
   formatChronicleEntry,
   detectPlayerReactionWindow,
   assignHordeWarlordIfEligible,
@@ -223,4 +227,85 @@ test('compileTacticaPostMatchReport: preserves full Round 1 through Round 6 hist
 
   const emptyGamma = compileTacticaPostMatchReport(createInitialTacticaState(), [], { channel: 'gamma' });
   assert.ok(emptyGamma.includes('KÂHL HÂRKYN') && emptyGamma.includes('[NO TACTICAL EVENTS RECORDED IN CHRONICLE]'));
+});
+
+test('createPlayerStratagemBuff, pruneExpiredPlayerBuffs & resolvePlayerUnitDefensiveBuffs: enforces 99% single-phase expiration vs 1-round ("until next shooting phase") persistence', () => {
+  assert.ok(PHASE_ORDER_INDEX && typeof PHASE_ORDER_INDEX.HORDE_SHOOTING === 'number');
+  assert.equal(typeof createPlayerStratagemBuff, 'function');
+  assert.equal(typeof pruneExpiredPlayerBuffs, 'function');
+  assert.equal(typeof resolvePlayerUnitDefensiveBuffs, 'function');
+
+  // 1. Default PHASE buff (Smokescreen popped during HORDE_MOVEMENT right before clicking 3. Shoot in Round 2)
+  const smokePreShoot = createPlayerStratagemBuff({
+    stratKey: 'SMOKESCREEN',
+    stratName: 'Smokescreen',
+    resolvedTarget: 'Einhyr Hearthguard',
+    durationScope: 'PHASE',
+    buff: { hitMod: -1, cover: true }
+  }, { battleRound: 2, phase: 'HORDE_MOVEMENT' });
+  assert.equal(smokePreShoot.durationScope, 'PHASE');
+  assert.equal(smokePreShoot.activePhase, 'HORDE_SHOOTING');
+
+  let buffs = [smokePreShoot];
+  // Advancing into HORDE_SHOOTING activates it and applies -1 to Hit
+  buffs = pruneExpiredPlayerBuffs(buffs, 2, 'HORDE_SHOOTING');
+  assert.equal(buffs.length, 1);
+  assert.equal(resolvePlayerUnitDefensiveBuffs('Einhyr Hearthguard', buffs, 2, 'HORDE_SHOOTING').hitMod, -1);
+
+  // Advancing out of HORDE_SHOOTING into HORDE_CHARGE (or HORDE_FIGHT) in the SAME Round 2 immediately expires it!
+  buffs = pruneExpiredPlayerBuffs(buffs, 2, 'HORDE_CHARGE');
+  assert.equal(buffs.length, 0, 'PHASE-scoped Shooting buff must expire as soon as HORDE_SHOOTING ends');
+
+  // 2. PHASE buff popped during HORDE_CHARGE (e.g., melee Void Armour / -1 to Hit for the upcoming Fight phase)
+  const fightBuff = createPlayerStratagemBuff({
+    stratKey: 'FACTION_CUSTOM',
+    stratName: 'Reactive Ward',
+    resolvedTarget: 'Einhyr Hearthguard',
+    durationScope: 'PHASE',
+    buff: { hitMod: -1, worsenAp: 1 }
+  }, { battleRound: 2, phase: 'HORDE_CHARGE' });
+  assert.equal(fightBuff.activePhase, 'HORDE_FIGHT');
+  let meleeBuffs = pruneExpiredPlayerBuffs([fightBuff], 2, 'HORDE_FIGHT');
+  assert.equal(meleeBuffs.length, 1, 'Fight-targeted PHASE buff popped in HORDE_CHARGE must survive into HORDE_FIGHT');
+  assert.equal(resolvePlayerUnitDefensiveBuffs('Einhyr Hearthguard', meleeBuffs, 2, 'HORDE_FIGHT').worsenAp, 1);
+  meleeBuffs = pruneExpiredPlayerBuffs(meleeBuffs, 2, 'PLAYER_TURN');
+  assert.equal(meleeBuffs.length, 0, 'Fight PHASE buff must expire immediately when HORDE_FIGHT ends');
+
+  // 3. ROUND buff popped during Horde half of Round 2 -> lasts all remaining phases of Round 2, expires at Round 3
+  const fullRoundHorde = createPlayerStratagemBuff({
+    stratKey: 'FACTION_CUSTOM',
+    stratName: 'Cloud Of Ash',
+    resolvedTarget: 'Hernkyn Pioneers',
+    durationScope: 'ROUND',
+    buff: { hitMod: -1 }
+  }, { battleRound: 2, phase: 'HORDE_SHOOTING' });
+  let roundBuffs = [fullRoundHorde];
+  roundBuffs = pruneExpiredPlayerBuffs(roundBuffs, 2, 'HORDE_CHARGE');
+  roundBuffs = pruneExpiredPlayerBuffs(roundBuffs, 2, 'HORDE_FIGHT');
+  roundBuffs = pruneExpiredPlayerBuffs(roundBuffs, 2, 'PLAYER_TURN');
+  assert.equal(roundBuffs.length, 1, 'ROUND buff popped in Round 2 Horde Shooting must persist across Fight and Player Turn of Round 2');
+  assert.equal(resolvePlayerUnitDefensiveBuffs('Hernkyn Pioneers', roundBuffs, 2, 'HORDE_FIGHT').hitMod, -1);
+  roundBuffs = pruneExpiredPlayerBuffs(roundBuffs, 3, 'COMMAND_SPAWN');
+  assert.equal(roundBuffs.length, 0, 'ROUND buff popped in Round 2 Horde half must expire at start of Round 3');
+
+  // 4. "Until your next shooting phase (1 round)" buff popped during PLAYER_TURN of Round 2:
+  //    Must survive advancing into Round 3 across COMMAND_SPAWN -> HORDE_MOVEMENT -> HORDE_SHOOTING -> HORDE_FIGHT,
+  //    and expire upon entering PLAYER_TURN of Round 3!
+  const untilNextShoot = createPlayerStratagemBuff({
+    stratKey: 'FACTION_CUSTOM',
+    stratName: 'Suppressing Fire',
+    resolvedTarget: 'Einhyr Hearthguard',
+    durationScope: 'ROUND',
+    buff: { hitMod: -1 }
+  }, { battleRound: 2, phase: 'PLAYER_TURN' });
+  let nextTurnBuffs = [untilNextShoot];
+  nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'COMMAND_SPAWN');
+  nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'HORDE_MOVEMENT');
+  nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'HORDE_SHOOTING');
+  assert.equal(nextTurnBuffs.length, 1, '"Until next shooting phase" buff from R2 PLAYER_TURN must survive into R3 HORDE_SHOOTING');
+  assert.equal(resolvePlayerUnitDefensiveBuffs('Einhyr Hearthguard', nextTurnBuffs, 3, 'HORDE_SHOOTING').hitMod, -1);
+  nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'HORDE_FIGHT');
+  assert.equal(nextTurnBuffs.length, 1, 'Must also protect through R3 HORDE_FIGHT before Player Turn begins');
+  nextTurnBuffs = pruneExpiredPlayerBuffs(nextTurnBuffs, 3, 'PLAYER_TURN');
+  assert.equal(nextTurnBuffs.length, 0, 'Must expire once Round 3 reaches PLAYER_TURN ("your next turn / shooting phase")');
 });

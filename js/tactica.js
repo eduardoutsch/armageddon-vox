@@ -272,6 +272,16 @@
     return daemonOnline;
   }
 
+  function pruneClientBuffs() {
+    if (typeof pruneExpiredPlayerBuffs === 'function') {
+      clientState.activePlayerBuffs = pruneExpiredPlayerBuffs(
+        clientState.activePlayerBuffs,
+        clientState.battleRound,
+        clientState.phase
+      );
+    }
+  }
+
   /**
    * Synchronizes Room Code, Round, Faction, CP/SP, and active Misery cards from Mode 1 Spawner `localStorage`.
    */
@@ -283,20 +293,21 @@
         const s = JSON.parse(raw);
         const nextRound = Math.max(1, Number(s.battleRound) || 1);
         const roundChanged = nextRound !== Number(clientState.battleRound);
-        if (roundChanged) {
-          clientState.activePlayerBuffs = [];
-        }
         const patch = {
           roomCode: s.seed || clientState.roomCode,
           battleRound: nextRound,
+          ...(roundChanged ? { phase: 'COMMAND_SPAWN' } : {}),
           factionName: s.activeHordeFactionName || clientState.factionName,
           playerCp: s.cp !== undefined ? Number(s.cp) : clientState.playerCp,
           playerSp: s.sp !== undefined ? Number(s.sp) : clientState.playerSp,
           activeMiseryIds: Array.isArray(s.activeMiseries) ? s.activeMiseries.map(m => m.id) : [],
-          zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : [],
-          ...(roundChanged ? { activePlayerBuffs: [] } : {})
+          zoneSpawns: Array.isArray(s.currentZoneSpawns) ? s.currentZoneSpawns : []
         };
         Object.assign(clientState, patch);
+        pruneClientBuffs();
+        if (roundChanged) {
+          patch.activePlayerBuffs = clientState.activePlayerBuffs;
+        }
         try {
           const res = await daemonRequest('/session/sync', 'POST', patch);
           daemonOnline = true;
@@ -311,13 +322,10 @@
   }
 
   async function setConsolePhaseAndTrigger(phase, reactionTrigger = null) {
-    const prevRound = Number(clientState.battleRound) || 1;
     const rndEl = typeof document !== 'undefined' ? document.getElementById('tacticaRoundSelect') : null;
     if (rndEl && rndEl.value) clientState.battleRound = Number(rndEl.value) || clientState.battleRound;
-    if (Number(clientState.battleRound) !== prevRound) {
-      clientState.activePlayerBuffs = [];
-    }
     clientState.phase = phase;
+    pruneClientBuffs();
     const summary = `Entered ${phase} (Round ${clientState.battleRound}).`;
 
     try {
@@ -573,6 +581,8 @@
    */
   async function triggerAutopilotSpawnWaves() {
     setHordeTurnStep(1);
+    clientState.phase = 'COMMAND_SPAWN';
+    pruneClientBuffs();
     let plan;
     try {
       const res = await daemonRequest('/autopilot/spawn-waves', 'POST', { zoneSpawns: clientState.zoneSpawns });
@@ -594,6 +604,7 @@
   async function triggerAutopilotMovement() {
     setHordeTurnStep(2);
     clientState.phase = 'HORDE_MOVEMENT';
+    pruneClientBuffs();
     let plans = [];
     try {
       const res = await daemonRequest('/autopilot/plan-movement', 'POST', {});
@@ -659,6 +670,7 @@
   async function triggerAutopilotShooting() {
     setHordeTurnStep(3);
     clientState.phase = 'HORDE_SHOOTING';
+    pruneClientBuffs();
     let assignments = [];
     try {
       const res = await daemonRequest('/autopilot/select-shooting', 'POST', {});
@@ -693,7 +705,7 @@
     const units = clientState.boardTelemetry?.units || [];
     const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
     const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
-      ? resolvePlayerUnitDefensiveBuffs(asgn.targetName, clientState.activePlayerBuffs, clientState.battleRound)
+      ? resolvePlayerUnitDefensiveBuffs(asgn.targetName, clientState.activePlayerBuffs, clientState.battleRound, clientState.phase)
       : { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
     const baseTarget = asgn.target || { toughness: 4 };
     const targetWithBuffs = {
@@ -734,6 +746,7 @@
   async function triggerAutopilotCharges() {
     setHordeTurnStep(4);
     clientState.phase = 'HORDE_CHARGE';
+    pruneClientBuffs();
     let declarations = [];
     try {
       const res = await daemonRequest('/autopilot/declare-charges', 'POST', {});
@@ -765,6 +778,7 @@
   async function triggerAutopilotConsolidate() {
     setHordeTurnStep(4);
     clientState.phase = 'HORDE_FIGHT';
+    pruneClientBuffs();
     let moves = [];
     try {
       const res = await daemonRequest('/autopilot/consolidate', 'POST', {});
