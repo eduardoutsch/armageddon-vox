@@ -240,3 +240,62 @@ var CrusadeCore = (function () {
     };
   }
 
+  function rollCrusadeRelicPick(poolKey, tier, catalogs = {}, rng = Math.random) {
+    const relicTier = tier || 'Artificer';
+    const vaultLookup = {
+      AlphaCodex: { tag: 'AM Codex', vault: catalogs.astraRelics },
+      BetaCodex: { tag: 'Necrons Codex', vault: catalogs.necronRelics },
+      GammaCodex: { tag: 'Leagues of Votann Codex', vault: catalogs.votannRelics },
+      Armageddon: { tag: 'Armageddon', vault: catalogs.relicVault }
+    };
+    const chosen = vaultLookup[poolKey] || vaultLookup.Armageddon;
+    const fallbackVault = catalogs.relicVault || {};
+    const activeVault = chosen.vault || fallbackVault;
+    const pool = activeVault[relicTier] || fallbackVault.Artificer || [];
+    const picked = _pickRandom(pool, rng)?.item || { name: 'Standard Relic', desc: 'No relic found' };
+
+    return {
+      category: `Crusade Relic (${relicTier})`,
+      roll: 'Vault Draw',
+      tier: relicTier,
+      name: picked.name,
+      desc: picked.desc,
+      poolTag: chosen.tag
+    };
+  }
+
+  function evaluateOutOfActionRoll(rng = Math.random) {
+    const roll = _rollDie(6, rng);
+    return { roll, survived: roll >= 2 };
+  }
+
+  function rollBattleScarPick(poolKey, catalogs = {}, rng = Math.random) {
+    const scarLookup = {
+      BetaCodex: { tag: 'Necron Flaw', table: catalogs.necronScars },
+      GammaCodex: { tag: 'Votann Scar', table: catalogs.votannScars && catalogs.votannScars.length ? catalogs.votannScars : catalogs.battleScars }
+    };
+    const chosen = scarLookup[poolKey] || { tag: 'Armageddon', table: catalogs.battleScars };
+    const table = chosen.table || catalogs.battleScars || [];
+    const picked = _pickRandom(table, rng)?.item || { d6: 1, name: 'Scar', desc: 'No scar' };
+
+    return {
+      category: 'Battle Scar',
+      roll: `D6 = ${picked.d6}`,
+      d6: picked.d6,
+      name: picked.name,
+      desc: picked.desc,
+      poolTag: chosen.tag
+    };
+  }
+
+  function createQueuedUpgradeEntry(rolledItem, unitName, unitContext) {
+    return {
+      unit: String(unitName || '[Unnamed Unit]').trim() || '[Unnamed Unit]',
+      context: String(unitContext || 'Fielded in battle').trim() || 'Fielded in battle',
+      category: rolledItem.category,
+      roll: rolledItem.roll,
+      name: rolledItem.name,
+      desc: rolledItem.desc
+    };
+  }
+
