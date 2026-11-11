@@ -156,3 +156,64 @@ function clickMatButtonMatching(matObj, btns, pattern, playerColor)
     return false
 end
 
+function getDiceInMatBounds(bounds)
+    local found = {}
+    for _, obj in ipairs(getAllObjects()) do
+        if obj.tag == "Dice" then
+            local p = obj.getPosition()
+            if p.x >= bounds.minX and p.x <= bounds.maxX and p.z >= bounds.minZ and p.z <= bounds.maxZ then
+                table.insert(found, obj)
+            end
+        end
+    end
+    return found
+end
+
+-- Triggers LCT's Red/Blue Dice Mat, waits for settled physics, and posts pip values to /tts/dice-result
+function executeLctMatRoll(cmd)
+    isRollingMat = true
+    local side = string.upper(cmd.matSide or "RED")
+    local playerColor = (side == "BLUE") and "Blue" or "Red"
+    local bounds = LCT_MAT_BOUNDS[side] or LCT_MAT_BOUNDS.RED
+    local count = math.max(1, tonumber(cmd.count) or 1)
+
+    printToAll("🎲 [LCT MAT • " .. (cmd.stage or "ROLL") .. "] " .. (cmd.label or (count .. "D6")), {1, 0.8, 0.25})
+
+    local matObj, btns = findLctDiceMatController(side)
+    if cmd.clearFirst ~= false then
+        if not clickMatButtonMatching(matObj, btns, "clear", playerColor) then
+            for _, oldDie in ipairs(getDiceInMatBounds(bounds)) do destroyObject(oldDie) end
+        end
+    end
+
+    Wait.time(function()
+        local spawnedViaButtons = false
+        if matObj and btns then
+            local rem = count
+            for _, denom in ipairs({25, 10, 5, 2, 1}) do
+                while rem >= denom do
+                    if clickMatButtonMatching(matObj, btns, "^%+?" .. tostring(denom) .. "$", playerColor) then
+                        rem = rem - denom
+                        spawnedViaButtons = true
+                    else
+                        break
+                    end
+                end
+            end
+            clickMatButtonMatching(matObj, btns, "roll", playerColor)
+        end
+
+        -- Guaranteed fallback inside LCT's Dice Mat zone so LCT's zone counter still tallies them
+        if not spawnedViaButtons then
+            for i = 1, count do
+                local col = (i - 1) % 8
+                local row = math.floor((i - 1) / 8)
+                local die = spawnObject({
+                    type = "Die_6_Rounded",
+                    position = { bounds.minX + 2.0 + col * 1.1, bounds.spawnY, bounds.minZ + 2.0 + row * 1.1 }
+                })
+                die.setColorTint(side == "BLUE" and {0.2, 0.5, 1} or {0.9, 0.2, 0.2})
+                die.roll()
+            end
+        end
+
