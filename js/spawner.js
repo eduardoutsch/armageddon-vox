@@ -155,7 +155,6 @@ function parseSingleUnitToken(token, rng = Math.random) {
  * @returns {string} Chosen unit wave entry or explicit empty-pool warning.
  */
 function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
-  const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10', '10-12': 'pool10', '13+': 'pool13' };
   const mapKey = bracketKey === '3-4' ? 'b34'
     : bracketKey === '5-6' ? 'b56'
     : bracketKey === '7-9' ? 'b79'
@@ -172,44 +171,30 @@ function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
     raw = customPoolMap[bracketKey];
   } else if (typeof localStorage !== 'undefined') {
     try {
-      const saved = localStorage.getItem('foa_custom_shelf_pool_v1') || localStorage.getItem('armageddon_horde_pool');
+      const saved = localStorage.getItem('foa_custom_shelf_pool_v1');
       if (saved) {
         const p = JSON.parse(saved);
-        if (activeFaction && p.byFaction) {
-          const facPool = p.byFaction[activeFaction] || {};
+        if (activeFaction) {
+          const facPool = (p && p.byFaction && p.byFaction[activeFaction]) ? p.byFaction[activeFaction] : {};
           raw = facPool[mapKey] || '';
-        } else if (!p.byFaction && p[mapKey]) {
+        } else if (p && !p.byFaction && p[mapKey]) {
           raw = p[mapKey];
         }
       }
     } catch (e) {}
   }
-  if (!raw && typeof document !== 'undefined') {
-    const el = document.getElementById(idMap[bracketKey]) || document.getElementById('rosterPool' + mapKey.slice(1));
-    raw = el ? (el.value || '') : '';
-  }
 
-  // Canonical default faction spawn table fallback from js/data.js
-  const tables = (typeof HORDE_FACTION_SPAWN_TABLES !== 'undefined')
-    ? HORDE_FACTION_SPAWN_TABLES
-    : (typeof window !== 'undefined' && window.HORDE_FACTION_SPAWN_TABLES ? window.HORDE_FACTION_SPAWN_TABLES : null);
-
-  if (!raw && activeFaction && tables && tables[activeFaction]) {
-    const defaultUnits = tables[activeFaction][mapKey];
-    if (Array.isArray(defaultUnits) && defaultUnits.length > 0) {
-      raw = defaultUnits.join(', ');
-    } else if (typeof defaultUnits === 'string') {
-      raw = defaultUnits;
-    }
-  }
-
-  const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+  const list = String(raw || '').split(',').map(s => s.trim()).filter(Boolean);
   if (list.length === 0) {
     return activeFaction
       ? `⚠️ ${activeFaction} Pool Empty for Bracket [${bracketKey}] — Configure in Mode 4!`
       : "Unit from Bracket [" + bracketKey + "]";
   }
   return list[Math.floor(rng() * list.length)];
+}
+
+if (typeof window !== 'undefined') {
+  window.parseSpawnWaveSpec = parseSpawnWaveSpec;
 }
 
 // Dual export for Node.js test runner and browser global scope
@@ -219,6 +204,7 @@ if (typeof module !== 'undefined' && module.exports) {
     LABEL_MAP,
     getBracketInfo,
     calculateRollDown,
-    pickSyncedUnitFromBracket
+    pickSyncedUnitFromBracket,
+    parseSpawnWaveSpec
   };
 }
