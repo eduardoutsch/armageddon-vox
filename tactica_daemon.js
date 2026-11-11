@@ -98,6 +98,51 @@ async function launchTacticaBrowserSession(tacticaThreadUrl) {
     return null;
   }
 
+  const launchOpts = {
+    headless: false,
+    channel: 'chrome',
+    ignoreDefaultArgs: ['--enable-automation'],
+    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+    viewport: { width: 1200, height: 840 }
+  };
+
+  let context;
+  try {
+    context = await chromium.launchPersistentContext(path.join(__dirname, 'chrome_vox_profile'), launchOpts);
+  } catch (e) {
+    context = await chromium.launchPersistentContext(path.join(__dirname, 'chrome_tactica_profile'), launchOpts);
+  }
+
+  const pages = context.pages();
+  const page = pages[0] || await context.newPage();
+  for (let i = 1; i < pages.length; i++) {
+    await pages[i].close().catch(() => {});
+  }
+
+  await page.goto(tacticaThreadUrl, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('model-response', { timeout: 15000 }).catch(() => {});
+
+  let lock = Promise.resolve();
+  const queryThread = (promptText, imageBase64 = '') => {
+    const task = lock.then(async () => {
+      if (!String(page.url() || '').startsWith(tacticaThreadUrl)) {
+        await page.goto(tacticaThreadUrl, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(1500);
+      }
+      const prevCount = await page.locator('model-response').count();
+
+      if (imageBase64) {
+        const tmpImg = path.join(__dirname, 'match_logs', '_los_frame.jpg');
+        const cleanB64 = String(imageBase64).replace(/^data:image\/\w+;base64,/, '');
+        fs.mkdirSync(path.dirname(tmpImg), { recursive: true });
+        fs.writeFileSync(tmpImg, Buffer.from(cleanB64, 'base64'));
+        const fileInput = page.locator('input[type="file"]').first();
+        if (await fileInput.count() > 0) {
+          await fileInput.setInputFiles(tmpImg).catch(() => {});
+          await page.waitForTimeout(800);
+        }
+      }
+
 
 /**
  * Creates a self-contained LCT Relay & Append-Only Chronicle Daemon instance.
