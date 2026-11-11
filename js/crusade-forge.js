@@ -408,80 +408,43 @@ function renderSelectedCommendationPreview() {
 function attachCommendationToDossier() {
   const sel = _getForgeEl('commendationSelect');
   if (!sel) return;
-  const vault = (typeof ASTRA_COMMENDATIONS_VAULT !== 'undefined') ? ASTRA_COMMENDATIONS_VAULT : (typeof window !== 'undefined' ? window.ASTRA_COMMENDATIONS_VAULT : []);
-  const pick = vault.find(c => c.id === sel.value) || vault[0];
-  const unitName = (document.getElementById('commRecipientUnit')?.value || '044th Krieg Regiment').trim();
+  const vault = _resolveForgeCatalogs().commendationsVault;
+  const pick = vault.find((c) => c.id === sel.value) || vault[0];
+  if (!pick) return;
+  const unitName = (_getForgeEl('commRecipientUnit')?.value || '044th Krieg Regiment').trim();
 
   crusadeState.queuedRolls.push({
     unit: unitName,
     context: `Awarded upon Tour of Duty completion (${pick.type})`,
     category: pick.type,
-    roll: `Munitorum Commendation`,
+    roll: 'Munitorum Commendation',
     name: pick.name,
     desc: pick.desc
   });
 
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playRelicChoir();
+  _getVoxAudio()?.playRelicChoir?.();
   renderQueuedRolls();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
   switchCrusadeTab('forge');
 }
 
 function buildLogisticsSummaryLine() {
-  const log = crusadeState.logistics || { lexmechanicus: 1, materiel: 2, tithePool: 0, morale: 1 };
-  const categories = (typeof LOGISTICS_CATEGORIES !== 'undefined') ? LOGISTICS_CATEGORIES : (typeof window !== 'undefined' ? window.LOGISTICS_CATEGORIES : []);
-  const surplus = [];
-  const def = [];
-  categories.forEach(c => {
-    const v = log[c.key] || 0;
-    const shortName = c.title.split(' ')[1];
-    if (v === 2) surplus.push(shortName);
-    if (v === 0) def.push(shortName);
-  });
-  const surStr = surplus.length ? surplus.join(', ') : 'None';
-  const defStr = def.length ? def.join(', ') : 'None';
-  return `Battles Rem: ${crusadeState.tourBattlesRem || 0} | Wins Rem: ${crusadeState.tourWinsRem || 0} | Commendation Pts: ${crusadeState.commendationPts || 0} | Surplus: [${surStr}] | Deficiency: [${defStr}]`;
+  return _forgeCore.formatLogisticsSummaryLine(crusadeState, _resolveForgeCatalogs().logisticsCategories);
 }
 
 /**
- * Pure functional core: compiles the unique Start of Tour of Duty Dispatch string
- * (Departmento Munitorum Regulation 884-Alpha).
- *
- * @param {object} [input={}] - Plain Tour of Duty state snapshot.
- * @returns {string} Formatted Start of Tour of Duty dispatch payload.
+ * Boundary adapter delegating Tour of Duty dispatch compilation to `CrusadeCore.compileTourDispatch`.
  */
 function compileTourDispatch(input = {}) {
-  const battles = (typeof input.tourBattlesRem === 'number') ? input.tourBattlesRem : (crusadeState.tourBattlesRem || 0);
-  const wins = (typeof input.tourWinsRem === 'number') ? input.tourWinsRem : (crusadeState.tourWinsRem || 0);
-  const commPts = (typeof input.commendationPts === 'number') ? input.commendationPts : (crusadeState.commendationPts || 0);
-  const log = input.logistics || (crusadeState.logistics || { lexmechanicus: 1, materiel: 1, tithePool: 1, morale: 1 });
-  const lex = log.lexmechanicus || 0;
-  const mat = log.materiel || 0;
-  const tithe = log.tithePool || 0;
-  const mor = log.morale || 0;
-  const primer = (typeof input.upliftingPrimer === 'boolean') ? input.upliftingPrimer : !!crusadeState.upliftingPrimer;
-  const maxPts = primer ? 5 : 4;
-  const notes = (input.notes || (typeof document !== 'undefined' && document.getElementById('startTourNotes')?.value) || '').trim();
-
-  const lines = [
-    `+++ DEPARTMENTO MUNITORUM // TOUR OF DUTY & LOGISTICS ALLOCATION DISPATCH +++`,
-    `• REPORTING COMMANDER: THE EXILE // THE SANCTUARY OF ASH (044TH KRIEG)`,
-    `• OPERATIONAL QUOTAS: ${battles} Battles Required // ${wins} Victories Required`,
-    `• MUNITORUM LOGISTICS ALLOCATION (${maxPts} PTS): Lexmechanicus: ${lex} | Materiel: ${mat} | Tithe Pool: ${tithe} | Morale: ${mor}`,
-    `• ACTIVE COMMENDATION TALLY: ${commPts} CmP`
-  ];
-
-  if (notes) {
-    lines.push(`• REGIMENTAL DEPLOYMENT DIRECTIVE: "${notes}"`);
-  }
-
-  lines.push(
-    `------------------------------------------------`,
-    `REQUEST FOR LOGIS-PREFECT VANE: Please register this Tour of Duty operational quota and Munitorum Regulation 884-Alpha logistics distribution in the orbital ledger!`
-  );
-
-  return lines.join('\n');
+  const hasExplicitNotes = Object.prototype.hasOwnProperty.call(input, 'notes');
+  return _forgeCore.compileTourDispatch({
+    tourBattlesRem: typeof input.tourBattlesRem === 'number' ? input.tourBattlesRem : (crusadeState.tourBattlesRem || 0),
+    tourWinsRem: typeof input.tourWinsRem === 'number' ? input.tourWinsRem : (crusadeState.tourWinsRem || 0),
+    commendationPts: typeof input.commendationPts === 'number' ? input.commendationPts : (crusadeState.commendationPts || 0),
+    logistics: input.logistics || crusadeState.logistics,
+    upliftingPrimer: typeof input.upliftingPrimer === 'boolean' ? input.upliftingPrimer : !!crusadeState.upliftingPrimer,
+    notes: hasExplicitNotes ? input.notes : (_getForgeEl('startTourNotes')?.value || '')
+  });
 }
 
 function buildStartOfTourDossierString() {
@@ -491,7 +454,7 @@ function buildStartOfTourDossierString() {
     commendationPts: crusadeState.commendationPts,
     logistics: crusadeState.logistics,
     upliftingPrimer: crusadeState.upliftingPrimer,
-    notes: (typeof document !== 'undefined' ? document.getElementById('startTourNotes')?.value : '') || ''
+    notes: _getForgeEl('startTourNotes')?.value || ''
   });
 }
 
