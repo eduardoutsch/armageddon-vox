@@ -539,3 +539,59 @@ var CrusadeCore = (function () {
     const baseAmount = mult === 0.5 ? d6Amt * 5 : d6Amt * 10;
     const target = VOTANN_HARVEST_RESOURCE_MAP[resRoll] || VOTANN_HARVEST_RESOURCE_MAP[1];
 
+    let mineralBonus = 0;
+    if (target.key === 'rawMinerals') {
+      ['outpost1', 'outpost2', 'outpost3'].forEach((k) => {
+        if (v.assets[k] === 'Active') mineralBonus += 20;
+        if (v.assets[k] === 'Upgraded') mineralBonus += 30;
+      });
+    }
+    const finalGain = baseAmount + mineralBonus;
+    v[target.key] = (v[target.key] || 0) + finalGain;
+    v.expTotals[target.key] = (v.expTotals[target.key] || 0) + finalGain;
+
+    let bioBonus = 0;
+    if (target.key !== 'biomatter' && (v.assets.biorecyc === 'Active' || v.assets.biorecyc === 'Upgraded')) {
+      bioBonus = 20;
+      v.biomatter = (v.biomatter || 0) + 20;
+      v.expTotals.biomatter = (v.expTotals.biomatter || 0) + 20;
+    }
+
+    return {
+      resRoll,
+      targetKey: target.key,
+      targetLabel: target.label,
+      baseAmount,
+      mineralBonus,
+      bioBonus,
+      finalGain,
+      votann: v
+    };
+  }
+
+  function evaluateVotannRareRoll(rng = Math.random) {
+    const d6 = _rollDie(6, rng);
+    return { d6, success: d6 === 6 };
+  }
+
+  function adjustVotannExpeditionField(votannState, field, delta) {
+    const v = createInitialVotannState(votannState);
+    if (field === 'expeditionsCompleted') {
+      v.expeditionsCompleted = clampCounter(v.expeditionsCompleted, delta);
+      v.expBattles = 0;
+      v.expWins = 0;
+      v.goalProgress = 0;
+      v.expTotals = { rawMinerals: 0, biomatter: 0, energySources: 0, galacticIntel: 0, rare: 0 };
+    } else if (field === 'goalProgress') {
+      v.goalProgress = Math.min(3, Math.max(0, (v.goalProgress || 0) + delta));
+    } else {
+      v[field] = clampCounter(v[field], delta);
+    }
+    return { votann: v };
+  }
+
+  function nextVotannAssetState(currentStatus) {
+    const idx = VOTANN_ASSET_CYCLE.indexOf(currentStatus || 'Locked');
+    return VOTANN_ASSET_CYCLE[(idx + 1) % VOTANN_ASSET_CYCLE.length];
+  }
+
