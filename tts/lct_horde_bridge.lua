@@ -297,3 +297,59 @@ function findShelfTemplateModel(templateName)
     return nil
 end
 
+function executeSpawnWave(cmd)
+    local offsetGroup = 0
+    for _, u in ipairs(cmd.units or {}) do
+        local tmpl = findShelfTemplateModel(u.templateName)
+        local cx = (tonumber(cmd.targetX) or 0) + offsetGroup
+        local cz = tonumber(cmd.targetZ) or 19.5
+        if tmpl then
+            local count = math.max(1, tonumber(u.count) or 1)
+            for i = 1, count do
+                local ox, oz = 0, 0
+                if count > 1 and i > 1 then
+                    local ang = ((i - 2) / (count - 1)) * (2 * math.pi)
+                    local rad = (i <= 7) and 1.35 or 2.6
+                    ox = math.cos(ang) * rad
+                    oz = math.sin(ang) * rad
+                end
+                local y = getSurfaceY(cx + ox, cz + oz, 0.5)
+                local cloned = tmpl.clone({ position = { x = cx + ox, y = y + 0.5, z = cz + oz } })
+                cloned.removeTag("HORDE_TEMPLATE")
+                cloned.addTag("HORDE")
+                cloned.setLock(false)
+                if cmd.facingY then cloned.setRotation({ x = 0, y = cmd.facingY, z = 0 }) end
+            end
+            printToAll("🧟 Spawned " .. count .. "x " .. u.templateName .. " in Zone " .. tostring(cmd.zone), {1, 0.45, 0.45})
+        else
+            spawnGhostRing({ targetX = cx, targetZ = cz, label = "Missing Shelf Template: " .. tostring(u.count) .. "x " .. tostring(u.templateName) })
+        end
+        offsetGroup = offsetGroup + 4.0
+    end
+    Wait.time(pushBoardTelemetry, 1.5)
+end
+
+function executeRevertMove(cmd)
+    for _, m in ipairs(cmd.models or {}) do
+        local obj = getObjectFromGUID(m.guid)
+        if obj then
+            obj.setPositionSmooth({ x = m.x, y = m.y or 1.1, z = m.z }, false, false)
+        end
+    end
+    printToAll("↩️ Reverted move for " .. tostring(cmd.unitName or "Horde Squad") .. " (LOS Check).", {0.95, 0.8, 0.3})
+    Wait.time(pushBoardTelemetry, 1.2)
+end
+
+function spawnGhostRing(cmd)
+    local y = getSurfaceY(cmd.targetX or 0, cmd.targetZ or 0, 0.05)
+    local ring = spawnObject({
+        type = "Custom_Tile",
+        position = { x = cmd.targetX or 0, y = y, z = cmd.targetZ or 0 },
+        scale = { x = 1.6, y = 0.1, z = 1.6 }
+    })
+    ring.setName("📍 " .. tostring(cmd.label or "Horde Waypoint"))
+    ring.setColorTint({ 1.0, 0.75, 0.15, 0.65 })
+    ring.setLock(true)
+end
+
+
