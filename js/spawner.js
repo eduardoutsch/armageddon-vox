@@ -91,6 +91,68 @@ function parseSpawnWaveSpec(entryStr, rng = Math.random) {
     .filter(Boolean);
 }
 
+/**
+ * Pure helper: parses an individual unit token (including optional embarked passengers and dice/integer counts).
+ *
+ * @param {string} token - Single unit segment from a wave option.
+ * @param {function(): number} [rng=Math.random] - Random float generator in [0, 1).
+ * @returns {{count: number, countExpr: string, templateName: string, embarked: object|null}|null}
+ */
+function parseSingleUnitToken(token, rng = Math.random) {
+  let working = String(token || '').trim();
+  if (!working) return null;
+
+  let embarked = null;
+  const embarkedMatch = working.match(/\[([^\]]+)\]\s*$/);
+  if (embarkedMatch) {
+    working = working.slice(0, embarkedMatch.index).trim();
+    embarked = parseSingleUnitToken(embarkedMatch[1], rng);
+  }
+
+  // Match dice count (e.g., "1D3", "2D6+2", "D3") or integer count (e.g., "10", "10x")
+  const diceMatch = working.match(/^(\d*)d(\d+)(?:\s*\+\s*(\d+))?\s+(.+)$/i);
+  if (diceMatch) {
+    const numDice = diceMatch[1] ? parseInt(diceMatch[1], 10) : 1;
+    const sides = parseInt(diceMatch[2], 10);
+    const flatBonus = diceMatch[3] ? parseInt(diceMatch[3], 10) : 0;
+    let total = flatBonus;
+    for (let i = 0; i < numDice; i++) {
+      total += Math.floor(rng() * sides) + 1;
+    }
+    const expr = `${numDice}D${sides}${flatBonus ? '+' + flatBonus : ''}`;
+    return {
+      count: Math.max(1, total),
+      countExpr: expr,
+      templateName: diceMatch[4].trim(),
+      embarked
+    };
+  }
+
+  const intMatch = working.match(/^(\d+)x?\s+(.+)$/i);
+  if (intMatch) {
+    return {
+      count: Math.max(1, parseInt(intMatch[1], 10)),
+      countExpr: intMatch[1],
+      templateName: intMatch[2].trim(),
+      embarked
+    };
+  }
+
+  return {
+    count: 1,
+    countExpr: '1',
+    templateName: working,
+    embarked
+  };
+}
+
+/**
+ * Picks a unit strictly from the active faction's shelf pool (zero hardcoded fallbacks).
+ *
+ * @param {string} bracketKey - Evaluated spawn bracket key ('3-4', '5-6', '7-9', '10-12', '13+').
+ * @param {function(): number} rng - Random float generator in [0, 1).
+ * @param {object|null} [customPoolMap=null] - Optional explicit bracket map override for pure tests.
+ * @returns {string} Chosen unit wave entry or explicit empty-pool warning.
  */
 function pickSyncedUnitFromBracket(bracketKey, rng, customPoolMap = null) {
   const idMap = { '3-4': 'pool34', '5-6': 'pool56', '7-9': 'pool79', '10+': 'pool10', '10-12': 'pool10', '13+': 'pool13' };
