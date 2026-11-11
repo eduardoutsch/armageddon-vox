@@ -174,3 +174,54 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
     assert.ok(typeof telRaw.units[0].closestObjective.distanceInches === 'number');
     assert.ok(telRaw.units[0].closestObjective.distanceInches > 6 && telRaw.units[0].closestObjective.distanceInches < 7);
 
+    // Subsequent pre-parsed units telemetry preserves locked Horde Warlord & sets up Autopilot check
+    const tel = await postJson(url1, '/tts/telemetry', {
+      units: [
+        {
+          squadKey: 'HORDE::Overlord',
+          guid: 'w2',
+          guids: ['w2'],
+          name: 'Overlord',
+          side: 'HORDE',
+          move: 5,
+          pos: { x: 0, z: 9 },
+          keywords: ['INFANTRY', 'CHARACTER'],
+          weapons: [{ name: 'Tachyon Arrow', type: 'ranged', rangeInches: 72, attacks: 1, skill: 2, strength: 16, ap: -5, damage: 'D6+2', keywords: [] }],
+          models: [{ guid: 'w2', pos: { x: 0, y: 1.1, z: 9 }, radiusInches: 0.78 }]
+        },
+        {
+          squadKey: 'PLAYER::Krieg',
+          guid: 'p1',
+          guids: ['p1'],
+          name: 'Death Korps',
+          side: 'PLAYER',
+          pos: { x: 0, z: 0 },
+          keywords: ['INFANTRY'],
+          models: [{ guid: 'p1', pos: { x: 0, y: 1.1, z: 0 }, radiusInches: 0.5 }]
+        }
+      ]
+    });
+    assert.equal(tel.warlord.name, 'Technomancer');
+
+    // Autopilot spawn-waves, select-shooting & movement -> enqueues SPAWN_WAVE & MOVE_UNIT
+    const spw = await postJson(url1, '/autopilot/spawn-waves', {
+      zoneSpawns: [{ zone: 1, bracketKey: '5-6', units: ['5 Immortals'] }]
+    });
+    assert.equal(spw.ok, true);
+    assert.equal((await (await fetch(`${url1}/tts/poll`)).json()).action, 'SPAWN_WAVE');
+
+    const sht = await postJson(url1, '/autopilot/select-shooting', {});
+    assert.equal(sht.ok, true);
+    assert.equal(sht.assignments.length, 1);
+
+    const mv = await postJson(url1, '/autopilot/plan-movement', {});
+    assert.equal(mv.ok, true);
+    assert.equal(mv.plans.length, 1);
+    const pollMv = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(pollMv.action, 'MOVE_UNIT');
+
+    const rev = await postJson(url1, '/autopilot/revert-move', { squadKey: 'HORDE::Overlord' });
+    assert.equal(rev.ok, true);
+    const pollRev = await (await fetch(`${url1}/tts/poll`)).json();
+    assert.equal(pollRev.action, 'REVERT_MOVE');
+
