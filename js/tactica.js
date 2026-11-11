@@ -46,3 +46,62 @@
     `;
   }
 
+  /**
+   * Idempotently projects explicit `clientState` and `localChronicle` onto the DOM.
+   */
+  function renderTacticaConsole() {
+    if (typeof document === 'undefined') return;
+    const badge = document.getElementById('tacticaDaemonBadge');
+    if (badge) {
+      badge.textContent = daemonOnline
+        ? '🟢 LCT TACTICA DAEMON ONLINE (127.0.0.1:3030 • Disk Scribe & LCT Mat Ready)'
+        : '🟡 OFFLINE TABLETOP MODE (Run `npm run tactica:daemon` for Automatic LCT Mat Polling)';
+    }
+
+    const setTxt = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(val);
+    };
+    setTxt('tacticaRoomLabel', clientState.roomCode || 'HADES-1');
+    setTxt('tacticaFactionLabel', clientState.factionName || 'Chaos Daemons');
+    setTxt('tacticaCpLabel', `${clientState.playerCp ?? 2} CP / ${clientState.playerSp ?? 0} SP`);
+    setTxt('tacticaWarlordLabel', clientState.hordeWarlord ? clientState.hordeWarlord.name : 'None Designated');
+
+    const pendingBox = document.getElementById('tacticaPendingRollBox');
+    if (pendingBox) {
+      const seq = clientState.pendingDiceSequence;
+      const chgCmd = (!seq && clientState.pendingChargeDecl) ? clientState.pendingChargeDecl.lctCommand : null;
+      const activeCmd = (seq && seq.nextCommand) ? seq.nextCommand : chgCmd;
+      const stageLabel = seq ? seq.stage : 'CHARGE_ROLL';
+      if (activeCmd) {
+        pendingBox.classList.remove('hidden');
+        pendingBox.innerHTML = `
+          <div style="font-weight:800; color:var(--gold);">🎲 AWAITING LCT DICE MAT [${stageLabel}]: ${activeCmd.label}</div>
+          <div style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
+            TTS LCT table rolls <strong>${activeCmd.count}D6</strong> automatically when connected, or enter settled mat pips below (comma-separated) if offline.
+          </div>
+        `;
+      } else {
+        pendingBox.classList.add('hidden');
+        pendingBox.innerHTML = '';
+      }
+    }
+
+    const reactBanner = document.getElementById('tacticaReactionBanner');
+    if (reactBanner) {
+      const win = clientState.pendingReactionWindow;
+      if (win && win.open) {
+        reactBanner.classList.remove('hidden');
+        const btns = win.eligibleStratagems.map(s =>
+          `<button type="button" class="btn-red btn-sm" onclick="resolveConsoleReaction('${s.key}', ${s.cpCost})">⚡ ${s.name} (-${s.cpCost} CP)</button>`
+        ).join(' ');
+        reactBanner.innerHTML = `
+          <div style="font-weight:800; color:var(--gold); margin-bottom:6px;">⚡ PLAYER REACTION WINDOW: ${win.title} (${win.playerCp} CP)</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">${btns} <button type="button" class="btn-ghost btn-sm" onclick="resolveConsoleReaction('PASS', 0)">Pass (Hold CP)</button></div>
+        `;
+      } else {
+        reactBanner.classList.add('hidden');
+        reactBanner.innerHTML = '';
+      }
+    }
+
