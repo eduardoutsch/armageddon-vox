@@ -224,3 +224,62 @@
         }
       }
 
+      if (minPlayerDist <= 2.0) {
+        plans.push({
+          squadKey: u.squadKey || u.name,
+          unitName: u.name,
+          guids: u.guids || originModels.map(m => m.guid),
+          status: 'ENGAGED_HOLD',
+          originModels
+        });
+        continue;
+      }
+
+      let closestObj = null;
+      let minObjDist = Infinity;
+      for (const o of objectives) {
+        const d = squadEdgeDistance(u, o);
+        if (d < minObjDist) {
+          minObjDist = d;
+          closestObj = o;
+        }
+      }
+
+      // Mode 3 Target Selection: closest Player unit (or closest Objective if tied / no Player units)
+      const pickObjective = (!closestPlayer && closestObj) ||
+        (closestPlayer && closestObj && Math.abs(minPlayerDist - minObjDist) <= 0.1);
+      const goalTarget = pickObjective ? closestObj : closestPlayer;
+
+      if (!goalTarget) continue;
+
+      const moveProfile = combatCore.resolveHordeMovementProfile(u, matchState, {
+        spawnedThisTurn: spawnedSet.has(u.squadKey),
+        withinRazorWire: razorWireSet.has(u.squadKey)
+      });
+
+      const goalDistEdge = pickObjective ? minObjDist : minPlayerDist;
+      const distAfterNormal = Math.max(0, goalDistEdge - moveProfile.effectiveMove);
+      const wantsAdvance = shouldUnitAdvance(u, moveProfile, distAfterNormal);
+      const extraAdvance = (wantsAdvance && typeof moveProfile.autoAdvance === 'number') ? moveProfile.autoAdvance : 0;
+      const moveBudgetInches = moveProfile.effectiveMove + extraAdvance;
+
+      const uRadius = u.models?.[0]?.radiusInches || 0.63;
+      const gRadius = goalTarget.models?.[0]?.radiusInches || goalTarget.radiusInches || 0.63;
+      const stopShortCenter = pickObjective ? 0 : (uRadius + gRadius + 2.1);
+
+      let step = stepTowardPoint(u.pos || { x: 0, z: 0 }, goalTarget.pos || { x: 0, z: 0 }, moveBudgetInches, stopShortCenter);
+      let detouredAroundObstacle = false;
+      let requiresGhostRing = false;
+
+      const hasFly = moveProfile.keywords.includes('FLY');
+      if (!hasFly) {
+        for (const obs of obstacles) {
+          if (!obs.solid) continue;
+          if (segmentIntersectsRect(u.pos || { x: 0, z: 0 }, step, obs)) {
+            const leftCorner = { x: obs.minX - 1.5, z: (obs.minZ + obs.maxZ) * 0.5 };
+            const rightCorner = { x: obs.maxX + 1.5, z: (obs.minZ + obs.maxZ) * 0.5 };
+            const pickCorner = Math.hypot(leftCorner.x - (u.pos?.x || 0), leftCorner.z - (u.pos?.z || 0)) <=
+                               Math.hypot(rightCorner.x - (u.pos?.x || 0), rightCorner.z - (u.pos?.z || 0))
+              ? leftCorner
+              : rightCorner;
+
