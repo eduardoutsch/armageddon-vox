@@ -200,3 +200,68 @@
     }
   }
 
+  function pingIntrusionFromTactica(zoneNum, bracketLabel, channel) {
+    const w = typeof window !== 'undefined' ? window : globalThis;
+    const state = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : {};
+    const payload = buildIntrusionVoxPayload({
+      zoneNum,
+      bracketLabel,
+      channel,
+      roomCode: state.roomCode,
+      battleRound: state.battleRound,
+      factionName: state.factionName
+    });
+    if (w.VoxAudio && typeof w.VoxAudio.transmitToVox === 'function') {
+      w.VoxAudio.transmitToVox(channel, payload);
+    }
+    return payload;
+  }
+
+  function exportTacticaToCrusade() {
+    if (typeof localStorage === 'undefined') return null;
+    const w = typeof window !== 'undefined' ? window : globalThis;
+    const state = typeof w.getTacticaClientState === 'function' ? w.getTacticaClientState() : {};
+    const chronicle = typeof w.getTacticaChronicle === 'function' ? w.getTacticaChronicle() : [];
+    let spawnerSession = {};
+    try {
+      const raw = localStorage.getItem('foa_horde_session_v1');
+      if (raw) spawnerSession = JSON.parse(raw);
+    } catch (e) {}
+
+    const snapshot = compileTacticaCrusadeSnapshot(state, chronicle, spawnerSession);
+    localStorage.setItem('foa_horde_battle_stats_v1', JSON.stringify(snapshot));
+    if (w.VoxAudio && typeof w.VoxAudio.playPowerSurge === 'function') w.VoxAudio.playPowerSurge();
+
+    const notice = typeof document !== 'undefined' ? document.getElementById('tacticaCrusadeExportNotice') : null;
+    if (notice) {
+      notice.classList.remove('hidden');
+      notice.innerHTML = `✅ Exported to Mode 5 Crusade Quartermaster (${snapshot.hordeKills} Horde Units Wiped • R${snapshot.roundsPlayed} • ${snapshot.leftoverSp} Leftover SP)! <a href="crusade.html" style="color:var(--gold); text-decoration:underline;">Open Crusade Command &rarr;</a>`;
+    }
+    return snapshot;
+  }
+
+  if (typeof window !== 'undefined') {
+    Object.assign(window, {
+      toggleTtsScreenCapture,
+      toggleOverwatchVoiceOutput,
+      startPushToTalkMic,
+      runOverwatchLosCheck,
+      dispatchSpokenOrTypedCommand,
+      syncOverwatchAlertsFromState,
+      pingIntrusionFromTactica,
+      exportTacticaToCrusade
+    });
+  }
+
+  return {
+    toggleTtsScreenCapture,
+    toggleOverwatchVoiceOutput,
+    startPushToTalkMic,
+    runOverwatchLosCheck,
+    dispatchSpokenOrTypedCommand,
+    syncOverwatchAlertsFromState,
+    pingIntrusionFromTactica,
+    exportTacticaToCrusade
+  };
+});
+
