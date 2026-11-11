@@ -13,6 +13,10 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   const html = fs.readFileSync(path.join(ROOT_DIR, 'pages/tactica.html'), 'utf8');
   assert.ok(html.includes('href="../index.html" class="suite-link'), 'Must include root index suite-link');
   assert.ok(html.includes('href="briefing.html" class="suite-link'), 'Must include briefing suite-link');
+  assert.ok(html.includes('href="spawner.html"'), 'Sticky bar must include href="spawner.html" return button');
+  assert.ok(html.includes('id="pttStatusPill"'), 'Sticky bar must include #pttStatusPill');
+  assert.ok(html.includes('id="tacticaModeHorde"') && html.includes('id="tacticaModePlayer"') && html.includes('id="tacticaModeExport"'), 'Must include 3-mode progressive panels');
+  assert.ok(html.includes('id="tacticaBoardDrawer"') && html.includes('id="tacticaChronicleDrawer"'), 'Must include collapsed bottom utility drawers');
   assert.ok(html.includes('<link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">'), 'Must link favicon');
   assert.ok(html.includes('<script src="../js/spawner.js"></script>'), 'Must link spawner.js');
   assert.ok(html.includes('<script src="../js/tts-telemetry-core.js"></script>'), 'Must link tts-telemetry-core.js');
@@ -81,7 +85,14 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     'defDmgInput', 'defInSpawnCheck', 'defResultBox', 'tacticaReportChannel',
     'tacticaOutcomeInput', 'tacticaCompiledPreview',
     'overwatchScreenStatus', 'tacticaIntrusionAlertBox', 'btnToggleOverwatchTts',
-    'overwatchQueryInput', 'overwatchVerdictBox', 'tacticaCrusadeExportNotice'
+    'overwatchQueryInput', 'overwatchVerdictBox', 'tacticaCrusadeExportNotice',
+    'pttStatusPill', 'tacticaModeHorde', 'tacticaModePlayer', 'tacticaModeExport',
+    'btnTacticaModeHorde', 'btnTacticaModePlayer', 'btnTacticaModeExport',
+    'hordeStepPanel1', 'hordeStepPanel2', 'hordeStepPanel3', 'hordeStepPanel4',
+    'hordeStepBtn1', 'hordeStepBtn2', 'hordeStepBtn3', 'hordeStepBtn4',
+    'tacticaLosBar', 'tacticaHordeTargetChips', 'tacticaUnitCountSummary',
+    'tacticaLatestLogSummary', 'tacticaPendingRollStrip', 'quickStratTargetSelect',
+    'quickStratNameInput', 'quickStratCategorySelect', 'quickStratCoreSelect'
   ].forEach(id => { els[id] = makeEl(); });
 
   els.defUnitName.value = 'Necron Warriors';
@@ -257,6 +268,51 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.equal(await overwatch.toggleTtsScreenCapture(), false);
   await overwatch.dispatchSpokenOrTypedCommand('Can Skorpekh see Cadians behind central ruin?');
   assert.ok(els.overwatchVerdictBox.innerHTML.includes('offline'));
+
+  // 3-Mode Progressive Switcher & Guided 4-Step Horde Sub-Bar
+  assert.equal(typeof tactica.switchTacticaMode, 'function');
+  tactica.switchTacticaMode('player');
+  assert.equal(els.tacticaModeHorde.classList.contains('hidden'), true, 'switchTacticaMode("player") must hide #tacticaModeHorde');
+  assert.equal(els.tacticaModePlayer.classList.contains('hidden'), false, 'switchTacticaMode("player") must reveal #tacticaModePlayer');
+  assert.equal(els.tacticaModeExport.classList.contains('hidden'), true);
+
+  tactica.switchTacticaMode('export');
+  assert.equal(els.tacticaModePlayer.classList.contains('hidden'), true);
+  assert.equal(els.tacticaModeExport.classList.contains('hidden'), false);
+
+  tactica.switchTacticaMode('horde');
+  tactica.setHordeTurnStep(1);
+  assert.equal(els.tacticaLosBar.classList.contains('hidden'), true, 'LOS bar stays tucked in Step 1 (Spawn)');
+  tactica.setHordeTurnStep(2);
+  assert.equal(els.tacticaLosBar.classList.contains('hidden'), false, 'LOS bar reveals in Step 2 (Move & LOS)');
+
+  // Hold-[Space] / [V] Push-to-Talk Hotkey (ignores INPUT/TEXTAREA/SELECT)
+  let spacePrevented = false;
+  overwatch.handlePttKeyDown({ code: 'Space', preventDefault: () => { spacePrevented = true; }, target: { tagName: 'INPUT' } });
+  assert.equal(spacePrevented, false, 'handlePttKeyDown must ignore editable INPUT targets');
+  assert.equal(els.pttStatusPill.classList.contains('ptt-active'), false);
+
+  overwatch.handlePttKeyDown({ code: 'Space', preventDefault: () => { spacePrevented = true; }, target: { tagName: 'BODY' } });
+  assert.equal(spacePrevented, true, 'handlePttKeyDown must activate PTT on BODY');
+  assert.equal(els.pttStatusPill.classList.contains('ptt-active'), true);
+  overwatch.handlePttKeyUp({ code: 'Space' });
+  assert.equal(els.pttStatusPill.classList.contains('ptt-active'), false);
+
+  // Spoken Player Stratagem fuzzy-matching & Mode 1 session sync
+  tactica.getTacticaClientState().playerCp = 3;
+  tactica.getTacticaClientState().boardTelemetry.units.push({
+    squadKey: 'PLAYER::Einhyr Hearthguard',
+    name: 'Einhyr Hearthguard',
+    side: 'PLAYER',
+    modelCount: 5,
+    save: 2
+  });
+  await overwatch.dispatchSpokenOrTypedCommand('Stratagem Void Armour on Hearthguard, one CP');
+  assert.equal(tactica.getTacticaClientState().playerCp, 2, 'Vocal stratagem must deduct 1 CP');
+  assert.ok(els.tacticaChronicleBox.innerHTML.includes('Void Armour on Einhyr Hearthguard'), 'Must fuzzy-match scanned PLAYER unit name into chronicle');
+  const syncedSession = JSON.parse(store.get('foa_horde_session_v1'));
+  assert.equal(syncedSession.cp, 2, 'Updated CP must sync back to foa_horde_session_v1');
+  assert.equal(syncedSession.stratCount, 1, '1+ CP Stratagem must increment stratCount for Secret #20');
 
   delete globalThis.localStorage;
   delete globalThis.document;

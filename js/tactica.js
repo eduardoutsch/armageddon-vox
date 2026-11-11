@@ -19,6 +19,83 @@
   let localChronicle = [];
   let daemonOnline = false;
   let lastCompiledReport = '';
+  let activeTacticaMode = 'horde';
+  let activeHordeStep = 1;
+
+  /**
+   * Switches between the 3 progressive Tactica panels (`'horde'`, `'player'`, `'export'`).
+   *
+   * @param {'horde'|'player'|'export'} [mode='horde'] - Active console mode.
+   * @returns {string} Active mode key.
+   */
+  function switchTacticaMode(mode = 'horde') {
+    const m = (mode === 'player' || mode === 'export') ? mode : 'horde';
+    activeTacticaMode = m;
+    if (typeof document === 'undefined') return m;
+
+    const map = [
+      { key: 'horde', panelId: 'tacticaModeHorde', btnId: 'btnTacticaModeHorde' },
+      { key: 'player', panelId: 'tacticaModePlayer', btnId: 'btnTacticaModePlayer' },
+      { key: 'export', panelId: 'tacticaModeExport', btnId: 'btnTacticaModeExport' }
+    ];
+    for (const item of map) {
+      const panel = document.getElementById(item.panelId);
+      const btn = document.getElementById(item.btnId);
+      const isCurrent = item.key === m;
+      if (panel) panel.classList.toggle('hidden', !isCurrent);
+      if (btn) btn.classList.toggle('active', isCurrent);
+    }
+    return m;
+  }
+
+  /**
+   * Selects the active Horde Turn sub-step (1: Spawn, 2: Move & LOS, 3: Shoot, 4: Charge & Consolidate),
+   * revealing `#tacticaLosBar` strictly inside Step 2 and Step 3 where 3D LOS applies.
+   *
+   * @param {number} [step=1] - Sub-step index (1–4).
+   * @returns {number} Clamped active step.
+   */
+  function setHordeTurnStep(step = 1) {
+    const s = Math.max(1, Math.min(4, Number(step) || 1));
+    activeHordeStep = s;
+    if (typeof document === 'undefined') return s;
+
+    for (let i = 1; i <= 4; i++) {
+      const p = document.getElementById(`hordeStepPanel${i}`);
+      const b = document.getElementById(`hordeStepBtn${i}`);
+      if (p) p.classList.toggle('hidden', i !== s);
+      if (b) b.classList.toggle('active', i === s);
+    }
+    const losBar = document.getElementById('tacticaLosBar');
+    if (losBar) losBar.classList.toggle('hidden', s !== 2 && s !== 3);
+    return s;
+  }
+
+  /**
+   * Adjusts live Player Command Points from the Sticky Bar and syncs back to `foa_horde_session_v1`.
+   *
+   * @param {number} [delta=0] - Signed CP delta (`+1` or `-1`).
+   * @returns {Promise<number>} Updated Player CP total.
+   */
+  async function adjustTacticaCp(delta = 0) {
+    const nextCp = Math.max(0, (Number(clientState.playerCp) || 0) + (Number(delta) || 0));
+    clientState.playerCp = nextCp;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('foa_horde_session_v1');
+        const sess = raw ? JSON.parse(raw) : {};
+        sess.cp = nextCp;
+        localStorage.setItem('foa_horde_session_v1', JSON.stringify(sess));
+      } catch (e) {}
+    }
+    try {
+      const res = await daemonRequest('/session/sync', 'POST', { playerCp: nextCp });
+      daemonOnline = true;
+      clientState = res.state;
+    } catch (e) {}
+    renderTacticaConsole();
+    return clientState.playerCp;
+  }
 
   async function daemonRequest(route, method = 'GET', body = null) {
     if (typeof fetch !== 'function') throw new Error('No fetch');
@@ -68,6 +145,7 @@
     setTxt('tacticaWarlordLabel', clientState.hordeWarlord ? clientState.hordeWarlord.name : 'None Designated');
 
     const pendingBox = document.getElementById('tacticaPendingRollBox');
+    const pendingStrip = document.getElementById('tacticaPendingRollStrip');
     if (pendingBox) {
       const seq = clientState.pendingDiceSequence;
       const chgCmd = (!seq && clientState.pendingChargeDecl) ? clientState.pendingChargeDecl.lctCommand : null;
@@ -75,14 +153,16 @@
       const stageLabel = seq ? seq.stage : 'CHARGE_ROLL';
       if (activeCmd) {
         pendingBox.classList.remove('hidden');
+        if (pendingStrip) pendingStrip.classList.remove('hidden');
         pendingBox.innerHTML = `
           <div style="font-weight:800; color:var(--gold);">🎲 AWAITING LCT DICE MAT [${stageLabel}]: ${activeCmd.label}</div>
           <div style="font-size:0.8rem; color:var(--muted); margin-top:4px;">
-            TTS LCT table rolls <strong>${activeCmd.count}D6</strong> automatically when connected, or enter settled mat pips below (comma-separated) if offline.
+            TTS LCT table rolls <strong>${activeCmd.count}D6</strong> automatically when connected, or open Offline Manual Pip Entry below.
           </div>
         `;
       } else {
         pendingBox.classList.add('hidden');
+        if (pendingStrip) pendingStrip.classList.add('hidden');
         pendingBox.innerHTML = '';
       }
     }
@@ -105,9 +185,32 @@
       }
     }
 
+    const units = clientState.boardTelemetry?.units || [];
+    setTxt('tacticaUnitCountSummary', `${units.length} Unit${units.length === 1 ? '' : 's'}`);
+
+    const chipsBox = document.getElementById('tacticaHordeTargetChips');
+    if (chipsBox) {
+      const hordeUnits = units.map((u, idx) => ({ u, idx })).filter(x => x.u.side !== 'PLAYER');
+      const curTarget = document.getElementById('defUnitName')?.value || '';
+      chipsBox.innerHTML = hordeUnits.length === 0
+        ? '<span style="font-size:0.8rem; color:var(--muted);">No scanned Horde targets yet — open Scanned Board Units below or Override Yellowscribe Stats.</span>'
+        : hordeUnits.map(({ u, idx }) => {
+          const isSel = u.name === curTarget;
+          return `<button type="button" class="${isSel ? 'btn-red' : 'btn-ghost'} btn-sm" onclick="selectTelemetryUnitForDefense(${idx})">🎯 ${u.name} (x${u.modelCount || 1} • Sv ${u.save || 4}+)</button>`;
+        }).join('');
+    }
+
+    const stratTargetSel = document.getElementById('quickStratTargetSelect');
+    if (stratTargetSel) {
+      const prevVal = stratTargetSel.value || '';
+      const playerUnits = units.filter(u => u.side === 'PLAYER');
+      stratTargetSel.innerHTML = '<option value="">(Any / Untargeted)</option>' +
+        playerUnits.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+      if (prevVal && playerUnits.some(u => u.name === prevVal)) stratTargetSel.value = prevVal;
+    }
+
     const telBox = document.getElementById('tacticaTelemetryBox');
     if (telBox) {
-      const units = clientState.boardTelemetry?.units || [];
       if (units.length === 0) {
         telBox.innerHTML = '<div style="color:var(--muted); font-style:italic;">No LCT tabletop scan received yet. Click [📡 Scan LCT Board] on your TTS Beacon token or request a scan above.</div>';
       } else {
@@ -134,6 +237,9 @@
         }).join('');
       }
     }
+
+    const lastLog = localChronicle.length > 0 ? localChronicle[localChronicle.length - 1] : null;
+    setTxt('tacticaLatestLogSummary', lastLog ? `R${lastLog.battleRound} • ${lastLog.type}` : 'Ready');
 
     const box = document.getElementById('tacticaChronicleBox');
     if (box) {
@@ -409,6 +515,7 @@
     setVal('defModelsInput', u.modelCount || 1);
     const spCheck = document.getElementById('defInSpawnCheck');
     if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
+    renderTacticaConsole();
     return u;
   }
 
@@ -455,6 +562,7 @@
    * 1. Clones off-board `HORDE_TEMPLATE` miniatures into active Mode 1 Spawn Zones.
    */
   async function triggerAutopilotSpawnWaves() {
+    setHordeTurnStep(1);
     let plan;
     try {
       const res = await daemonRequest('/autopilot/spawn-waves', 'POST', { zoneSpawns: clientState.zoneSpawns });
@@ -474,6 +582,7 @@
    * 2. Computes deterministic Horde Movement & Advance vectors with one-click Pre-Overwatch LOS Revert buttons.
    */
   async function triggerAutopilotMovement() {
+    setHordeTurnStep(2);
     clientState.phase = 'HORDE_MOVEMENT';
     let plans = [];
     try {
@@ -538,6 +647,7 @@
    * 3. Computes Mode 3 Keyword-Driven Shooting Target Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`) & 11th Ed Hidden caps.
    */
   async function triggerAutopilotShooting() {
+    setHordeTurnStep(3);
     clientState.phase = 'HORDE_SHOOTING';
     let assignments = [];
     try {
@@ -595,6 +705,7 @@
    * 4. Declares eligible Horde Charges (`<= 12"`), opens Heroic Intervention, and queues `2D6` on the LCT Mat.
    */
   async function triggerAutopilotCharges() {
+    setHordeTurnStep(4);
     clientState.phase = 'HORDE_CHARGE';
     let declarations = [];
     try {
@@ -625,6 +736,7 @@
    * 5. Executes 11th Edition 3-Tier `3"` Consolidation (`ONGOING` -> `ENGAGING` -> `OBJECTIVE` -> `HOLD`).
    */
   async function triggerAutopilotConsolidate() {
+    setHordeTurnStep(4);
     clientState.phase = 'HORDE_FIGHT';
     let moves = [];
     try {
@@ -651,6 +763,8 @@
   }
 
   function initTacticaPage() {
+    switchTacticaMode(activeTacticaMode);
+    setHordeTurnStep(activeHordeStep);
     syncFromSpawnerStorage().then(() => refreshDaemonState());
   }
 
@@ -658,6 +772,9 @@
     Object.assign(window, {
       getTacticaClientState: () => clientState,
       getTacticaChronicle: () => localChronicle,
+      switchTacticaMode,
+      setHordeTurnStep,
+      adjustTacticaCp,
       syncFromSpawnerStorage,
       refreshDaemonState,
       setConsolePhaseAndTrigger,
@@ -690,6 +807,9 @@
   return {
     getTacticaClientState: () => clientState,
     getTacticaChronicle: () => localChronicle,
+    switchTacticaMode,
+    setHordeTurnStep,
+    adjustTacticaCp,
     refreshDaemonState,
     syncFromSpawnerStorage,
     setConsolePhaseAndTrigger,

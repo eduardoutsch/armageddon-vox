@@ -232,12 +232,14 @@ test('Documentation Boundary: breakdown bundle markdown files exist for each pag
     { file: 'bundle_crusade_core.md', check: 'js/crusade-core.js' },
     { file: 'bundle_horde_combat.md', check: 'js/horde-combat-modifiers.js' },
     { file: 'bundle_tactica.md', check: 'pages/tactica.html' },
+    { file: 'bundle_tactica_controller.md', check: 'js/tactica.js' },
     { file: 'bundle_tactica_core.md', check: 'js/tactica-core.js' },
     { file: 'bundle_tactica_daemon.md', check: 'tactica_daemon.js' },
     { file: 'bundle_tts_bridge.md', check: 'js/tts-telemetry-core.js' },
     { file: 'bundle_tests_tts_tactica.md', check: 'tests/js/tts-telemetry-core.test.js' },
     { file: 'bundle_horde_autopilot.md', check: 'js/horde-autopilot-core.js' },
     { file: 'bundle_tactica_overwatch.md', check: 'js/tactica-overwatch-core.js' },
+    { file: 'bundle_tactica_overwatch_shell.md', check: 'js/tactica-overwatch.js' },
     { file: 'bundle_vox.md', check: 'pages/vox.html' },
     { file: 'bundle_welcome.md', check: 'pages/welcome.html' },
     { file: 'bundle_css.md', check: 'css/style.css' },
@@ -511,7 +513,7 @@ test('E2E Integration: seamless router supports multi-page navigation (vox -> ro
     const rosterLink = await page.$('a[href*="roster.html"]');
     assert.ok(rosterLink, 'Roster link must exist in navigation bar');
     await rosterLink.click();
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => typeof window.switchRosterTab === 'function', null, { timeout: 5000 });
 
     // 3. Verify roster functions are defined and not aborted by syntax error
     const switchTabType = await page.evaluate(() => typeof window.switchRosterTab);

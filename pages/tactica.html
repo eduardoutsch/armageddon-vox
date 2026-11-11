@@ -7,6 +7,61 @@
   <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
   <link rel="apple-touch-icon" href="../assets/favicon.svg">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .tactica-sticky-bar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(11, 13, 19, 0.96);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-bottom: 2px solid var(--gold);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .tactica-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #111520;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.8rem;
+    }
+    .ptt-pill {
+      cursor: pointer;
+      border-color: rgba(245, 176, 65, 0.45);
+      color: var(--gold);
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+    .ptt-pill.ptt-active {
+      background: rgba(255, 71, 87, 0.22);
+      border-color: var(--red);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(255, 71, 87, 0.45);
+    }
+    .tactica-mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .tactica-mode-btn.active {
+      border-color: var(--gold);
+      background: rgba(245, 176, 65, 0.16);
+      color: var(--gold);
+      font-weight: 800;
+    }
+    .horde-step-btn.active {
+      border-color: var(--green);
+      background: rgba(46, 204, 113, 0.16);
+      color: #fff;
+      font-weight: 700;
+    }
+  </style>
 </head>
 <body>
 
@@ -22,134 +77,189 @@
   </nav>
 
   <div class="app-shell">
-    <div class="hero-banner">
-      <div id="tacticaDaemonBadge" class="status-pill" style="margin-bottom:8px;">🟡 Checking LCT Tactica Daemon...</div>
-      <h1>In-Match Tactical &amp; LCT Autopilot Console</h1>
-      <p>100% LCT TTS Map Dice Roller Orchestration • Persistent Round 1–6 Scribe • Separate from Live Vox</p>
-    </div>
+    <!-- 1. STICKY COMMAND BAR -->
+    <div class="tactica-sticky-bar">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+          <a href="spawner.html" class="btn-ghost btn-sm" style="text-decoration:none;">🧟 &larr; Mode 1 Spawner</a>
+          <span class="tactica-pill"><strong>Room:</strong> <span id="tacticaRoomLabel">HADES-1</span></span>
+          <select id="tacticaRoundSelect" style="padding:4px 8px; background:#0b0d13; font-size:0.8rem;" onchange="setConsolePhaseAndTrigger(document.getElementById('tacticaPhaseSelect').value)">
+            <option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option>
+            <option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Round 6 (Final Stand)</option>
+          </select>
+          <select id="tacticaPhaseSelect" class="hidden" onchange="setConsolePhaseAndTrigger(this.value)">
+            <option value="COMMAND_SPAWN">1. Command &amp; Wave Spawns</option>
+            <option value="HORDE_MOVEMENT">2. Horde Movement</option>
+            <option value="HORDE_SHOOTING">3. Horde Shooting</option>
+            <option value="HORDE_CHARGE">4. Horde Charges</option>
+            <option value="HORDE_FIGHT">5. Horde Fight &amp; Consolidate</option>
+            <option value="PLAYER_TURN">6. Player Turn</option>
+            <option value="ROUND_END">7. End of Round</option>
+          </select>
+          <span class="tactica-pill"><strong>Horde:</strong> <span id="tacticaFactionLabel" style="color:var(--gold);">Chaos Daemons</span></span>
+          <span class="tactica-pill">
+            <button type="button" class="btn-ghost btn-sm" style="padding:1px 6px;" onclick="adjustTacticaCp(-1)">&minus;</button>
+            <strong id="tacticaCpLabel">2 CP / 0 SP</strong>
+            <button type="button" class="btn-ghost btn-sm" style="padding:1px 6px;" onclick="adjustTacticaCp(1)">+</button>
+          </span>
+        </div>
 
-    <!-- 1. LIVE SESSION & REACTION WINDOWS -->
-    <div class="card green" style="margin-bottom:14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+          <span id="pttStatusPill" class="tactica-pill ptt-pill" onclick="startPushToTalkMic()">🎙️ Hold [SPACE] or [V] to Talk</span>
+          <button type="button" class="btn-ghost btn-sm" onclick="toggleTtsScreenCapture()">🖥️ Share TTS <span id="overwatchScreenStatus" style="font-size:0.74rem; color:var(--muted);">📷 Off</span></button>
+          <button type="button" id="btnToggleOverwatchTts" class="btn-ghost btn-sm" onclick="toggleOverwatchVoiceOutput()">🔊 Auspex Voice: ON</button>
+          <button type="button" class="btn-green btn-sm" onclick="syncFromSpawnerStorage()">🔄 Sync</button>
+          <button type="button" class="btn-ghost btn-sm" onclick="refreshDaemonState()">📡 Poll</button>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px; font-size:0.76rem; color:var(--muted);">
+        <div id="tacticaDaemonBadge">🟡 Checking LCT Tactica Daemon...</div>
         <div>
-          <strong>Room:</strong> <span id="tacticaRoomLabel">HADES-1</span> •
-          <strong>Horde:</strong> <span id="tacticaFactionLabel" style="color:var(--gold);">Chaos Daemons</span> •
-          <strong>Assets:</strong> <span id="tacticaCpLabel">2 CP / 0 SP</span> •
-          <strong>Warlord:</strong> <span id="tacticaWarlordLabel">None Designated</span> •
-          <strong>LCT Queue:</strong> <span id="tacticaQueueLabel">0 Queued</span>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <button type="button" class="btn-ghost btn-sm" onclick="refreshDaemonState()">📡 Poll LCT Daemon</button>
-          <button type="button" class="btn-green btn-sm" onclick="syncFromSpawnerStorage()">🔄 Sync Mode 1 Session</button>
+          Warlord: <strong id="tacticaWarlordLabel" style="color:var(--text);">None Designated</strong> •
+          LCT Queue: <strong id="tacticaQueueLabel" style="color:var(--text);">0 Queued</strong>
         </div>
       </div>
 
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <select id="tacticaRoundSelect" style="padding:6px 10px; background:#0b0d13;">
-          <option value="1">Round 1</option><option value="2">Round 2</option><option value="3">Round 3</option>
-          <option value="4">Round 4</option><option value="5">Round 5</option><option value="6">Round 6 (Final Stand)</option>
-        </select>
-        <select id="tacticaPhaseSelect" style="padding:6px 10px; background:#0b0d13;" onchange="setConsolePhaseAndTrigger(this.value)">
-          <option value="COMMAND_SPAWN">1. Command &amp; Wave Spawns</option>
-          <option value="HORDE_MOVEMENT">2. Horde Movement</option>
-          <option value="HORDE_SHOOTING">3. Horde Shooting</option>
-          <option value="HORDE_CHARGE">4. Horde Charges</option>
-          <option value="HORDE_FIGHT">5. Horde Fight &amp; Consolidate</option>
-          <option value="PLAYER_TURN">6. Player Turn</option>
-          <option value="ROUND_END">7. End of Round</option>
-        </select>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">⏸️ End Horde Move (Overwatch)</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_CHARGE', 'HORDE_CHARGE_DECLARED')">⏸️ Charge Declared (Heroic)</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_FIGHT', 'AFTER_HORDE_UNIT_FOUGHT')">⏸️ Counter-Offensive</button>
-      </div>
+      <!-- Compact [ ⚡ Stratagem ] Drawer in Sticky Bar -->
+      <details id="tacticaQuickStratDrawer" style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px;">
+        <summary style="cursor:pointer; font-size:0.8rem; color:var(--gold); font-weight:700;">⚡ Quick Player Stratagem (or Hold [SPACE]/[V] &amp; speak "Stratagem Void Armour on Hearthguard, 1 CP")</summary>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+          <select id="quickStratCategorySelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;" onchange="toggleQuickStratCategory()">
+            <option value="FACTION">Faction Stratagem</option>
+            <option value="CORE">11th Ed Core Stratagem</option>
+          </select>
+          <input id="quickStratNameInput" placeholder="Stratagem Name (e.g. Void Armour)" style="padding:5px 8px; background:#0b0d13; min-width:190px; flex:1;">
+          <select id="quickStratCoreSelect" class="hidden" style="padding:5px 8px; background:#0b0d13; min-width:190px; flex:1;">
+            <option value="Fire Overwatch">Fire Overwatch (1 CP)</option>
+            <option value="Smokescreen">Smokescreen (1 CP)</option>
+            <option value="Go to Ground">Go to Ground (1 CP)</option>
+            <option value="Heroic Intervention">Heroic Intervention (1 CP)</option>
+            <option value="Counter-Offensive">Counter-Offensive (2 CP)</option>
+            <option value="Rapid Ingress">Rapid Ingress (1 CP • R2+)</option>
+            <option value="Command Re-roll">Command Re-roll (1 CP)</option>
+            <option value="Crushing Impact">Crushing Impact (1 CP)</option>
+            <option value="Explosives">Explosives (1 CP)</option>
+            <option value="Insane Bravery">Insane Bravery (1 CP)</option>
+            <option value="Epic Challenge">Epic Challenge (1 CP)</option>
+          </select>
+          <span style="font-size:0.8rem; color:var(--muted);">on</span>
+          <select id="quickStratTargetSelect" style="padding:5px 8px; background:#0b0d13; font-size:0.8rem;">
+            <option value="">(Any / Untargeted)</option>
+          </select>
+          <button type="button" class="btn-ghost btn-sm" onclick="triggerQuickStratagem(0)">0 CP</button>
+          <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(1)">1 CP</button>
+          <button type="button" class="btn-red btn-sm" onclick="triggerQuickStratagem(2)">2 CP</button>
+        </div>
+      </details>
 
-      <div id="tacticaReactionBanner" class="card hidden" style="margin-top:10px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.1);"></div>
+      <div id="tacticaReactionBanner" class="card hidden" style="margin-top:8px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.1);"></div>
     </div>
 
-    <!-- 1B. LIVE LCT ORBITAL AUSPEX TELEMETRY -->
-    <div class="card" style="margin-bottom:14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-        <h3 style="margin:0;">🛰️ LCT Orbital Auspex Telemetry (Exact Edge-to-Edge Inches)</h3>
-        <button type="button" class="btn-ghost btn-sm" onclick="requestTtsBoardScan()">📡 Request LCT Board Scan</button>
-      </div>
-      <div id="tacticaTelemetryBox" style="max-height:200px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border);"></div>
+    <!-- 2. CONTEXTUAL POP-UP STRIP (HIDDEN WHEN IDLE) -->
+    <div id="tacticaIntrusionAlertBox" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--red); background:rgba(255,71,87,0.12);"></div>
+
+    <div id="tacticaPendingRollStrip" class="card hidden" style="margin-bottom:12px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.08);">
+      <div id="tacticaPendingRollBox" class="hidden"></div>
+      <details style="margin-top:8px;">
+        <summary style="cursor:pointer; font-size:0.8rem; color:var(--muted);">Offline Manual Pip Entry</summary>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <input id="tacticaManualPipsInput" placeholder="Enter settled LCT mat pips (e.g. 5, 2, 4, 6)" style="flex:1; padding:6px 8px; background:#0b0d13;">
+          <button type="button" class="btn-ghost btn-sm" onclick="submitSettledMatPips()">✓ Apply Settled Pips</button>
+        </div>
+      </details>
     </div>
 
-    <!-- 1C. DETERMINISTIC HORDE AUTOPILOT DECK -->
-    <div class="card" style="margin-bottom:14px;">
-      <h3>🤖 Horde Turn Autopilot (Shelf Cloning • Pre-LOS Revert • Keyword Priority • 11th Ed Consolidation)</h3>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-        <button type="button" class="btn-green btn-sm" onclick="triggerAutopilotSpawnWaves()">🧟 1. Drop Wave Spawns</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotMovement()">🏃 2. Move Horde (Pre-LOS Preview)</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">✅ Lock Moves &amp; Open Overwatch</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotShooting()">🎯 3. Compute Shooting Priority</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotCharges()">⚡ 4. Declare Charges (&le;12")</button>
-        <button type="button" class="btn-ghost btn-sm" onclick="triggerAutopilotConsolidate()">⚔️ 5. 3" Consolidate</button>
+    <!-- 3. 3-TAB PROGRESSIVE MODE SWITCHER -->
+    <div class="tactica-mode-tabs">
+      <button type="button" id="btnTacticaModeHorde" class="btn-ghost tactica-mode-btn active" onclick="switchTacticaMode('horde')">🧟 1. Horde Turn</button>
+      <button type="button" id="btnTacticaModePlayer" class="btn-ghost tactica-mode-btn" onclick="switchTacticaMode('player')">🛡️ 2. Your Turn — Attack Horde</button>
+      <button type="button" id="btnTacticaModeExport" class="btn-ghost tactica-mode-btn" onclick="switchTacticaMode('export')">🏆 3. End Match &amp; Export</button>
+    </div>
+
+    <!-- PANEL 1: HORDE TURN (DEFAULT VISIBLE) -->
+    <div id="tacticaModeHorde" class="card" style="margin-bottom:14px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" id="hordeStepBtn1" class="btn-ghost btn-sm horde-step-btn active" onclick="setHordeTurnStep(1)">1. Spawn</button>
+        <button type="button" id="hordeStepBtn2" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(2)">2. Move &amp; LOS</button>
+        <button type="button" id="hordeStepBtn3" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(3)">3. Shoot</button>
+        <button type="button" id="hordeStepBtn4" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(4)">4. Charge &amp; Consolidate</button>
       </div>
+
+      <div id="hordeStepPanel1" style="margin-bottom:10px;">
+        <button type="button" class="btn-green" onclick="triggerAutopilotSpawnWaves()">🧟 Drop Wave Spawns onto LCT Playmat</button>
+      </div>
+
+      <div id="hordeStepPanel2" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="btn-green" onclick="triggerAutopilotMovement()">🏃 Move Horde (Pre-LOS Preview)</button>
+        <button type="button" class="btn-ghost" onclick="setConsolePhaseAndTrigger('HORDE_MOVEMENT', 'END_OF_HORDE_MOVEMENT')">✅ Lock Moves &amp; Check Overwatch</button>
+      </div>
+
+      <div id="hordeStepPanel3" class="hidden" style="margin-bottom:10px;">
+        <button type="button" class="btn-red" onclick="triggerAutopilotShooting()">🎯 Compute Shooting Target Priority</button>
+      </div>
+
+      <div id="hordeStepPanel4" class="hidden" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="btn-red" onclick="triggerAutopilotCharges()">⚡ Declare Charges (&le;12")</button>
+        <button type="button" class="btn-ghost" onclick="triggerAutopilotConsolidate()">⚔️ 3" Consolidate</button>
+      </div>
+
       <div id="tacticaAutopilotBox" style="background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); font-size:0.84rem; color:var(--text);">
         Ready. Sync Mode 1 Session &amp; scan LCT board to pilot Horde waves automatically.
       </div>
+
+      <!-- Contextual 3D LOS Bar (Visible inside Step 2 Move & LOS and Step 3 Shoot) -->
+      <div id="tacticaLosBar" class="hidden" style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+        <div style="display:flex; gap:8px;">
+          <input id="overwatchQueryInput" placeholder="Ask 3D Ruin LOS or type command (e.g. 'Can Screamer-Killer see Krieg behind central ruin?')" style="flex:1; padding:8px; background:#0b0d13;">
+          <button type="button" class="btn-ghost btn-sm" onclick="dispatchSpokenOrTypedCommand(document.getElementById('overwatchQueryInput').value)">👁️ Verify 3D LOS</button>
+        </div>
+        <div id="overwatchVerdictBox" style="margin-top:8px; font-size:0.84rem; color:var(--text);"></div>
+      </div>
     </div>
 
-    <!-- 1D. LIVE SCREEN & MICROPHONE OVERWATCH REFEREE + 6+ INTRUSION WATCHER -->
-    <div class="card" style="margin-bottom:14px;">
+    <!-- PANEL 2: YOUR TURN — ATTACK HORDE (HIDDEN UNTIL CLICKED) -->
+    <div id="tacticaModePlayer" class="card hidden" style="margin-bottom:14px;">
+      <h3 style="margin-top:0;">🛡️ Attack Horde — Auto-Defender Saves &amp; FNP</h3>
+      <div id="tacticaHordeTargetChips" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
+
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin-bottom:10px;">
+        <label style="font-size:0.8rem; color:var(--muted);">Incoming Wounds
+          <input id="defWoundsCountInput" type="number" placeholder="Incoming Wounds" value="4" style="width:100%; margin-top:4px; padding:8px; background:#0b0d13;">
+        </label>
+        <label style="font-size:0.8rem; color:var(--muted);">Weapon AP (e.g. -1)
+          <input id="defApInput" type="number" placeholder="AP (e.g. -1)" value="-1" style="width:100%; margin-top:4px; padding:8px; background:#0b0d13;">
+        </label>
+        <label style="font-size:0.8rem; color:var(--muted);">Damage per Wound
+          <input id="defDmgInput" type="number" placeholder="Damage" value="1" style="width:100%; margin-top:4px; padding:8px; background:#0b0d13;">
+        </label>
+      </div>
+
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-        <h3 style="margin:0;">🎙️ Live Screen &amp; Mic Overwatch (3D Ruin LOS • Hands-Free Voice • 6+ Intrusions)</h3>
-        <span id="overwatchScreenStatus" style="font-size:0.8rem; color:var(--muted);">📷 Screen Share: Disconnected</span>
-      </div>
-      <div id="tacticaIntrusionAlertBox" class="card hidden" style="margin-bottom:10px; border-left:4px solid var(--red); background:rgba(255,71,87,0.12);"></div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-        <button type="button" class="btn-green btn-sm" onclick="toggleTtsScreenCapture()">🖥️ Share TTS Window</button>
-        <button type="button" class="btn-red btn-sm" onclick="startPushToTalkMic()">🎙️ Push-to-Talk Mic</button>
-        <button type="button" id="btnToggleOverwatchTts" class="btn-ghost btn-sm" onclick="toggleOverwatchVoiceOutput()">🔊 Voice Readout: ON</button>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <input id="overwatchQueryInput" placeholder="Voice/text command or 3D LOS check (e.g. 'Can Screamer-Killer see Krieg behind central ruin?')" style="flex:1; padding:8px; background:#0b0d13;">
-        <button type="button" class="btn-ghost btn-sm" onclick="dispatchSpokenOrTypedCommand(document.getElementById('overwatchQueryInput').value)">👁️ Verify LOS / Run</button>
-      </div>
-      <div id="overwatchVerdictBox" style="margin-top:8px; font-size:0.84rem; color:var(--text);"></div>
-    </div>
-
-    <!-- 2. HORDE AUTO-DEFENDER (QUEUES SAVES & FNP ON LCT TTS DICE MAT) -->
-    <div class="card" style="margin-bottom:14px;">
-      <h3>🛡️ Horde Auto-Defender (Queues Saves, FNP &amp; On-Death onto LCT Dice Mat)</h3>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-bottom:10px;">
-        <input id="defUnitName" placeholder="Unit" value="Necron Warriors" style="padding:8px; background:#0b0d13;">
-        <input id="defSaveInput" type="number" placeholder="Save (4)" value="4" style="padding:8px; background:#0b0d13;">
-        <input id="defInvulnInput" type="number" placeholder="Invuln (0=None)" value="0" style="padding:8px; background:#0b0d13;">
-        <input id="defWpmInput" type="number" placeholder="Wounds/Model" value="1" style="padding:8px; background:#0b0d13;">
-        <input id="defKeywordsInput" placeholder="Keywords" value="INFANTRY" style="padding:8px; background:#0b0d13;">
-        <input id="defModelsInput" type="number" placeholder="Models Alive" value="10" style="padding:8px; background:#0b0d13;">
-        <input id="defWoundsCountInput" type="number" placeholder="Incoming Wounds" value="4" style="padding:8px; background:#0b0d13;">
-        <input id="defApInput" type="number" placeholder="AP (e.g. -1)" value="-1" style="padding:8px; background:#0b0d13;">
-        <input id="defDmgInput" type="number" placeholder="Damage" value="1" style="padding:8px; background:#0b0d13;">
-      </div>
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <label style="display:inline-flex; align-items:center; gap:6px;"><input type="checkbox" id="defInSpawnCheck"> Unit in Spawn Zone (Cover + Hidden)</label>
-        <button type="button" class="btn-red" onclick="queueConsoleAutoDefender()">🎲 Queue Roll on LCT TTS Dice Mat</button>
+        <button type="button" class="btn-red" onclick="queueConsoleAutoDefender()">🎲 Queue Saves &amp; FNP on LCT Mat</button>
       </div>
 
-      <div id="tacticaPendingRollBox" class="card hidden" style="margin-top:10px; border-left:4px solid var(--gold); background:rgba(245,176,65,0.08);"></div>
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <input id="tacticaManualPipsInput" placeholder="Offline fallback: enter settled LCT mat pips (e.g. 5, 2, 4, 6)" style="flex:1; padding:8px; background:#0b0d13;">
-        <button type="button" class="btn-ghost btn-sm" onclick="submitSettledMatPips()">✓ Apply Settled Pips</button>
-      </div>
+      <details id="defStatsOverrideDrawer" style="margin-top:8px;">
+        <summary style="cursor:pointer; font-size:0.82rem; color:var(--muted);">⚙️ Override Scanned Yellowscribe Stats</summary>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:8px; margin-top:8px;">
+          <input id="defUnitName" placeholder="Unit" value="Necron Warriors" style="padding:8px; background:#0b0d13;">
+          <input id="defSaveInput" type="number" placeholder="Save (4)" value="4" style="padding:8px; background:#0b0d13;">
+          <input id="defInvulnInput" type="number" placeholder="Invuln (0=None)" value="0" style="padding:8px; background:#0b0d13;">
+          <input id="defWpmInput" type="number" placeholder="Wounds/Model" value="1" style="padding:8px; background:#0b0d13;">
+          <input id="defKeywordsInput" placeholder="Keywords" value="INFANTRY" style="padding:8px; background:#0b0d13;">
+          <input id="defModelsInput" type="number" placeholder="Models Alive" value="10" style="padding:8px; background:#0b0d13;">
+        </div>
+        <label style="display:inline-flex; align-items:center; gap:6px; margin-top:8px; font-size:0.84rem;">
+          <input type="checkbox" id="defInSpawnCheck"> Unit in Spawn Zone (Cover + Hidden)
+        </label>
+      </details>
+
       <div id="defResultBox" style="margin-top:10px; font-size:0.88rem; color:var(--text);"></div>
     </div>
 
-    <!-- 3. PERSISTENT ROUND 1–6 BLACK-BOX CHRONICLE -->
-    <div class="card" style="margin-bottom:14px;">
-      <h3>📜 Persistent Match Chronicle (Round 1–6 Disk Scribe)</h3>
-      <div id="tacticaChronicleBox" style="max-height:240px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); margin-bottom:8px;"></div>
-      <div style="display:flex; gap:8px;">
-        <input id="tacticaNoteInput" placeholder="Log tactical event, LOS ruling, or heroic moment..." style="flex:1; padding:8px; background:#0b0d13;">
-        <button type="button" class="btn-ghost" onclick="appendConsoleNote()">+ Log Event</button>
-      </div>
-    </div>
-
-    <!-- 4. OPTIONAL POST-MATCH EXPORT TO VOX -->
-    <div class="card">
-      <h3>📡 Optional Post-Match Chronicle Export</h3>
+    <!-- PANEL 3: END MATCH & EXPORT (HIDDEN UNTIL CLICKED) -->
+    <div id="tacticaModeExport" class="card hidden" style="margin-bottom:14px;">
+      <h3 style="margin-top:0;">🏆 End Match — Export Crusade Telemetry &amp; Vox Chronicle</h3>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
         <select id="tacticaReportChannel" style="padding:8px; background:#0b0d13;">
           <option value="alpha">Conduit Alpha (The Exile)</option>
@@ -161,11 +271,29 @@
       </div>
       <pre id="tacticaCompiledPreview" class="master-dossier-preview vox-preview-alpha" style="min-height:80px; white-space:pre-wrap;"></pre>
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-        <button type="button" class="launch-btn" style="flex:1; margin:0;" onclick="sendCompiledReportToVox()">📡 Queue Compiled Match File into Astropathic Vox →</button>
-        <button type="button" class="btn-green" onclick="exportTacticaToCrusade()">🏆 Export Telemetry to Mode 5 Crusade →</button>
+        <button type="button" class="btn-green" onclick="exportTacticaToCrusade()">🏆 Export Telemetry to Mode 5 Crusade &rarr;</button>
+        <button type="button" class="launch-btn" style="flex:1; margin:0;" onclick="sendCompiledReportToVox()">📡 Queue Chronicle to Vox &rarr;</button>
       </div>
       <div id="tacticaCrusadeExportNotice" class="hidden" style="margin-top:8px; font-size:0.84rem; color:var(--green);"></div>
     </div>
+
+    <!-- 4. COLLAPSED UTILITY DRAWERS AT BOTTOM -->
+    <details id="tacticaBoardDrawer" class="card" style="margin-bottom:10px;">
+      <summary style="cursor:pointer; font-weight:700;">🛰️ Scanned Board Units &amp; Side-Flipper (<span id="tacticaUnitCountSummary">0 Units</span>)</summary>
+      <div style="display:flex; justify-content:flex-end; margin:8px 0;">
+        <button type="button" class="btn-ghost btn-sm" onclick="requestTtsBoardScan()">📡 Request LCT Board Scan</button>
+      </div>
+      <div id="tacticaTelemetryBox" style="max-height:220px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border);"></div>
+    </details>
+
+    <details id="tacticaChronicleDrawer" class="card">
+      <summary style="cursor:pointer; font-weight:700;">📜 Match Chronicle Scribe (<span id="tacticaLatestLogSummary">Ready</span>)</summary>
+      <div id="tacticaChronicleBox" style="max-height:220px; overflow-y:auto; background:#0b0d13; padding:10px; border-radius:8px; border:1px solid var(--border); margin:8px 0;"></div>
+      <div style="display:flex; gap:8px;">
+        <input id="tacticaNoteInput" placeholder="Log tactical event, LOS ruling, or heroic moment..." style="flex:1; padding:8px; background:#0b0d13;">
+        <button type="button" class="btn-ghost" onclick="appendConsoleNote()">+ Log Event</button>
+      </div>
+    </details>
   </div>
 
   <script src="../js/spawner.js"></script>
@@ -179,4 +307,3 @@
   <script src="../js/vox-audio.js"></script>
 </body>
 </html>
-
