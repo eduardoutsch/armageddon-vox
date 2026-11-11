@@ -612,3 +612,47 @@
       return seq;
     }
 
+    if (seq.stage === 'WOUNDS' || seq.stage === 'WOUND_REROLLS') {
+      const batch = evaluateWoundDiceBatch(dice, seq.attackMods);
+      seq.normalWounds += batch.normalWounds;
+      seq.devastatingMortalWounds += batch.devastatingMortalWounds;
+
+      if (seq.stage === 'WOUNDS') {
+        const twinLinked = (seq.attackMods.keywords || []).includes('TWIN-LINKED');
+        const rerollCount = twinLinked
+          ? batch.misses
+          : (seq.attackMods.rerollWounds === 'ONES' ? batch.ones : 0);
+        if (rerollCount > 0) {
+          const wndThresh = clamp(seq.attackMods.woundTarget - seq.attackMods.netWoundMod, 2, 6);
+          seq.stage = 'WOUND_REROLLS';
+          seq.expectedDice = rerollCount;
+          seq.nextCommand = buildLctCommand(seq.sequenceId, 'WOUND_REROLLS', rerollCount, wndThresh, seq.matSide, `${seq.attackerName} — ${rerollCount}x Wound Re-rolls (${wndThresh}+)`);
+          return seq;
+        }
+      }
+
+      seq.stage = 'COMPLETE';
+      seq.expectedDice = 0;
+      seq.nextCommand = null;
+      return seq;
+    }
+
+    return seq;
+  }
+
+  /**
+   * Compiles the complete Round 1–6 After-Action Tactical Chronicle dossier for Astropathic Vox archival.
+   */
+  function compileTacticaPostMatchReport(state = {}, chronicleEntries = [], options = {}) {
+    const chan = options.channel || 'alpha';
+    const cmdr = chan === 'beta'
+      ? 'LORD COMMANDER JUNEBUG // TOMB-SHIP QUANTUM INTERLINK'
+      : (chan === 'gamma'
+          ? 'KÂHL HÂRKYN // FANE-NODE VÔL-09 BLACK-LEDGER'
+          : 'THE EXILE // SANCTUARY OF ASH');
+
+    const outcome = (options.outcome || '').trim() || `Concluded at Battle Round ${state.battleRound || 1}`;
+    const wl = state.hordeWarlord
+      ? `${state.hordeWarlord.name} (${state.hordeWarlord.alive === false ? 'Slain' : 'Survived'} • Spawned R${state.hordeWarlord.roundSpawned || 1})`
+      : 'None Spawned';
+
