@@ -263,3 +263,42 @@ test('resolvePlayerModifiers: aggregates Misery debuffs and active Fortification
   assert.equal(playerMods.rangedDefenseFnp, 5);
 });
 
+test('Edge cases: Tau Glasses, Officer Aura, Custodes/CSM/Aeldari/Drukhari/Tyranids/Chaos Knights, Mortal Wounds, and activeMiseries objects', () => {
+  // T'au Empire Glasses: unrolled vs passed
+  const tauPending = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 4, strength: 5, ap: 0 },
+    { factionName: "T'au Empire", activeMiseries: [{ id: 19 }] }
+  );
+  assert.equal(tauPending.requiresTauGlassesRoll, true);
+  assert.equal(tauPending.effectiveSkill, 4);
+
+  const tauPassed = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 4, strength: 5, ap: 0 },
+    { factionName: "T'au Empire" },
+    { tauGlassesPassed: true }
+  );
+  assert.equal(tauPassed.requiresTauGlassesRoll, false);
+  assert.equal(tauPassed.effectiveSkill, 3);
+
+  // Astra Militarum Officer Aura & Aeldari ranged AP
+  const guardAura = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 4, strength: 3, ap: 0 },
+    { factionName: 'Astra Militarum' },
+    { within6OfFriendlyOfficer: true }
+  );
+  assert.equal(guardAura.effectiveSkill, 3);
+
+  const aeldariShot = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 3, strength: 4, ap: -1 },
+    { factionName: 'Aeldari' }
+  );
+  assert.equal(aeldariShot.apPenetration, 2);
+
