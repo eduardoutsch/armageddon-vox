@@ -16,6 +16,7 @@ node_modules/
 scratch/
 match_logs/
 chrome_vox_profile/
+chrome_tactica_profile/
 .env
 .env.*
 !.env.example

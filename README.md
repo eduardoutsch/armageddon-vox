@@ -180,6 +180,7 @@ npm run bundle
 
 # Launch the local In-Match LCT Tactical Daemon & Disk Scribe (127.0.0.1:3030)
 npm run tactica:daemon
+# (or run tactica_daemon.bat on Windows)
 
 # Launch the local Astropathic Courier Gemini Bridge
 npm run vox:bridge
