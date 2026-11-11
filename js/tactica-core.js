@@ -183,3 +183,60 @@
     return { warlord: null, newlyAssigned: false };
   }
 
+  /**
+   * Allocates resolved damage packets across multi-wound models, respecting non-spillover
+   * for normal attacks and point-by-point spillover for Mortal Wounds.
+   */
+  function applyDamagePacketsToModels(packets, wpm, startModels, startWounds, spillOver = false) {
+    let remainingModels = startModels;
+    let currentWounds = startWounds;
+    let modelsSlain = 0;
+    let finalDamageInflicted = 0;
+
+    for (const dmg of packets) {
+      if (remainingModels <= 0 || dmg <= 0) continue;
+      finalDamageInflicted += dmg;
+      if (spillOver) {
+        for (let p = 0; p < dmg && remainingModels > 0; p++) {
+          if (currentWounds <= 1) {
+            modelsSlain += 1;
+            remainingModels -= 1;
+            currentWounds = wpm;
+          } else {
+            currentWounds -= 1;
+          }
+        }
+      } else if (dmg >= currentWounds) {
+        modelsSlain += 1;
+        remainingModels -= 1;
+        currentWounds = wpm;
+      } else {
+        currentWounds -= dmg;
+      }
+    }
+    return {
+      modelsSlain,
+      remainingModels: Math.max(0, remainingModels),
+      currentModelRemainingWounds: remainingModels > 0 ? currentWounds : 0,
+      finalDamageInflicted
+    };
+  }
+
+  function finalizeOrAdvancePostDamageStage(seq) {
+    const prof = seq.defenseProfile;
+    const out = seq.outcome;
+
+    if (!seq.didOnDeath && prof.shootOrFightOnDeathThreshold && out.modelsSlain > 0) {
+      seq.stage = 'ON_DEATH';
+      seq.expectedDice = out.modelsSlain;
+      seq.nextCommand = buildLctCommand(
+        seq.sequenceId,
+        'ON_DEATH',
+        out.modelsSlain,
+        prof.shootOrFightOnDeathThreshold,
+        seq.matSide,
+        `${seq.unitName} — ${out.modelsSlain}x Misery #30 Shoot/Fight on Death (${prof.shootOrFightOnDeathThreshold}+)`
+      );
+      return seq;
+    }
+
