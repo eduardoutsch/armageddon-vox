@@ -595,3 +595,72 @@ var CrusadeCore = (function () {
     return VOTANN_ASSET_CYCLE[(idx + 1) % VOTANN_ASSET_CYCLE.length];
   }
 
+  function deriveVotannTabViewModel(votannState, assetsCatalog = []) {
+    const v = createInitialVotannState(votannState);
+    const maxBattles = v.expBacking.includes('6') ? 6 : (v.expBacking.includes('7') ? 7 : 5);
+    const goalProgress = Math.min(3, Math.max(0, v.goalProgress || 0));
+    const tot = v.expTotals || {};
+    let activeAssetsCount = 0;
+
+    const cards = (assetsCatalog || []).map((a) => {
+      const status = v.assets[a.key] || 'Locked';
+      if (status === 'Active' || status === 'Upgraded') activeAssetsCount += 1;
+      const colorMap = { Upgraded: 'var(--green)', Active: 'var(--gold)', Inactive: 'var(--red)', Locked: 'var(--muted)' };
+      return {
+        key: a.key,
+        title: a.title,
+        status,
+        badgeColor: colorMap[status] || 'var(--muted)',
+        costLine: `Cost: ${a.cost} | Upg: ${a.upgCost}`,
+        desc: status === 'Upgraded' ? a.upgDesc : a.baseDesc
+      };
+    });
+
+    return {
+      votann: v,
+      maxBattles,
+      battlesLabel: `${v.expBattles || 0} / ${maxBattles}`,
+      winsLabel: String(v.expWins || 0),
+      goalProgress,
+      goalProgressLabel: `${goalProgress} / 3`,
+      goalPipsText: [0, 1, 2].map((i) => (i < goalProgress ? '🟡' : '⚪')).join(' '),
+      expTotalsText: `Minerals: ${tot.rawMinerals || 0} | Biomatter: ${tot.biomatter || 0} | Energy: ${tot.energySources || 0} | Intel: ${tot.galacticIntel || 0}${tot.rare ? ` | Rare: ${tot.rare}` : ''}`,
+      activeAssetsCount,
+      cards
+    };
+  }
+
+  function formatVotannSummaryLine(votannState) {
+    const v = createInitialVotannState(votannState);
+    const r = v.rare || {};
+    const tot = v.expTotals || {};
+    return `Charter: ${v.expBacking || 'Lean'} (${v.expBattles || 0} Battles, ${v.expWins || 0} Wins, Goal: ${v.goalProgress || 0}/3) | Exp Total: M:${tot.rawMinerals || 0} B:${tot.biomatter || 0} E:${tot.energySources || 0} I:${tot.galacticIntel || 0} | Vault: M:${v.rawMinerals || 0} B:${v.biomatter || 0} E:${v.energySources || 0} I:${v.galacticIntel || 0} (Rare: M:${r.rawMinerals || 0}, B:${r.biomatter || 0}, E:${r.energySources || 0}, I:${r.galacticIntel || 0})`;
+  }
+
+  function compileVotannDispatch(input = {}) {
+    const v = createInitialVotannState(input.votann);
+    const activeAssets = Object.entries(v.assets || {})
+      .filter(([, st]) => st === 'Active' || st === 'Upgraded')
+      .map(([k, st]) => `${k} (${st})`)
+      .join(', ') || 'None yet';
+    const notes = String(input.notes || '').trim();
+    const lines = [
+      '+++ THRYMKÂL SALVAGE CONSORTIUM // BLACK-LEDGER EXPEDITION & ACQUISITIONS DISPATCH +++',
+      '• REPORTING WARLORD: KÂHL HÂRKYN // THE LEDGER OF EMBERS (1,200 PTS)',
+      `• EXPEDITION CHARTER: ${v.expBacking} | Progress: ${v.expBattles} Battles (${v.expWins} Wins)`,
+      `• EXPEDITION GOAL: ${v.expGoal}`,
+      `• GOAL CONDITION TRACKER: ${v.goalProgress || 0} / 3`,
+      `• GUILD CONTRACT: ${v.expContract}`,
+      `• EXPEDITION TOTAL (CURRENT RUN): Minerals: ${v.expTotals?.rawMinerals || 0} | Biomatter: ${v.expTotals?.biomatter || 0} | Energy: ${v.expTotals?.energySources || 0} | Intel: ${v.expTotals?.galacticIntel || 0}`,
+      `• FUNDAMENTAL VAULT: Raw Minerals: ${v.rawMinerals} | Biomatter: ${v.biomatter} | Energy Sources: ${v.energySources} | Galactic Intel: ${v.galacticIntel}`,
+      `• RARE RESOURCE VAULT: Minerals: ${v.rare?.rawMinerals || 0} | Biomatter: ${v.rare?.biomatter || 0} | Energy: ${v.rare?.energySources || 0} | Intel: ${v.rare?.galacticIntel || 0}`,
+      `• ACTIVE KINDRED ASSETS: ${activeAssets}`
+    ];
+    if (notes) lines.push(`• CLAIM-RECKONER FIELD LOG: "${notes}"`);
+    lines.push(
+      '------------------------------------------------',
+      'DIRECTIVE FOR FANE-NODE VÔL-09 ("THE DEAF EAR"): Inscribe this Black-Ledger resource tally and Expedition progress into the deep-core Ancestor Vault without alerting Geostationary Zenith-09!'
+    );
+    return lines.join('\n');
+  }
+
