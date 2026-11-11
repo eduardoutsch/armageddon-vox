@@ -216,23 +216,14 @@ function rollOutOfActionTest() {
 }
 
 function rollRandomBattleScar() {
-  if (typeof window !== 'undefined' && window.VoxAudio?.playDiceClatter) window.VoxAudio.playDiceClatter();
-  const poolKey = (typeof document !== 'undefined' ? document.getElementById('forgeSourcePool')?.value : '') || 'Armageddon';
-  const scars = (typeof BATTLE_SCAR_TABLE !== 'undefined') ? BATTLE_SCAR_TABLE : (typeof window !== 'undefined' ? window.BATTLE_SCAR_TABLE : []);
-  const necScars = (typeof NECRON_BATTLE_SCAR_TABLE !== 'undefined') ? NECRON_BATTLE_SCAR_TABLE : (typeof window !== 'undefined' ? window.NECRON_BATTLE_SCAR_TABLE : []);
-  const activeScarTable = poolKey === 'BetaCodex' ? necScars : scars;
-  const pick = activeScarTable[Math.floor(Math.random() * activeScarTable.length)] || { d6: 1, name: 'Scar', desc: 'No scar' };
+  _getVoxAudio()?.playDiceClatter?.();
+  const poolKey = _getForgeEl('forgeSourcePool')?.value || 'Armageddon';
+  const pick = _forgeCore.rollBattleScarPick(poolKey, _resolveForgeCatalogs());
+  lastRolledItem.scar = { category: pick.category, roll: pick.roll, name: pick.name, desc: pick.desc };
 
-  lastRolledItem.scar = {
-    category: `Battle Scar`,
-    roll: `D6 = ${pick.d6}`,
-    name: pick.name,
-    desc: pick.desc
-  };
-
-  setTimeout(() => {
-    if (typeof window !== 'undefined' && window.VoxAudio?.playScarHazard) window.VoxAudio.playScarHazard();
-    const box = typeof document !== 'undefined' ? document.getElementById('scarResultBox') : null;
+  _scheduleForgeReveal(() => {
+    _getVoxAudio()?.playScarHazard?.();
+    const box = _getForgeEl('scarResultBox');
     if (box) {
       box.innerHTML = `
         <div><span class="dice-pip-badge" style="background:var(--red); color:#fff;">SCAR D6: ${pick.d6}</span> <strong style="color:var(--red);">${pick.name}</strong></div>
@@ -245,45 +236,36 @@ function rollRandomBattleScar() {
 function attachRollToDossier(kind) {
   const item = lastRolledItem[kind];
   if (!item) {
-    alert('Roll the dice on this card first before attaching it to the Master Dossier!');
+    if (typeof alert === 'function') alert('Roll the dice on this card first before attaching it to the Master Dossier!');
     return;
   }
-  const unitName = ((typeof document !== 'undefined' ? document.getElementById('rollerUnitName')?.value : '') || '[Unnamed Unit]').trim();
-  const unitCtx = ((typeof document !== 'undefined' ? document.getElementById('rollerUnitContext')?.value : '') || 'Fielded in battle').trim();
-
-  crusadeState.queuedRolls.push({
-    unit: unitName,
-    context: unitCtx,
-    category: item.category,
-    roll: item.roll,
-    name: item.name,
-    desc: item.desc
-  });
-
-  if (typeof window !== 'undefined' && window.VoxAudio) window.VoxAudio.playClank('card');
+  const entry = _forgeCore.createQueuedUpgradeEntry(
+    item,
+    _getForgeEl('rollerUnitName')?.value,
+    _getForgeEl('rollerUnitContext')?.value
+  );
+  crusadeState.queuedRolls.push(entry);
+  _getVoxAudio()?.playClank?.('card');
   renderQueuedRolls();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
 }
 
 function removeQueuedRoll(idx) {
   crusadeState.queuedRolls.splice(idx, 1);
   renderQueuedRolls();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
 }
 
 function clearQueuedRolls() {
   crusadeState.queuedRolls = [];
   renderQueuedRolls();
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
 }
 
 function renderQueuedRolls() {
   if (typeof document === 'undefined') return;
-  const countEl = document.getElementById('queuedCountLabel');
-  const box = document.getElementById('queuedRollsContainer');
+  const countEl = _getForgeEl('queuedCountLabel');
+  const box = _getForgeEl('queuedRollsContainer');
   if (countEl) countEl.textContent = String(crusadeState.queuedRolls.length);
   if (!box) return;
 
@@ -303,16 +285,15 @@ function renderQueuedRolls() {
   `).join('');
 }
 
-// =========================================================================
-// ASTRA MILITARUM TOUR OF DUTY, LOGISTICS & COMMENDATIONS FUNCTIONS
-// =========================================================================
+// =============================================================================
+// TAB 3: ASTRA MILITARUM TOUR OF DUTY, LOGISTICS & COMMENDATIONS VIEW ADAPTERS
+// =============================================================================
 function adjTourField(field, delta) {
-  crusadeState[field] = Math.max(0, (crusadeState[field] || 0) + delta);
-  const el = typeof document !== 'undefined' ? document.getElementById(field) : null;
+  crusadeState[field] = _forgeCore.clampCounter(crusadeState[field], delta);
+  const el = _getForgeEl(field);
   if (el) el.textContent = String(crusadeState[field]);
-  if (typeof updateMasterDossierPreview === 'function') updateMasterDossierPreview();
   updateStartOfTourPreview();
-  if (typeof saveCrusadeState === 'function') saveCrusadeState();
+  _syncPostForgeChange();
 }
 
 function rollNewTourQuotas() {
