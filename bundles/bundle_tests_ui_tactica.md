@@ -1,6 +1,6 @@
 # 📦 Fires of Armageddon // Bundle: UI Tests (In-Match LCT Tactical Console)
 
-Boundary, MVVM Humble View, Step 2 Projected Sightlines, In-Place Undo Move, and Step 3 LOS Re-Pick UI tests (`tests/ui/tactica.test.js`).
+Boundary, MVVM Humble View, Step 2 Projected Sightlines, In-Place Undo Move, Step 2/3 Cover (-1 Hit) Toggle, and Step 3 LOS Re-Pick UI tests (`tests/ui/tactica.test.js`).
 
 ## 📑 Table of Contents
 - [tests/ui/tactica.test.js](#file-testsuitacticatestjs)
@@ -623,6 +623,46 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   );
   assert.ok(helvAfterBlock, 'Armiger Helverin must re-pick its next visible target after blocking Yaegirs');
   assert.equal(helvAfterBlock.targetKey, 'PLAYER::Kapricus Defender');
+
+  // Step 2 & Step 3 clickable 🛡️ Cover (-1 Hit) toggle chip flips partial-obscuration Cover on/off before rolling on LCT mat
+  assert.equal(typeof tactica.toggleTargetCover, 'function', 'Must export toggleTargetCover for 1-click Cover toggling');
+  tactica.setHordeTurnStep(2);
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('toggleTargetCover(') &&
+    els.tacticaAutopilotBox.innerHTML.includes('🛡️ Cover (-1 Hit)'),
+    'Step 2 sightline row must render clickable 🛡️ Cover (-1 Hit) toggle chip'
+  );
+  tactica.setHordeTurnStep(3);
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('toggleTargetCover(') &&
+    els.tacticaAutopilotBox.innerHTML.includes('🛡️ Cover (-1 Hit)'),
+    'Step 3 shooting row must render clickable 🛡️ Cover (-1 Hit) toggle chip'
+  );
+
+  const helvIdx = (tactica.getTacticaClientState().lastShootingAssignments || []).findIndex(
+    a => a.attackerKey === 'HORDE::Armiger Helverin'
+  );
+  assert.ok(helvIdx >= 0);
+
+  // Flip Cover ON for Armiger Helverin -> Kapricus Defender -> BS 3+ worsens to 4+ on LCT mat
+  await tactica.toggleTargetCover('HORDE::Armiger Helverin->PLAYER::Kapricus Defender', true);
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('🛡️ Cover (-1 Hit): ON'), 'Active Cover chip must show : ON state');
+  const coverOnSeq = await tactica.fireAutopilotWeaponOnMat(helvIdx);
+  assert.equal(coverOnSeq.nextCommand.threshold, 4, 'Toggled Cover (-1 Hit) must worsen Armiger Helverin BS 3+ to 4+ on LCT mat');
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  // Misery #26 ([IGNORE COVER]) strips Cover's -1 to Hit cleanly back to 3+
+  tactica.getTacticaClientState().activeMiseryIds = [26];
+  const misery26Seq = await tactica.fireAutopilotWeaponOnMat(helvIdx);
+  assert.equal(misery26Seq.nextCommand.threshold, 3, 'Misery #26 [IGNORE COVER] must strip Cover -1 Hit back to 3+');
+  tactica.getTacticaClientState().activeMiseryIds = [];
+  tactica.getTacticaClientState().pendingDiceSequence = null;
+
+  // Flip Cover OFF -> BS 3+ returns to 3+ on LCT mat
+  await tactica.toggleTargetCover('HORDE::Armiger Helverin->PLAYER::Kapricus Defender', false);
+  const coverOffSeq = await tactica.fireAutopilotWeaponOnMat(helvIdx);
+  assert.equal(coverOffSeq.nextCommand.threshold, 3, 'Flipping Cover chip OFF must restore BS 3+ on LCT mat');
+  tactica.getTacticaClientState().pendingDiceSequence = null;
 
   if (typeof tactica.stopTacticaAutoPoller === 'function') tactica.stopTacticaAutoPoller();
   delete globalThis.localStorage;

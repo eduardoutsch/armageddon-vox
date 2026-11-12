@@ -27,8 +27,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_horde_combat.md`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | `js/horde-combat-modifiers.js` |
 | [`bundle_tactica.md`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View)** | `pages/tactica.html` |
 | [`bundle_tests_ui_tactica.md`](bundle_tests_ui_tactica.md) | **UI Tests (In-Match LCT Tactical Console)** | `tests/ui/tactica.test.js` |
-| [`bundle_tactica_controller.md`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | `js/tactica.js` (Lines 1-680) |
-| [`bundle_tactica_controller_part2.md`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | `js/tactica.js` (Lines 681-end) |
+| [`bundle_tactica_controller.md`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | `js/tactica.js` (Lines 1-796) |
+| [`bundle_tactica_controller_part2.md`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | `js/tactica.js` (Lines 797-end) |
 | [`bundle_tactica_core.md`](bundle_tactica_core.md) | **In-Match LCT Tactical Core (Part 1)** | `js/tactica-core.js` (Lines 1-500) |
 | [`bundle_tactica_core_part2.md`](bundle_tactica_core_part2.md) | **In-Match LCT Tactical Core (Part 2)** | `js/tactica-core.js` (Lines 501-end) |
 | [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe (Part 1)** | `tactica_daemon.js` (Lines 1-610) |

@@ -174,20 +174,38 @@ function pushBoardTelemetry()
             local isObjMarker = obj.interactable ~= false and not isSecChip
                            and (obj.hasTag("OBJECTIVE") or string.match(lname, "^objective%s*%d*$") or string.match(lname, "^obj%s*%d+$"))
 
-            -- Collect locked 3D terrain colliders (ruins, containers, solid walls >= 1.8" tall) inside playmat
+            -- Collect locked 3D terrain colliders (solid walls >= 1.8" tall, plus low Light/Dense/Barricade cover footprints) inside playmat
             if centerInMat and obj.getLock() and not isSecChip and not isObjMarker
                and obj.tag ~= "Figurine" and obj.tag ~= "Dice"
                and not obj.hasTag("HORDE") and not obj.hasTag("PLAYER") and not obj.hasTag("HORDE_TEMPLATE")
-               and size.y >= 1.8 and size.x >= 0.15 and size.z >= 0.15 and size.x < 36 and size.z < 36 then
-                table.insert(obstacles, {
-                    name = (name ~= "" and name) or "Terrain Wall",
-                    minX = center.x - size.x * 0.5,
-                    maxX = center.x + size.x * 0.5,
-                    minZ = center.z - size.z * 0.5,
-                    maxZ = center.z + size.z * 0.5,
-                    heightY = size.y,
-                    solid = true
-                })
+               and size.x >= 0.15 and size.z >= 0.15 and size.x < 36 and size.z < 36 then
+                if size.y >= 1.8 then
+                    table.insert(obstacles, {
+                        name = (name ~= "" and name) or "Terrain Wall",
+                        minX = center.x - size.x * 0.5,
+                        maxX = center.x + size.x * 0.5,
+                        minZ = center.z - size.z * 0.5,
+                        maxZ = center.z + size.z * 0.5,
+                        heightY = size.y,
+                        solid = true
+                    })
+                elseif size.y >= 0.12 and (
+                    string.find(lname, "ruin") or string.find(lname, "barricade") or string.find(lname, "crater")
+                    or string.find(lname, "wood") or string.find(lname, "forest") or string.find(lname, "rubble")
+                    or string.find(lname, "debris") or string.find(lname, "trench") or string.find(lname, "light")
+                    or string.find(lname, "dense") or string.find(lname, "cover") or string.find(lname, "pipe")
+                ) then
+                    table.insert(obstacles, {
+                        name = (name ~= "" and name) or "Light Cover Terrain",
+                        minX = center.x - size.x * 0.5,
+                        maxX = center.x + size.x * 0.5,
+                        minZ = center.z - size.z * 0.5,
+                        maxZ = center.z + size.z * 0.5,
+                        heightY = size.y,
+                        solid = false,
+                        terrainType = "LIGHT"
+                    })
+                end
             end
 
             if obj.interactable ~= false then

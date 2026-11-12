@@ -507,8 +507,81 @@
   }
 
   /**
+   * Detects 11th Edition automatic Benefit of Cover (`-1` to Attacker's ranged Hit roll)
+   * when a visible target sits on Light/Dense terrain, has a sightline crossing non-solid cover terrain,
+   * or sits partially obscured behind a ruin/barricade edge.
+   */
+  function detectAutomaticTerrainCover(attacker, target, obstacles = [], boardTelemetry = {}) {
+    if (!target || typeof target !== 'object') return false;
+    if (target.hasCover || target.inCover || target.inSpawnZone || target.isGoneToGround) return true;
+
+    const obsList = Array.isArray(obstacles) ? obstacles.filter(Boolean) : [];
+    const aModels = Array.isArray(attacker?.models) && attacker.models.length > 0
+      ? attacker.models
+      : [{ guid: attacker?.guid, pos: attacker?.pos || { x: 0, z: 0 }, radiusInches: 0.63 }];
+    const tModels = Array.isArray(target.models) && target.models.length > 0
+      ? target.models
+      : [{ guid: target.guid, pos: target.pos || { x: 0, z: 0 }, radiusInches: target.radiusInches || 0.63 }];
+
+    // Partial 3D TTS raycast obscuration (some model-to-model rays blocked while squad remains visible)
+    const blockedGuids = Array.isArray(boardTelemetry?.raycastBlockedGuidPairs)
+      ? new Set(boardTelemetry.raycastBlockedGuidPairs.map(String))
+      : null;
+    if (blockedGuids && blockedGuids.size > 0) {
+      for (const am of aModels) {
+        for (const tm of tModels) {
+          if (am.guid && tm.guid && (blockedGuids.has(`${am.guid}->${tm.guid}`) || blockedGuids.has(`${tm.guid}->${am.guid}`))) {
+            return true;
+          }
+        }
+      }
+    }
+
+    if (obsList.length === 0) return false;
+
+    for (const obs of obsList) {
+      if (obs.grantsCover === false) continue;
+      const isAreaCover = obs.solid === false ||
+        obs.grantsCover === true ||
+        /\b(light|dense|area|woods?|forest|crater|rubble|debris|trench)\b/i.test(`${obs.terrainType || ''} ${obs.name || ''}`);
+
+      // 1. Target model sitting on/within Light/Dense/Area terrain footprint
+      if (isAreaCover) {
+        const sitsOnArea = tModels.some(tm => {
+          const px = Number(tm.pos?.x ?? target.pos?.x) || 0;
+          const pz = Number(tm.pos?.z ?? target.pos?.z) || 0;
+          const r = Number(tm.radiusInches) || 0.55;
+          return px >= obs.minX - r && px <= obs.maxX + r && pz >= obs.minZ - r && pz <= obs.maxZ + r;
+        });
+        if (sitsOnArea) return true;
+      }
+
+      // 2. Partial sightline or base-perimeter edge obscured by a ruin/barricade/cover obstacle
+      for (const am of aModels) {
+        const pa = am.pos || attacker?.pos || { x: 0, z: 0 };
+        for (const tm of tModels) {
+          const pt = tm.pos || target.pos || { x: 0, z: 0 };
+          const r = Math.max(0.45, Number(tm.radiusInches) || 0.63);
+          const samplePts = [
+            pt,
+            { x: (Number(pt.x) || 0) - r, z: Number(pt.z) || 0 },
+            { x: (Number(pt.x) || 0) + r, z: Number(pt.z) || 0 },
+            { x: Number(pt.x) || 0, z: (Number(pt.z) || 0) - r },
+            { x: Number(pt.x) || 0, z: (Number(pt.z) || 0) + r }
+          ];
+          if (samplePts.some(sp => segmentIntersectsRect(pa, sp, obs))) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
    * Evaluates whether a `HORDE->PLAYER` squad pair is blocked by manual LOS overrides, 3D TTS wall raycasts,
-   * 2D solid/obscuring terrain footprints, or 11th Ed Hidden (`15"`) / Gone to Ground (`12"`) caps.
+   * 2D solid/obscuring terrain footprints, or 11th Ed Hidden (`15"`) / Gone to Ground (`12"`) caps,
+   * and resolves `targetHasCover` for 11th Edition Benefit of Cover (`-1` to Hit).
    */
   function evaluatePairVisibility(attacker, target, dist, boardTelemetry = {}, matchState = {}, options = {}) {
     const pairKey = `${attacker.squadKey || attacker.name}->${target.squadKey || target.name}`;
@@ -521,6 +594,16 @@
       ...(matchState.losBlockedPairs || []),
       ...(options.losBlockedPairs || [])
     ]);
+    const coverGrantedSet = new Set([
+      ...(boardTelemetry.coverGrantedPairs || []),
+      ...(matchState.coverGrantedPairs || []),
+      ...(options.coverGrantedPairs || [])
+    ]);
+    const coverStrippedSet = new Set([
+      ...(boardTelemetry.coverStrippedPairs || []),
+      ...(matchState.coverStrippedPairs || []),
+      ...(options.coverStrippedPairs || [])
+    ]);
     const autoBlockedSet = new Set(boardTelemetry.autoBlockedLosPairs || []);
     const obstacles = Array.isArray(options.obstacles)
       ? options.obstacles
@@ -529,33 +612,39 @@
     const ignoreTerrainVis = miseryIds.includes(28);
 
     if (manualBlockedSet.has(pairKey)) {
-      return { blocked: true, pairKey, reason: 'MANUAL_NO_LOS' };
+      return { blocked: true, pairKey, reason: 'MANUAL_NO_LOS', targetHasCover: false };
     }
     if (!allowedSet.has(pairKey) && !ignoreTerrainVis) {
       if (autoBlockedSet.has(pairKey)) {
-        return { blocked: true, pairKey, reason: 'RAYCAST_WALL' };
+        return { blocked: true, pairKey, reason: 'RAYCAST_WALL', targetHasCover: false };
       }
       if (isSquadBlockedByObstacles(attacker, target, obstacles)) {
-        return { blocked: true, pairKey, reason: 'SOLID_OBSTACLE' };
+        return { blocked: true, pairKey, reason: 'SOLID_OBSTACLE', targetHasCover: false };
       }
       if (target.isGoneToGround && dist > 12.0) {
-        return { blocked: true, pairKey, reason: 'GONE_TO_GROUND_12' };
+        return { blocked: true, pairKey, reason: 'GONE_TO_GROUND_12', targetHasCover: false };
       }
       if (target.isHidden && dist > 15.0) {
-        return { blocked: true, pairKey, reason: 'HIDDEN_15' };
+        return { blocked: true, pairKey, reason: 'HIDDEN_15', targetHasCover: false };
       }
     }
-    return { blocked: false, pairKey, reason: null };
+
+    const autoCover = detectAutomaticTerrainCover(attacker, target, obstacles, boardTelemetry);
+    const targetHasCover = coverGrantedSet.has(pairKey)
+      ? true
+      : (coverStrippedSet.has(pairKey) ? false : autoCover);
+
+    return { blocked: false, pairKey, reason: null, targetHasCover };
   }
 
   /**
    * 3. Selects legal ranged targets per weapon using Mode 3 Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`),
    * merging 3D TTS raycast blocks, 2D solid obstacle footprints, manual `losBlockedPairs` / `losAllowedPairs`,
-   * and 11th Edition Hidden (`15"`) / Gone to Ground (`12"`) visibility caps.
+   * 11th Edition Cover detection, and Hidden (`15"`) / Gone to Ground (`12"`) visibility caps.
    *
    * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`, `objectives`, `obstacles`, `autoBlockedLosPairs`).
    * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`, `losBlockedPairs`, `losAllowedPairs`).
-   * @param {object} [options={}] - Optional `{ losBlockedPairs, losAllowedPairs, obstacles }` overrides.
+   * @param {object} [options={}] - Optional `{ losBlockedPairs, losAllowedPairs, coverGrantedPairs, coverStrippedPairs, obstacles }` overrides.
    * @returns {Array<object>} Prioritized weapon-to-target firing assignments.
    */
   function selectHordeShootingTargets(boardTelemetry = {}, matchState = {}, options = {}) {
@@ -567,10 +656,19 @@
     const assignments = [];
 
     for (const attacker of hordeUnits) {
+      const attackerKws = normalizeKwList(attacker.keywords);
+      const isMonsterOrVehicle = attackerKws.includes('MONSTER') || attackerKws.includes('VEHICLE');
+      const isAttackerEngaged = playerUnits.some(p => squadEdgeDistance(attacker, p) <= 2.0);
+
       for (const baseWeapon of (attacker.weapons || [])) {
         if (String(baseWeapon.type || '').toLowerCase() === 'melee') continue;
         const range = Number(baseWeapon.rangeInches) || 0;
         if (range <= 0) continue;
+
+        const baseWepKws = normalizeKwList(baseWeapon.keywords);
+        const isCloseQuarters = baseWepKws.includes('PISTOL') || baseWepKws.includes('CLOSE-QUARTERS') || baseWepKws.includes('CLOSE QUARTERS');
+        if (isAttackerEngaged && !isMonsterOrVehicle && !isCloseQuarters) continue;
+        const engagedMonsterVehiclePenalty = isAttackerEngaged && isMonsterOrVehicle && !isCloseQuarters;
 
         const candidates = [];
         for (const target of playerUnits) {
@@ -580,18 +678,28 @@
           const vis = evaluatePairVisibility(attacker, target, dist, boardTelemetry, matchState, options);
           if (vis.blocked) continue;
 
-          const mods = combatCore.resolveHordeAttackModifiers(attacker, target, baseWeapon, matchState);
+          const mods = combatCore.resolveHordeAttackModifiers(attacker, target, baseWeapon, matchState, {
+            targetHasCover: vis.targetHasCover,
+            engagedMonsterVehiclePenalty
+          });
           if (attacker.advancedThisTurn && !miseryIds.includes(1) && matchState.factionName !== "Emperor's Children") {
             if (!mods.keywords.includes('ASSAULT')) continue;
           }
 
-          candidates.push({ target, dist, mods, pairKey: vis.pairKey });
+          candidates.push({
+            target,
+            dist,
+            mods,
+            pairKey: vis.pairKey,
+            targetHasCover: Boolean(vis.targetHasCover),
+            engagedMonsterVehiclePenalty
+          });
         }
 
         if (candidates.length === 0) continue;
         candidates.sort((a, b) => a.dist - b.dist);
 
-        const effectiveKws = candidates[0].mods.keywords || normalizeKwList(baseWeapon.keywords);
+        const effectiveKws = candidates[0].mods.keywords || baseWepKws;
         const antiTargetKw = extractAntiKeyword(effectiveKws);
         const hasPrecision = effectiveKws.includes('PRECISION');
         const hasMelta = effectiveKws.some(k => k.startsWith('MELTA'));
@@ -621,6 +729,8 @@
           targetKey: chosen.target.squadKey || chosen.target.name,
           targetName: chosen.target.name,
           distanceInches: chosen.dist,
+          targetHasCover: Boolean(chosen.targetHasCover),
+          engagedMonsterVehiclePenalty: Boolean(chosen.engagedMonsterVehiclePenalty),
           target: chosen.target,
           weapon: baseWeapon
         });
@@ -731,6 +841,7 @@
             targetKey: target.squadKey || target.name,
             targetName: target.name,
             distanceInches: Number(dist.toFixed(1)),
+            targetHasCover: Boolean(vis.targetHasCover),
             reason: vis.reason
           };
           if (vis.blocked) {
@@ -983,6 +1094,7 @@
     buildDisembarkWaveCommand,
     planHordeMovementPhase,
     buildMoveRevertCommand,
+    evaluatePairVisibility,
     selectHordeShootingTargets,
     previewMovementSightlines,
     planHordeCharges,

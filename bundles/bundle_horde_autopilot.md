@@ -519,5 +519,5 @@ Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, exact 2D Li
   }
 
   /**
-   * Evaluates whether a `HORDE->PLAYER` squad pair is blocked by manual LOS overrides, 3D TTS wall raycasts,
+   * Detects 11th Edition automatic Benefit of Cover (`-1` to Attacker's ranged Hit roll)
 ````

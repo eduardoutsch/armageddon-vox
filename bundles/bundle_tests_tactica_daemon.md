@@ -797,11 +797,35 @@ test('Part 3 & 4 Daemon: Private Network CORS, toggle-los target re-pick, persis
       'REVERTED'
     );
 
-    // 6. Advancing battleRound clears round-scoped LOS overrides & phaseOriginSnapshots
+    // 5b. Toggle partial-obscuration Cover via /autopilot/toggle-cover -> grants and strips Cover cleanly
+    const grantCover = await postJson(baseUrl, '/autopilot/toggle-cover', {
+      pairKey: 'HORDE::Armiger Helverin->PLAYER::Hernkyn Yaegirs',
+      hasCover: true
+    });
+    assert.equal(grantCover.ok, true);
+    assert.equal(grantCover.hasCover, true);
+    assert.deepEqual(grantCover.coverGrantedPairs, ['HORDE::Armiger Helverin->PLAYER::Hernkyn Yaegirs']);
+    assert.equal(
+      grantCover.assignments.find(a => a.attackerKey === 'HORDE::Armiger Helverin' && a.targetKey === 'PLAYER::Hernkyn Yaegirs')?.targetHasCover,
+      true
+    );
+
+    const stripCover = await postJson(baseUrl, '/autopilot/toggle-cover', {
+      pairKey: 'HORDE::Armiger Helverin->PLAYER::Hernkyn Yaegirs',
+      hasCover: false
+    });
+    assert.equal(stripCover.ok, true);
+    assert.equal(stripCover.hasCover, false);
+    assert.deepEqual(stripCover.coverGrantedPairs, []);
+    assert.deepEqual(stripCover.coverStrippedPairs, ['HORDE::Armiger Helverin->PLAYER::Hernkyn Yaegirs']);
+
+    // 6. Advancing battleRound clears round-scoped LOS & Cover overrides & phaseOriginSnapshots
     await postJson(baseUrl, '/session/sync', { battleRound: 2 });
     const r2State = await (await fetch(`${baseUrl}/state`)).json();
     assert.deepEqual(r2State.state.losBlockedPairs, []);
     assert.deepEqual(r2State.state.losAllowedPairs, []);
+    assert.deepEqual(r2State.state.coverGrantedPairs, []);
+    assert.deepEqual(r2State.state.coverStrippedPairs, []);
     assert.deepEqual(r2State.state.phaseOriginSnapshots, {});
 
     // 7. Lazy reconnect on /overwatch/los-check invokes ensureThreadSession() instead of returning offline

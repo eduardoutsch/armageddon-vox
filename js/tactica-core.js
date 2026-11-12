@@ -126,6 +126,8 @@
       lastShootingAssignments: Array.isArray(overrides.lastShootingAssignments) ? [...overrides.lastShootingAssignments] : [],
       losBlockedPairs: Array.isArray(overrides.losBlockedPairs) ? [...overrides.losBlockedPairs] : [],
       losAllowedPairs: Array.isArray(overrides.losAllowedPairs) ? [...overrides.losAllowedPairs] : [],
+      coverGrantedPairs: Array.isArray(overrides.coverGrantedPairs) ? [...overrides.coverGrantedPairs] : [],
+      coverStrippedPairs: Array.isArray(overrides.coverStrippedPairs) ? [...overrides.coverStrippedPairs] : [],
       phaseOriginSnapshots: (overrides.phaseOriginSnapshots && typeof overrides.phaseOriginSnapshots === 'object') ? { ...overrides.phaseOriginSnapshots } : {},
       boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [], obstacles: [], autoBlockedLosPairs: [] },
       squadGuidRegistry: (overrides.squadGuidRegistry && typeof overrides.squadGuidRegistry === 'object') ? { ...overrides.squadGuidRegistry } : {},
@@ -652,6 +654,9 @@
         : {}),
       ...(rawContext.targetWorsenAp === undefined && request.target?.worsenAp === undefined && stateBuff.worsenAp !== 0
         ? { targetWorsenAp: stateBuff.worsenAp }
+        : {}),
+      ...(rawContext.targetHasCover === undefined && request.target?.hasCover === undefined && stateBuff.cover
+        ? { targetHasCover: true }
         : {})
     };
     const attackMods = combatCore.resolveHordeAttackModifiers(

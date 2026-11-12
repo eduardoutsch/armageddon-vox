@@ -413,12 +413,23 @@ Pure Functional Core combat modifiers, 23 Horde faction rules, 36 Misery deck mo
       }
       if (isRanged && m.hordeRangedIgnoreCover) ignoreCover = true;
     }
+    if (weapon.ignoreCover || weaponKws.has('IGNORES COVER') || weaponKws.has('IGNORE COVER')) {
+      ignoreCover = true;
+    }
 
-    // 3. Targeted Player defensive buffs (Smokescreen -1 to Hit, Stealth, Void Armour / Armour of Contempt AP worsen)
+    // 3. Targeted Player defensive buffs (11th Ed Cover -1 to Hit, Stealth, Void Armour / Armour of Contempt AP worsen)
     const defenderHitMod = context.targetHitMod !== undefined
       ? (Number(context.targetHitMod) || 0)
       : ((Number(target.hitMod) || 0) + (isRanged && target.hasStealth ? -1 : 0));
     rawHitMod += defenderHitMod;
+    const targetHasCover = Boolean(context.targetHasCover ?? target.hasCover);
+    const effectiveTargetCover = isRanged && targetHasCover && !ignoreCover;
+    if (effectiveTargetCover) {
+      rawHitMod -= 1;
+    }
+    if (isRanged && context.engagedMonsterVehiclePenalty) {
+      rawHitMod -= 1; // Rule 10.06: Monster/Vehicle firing non-[CLOSE-QUARTERS] while Engaged
+    }
     const defenderWorsenAp = context.targetWorsenAp !== undefined
       ? (Number(context.targetWorsenAp) || 0)
       : (Number(target.worsenAp) || 0);
@@ -447,6 +458,7 @@ Pure Functional Core combat modifiers, 23 Horde faction rules, 36 Misery deck mo
       apSigned: apPenetration === 0 ? 0 : -apPenetration,
       attacksMod,
       ignoreCover,
+      targetHasCover: effectiveTargetCover,
       requiresTauGlassesRoll,
       keywords: Array.from(weaponKws)
     };
@@ -507,15 +519,17 @@ Pure Functional Core combat modifiers, 23 Horde faction rules, 36 Misery deck mo
       atkKws.includes('IGNORE COVER')
     );
     const effectiveCover = isRanged && hasCover && !ignoresCover;
+    if (effectiveCover) {
+      incomingHitMod -= 1; // 11th Ed Cover: -1 to Attacker's ranged Hit roll (0 Save bonus)
+    }
 
     const rawApPen = normalizeApPenetration(incomingAttack.ap);
     const effectiveApPenetration = Math.max(0, rawApPen - apWorsen);
     const effectiveAttackerStrength = Math.max(1, (Number(incomingAttack.strength) || 4) + attackerStrengthMod);
 
-    // Armor Save calculation (Core Rule: 3+ or better Save does not improve vs AP 0 from Cover)
+    // 11th Ed Armor Save: Benefit of Cover applies -1 to Hit rather than improving Armor Save
     const baseSave = Number(defender.save) || 6;
-    const coverBonus = (effectiveCover && !(baseSave <= 3 && effectiveApPenetration === 0)) ? 1 : 0;
-    const modifiedArmorSave = baseSave + effectiveApPenetration - coverBonus;
+    const modifiedArmorSave = baseSave + effectiveApPenetration;
 
     // Invulnerable Save + Misery #5 (Untouchable)
     const baseInvuln = defender.invuln ? Number(defender.invuln) : null;

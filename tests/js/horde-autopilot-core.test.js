@@ -489,5 +489,85 @@ test('3D Wall Raycasts + 2D Solid Obstacles + previewMovementSightlines: blocks 
   assert.equal(armSight.blockedTargets.some(t => t.targetKey === 'PLAYER::Kapricus Defender'), true, 'Step 2 preview must list wall-blocked Kapricus Defender');
 });
 
+test('evaluatePairVisibility & Automatic Terrain Cover Detection: grants targetHasCover on Light/Dense terrain or behind ruin/barricade edges and respects manual Cover toggles', () => {
+  const { evaluatePairVisibility } = require('../../js/horde-autopilot-core.js');
+  assert.equal(typeof evaluatePairVisibility, 'function');
+
+  const shooter = {
+    squadKey: 'HORDE::Helverin',
+    name: 'Armiger Helverin',
+    side: 'HORDE',
+    pos: { x: 2, z: 12 },
+    keywords: ['VEHICLE'],
+    models: [{ guid: 'h1', pos: { x: 2, z: 12 }, radiusInches: 1.97 }],
+    weapons: [{ name: 'Autocannon', type: 'ranged', rangeInches: 48, attacks: 4, skill: 3, strength: 9, ap: -1, damage: 3, keywords: [] }]
+  };
+
+  const openTarget = {
+    squadKey: 'PLAYER::OpenUnit',
+    name: 'Open Hearthkyn',
+    side: 'PLAYER',
+    pos: { x: 10, z: 0 },
+    keywords: ['INFANTRY'],
+    models: [{ guid: 'p_open', pos: { x: 10, z: 0 }, radiusInches: 0.55 }]
+  };
+
+  const woodsTarget = {
+    squadKey: 'PLAYER::WoodsUnit',
+    name: 'Woods Yaegirs',
+    side: 'PLAYER',
+    pos: { x: 10, z: -6 },
+    keywords: ['INFANTRY'],
+    models: [{ guid: 'p_woods', pos: { x: 10, z: -6 }, radiusInches: 0.55 }]
+  };
+
+  const ruinEdgeTarget = {
+    squadKey: 'PLAYER::RuinEdgeUnit',
+    name: 'Ruin-Edge Pioneers',
+    side: 'PLAYER',
+    pos: { x: 0.35, z: 0.5 },
+    keywords: ['MOUNTED'],
+    models: [{ guid: 'p_edge', pos: { x: 0.35, z: 0.5 }, radiusInches: 0.9 }]
+  };
+
+  const obstacles = [
+    { name: 'Light Woods Patch', minX: 8, maxX: 12, minZ: -8, maxZ: -4, heightY: 1.0, solid: false, terrainType: 'LIGHT' },
+    { name: 'Central LCT Ruin Wall', minX: -6, maxX: 0, minZ: 1.9, maxZ: 2.1, heightY: 5.0, solid: true }
+  ];
+  const board = { units: [shooter, openTarget, woodsTarget, ruinEdgeTarget], objectives: [], obstacles };
+
+  const openVis = evaluatePairVisibility(shooter, openTarget, 14, board, {});
+  assert.equal(openVis.blocked, false);
+  assert.equal(openVis.targetHasCover, false, 'Target in open field must have targetHasCover: false');
+
+  const woodsVis = evaluatePairVisibility(shooter, woodsTarget, 18, board, {});
+  assert.equal(woodsVis.blocked, false);
+  assert.equal(woodsVis.targetHasCover, true, 'Target sitting on Light/Dense terrain must receive targetHasCover: true');
+
+  const edgeVis = evaluatePairVisibility(shooter, ruinEdgeTarget, 11, board, {});
+  assert.equal(edgeVis.blocked, false);
+  assert.equal(edgeVis.targetHasCover, true, 'Target tucked behind a ruin/barricade edge must receive targetHasCover: true');
+
+  const grantedOpen = evaluatePairVisibility(shooter, openTarget, 14, board, {
+    coverGrantedPairs: ['HORDE::Helverin->PLAYER::OpenUnit']
+  });
+  assert.equal(grantedOpen.targetHasCover, true, 'coverGrantedPairs must grant Cover on open target');
+
+  const strippedWoods = evaluatePairVisibility(shooter, woodsTarget, 18, board, {
+    coverStrippedPairs: ['HORDE::Helverin->PLAYER::WoodsUnit']
+  });
+  assert.equal(strippedWoods.targetHasCover, false, 'coverStrippedPairs must strip automatic terrain Cover');
+
+  const preview = previewMovementSightlines(board, {}, []);
+  const helvClear = preview.bySquad['HORDE::Helverin'].clearTargets;
+  assert.equal(helvClear.find(t => t.targetKey === 'PLAYER::OpenUnit')?.targetHasCover, false);
+  assert.equal(helvClear.find(t => t.targetKey === 'PLAYER::WoodsUnit')?.targetHasCover, true);
+  assert.equal(helvClear.find(t => t.targetKey === 'PLAYER::RuinEdgeUnit')?.targetHasCover, true);
+
+  const shots = selectHordeShootingTargets(board, {});
+  assert.equal(shots[0].targetKey, 'PLAYER::RuinEdgeUnit');
+  assert.equal(shots[0].targetHasCover, true, 'selectHordeShootingTargets must surface targetHasCover on chosen assignment');
+});
+
 
 

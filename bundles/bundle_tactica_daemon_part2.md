@@ -10,6 +10,10 @@ HTTP endpoints for LCT dice-mat sequences, TTS board telemetry, Horde Autopilot 
 ## File: `tactica_daemon.js (Part 2: LCT Mat, Autopilot, LOS Toggle & Vision Routes, Lines 611-1500)` <a id="file-tacticadaemonjspart2lctmatautopilotlostogglevisionrouteslines6111500"></a>
 
 ````javascript
+    if (req.method === 'POST' && urlPath === '/combat/defend-request') {
+      const body = await readJsonBody(req);
+      cmdCounter += 1;
+      const seq = createDefenseRollSequence({ ...body, sequenceId: `def_${Date.now()}_${cmdCounter}` }, liveState);
       if (seq.stage === 'COMPLETE') {
         liveState.pendingDiceSequence = null;
         const entry = logCompletedSequence(seq);
@@ -369,6 +373,51 @@ HTTP endpoints for LCT dice-mat sequences, TTS board telemetry, Horde Autopilot 
         blocked: isBlocked,
         losBlockedPairs: liveState.losBlockedPairs,
         losAllowedPairs: liveState.losAllowedPairs,
+        sightlines,
+        assignments
+      });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/toggle-cover') {
+      const body = await readJsonBody(req);
+      const pairKey = String(body.pairKey || '').trim();
+      if (!pairKey) return sendJson(res, 400, { ok: false, error: 'Missing pairKey' });
+      const hasCover = Boolean(body.hasCover);
+
+      const grantedSet = new Set(liveState.coverGrantedPairs || []);
+      const strippedSet = new Set(liveState.coverStrippedPairs || []);
+      if (hasCover) {
+        grantedSet.add(pairKey);
+        strippedSet.delete(pairKey);
+      } else {
+        grantedSet.delete(pairKey);
+        strippedSet.add(pairKey);
+      }
+      liveState.coverGrantedPairs = Array.from(grantedSet);
+      liveState.coverStrippedPairs = Array.from(strippedSet);
+
+      const sightlines = previewMovementSightlines(liveState.boardTelemetry, liveState, liveState.lastMovementPlans || [], {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || [],
+        coverGrantedPairs: liveState.coverGrantedPairs,
+        coverStrippedPairs: liveState.coverStrippedPairs
+      });
+      const assignments = selectHordeShootingTargets(liveState.boardTelemetry, liveState, {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || [],
+        coverGrantedPairs: liveState.coverGrantedPairs,
+        coverStrippedPairs: liveState.coverStrippedPairs
+      });
+      liveState.lastMovementSightlines = sightlines;
+      liveState.lastShootingAssignments = assignments;
+      savePersistedState();
+
+      return sendJson(res, 200, {
+        ok: true,
+        pairKey,
+        hasCover,
+        coverGrantedPairs: liveState.coverGrantedPairs,
+        coverStrippedPairs: liveState.coverStrippedPairs,
         sightlines,
         assignments
       });

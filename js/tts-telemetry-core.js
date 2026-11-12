@@ -960,7 +960,9 @@
         maxZ: Number(o.maxZ),
         heightY: Number(o.heightY) || 2.0,
         solid: o.solid !== false,
-        obscuring: Boolean(o.obscuring)
+        obscuring: Boolean(o.obscuring),
+        ...(o.terrainType ? { terrainType: String(o.terrainType) } : {}),
+        ...(o.grantsCover !== undefined ? { grantsCover: Boolean(o.grantsCover) } : {})
       }));
 
     // Squad-Level 40k LOS Rule: mark HORDE->PLAYER pair blocked only when EVERY model-to-model 3D raycast is blocked

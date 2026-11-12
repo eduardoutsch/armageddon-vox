@@ -138,6 +138,8 @@ Pure Functional Core state schemas, phase/round player Stratagem buff expiration
       lastShootingAssignments: Array.isArray(overrides.lastShootingAssignments) ? [...overrides.lastShootingAssignments] : [],
       losBlockedPairs: Array.isArray(overrides.losBlockedPairs) ? [...overrides.losBlockedPairs] : [],
       losAllowedPairs: Array.isArray(overrides.losAllowedPairs) ? [...overrides.losAllowedPairs] : [],
+      coverGrantedPairs: Array.isArray(overrides.coverGrantedPairs) ? [...overrides.coverGrantedPairs] : [],
+      coverStrippedPairs: Array.isArray(overrides.coverStrippedPairs) ? [...overrides.coverStrippedPairs] : [],
       phaseOriginSnapshots: (overrides.phaseOriginSnapshots && typeof overrides.phaseOriginSnapshots === 'object') ? { ...overrides.phaseOriginSnapshots } : {},
       boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [], obstacles: [], autoBlockedLosPairs: [] },
       squadGuidRegistry: (overrides.squadGuidRegistry && typeof overrides.squadGuidRegistry === 'object') ? { ...overrides.squadGuidRegistry } : {},
@@ -508,6 +510,4 @@ Pure Functional Core state schemas, phase/round player Stratagem buff expiration
         hitMod: Number(rawBuff.hitMod) || 0,
         worsenAp: Number(rawBuff.worsenAp) || 0,
         cover: Boolean(rawBuff.cover),
-        invuln6: Boolean(rawBuff.invuln6)
-      };
 ````

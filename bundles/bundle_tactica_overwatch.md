@@ -48,7 +48,7 @@ Pure vocal Core/Faction Stratagem parser, neural Auspex voice presets, multimoda
   const PLAYER_VOCAL_STRATAGEMS = [
     { key: 'FIRE_OVERWATCH',      name: 'Fire Overwatch',      cpCost: 1, pattern: /\b(fire\s+overwatch|pop(?:ping)?\s+overwatch|use\s+overwatch)\b/i },
     { key: 'RAPID_INGRESS',       name: 'Rapid Ingress',       cpCost: 1, minRound: 2, pattern: /\b(rapid\s+ingress)\b/i },
-    { key: 'SMOKESCREEN',         name: 'Smokescreen',         cpCost: 1, buff: { hitMod: -1, cover: true }, pattern: /\b(smokescreen|pop(?:ping)?\s+smoke)\b/i },
+    { key: 'SMOKESCREEN',         name: 'Smokescreen',         cpCost: 1, buff: { cover: true }, pattern: /\b(smokescreen|pop(?:ping)?\s+smoke)\b/i },
     { key: 'GO_TO_GROUND',        name: 'Go to Ground',        cpCost: 1, buff: { cover: true, invuln6: true }, pattern: /\b(go(?:ing)?\s+to\s+ground)\b/i },
     { key: 'HEROIC_INTERVENTION', name: 'Heroic Intervention', cpCost: 1, pattern: /\b(heroic\s+intervention)\b/i },
     { key: 'COUNTER_OFFENSIVE',   name: 'Counter-Offensive',   cpCost: 2, pattern: /\b(counter[\s-]*offensive)\b/i },
@@ -182,7 +182,7 @@ Pure vocal Core/Faction Stratagem parser, neural Auspex voice presets, multimoda
       case 'RAPID_INGRESS':
         return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Rapid Ingress', targetUnit, cpCost: explicitCp ?? 1, minRound: 2, durationScope, buff: null };
       case 'SMOKESCREEN':
-        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Smokescreen', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, durationScope, buff: { hitMod: -1, cover: true } };
+        return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Smokescreen', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, durationScope, buff: { cover: true } };
       case 'GO_TO_GROUND':
         return { intent: 'PLAYER_STRATAGEM', category: 'CORE', stratKey: coreKey, stratName: 'Go to Ground', targetUnit, cpCost: explicitCp ?? 1, minRound: 1, durationScope, buff: { cover: true, invuln6: true } };
       case 'FIRE_OVERWATCH':

@@ -109,7 +109,12 @@ test('parsePlayerStratagem, matchPlayerUnitFromTelemetry & validatePlayerStratag
   const smoke = parseSpokenTacticaIntent('Popping smoke on Sagitaur');
   assert.equal(smoke.intent, 'PLAYER_STRATAGEM');
   assert.equal(smoke.stratKey, 'SMOKESCREEN');
-  assert.deepEqual(smoke.buff, { hitMod: -1, cover: true });
+  assert.deepEqual(smoke.buff, { cover: true }, '11th Ed Smokescreen must grant Benefit of Cover ({ cover: true }) so [IGNORES COVER] strips it cleanly');
+  assert.deepEqual(
+    PLAYER_VOCAL_STRATAGEMS.find(s => s.key === 'SMOKESCREEN')?.buff,
+    { cover: true },
+    'PLAYER_VOCAL_STRATAGEMS SMOKESCREEN entry must use { cover: true }'
+  );
   assert.equal(smoke.durationScope, 'PHASE', '99% of Stratagem buffs must default to PHASE durationScope');
   assert.equal(voidArmour1.durationScope, 'PHASE', 'Faction Stratagems without explicit round wording must default to PHASE');
 

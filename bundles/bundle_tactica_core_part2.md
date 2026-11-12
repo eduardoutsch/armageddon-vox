@@ -10,6 +10,8 @@ Pure Horde Attack LCT dice-mat sequence, Round 1–6 post-match chronicle compil
 ## File: `js/tactica-core.js (Part 2: Horde Attacks, Chronicle & MVVM Selectors, Lines 501-1100)` <a id="file-jstacticacorejspart2hordeattackschroniclemvvmselectorslines5011100"></a>
 
 ````javascript
+        invuln6: Boolean(rawBuff.invuln6)
+      };
     }
 
     let activePhase = curPhase;
@@ -164,6 +166,9 @@ Pure Horde Attack LCT dice-mat sequence, Round 1–6 post-match chronicle compil
         : {}),
       ...(rawContext.targetWorsenAp === undefined && request.target?.worsenAp === undefined && stateBuff.worsenAp !== 0
         ? { targetWorsenAp: stateBuff.worsenAp }
+        : {}),
+      ...(rawContext.targetHasCover === undefined && request.target?.hasCover === undefined && stateBuff.cover
+        ? { targetHasCover: true }
         : {})
     };
     const attackMods = combatCore.resolveHordeAttackModifiers(

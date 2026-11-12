@@ -213,6 +213,7 @@
     const emergencyCargo = out.unitDestroyed && matchedUnit?.embarkedSummary ? matchedUnit.embarkedSummary : null;
     box.innerHTML = `
       <strong>${seq.unitName}</strong> • Save: <strong>${prof.saveTarget}+</strong> (${out.savesPassed}/${seq.numWounds} saved)
+      ${prof.incomingHitMod < 0 ? ` • <span style="color:#38bdf8;">🛡️ Enemy Hit ${prof.incomingHitMod}</span>` : ''}
       ${prof.fnp ? ` • <strong>FNP ${prof.fnp}+</strong> (${out.fnpPassed} shrugged)` : ''}
       • Slain: <strong style="color:var(--red);">${out.modelsSlain}</strong> • Remaining: <strong>${out.remainingModels}</strong>
       ${out.onDeathTriggers > 0 ? `<br><span style="color:var(--gold);">⚡ Misery #30: ${out.onDeathTriggers} model(s) Shoot/Fight on Death!</span>` : ''}
@@ -442,6 +443,8 @@
           patch.activePlayerBuffs = clientState.activePlayerBuffs;
           clientState.losBlockedPairs = [];
           clientState.losAllowedPairs = [];
+          clientState.coverGrantedPairs = [];
+          clientState.coverStrippedPairs = [];
           clientState.phaseOriginSnapshots = {};
           clientState.lastMovementPlans = [];
           clientState.lastMovementSightlines = [];
@@ -466,6 +469,8 @@
       if (nextRnd !== clientState.battleRound) {
         clientState.losBlockedPairs = [];
         clientState.losAllowedPairs = [];
+        clientState.coverGrantedPairs = [];
+        clientState.coverStrippedPairs = [];
         clientState.phaseOriginSnapshots = {};
         clientState.lastMovementPlans = [];
         clientState.lastMovementSightlines = [];
@@ -845,18 +850,34 @@
     unit.advancedThisTurn = false;
   }
 
+  function isPairCoverActive(pairKey, targetName = '', baseHasCover = false) {
+    if ((clientState.coverStrippedPairs || []).includes(pairKey)) return false;
+    if ((clientState.coverGrantedPairs || []).includes(pairKey)) return true;
+    const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
+      ? resolvePlayerUnitDefensiveBuffs(targetName, clientState.activePlayerBuffs, clientState.battleRound, clientState.phase)
+      : null;
+    return Boolean(baseHasCover || unitBuff?.cover);
+  }
+
   function renderSquadSightlinesHtml(squadSight) {
     if (!squadSight) return '';
     const clearList = Array.isArray(squadSight.clearTargets) ? squadSight.clearTargets : [];
     const blockedList = Array.isArray(squadSight.blockedTargets) ? squadSight.blockedTargets : [];
     if (clearList.length === 0 && blockedList.length === 0) return '';
 
-    const clearChips = clearList.map(t => `
+    const clearChips = clearList.map(t => {
+      const hasCover = isPairCoverActive(t.pairKey, t.targetName, t.targetHasCover);
+      const coverStyle = hasCover
+        ? 'padding:1px 6px; font-size:0.72rem; background:rgba(56,189,248,0.22); border:1px solid rgba(56,189,248,0.75); color:#bae6fd; font-weight:700;'
+        : 'padding:1px 6px; font-size:0.72rem; opacity:0.78;';
+      return `
       <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); border-radius:6px; padding:2px 6px; font-size:0.76rem;">
         🎯 ${t.targetName} (${t.distanceInches}") •
+        <button type="button" class="btn-ghost btn-sm" aria-pressed="${hasCover}" style="${coverStyle}" onclick="toggleTargetCover('${escapeJsStr(t.pairKey)}', ${!hasCover})">🛡️ Cover (-1 Hit)${hasCover ? ': ON' : ''}</button>
         <button type="button" class="btn-ghost btn-sm" style="padding:1px 5px; font-size:0.72rem;" onclick="blockShootingSightline('${escapeJsStr(t.pairKey)}')">🚫 No LOS</button>
       </span>
-    `).join('');
+    `;
+    }).join('');
     const blockedChips = blockedList.map(t => `
       <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:6px; padding:2px 6px; font-size:0.76rem; color:#fca5a5;">
         🧱 Blocked: ${t.targetName} •
@@ -1179,6 +1200,86 @@
     return toggleShootingSightline(pairKey, false);
   }
 
+  /**
+   * Toggles partial-obscuration 11th Edition Benefit of Cover (`-1` to Hit) for a `HORDE->PLAYER` pair
+   * in one click across Step 2 and Step 3 before rolling on the LCT mat.
+   */
+  async function toggleTargetCover(pairKey, forceCover = undefined) {
+    const cleanPair = String(pairKey || '').trim();
+    if (!cleanPair) return null;
+
+    let currentCover = false;
+    const matchAsgn = (clientState.lastShootingAssignments || []).find(
+      a => (a.pairKey || `${a.attackerKey}->${a.targetKey}`) === cleanPair
+    );
+    if (matchAsgn) {
+      currentCover = isPairCoverActive(cleanPair, matchAsgn.targetName, matchAsgn.targetHasCover ?? matchAsgn.target?.hasCover);
+    } else if (clientState.lastMovementSightlines?.bySquad) {
+      for (const sq of Object.values(clientState.lastMovementSightlines.bySquad)) {
+        const ct = (sq.clearTargets || []).find(t => t.pairKey === cleanPair);
+        if (ct) {
+          currentCover = isPairCoverActive(cleanPair, ct.targetName, ct.targetHasCover);
+          break;
+        }
+      }
+    }
+    const nextCover = forceCover !== undefined ? Boolean(forceCover) : !currentCover;
+
+    try {
+      const res = await daemonRequest('/autopilot/toggle-cover', 'POST', { pairKey: cleanPair, hasCover: nextCover });
+      daemonOnline = true;
+      clientState.coverGrantedPairs = res.coverGrantedPairs || [];
+      clientState.coverStrippedPairs = res.coverStrippedPairs || [];
+      clientState.lastMovementSightlines = res.sightlines || null;
+      clientState.lastShootingAssignments = res.assignments || [];
+    } catch (e) {
+      const gSet = new Set(clientState.coverGrantedPairs || []);
+      const sSet = new Set(clientState.coverStrippedPairs || []);
+      if (nextCover) {
+        gSet.add(cleanPair);
+        sSet.delete(cleanPair);
+      } else {
+        gSet.delete(cleanPair);
+        sSet.add(cleanPair);
+      }
+      clientState.coverGrantedPairs = Array.from(gSet);
+      clientState.coverStrippedPairs = Array.from(sSet);
+
+      const opts = {
+        losBlockedPairs: clientState.losBlockedPairs || [],
+        losAllowedPairs: clientState.losAllowedPairs || [],
+        coverGrantedPairs: clientState.coverGrantedPairs,
+        coverStrippedPairs: clientState.coverStrippedPairs
+      };
+      if (typeof previewMovementSightlines === 'function') {
+        clientState.lastMovementSightlines = previewMovementSightlines(
+          clientState.boardTelemetry,
+          clientState,
+          clientState.lastMovementPlans || [],
+          opts
+        );
+      }
+      clientState.lastShootingAssignments = selectHordeShootingTargets(clientState.boardTelemetry, clientState, opts);
+    }
+
+    if (activeHordeStep === 3) {
+      renderAutopilotShootingAssignments(clientState.lastShootingAssignments || []);
+    } else if (activeHordeStep === 2) {
+      renderAutopilotMovementAndIngress(
+        clientState.lastMovementPlans || [],
+        clientState.lastIngressDrops || [],
+        clientState.lastMovementSightlines
+      );
+    }
+    renderTacticaConsole();
+    return {
+      pairKey: cleanPair,
+      hasCover: nextCover,
+      assignments: clientState.lastShootingAssignments,
+      sightlines: clientState.lastMovementSightlines
+    };
+  }
+
   function renderAutopilotShootingAssignments(assignments = []) {
     if (!Array.isArray(assignments) || assignments.length === 0) {
       setAutopilotHtml('<span style="color:var(--muted);">No visible Player targets within Horde ranged weapon envelopes.</span>');
@@ -1187,11 +1288,16 @@
     const snapshots = clientState.phaseOriginSnapshots || {};
     setAutopilotHtml(assignments.map((a, idx) => {
       const pairKey = a.pairKey || `${a.attackerKey}->${a.targetKey}`;
+      const hasCover = isPairCoverActive(pairKey, a.targetName, a.targetHasCover ?? a.target?.hasCover);
+      const coverStyle = hasCover
+        ? 'background:rgba(56,189,248,0.22); border:1px solid rgba(56,189,248,0.75); color:#bae6fd; font-weight:700;'
+        : 'opacity:0.78;';
       const canUndo = Boolean(snapshots[a.attackerKey]) || (clientState.lastMovementPlans || []).some(p => p.squadKey === a.attackerKey && p.status !== 'REVERTED');
       return `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
           <div>🎯 <strong>${a.attackerName}</strong> [${a.weapon.name}] &rarr; <strong>${a.targetName}</strong> (${a.distanceInches}")</div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn-ghost btn-sm" aria-pressed="${hasCover}" style="${coverStyle}" onclick="toggleTargetCover('${escapeJsStr(pairKey)}', ${!hasCover})">🛡️ Cover (-1 Hit)${hasCover ? ': ON' : ''}</button>
             <button type="button" class="btn-ghost btn-sm" onclick="blockShootingSightline('${escapeJsStr(pairKey)}')">🚫 No LOS (Re-pick)</button>
             ${canUndo ? `<button type="button" class="btn-ghost btn-sm" onclick="undoSquadMoveByKey('${escapeJsStr(a.attackerKey)}')">↩️ Undo Move</button>` : ''}
             <button type="button" class="btn-red btn-sm" onclick="fireAutopilotWeaponOnMat(${idx})">🎲 Roll Attack on LCT Mat</button>
@@ -1217,7 +1323,9 @@
     } catch (e) {
       assignments = selectHordeShootingTargets(clientState.boardTelemetry, clientState, {
         losBlockedPairs: clientState.losBlockedPairs || [],
-        losAllowedPairs: clientState.losAllowedPairs || []
+        losAllowedPairs: clientState.losAllowedPairs || [],
+        coverGrantedPairs: clientState.coverGrantedPairs || [],
+        coverStrippedPairs: clientState.coverStrippedPairs || []
       });
     }
     clientState.lastShootingAssignments = assignments;
@@ -1229,22 +1337,24 @@
 
   /**
    * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`),
-   * applying any active Player Stratagem defensive buffs (such as Smokescreen `-1` to Hit) for the target.
+   * applying active 11th Edition Cover (`-1` to Hit) and Player Stratagem defensive buffs for the target.
    */
   async function fireAutopilotWeaponOnMat(idx) {
     const asgn = (clientState.lastShootingAssignments || [])[idx];
     if (!asgn) return null;
+    const pairKey = asgn.pairKey || `${asgn.attackerKey}->${asgn.targetKey}`;
     const units = clientState.boardTelemetry?.units || [];
     const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
     const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
       ? resolvePlayerUnitDefensiveBuffs(asgn.targetName, clientState.activePlayerBuffs, clientState.battleRound, clientState.phase)
       : { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
     const baseTarget = asgn.target || { toughness: 4 };
+    const effectiveCover = isPairCoverActive(pairKey, asgn.targetName, asgn.targetHasCover ?? baseTarget.hasCover);
     const targetWithBuffs = {
       ...baseTarget,
       hitMod: (Number(baseTarget.hitMod) || 0) + unitBuff.hitMod,
       worsenAp: (Number(baseTarget.worsenAp) || 0) + unitBuff.worsenAp,
-      hasCover: Boolean(baseTarget.hasCover || unitBuff.cover),
+      hasCover: effectiveCover,
       invuln: unitBuff.invuln6 ? Math.min(Number(baseTarget.invuln) || 7, 6) : (baseTarget.invuln || null)
     };
     const payload = {
@@ -1256,7 +1366,8 @@
       context: {
         targetHitMod: targetWithBuffs.hitMod,
         targetWorsenAp: targetWithBuffs.worsenAp,
-        targetHasCover: targetWithBuffs.hasCover
+        targetHasCover: targetWithBuffs.hasCover,
+        ...(asgn.engagedMonsterVehiclePenalty ? { engagedMonsterVehiclePenalty: true } : {})
       }
     };
     try {
@@ -1383,6 +1494,7 @@
       toggleShootingSightline,
       blockShootingSightline,
       allowShootingSightline,
+      toggleTargetCover,
       triggerAutopilotShooting,
       fireAutopilotWeaponOnMat,
       triggerAutopilotCharges,
@@ -1440,6 +1552,7 @@
     toggleShootingSightline,
     blockShootingSightline,
     allowShootingSightline,
+    toggleTargetCover,
     triggerAutopilotShooting,
     fireAutopilotWeaponOnMat,
     triggerAutopilotCharges,

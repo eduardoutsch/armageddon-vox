@@ -538,6 +538,8 @@ function createTacticaDaemon(options = {}) {
           liveState.shelfTemplates = [];
           liveState.losBlockedPairs = [];
           liveState.losAllowedPairs = [];
+          liveState.coverGrantedPairs = [];
+          liveState.coverStrippedPairs = [];
           liveState.phaseOriginSnapshots = {};
           liveState.lastMovementPlans = [];
           liveState.lastMovementSightlines = [];
@@ -556,6 +558,8 @@ function createTacticaDaemon(options = {}) {
           }
           liveState.losBlockedPairs = [];
           liveState.losAllowedPairs = [];
+          liveState.coverGrantedPairs = [];
+          liveState.coverStrippedPairs = [];
           liveState.phaseOriginSnapshots = {};
           liveState.lastMovementPlans = [];
           liveState.lastMovementSightlines = [];
@@ -616,8 +620,4 @@ function createTacticaDaemon(options = {}) {
       return sendJson(res, 200, { ok: true, state: liveState, entry });
     }
 
-    if (req.method === 'POST' && urlPath === '/combat/defend-request') {
-      const body = await readJsonBody(req);
-      cmdCounter += 1;
-      const seq = createDefenseRollSequence({ ...body, sequenceId: `def_${Date.now()}_${cmdCounter}` }, liveState);
 ````

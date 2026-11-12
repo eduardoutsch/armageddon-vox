@@ -526,6 +526,8 @@ function createTacticaDaemon(options = {}) {
           liveState.shelfTemplates = [];
           liveState.losBlockedPairs = [];
           liveState.losAllowedPairs = [];
+          liveState.coverGrantedPairs = [];
+          liveState.coverStrippedPairs = [];
           liveState.phaseOriginSnapshots = {};
           liveState.lastMovementPlans = [];
           liveState.lastMovementSightlines = [];
@@ -544,6 +546,8 @@ function createTacticaDaemon(options = {}) {
           }
           liveState.losBlockedPairs = [];
           liveState.losAllowedPairs = [];
+          liveState.coverGrantedPairs = [];
+          liveState.coverStrippedPairs = [];
           liveState.phaseOriginSnapshots = {};
           liveState.lastMovementPlans = [];
           liveState.lastMovementSightlines = [];
@@ -967,6 +971,51 @@ function createTacticaDaemon(options = {}) {
         blocked: isBlocked,
         losBlockedPairs: liveState.losBlockedPairs,
         losAllowedPairs: liveState.losAllowedPairs,
+        sightlines,
+        assignments
+      });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/toggle-cover') {
+      const body = await readJsonBody(req);
+      const pairKey = String(body.pairKey || '').trim();
+      if (!pairKey) return sendJson(res, 400, { ok: false, error: 'Missing pairKey' });
+      const hasCover = Boolean(body.hasCover);
+
+      const grantedSet = new Set(liveState.coverGrantedPairs || []);
+      const strippedSet = new Set(liveState.coverStrippedPairs || []);
+      if (hasCover) {
+        grantedSet.add(pairKey);
+        strippedSet.delete(pairKey);
+      } else {
+        grantedSet.delete(pairKey);
+        strippedSet.add(pairKey);
+      }
+      liveState.coverGrantedPairs = Array.from(grantedSet);
+      liveState.coverStrippedPairs = Array.from(strippedSet);
+
+      const sightlines = previewMovementSightlines(liveState.boardTelemetry, liveState, liveState.lastMovementPlans || [], {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || [],
+        coverGrantedPairs: liveState.coverGrantedPairs,
+        coverStrippedPairs: liveState.coverStrippedPairs
+      });
+      const assignments = selectHordeShootingTargets(liveState.boardTelemetry, liveState, {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || [],
+        coverGrantedPairs: liveState.coverGrantedPairs,
+        coverStrippedPairs: liveState.coverStrippedPairs
+      });
+      liveState.lastMovementSightlines = sightlines;
+      liveState.lastShootingAssignments = assignments;
+      savePersistedState();
+
+      return sendJson(res, 200, {
+        ok: true,
+        pairKey,
+        hasCover,
+        coverGrantedPairs: liveState.coverGrantedPairs,
+        coverStrippedPairs: liveState.coverStrippedPairs,
         sightlines,
         assignments
       });

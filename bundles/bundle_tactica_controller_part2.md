@@ -1,126 +1,15 @@
 # 📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 2: Horde Autopilot, Sightlines & Undo)
 
-Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move, Step 3 LOS Re-Pick, LCT dice-mat attack triggers, and SPA lifecycle (`js/tactica.js` lines 681 to end).
+Horde Autopilot wave spawning, Step 2 Projected Sightlines, clickable Cover (-1 Hit) toggles, persistent Undo Move, Step 3 LOS Re-Pick, LCT dice-mat attack triggers, and SPA lifecycle (`js/tactica.js` lines 797 to end).
 
 ## 📑 Table of Contents
-- [js/tactica.js (Part 2: Horde Autopilot, Sightlines, Undo & SPA Lifecycle, Lines 681-1500)](#file-jstacticajspart2hordeautopilotsightlinesundospalifecyclelines6811500)
+- [js/tactica.js (Part 2: Horde Autopilot, Sightlines, Cover Toggles, Undo & SPA Lifecycle, Lines 797-1650)](#file-jstacticajspart2hordeautopilotsightlinescovertogglesundospalifecyclelines7971650)
 
 ---
 
-## File: `js/tactica.js (Part 2: Horde Autopilot, Sightlines, Undo & SPA Lifecycle, Lines 681-1500)` <a id="file-jstacticajspart2hordeautopilotsightlinesundospalifecyclelines6811500"></a>
+## File: `js/tactica.js (Part 2: Horde Autopilot, Sightlines, Cover Toggles, Undo & SPA Lifecycle, Lines 797-1650)` <a id="file-jstacticajspart2hordeautopilotsightlinescovertogglesundospalifecyclelines7971650"></a>
 
 ````javascript
-    }
-    renderTacticaConsole();
-  }
-
-  /**
-   * Populates the Horde Auto-Defender form inputs directly from a scanned Yellowscribe squad on the LCT table.
-   */
-  function selectTelemetryUnitForDefense(idx) {
-    const units = clientState.boardTelemetry?.units || [];
-    const u = units[idx];
-    if (!u || typeof document === 'undefined') return null;
-
-    const setVal = (id, v) => {
-      const el = document.getElementById(id);
-      if (el) el.value = String(v);
-    };
-    setVal('defUnitName', u.name || 'Horde Unit');
-    setVal('defSaveInput', u.save || 4);
-    setVal('defInvulnInput', u.invuln || 0);
-    setVal('defWpmInput', u.woundsPerModel || 1);
-    setVal('defKeywordsInput', Array.isArray(u.keywords) && u.keywords.length > 0 ? u.keywords.join(', ') : 'INFANTRY');
-    setVal('defModelsInput', u.modelCount || 1);
-    const spCheck = document.getElementById('defInSpawnCheck');
-    if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
-    renderTacticaConsole();
-    return u;
-  }
-
-  /**
-   * Flips a scanned squad's allegiance (`PLAYER` <-> `HORDE`) in both browser telemetry state and TTS tags
-   * via `POST /tts/set-side`, falling back cleanly to local state updates when offline.
-   *
-   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
-   * @returns {Promise<object|null>} Updated squad entry or `null` when out of bounds.
-   */
-  async function toggleTelemetryUnitSide(idx) {
-    const units = clientState.boardTelemetry?.units || [];
-    const u = units[idx];
-    if (!u) return null;
-    const nextSide = u.side === 'PLAYER' ? 'HORDE' : 'PLAYER';
-    const payload = {
-      squadKey: u.squadKey,
-      guids: Array.isArray(u.guids) ? u.guids : (u.guid ? [u.guid] : []),
-      side: nextSide
-    };
-    try {
-      const res = await daemonRequest('/tts/set-side', 'POST', payload);
-      daemonOnline = true;
-      if (Array.isArray(res.units) && clientState.boardTelemetry) {
-        clientState.boardTelemetry.units = res.units;
-      } else {
-        u.side = nextSide;
-      }
-    } catch (e) {
-      daemonOnline = false;
-      u.side = nextSide;
-    }
-    renderTacticaConsole();
-    return (clientState.boardTelemetry?.units || [])[idx] || u;
-  }
-
-  /**
-   * Forwards user intent to disembark all passenger units (`[10 Kasrkin]` or `[5 + Leader]`)
-   * wholly within `3"` of a Transport miniature via `POST /autopilot/disembark` with offline fallback.
-   *
-   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
-   * @returns {Promise<object|null>} Disembark command descriptor or `null` when invalid.
-   */
-  async function disembarkTelemetryTransport(idx) {
-    const units = clientState.boardTelemetry?.units || [];
-    const u = units[idx];
-    if (!u || !Array.isArray(u.embarkedCargo) || u.embarkedCargo.length === 0) return null;
-
-    let cmd = null;
-    try {
-      const res = await daemonRequest('/autopilot/disembark', 'POST', {
-        squadKey: u.squadKey,
-        transportGuid: u.guid,
-        unitIndex: idx
-      });
-      daemonOnline = true;
-      cmd = res.command;
-      if (Array.isArray(res.units) && clientState.boardTelemetry) {
-        clientState.boardTelemetry.units = res.units;
-      } else {
-        u.embarkedCargo = [];
-        u.embarkedSummary = null;
-      }
-      if (res.entry) localChronicle.push(res.entry);
-    } catch (e) {
-      daemonOnline = false;
-      cmd = typeof buildDisembarkWaveCommand === 'function' ? buildDisembarkWaveCommand(u) : null;
-      if (!cmd) return null;
-      u.embarkedCargo = [];
-      u.embarkedSummary = null;
-      localChronicle.push(formatChronicleEntry({ type: 'DISEMBARK', summary: cmd.summary }, clientState));
-    }
-
-    if (cmd) {
-      setAutopilotHtml(`<strong>🚌 Transport Disembark:</strong> ${cmd.summary}`);
-    }
-    renderTacticaConsole();
-    return cmd;
-  }
-
-  function setAutopilotHtml(html) {
-    if (typeof document === 'undefined') return;
-    const box = document.getElementById('tacticaAutopilotBox');
-    if (box) box.innerHTML = html;
-  }
-
   /**
    * 1. Clones off-board `HORDE_TEMPLATE` miniatures into active Mode 1 Spawn Zones (holding R2–R4 Deep Strike & Misery #13 waves in Reserves).
    */
@@ -177,18 +66,34 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     unit.advancedThisTurn = false;
   }
 
+  function isPairCoverActive(pairKey, targetName = '', baseHasCover = false) {
+    if ((clientState.coverStrippedPairs || []).includes(pairKey)) return false;
+    if ((clientState.coverGrantedPairs || []).includes(pairKey)) return true;
+    const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
+      ? resolvePlayerUnitDefensiveBuffs(targetName, clientState.activePlayerBuffs, clientState.battleRound, clientState.phase)
+      : null;
+    return Boolean(baseHasCover || unitBuff?.cover);
+  }
+
   function renderSquadSightlinesHtml(squadSight) {
     if (!squadSight) return '';
     const clearList = Array.isArray(squadSight.clearTargets) ? squadSight.clearTargets : [];
     const blockedList = Array.isArray(squadSight.blockedTargets) ? squadSight.blockedTargets : [];
     if (clearList.length === 0 && blockedList.length === 0) return '';
 
-    const clearChips = clearList.map(t => `
+    const clearChips = clearList.map(t => {
+      const hasCover = isPairCoverActive(t.pairKey, t.targetName, t.targetHasCover);
+      const coverStyle = hasCover
+        ? 'padding:1px 6px; font-size:0.72rem; background:rgba(56,189,248,0.22); border:1px solid rgba(56,189,248,0.75); color:#bae6fd; font-weight:700;'
+        : 'padding:1px 6px; font-size:0.72rem; opacity:0.78;';
+      return `
       <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.35); border-radius:6px; padding:2px 6px; font-size:0.76rem;">
         🎯 ${t.targetName} (${t.distanceInches}") •
+        <button type="button" class="btn-ghost btn-sm" aria-pressed="${hasCover}" style="${coverStyle}" onclick="toggleTargetCover('${escapeJsStr(t.pairKey)}', ${!hasCover})">🛡️ Cover (-1 Hit)${hasCover ? ': ON' : ''}</button>
         <button type="button" class="btn-ghost btn-sm" style="padding:1px 5px; font-size:0.72rem;" onclick="blockShootingSightline('${escapeJsStr(t.pairKey)}')">🚫 No LOS</button>
       </span>
-    `).join('');
+    `;
+    }).join('');
     const blockedChips = blockedList.map(t => `
       <span style="display:inline-flex; align-items:center; gap:5px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:6px; padding:2px 6px; font-size:0.76rem; color:#fca5a5;">
         🧱 Blocked: ${t.targetName} •
@@ -511,6 +416,86 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     return toggleShootingSightline(pairKey, false);
   }
 
+  /**
+   * Toggles partial-obscuration 11th Edition Benefit of Cover (`-1` to Hit) for a `HORDE->PLAYER` pair
+   * in one click across Step 2 and Step 3 before rolling on the LCT mat.
+   */
+  async function toggleTargetCover(pairKey, forceCover = undefined) {
+    const cleanPair = String(pairKey || '').trim();
+    if (!cleanPair) return null;
+
+    let currentCover = false;
+    const matchAsgn = (clientState.lastShootingAssignments || []).find(
+      a => (a.pairKey || `${a.attackerKey}->${a.targetKey}`) === cleanPair
+    );
+    if (matchAsgn) {
+      currentCover = isPairCoverActive(cleanPair, matchAsgn.targetName, matchAsgn.targetHasCover ?? matchAsgn.target?.hasCover);
+    } else if (clientState.lastMovementSightlines?.bySquad) {
+      for (const sq of Object.values(clientState.lastMovementSightlines.bySquad)) {
+        const ct = (sq.clearTargets || []).find(t => t.pairKey === cleanPair);
+        if (ct) {
+          currentCover = isPairCoverActive(cleanPair, ct.targetName, ct.targetHasCover);
+          break;
+        }
+      }
+    }
+    const nextCover = forceCover !== undefined ? Boolean(forceCover) : !currentCover;
+
+    try {
+      const res = await daemonRequest('/autopilot/toggle-cover', 'POST', { pairKey: cleanPair, hasCover: nextCover });
+      daemonOnline = true;
+      clientState.coverGrantedPairs = res.coverGrantedPairs || [];
+      clientState.coverStrippedPairs = res.coverStrippedPairs || [];
+      clientState.lastMovementSightlines = res.sightlines || null;
+      clientState.lastShootingAssignments = res.assignments || [];
+    } catch (e) {
+      const gSet = new Set(clientState.coverGrantedPairs || []);
+      const sSet = new Set(clientState.coverStrippedPairs || []);
+      if (nextCover) {
+        gSet.add(cleanPair);
+        sSet.delete(cleanPair);
+      } else {
+        gSet.delete(cleanPair);
+        sSet.add(cleanPair);
+      }
+      clientState.coverGrantedPairs = Array.from(gSet);
+      clientState.coverStrippedPairs = Array.from(sSet);
+
+      const opts = {
+        losBlockedPairs: clientState.losBlockedPairs || [],
+        losAllowedPairs: clientState.losAllowedPairs || [],
+        coverGrantedPairs: clientState.coverGrantedPairs,
+        coverStrippedPairs: clientState.coverStrippedPairs
+      };
+      if (typeof previewMovementSightlines === 'function') {
+        clientState.lastMovementSightlines = previewMovementSightlines(
+          clientState.boardTelemetry,
+          clientState,
+          clientState.lastMovementPlans || [],
+          opts
+        );
+      }
+      clientState.lastShootingAssignments = selectHordeShootingTargets(clientState.boardTelemetry, clientState, opts);
+    }
+
+    if (activeHordeStep === 3) {
+      renderAutopilotShootingAssignments(clientState.lastShootingAssignments || []);
+    } else if (activeHordeStep === 2) {
+      renderAutopilotMovementAndIngress(
+        clientState.lastMovementPlans || [],
+        clientState.lastIngressDrops || [],
+        clientState.lastMovementSightlines
+      );
+    }
+    renderTacticaConsole();
+    return {
+      pairKey: cleanPair,
+      hasCover: nextCover,
+      assignments: clientState.lastShootingAssignments,
+      sightlines: clientState.lastMovementSightlines
+    };
+  }
+
   function renderAutopilotShootingAssignments(assignments = []) {
     if (!Array.isArray(assignments) || assignments.length === 0) {
       setAutopilotHtml('<span style="color:var(--muted);">No visible Player targets within Horde ranged weapon envelopes.</span>');
@@ -519,11 +504,16 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     const snapshots = clientState.phaseOriginSnapshots || {};
     setAutopilotHtml(assignments.map((a, idx) => {
       const pairKey = a.pairKey || `${a.attackerKey}->${a.targetKey}`;
+      const hasCover = isPairCoverActive(pairKey, a.targetName, a.targetHasCover ?? a.target?.hasCover);
+      const coverStyle = hasCover
+        ? 'background:rgba(56,189,248,0.22); border:1px solid rgba(56,189,248,0.75); color:#bae6fd; font-weight:700;'
+        : 'opacity:0.78;';
       const canUndo = Boolean(snapshots[a.attackerKey]) || (clientState.lastMovementPlans || []).some(p => p.squadKey === a.attackerKey && p.status !== 'REVERTED');
       return `
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
           <div>🎯 <strong>${a.attackerName}</strong> [${a.weapon.name}] &rarr; <strong>${a.targetName}</strong> (${a.distanceInches}")</div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn-ghost btn-sm" aria-pressed="${hasCover}" style="${coverStyle}" onclick="toggleTargetCover('${escapeJsStr(pairKey)}', ${!hasCover})">🛡️ Cover (-1 Hit)${hasCover ? ': ON' : ''}</button>
             <button type="button" class="btn-ghost btn-sm" onclick="blockShootingSightline('${escapeJsStr(pairKey)}')">🚫 No LOS (Re-pick)</button>
             ${canUndo ? `<button type="button" class="btn-ghost btn-sm" onclick="undoSquadMoveByKey('${escapeJsStr(a.attackerKey)}')">↩️ Undo Move</button>` : ''}
             <button type="button" class="btn-red btn-sm" onclick="fireAutopilotWeaponOnMat(${idx})">🎲 Roll Attack on LCT Mat</button>
@@ -549,7 +539,9 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     } catch (e) {
       assignments = selectHordeShootingTargets(clientState.boardTelemetry, clientState, {
         losBlockedPairs: clientState.losBlockedPairs || [],
-        losAllowedPairs: clientState.losAllowedPairs || []
+        losAllowedPairs: clientState.losAllowedPairs || [],
+        coverGrantedPairs: clientState.coverGrantedPairs || [],
+        coverStrippedPairs: clientState.coverStrippedPairs || []
       });
     }
     clientState.lastShootingAssignments = assignments;
@@ -561,22 +553,24 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
 
   /**
    * Queues a selected Horde weapon assignment onto the LCT TTS Dice Mat (`HITS` -> `WOUNDS`),
-   * applying any active Player Stratagem defensive buffs (such as Smokescreen `-1` to Hit) for the target.
+   * applying active 11th Edition Cover (`-1` to Hit) and Player Stratagem defensive buffs for the target.
    */
   async function fireAutopilotWeaponOnMat(idx) {
     const asgn = (clientState.lastShootingAssignments || [])[idx];
     if (!asgn) return null;
+    const pairKey = asgn.pairKey || `${asgn.attackerKey}->${asgn.targetKey}`;
     const units = clientState.boardTelemetry?.units || [];
     const attacker = units.find(u => (u.squadKey || u.name) === asgn.attackerKey) || { name: asgn.attackerName, keywords: [] };
     const unitBuff = typeof resolvePlayerUnitDefensiveBuffs === 'function'
       ? resolvePlayerUnitDefensiveBuffs(asgn.targetName, clientState.activePlayerBuffs, clientState.battleRound, clientState.phase)
       : { hitMod: 0, worsenAp: 0, cover: false, invuln6: false };
     const baseTarget = asgn.target || { toughness: 4 };
+    const effectiveCover = isPairCoverActive(pairKey, asgn.targetName, asgn.targetHasCover ?? baseTarget.hasCover);
     const targetWithBuffs = {
       ...baseTarget,
       hitMod: (Number(baseTarget.hitMod) || 0) + unitBuff.hitMod,
       worsenAp: (Number(baseTarget.worsenAp) || 0) + unitBuff.worsenAp,
-      hasCover: Boolean(baseTarget.hasCover || unitBuff.cover),
+      hasCover: effectiveCover,
       invuln: unitBuff.invuln6 ? Math.min(Number(baseTarget.invuln) || 7, 6) : (baseTarget.invuln || null)
     };
     const payload = {
@@ -588,7 +582,8 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
       context: {
         targetHitMod: targetWithBuffs.hitMod,
         targetWorsenAp: targetWithBuffs.worsenAp,
-        targetHasCover: targetWithBuffs.hasCover
+        targetHasCover: targetWithBuffs.hasCover,
+        ...(asgn.engagedMonsterVehiclePenalty ? { engagedMonsterVehiclePenalty: true } : {})
       }
     };
     try {
@@ -715,6 +710,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
       toggleShootingSightline,
       blockShootingSightline,
       allowShootingSightline,
+      toggleTargetCover,
       triggerAutopilotShooting,
       fireAutopilotWeaponOnMat,
       triggerAutopilotCharges,
@@ -772,6 +768,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     toggleShootingSightline,
     blockShootingSightline,
     allowShootingSightline,
+    toggleTargetCover,
     triggerAutopilotShooting,
     fireAutopilotWeaponOnMat,
     triggerAutopilotCharges,

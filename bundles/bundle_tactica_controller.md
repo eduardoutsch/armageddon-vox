@@ -1,13 +1,13 @@
 # 📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 1: HUD, Poller & Telemetry)
 
-Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemon client, SPA-safe 2.5s auto-poller, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 680).
+Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemon client, SPA-safe 2.5s auto-poller, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 796).
 
 ## 📑 Table of Contents
-- [js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-680)](#file-jstacticajspart1hudsessionsyncautopollertelemetryviewlines1680)
+- [js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-796)](#file-jstacticajspart1hudsessionsyncautopollertelemetryviewlines1796)
 
 ---
 
-## File: `js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-680)` <a id="file-jstacticajspart1hudsessionsyncautopollertelemetryviewlines1680"></a>
+## File: `js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-796)` <a id="file-jstacticajspart1hudsessionsyncautopollertelemetryviewlines1796"></a>
 
 ````javascript
 /**
@@ -225,6 +225,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemo
     const emergencyCargo = out.unitDestroyed && matchedUnit?.embarkedSummary ? matchedUnit.embarkedSummary : null;
     box.innerHTML = `
       <strong>${seq.unitName}</strong> • Save: <strong>${prof.saveTarget}+</strong> (${out.savesPassed}/${seq.numWounds} saved)
+      ${prof.incomingHitMod < 0 ? ` • <span style="color:#38bdf8;">🛡️ Enemy Hit ${prof.incomingHitMod}</span>` : ''}
       ${prof.fnp ? ` • <strong>FNP ${prof.fnp}+</strong> (${out.fnpPassed} shrugged)` : ''}
       • Slain: <strong style="color:var(--red);">${out.modelsSlain}</strong> • Remaining: <strong>${out.remainingModels}</strong>
       ${out.onDeathTriggers > 0 ? `<br><span style="color:var(--gold);">⚡ Misery #30: ${out.onDeathTriggers} model(s) Shoot/Fight on Death!</span>` : ''}
@@ -454,6 +455,8 @@ Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemo
           patch.activePlayerBuffs = clientState.activePlayerBuffs;
           clientState.losBlockedPairs = [];
           clientState.losAllowedPairs = [];
+          clientState.coverGrantedPairs = [];
+          clientState.coverStrippedPairs = [];
           clientState.phaseOriginSnapshots = {};
           clientState.lastMovementPlans = [];
           clientState.lastMovementSightlines = [];
@@ -478,6 +481,8 @@ Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemo
       if (nextRnd !== clientState.battleRound) {
         clientState.losBlockedPairs = [];
         clientState.losAllowedPairs = [];
+        clientState.coverGrantedPairs = [];
+        clientState.coverStrippedPairs = [];
         clientState.phaseOriginSnapshots = {};
         clientState.lastMovementPlans = [];
         clientState.lastMovementSightlines = [];
@@ -690,4 +695,115 @@ Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemo
       daemonOnline = true;
     } catch (e) {
       daemonOnline = false;
+    }
+    renderTacticaConsole();
+  }
+
+  /**
+   * Populates the Horde Auto-Defender form inputs directly from a scanned Yellowscribe squad on the LCT table.
+   */
+  function selectTelemetryUnitForDefense(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || typeof document === 'undefined') return null;
+
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = String(v);
+    };
+    setVal('defUnitName', u.name || 'Horde Unit');
+    setVal('defSaveInput', u.save || 4);
+    setVal('defInvulnInput', u.invuln || 0);
+    setVal('defWpmInput', u.woundsPerModel || 1);
+    setVal('defKeywordsInput', Array.isArray(u.keywords) && u.keywords.length > 0 ? u.keywords.join(', ') : 'INFANTRY');
+    setVal('defModelsInput', u.modelCount || 1);
+    const spCheck = document.getElementById('defInSpawnCheck');
+    if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
+    renderTacticaConsole();
+    return u;
+  }
+
+  /**
+   * Flips a scanned squad's allegiance (`PLAYER` <-> `HORDE`) in both browser telemetry state and TTS tags
+   * via `POST /tts/set-side`, falling back cleanly to local state updates when offline.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Updated squad entry or `null` when out of bounds.
+   */
+  async function toggleTelemetryUnitSide(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u) return null;
+    const nextSide = u.side === 'PLAYER' ? 'HORDE' : 'PLAYER';
+    const payload = {
+      squadKey: u.squadKey,
+      guids: Array.isArray(u.guids) ? u.guids : (u.guid ? [u.guid] : []),
+      side: nextSide
+    };
+    try {
+      const res = await daemonRequest('/tts/set-side', 'POST', payload);
+      daemonOnline = true;
+      if (Array.isArray(res.units) && clientState.boardTelemetry) {
+        clientState.boardTelemetry.units = res.units;
+      } else {
+        u.side = nextSide;
+      }
+    } catch (e) {
+      daemonOnline = false;
+      u.side = nextSide;
+    }
+    renderTacticaConsole();
+    return (clientState.boardTelemetry?.units || [])[idx] || u;
+  }
+
+  /**
+   * Forwards user intent to disembark all passenger units (`[10 Kasrkin]` or `[5 + Leader]`)
+   * wholly within `3"` of a Transport miniature via `POST /autopilot/disembark` with offline fallback.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Disembark command descriptor or `null` when invalid.
+   */
+  async function disembarkTelemetryTransport(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || !Array.isArray(u.embarkedCargo) || u.embarkedCargo.length === 0) return null;
+
+    let cmd = null;
+    try {
+      const res = await daemonRequest('/autopilot/disembark', 'POST', {
+        squadKey: u.squadKey,
+        transportGuid: u.guid,
+        unitIndex: idx
+      });
+      daemonOnline = true;
+      cmd = res.command;
+      if (Array.isArray(res.units) && clientState.boardTelemetry) {
+        clientState.boardTelemetry.units = res.units;
+      } else {
+        u.embarkedCargo = [];
+        u.embarkedSummary = null;
+      }
+      if (res.entry) localChronicle.push(res.entry);
+    } catch (e) {
+      daemonOnline = false;
+      cmd = typeof buildDisembarkWaveCommand === 'function' ? buildDisembarkWaveCommand(u) : null;
+      if (!cmd) return null;
+      u.embarkedCargo = [];
+      u.embarkedSummary = null;
+      localChronicle.push(formatChronicleEntry({ type: 'DISEMBARK', summary: cmd.summary }, clientState));
+    }
+
+    if (cmd) {
+      setAutopilotHtml(`<strong>🚌 Transport Disembark:</strong> ${cmd.summary}`);
+    }
+    renderTacticaConsole();
+    return cmd;
+  }
+
+  function setAutopilotHtml(html) {
+    if (typeof document === 'undefined') return;
+    const box = document.getElementById('tacticaAutopilotBox');
+    if (box) box.innerHTML = html;
+  }
+
 ````

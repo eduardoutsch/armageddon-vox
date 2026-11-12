@@ -174,7 +174,8 @@ test('resolveHordeDefenseProfile: resolves Necron/Knight FNP, Misery #5 Invuln, 
   assert.equal(necronDef.isHidden, true, 'Spawn Zone grants Hidden');
   assert.equal(necronDef.maxVisibleRangeInches, 15, '11th Ed Hidden caps visibility at 15"');
   assert.equal(necronDef.effectiveInvuln, 4, 'Misery #5 grants 4+ invuln');
-  assert.equal(necronDef.saveTarget, 3, '4+ Save with Cover against effective AP 0 improves to 3+');
+  assert.equal(necronDef.saveTarget, 4, '11th Ed Cover grants 0 Save bonus (4+ Save vs effective AP 0 stays 4+)');
+  assert.equal(necronDef.incomingHitMod, -1, '11th Ed Cover applies -1 to Attacker ranged Hit roll');
 
   // 2. Necron Overlord (CHARACTER) with existing 4+ Invuln under Misery #5 -> 3+ Invuln, no 5+ FNP
   const overlordDef = resolveHordeDefenseProfile(
@@ -363,5 +364,62 @@ test('Edge cases: Tau Glasses, Officer Aura, Custodes/CSM/Aeldari/Drukhari/Tyran
   );
   assert.equal(vsSmokescreenPlusBonus.netHitMod, 0, '+1 Horde bonus and -1 Smokescreen must cancel to 0 without double-counting');
   assert.equal(vsSmokescreenPlusBonus.apPenetration, 1, 'Void Armour targetWorsenAp=1 must worsen AP -2 to AP -1');
+
+  // 11th Edition Cover (-1 ranged Hit, 0 Save bonus), [IGNORES COVER] / Misery #26 strip, and Rule 10.06 Engaged Monster/Vehicle
+  const rangedVsCover = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 3, strength: 5, ap: 0, keywords: [] },
+    { factionName: 'Space Marines', activeMiseryIds: [] },
+    { targetHasCover: true }
+  );
+  assert.equal(rangedVsCover.netHitMod, -1, '11th Ed targetHasCover: true must worsen Horde ranged Hit rolls by -1');
+
+  const meleeVsCover = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4, hasCover: true },
+    { type: 'melee', skill: 3, strength: 5, ap: 0, keywords: [] },
+    { factionName: 'Space Marines', activeMiseryIds: [] }
+  );
+  assert.equal(meleeVsCover.netHitMod, 0, 'Melee attacks are unaffected by target Cover');
+
+  const rangedIgnoreCoverKw = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4, hasCover: true },
+    { type: 'ranged', skill: 3, strength: 5, ap: 0, keywords: ['IGNORES COVER'] },
+    { factionName: 'Space Marines', activeMiseryIds: [] },
+    { targetHasCover: true }
+  );
+  assert.equal(rangedIgnoreCoverKw.ignoreCover, true);
+  assert.equal(rangedIgnoreCoverKw.netHitMod, 0, '[IGNORES COVER] weapon keyword must strip targetHasCover -1 Hit');
+
+  const rangedMisery26 = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 3, strength: 5, ap: 0, keywords: [] },
+    { factionName: 'Space Marines', activeMiseryIds: [26] },
+    { targetHasCover: true }
+  );
+  assert.equal(rangedMisery26.ignoreCover, true);
+  assert.equal(rangedMisery26.netHitMod, 0, 'Misery #26 [IGNORE COVER] must strip Cover -1 Hit cleanly');
+
+  const engagedVehicleShot = resolveHordeAttackModifiers(
+    {},
+    { toughness: 4 },
+    { type: 'ranged', skill: 3, strength: 8, ap: -2, keywords: [] },
+    { factionName: 'Imperial Knights', activeMiseryIds: [] },
+    { engagedMonsterVehiclePenalty: true }
+  );
+  assert.equal(engagedVehicleShot.netHitMod, -1, 'Rule 10.06: Engaged Monster/Vehicle firing non-[CLOSE-QUARTERS] suffers -1 to Hit');
+
+  const coverDefStripped = resolveHordeDefenseProfile(
+    { save: 4, invuln: null, woundsPerModel: 1, keywords: ['INFANTRY'] },
+    { type: 'ranged', strength: 4, ap: 0, damage: 1, keywords: ['IGNORES COVER'] },
+    { factionName: 'Space Marines', activeMiseryIds: [] },
+    { hasCover: true }
+  );
+  assert.equal(coverDefStripped.hasCover, false, '[IGNORES COVER] strips Benefit of Cover on Horde defender');
+  assert.equal(coverDefStripped.incomingHitMod, 0, 'Stripped Cover imposes 0 Hit penalty');
+  assert.equal(coverDefStripped.saveTarget, 4, '4+ Save vs AP 0 stays 4+');
 });
 

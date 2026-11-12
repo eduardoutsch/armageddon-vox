@@ -408,8 +408,41 @@ test('selectTelemetryRowViewModels: pure MVVM selector projects unit badges, sav
   assert.equal(initSt.shelfTemplates.length, 1);
   assert.deepEqual(initSt.lastIngressDrops, []);
   assert.deepEqual(initSt.losAllowedPairs, []);
+  assert.deepEqual(initSt.coverGrantedPairs, []);
+  assert.deepEqual(initSt.coverStrippedPairs, []);
   assert.deepEqual(initSt.phaseOriginSnapshots, {});
   assert.deepEqual(initSt.lastMovementSightlines, []);
+
+  // Verify 11th Ed Smokescreen ({ cover: true }) worsens Horde BS 3+ -> 4+ unless Misery #26 [IGNORE COVER] is active
+  const smokeCoverBuff = createPlayerStratagemBuff({
+    stratKey: 'SMOKESCREEN',
+    stratName: 'Smokescreen',
+    resolvedTarget: 'Sagitaur',
+    durationScope: 'PHASE',
+    buff: { cover: true }
+  }, { battleRound: 2, phase: 'HORDE_SHOOTING' });
+  const smokeState = createInitialTacticaState({
+    battleRound: 2,
+    phase: 'HORDE_SHOOTING',
+    factionName: 'Imperial Knights',
+    activeMiseryIds: [],
+    activePlayerBuffs: [smokeCoverBuff]
+  });
+  const atkVsSmoke = createHordeAttackRollSequence({
+    attackerName: 'Armiger Helverin',
+    targetName: 'Sagitaur',
+    target: { toughness: 9 },
+    weapon: { type: 'ranged', attacks: 4, skill: 3, strength: 9, ap: -1, damage: 3, keywords: [] }
+  }, smokeState);
+  assert.equal(atkVsSmoke.nextCommand.threshold, 4, 'Smokescreen Benefit of Cover must worsen Horde BS 3+ to 4+');
+
+  const atkVsSmokeMisery26 = createHordeAttackRollSequence({
+    attackerName: 'Armiger Helverin',
+    targetName: 'Sagitaur',
+    target: { toughness: 9 },
+    weapon: { type: 'ranged', attacks: 4, skill: 3, strength: 9, ap: -1, damage: 3, keywords: [] }
+  }, { ...smokeState, activeMiseryIds: [26] });
+  assert.equal(atkVsSmokeMisery26.nextCommand.threshold, 3, 'Misery #26 [IGNORE COVER] must strip Smokescreen Benefit of Cover back to 3+');
 
   // Verify selectTelemetryRowViewModels sets canUndoMove when phaseOriginSnapshots holds a stored round origin for a HORDE squad
   const undoVms = selectTelemetryRowViewModels(

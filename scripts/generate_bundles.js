@@ -150,22 +150,22 @@ compileBundle(
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: UI Tests (In-Match LCT Tactical Console)',
-  'Boundary, MVVM Humble View, Step 2 Projected Sightlines, In-Place Undo Move, and Step 3 LOS Re-Pick UI tests (`tests/ui/tactica.test.js`).',
+  'Boundary, MVVM Humble View, Step 2 Projected Sightlines, In-Place Undo Move, Step 2/3 Cover (-1 Hit) Toggle, and Step 3 LOS Re-Pick UI tests (`tests/ui/tactica.test.js`).',
   ['tests/ui/tactica.test.js'],
   path.join(BUNDLES_DIR, 'bundle_tests_ui_tactica.md')
 );
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 1: HUD, Poller & Telemetry)',
-  'Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemon client, SPA-safe 2.5s auto-poller, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 680).',
-  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-680)', startLine: 1, endLine: 680 }],
+  'Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemon client, SPA-safe 2.5s auto-poller, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 796).',
+  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-796)', startLine: 1, endLine: 796 }],
   path.join(BUNDLES_DIR, 'bundle_tactica_controller.md')
 );
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 2: Horde Autopilot, Sightlines & Undo)',
-  'Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move, Step 3 LOS Re-Pick, LCT dice-mat attack triggers, and SPA lifecycle (`js/tactica.js` lines 681 to end).',
-  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 2: Horde Autopilot, Sightlines, Undo & SPA Lifecycle, Lines 681-1500)', startLine: 681, endLine: 1500 }],
+  'Horde Autopilot wave spawning, Step 2 Projected Sightlines, clickable Cover (-1 Hit) toggles, persistent Undo Move, Step 3 LOS Re-Pick, LCT dice-mat attack triggers, and SPA lifecycle (`js/tactica.js` lines 797 to end).',
+  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 2: Horde Autopilot, Sightlines, Cover Toggles, Undo & SPA Lifecycle, Lines 797-1650)', startLine: 797, endLine: 1650 }],
   path.join(BUNDLES_DIR, 'bundle_tactica_controller_part2.md')
 );
 
@@ -735,8 +735,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_horde_combat.md\`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | \`js/horde-combat-modifiers.js\` |
 | [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View)** | \`pages/tactica.html\` |
 | [\`bundle_tests_ui_tactica.md\`](bundle_tests_ui_tactica.md) | **UI Tests (In-Match LCT Tactical Console)** | \`tests/ui/tactica.test.js\` |
-| [\`bundle_tactica_controller.md\`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | \`js/tactica.js\` (Lines 1-680) |
-| [\`bundle_tactica_controller_part2.md\`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | \`js/tactica.js\` (Lines 681-end) |
+| [\`bundle_tactica_controller.md\`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | \`js/tactica.js\` (Lines 1-796) |
+| [\`bundle_tactica_controller_part2.md\`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | \`js/tactica.js\` (Lines 797-end) |
 | [\`bundle_tactica_core.md\`](bundle_tactica_core.md) | **In-Match LCT Tactical Core (Part 1)** | \`js/tactica-core.js\` (Lines 1-500) |
 | [\`bundle_tactica_core_part2.md\`](bundle_tactica_core_part2.md) | **In-Match LCT Tactical Core (Part 2)** | \`js/tactica-core.js\` (Lines 501-end) |
 | [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe (Part 1)** | \`tactica_daemon.js\` (Lines 1-610) |
