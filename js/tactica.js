@@ -21,6 +21,37 @@
   let lastCompiledReport = '';
   let activeTacticaMode = 'horde';
   let activeHordeStep = 1;
+  let hasHydratedChronicleSeq = false;
+  let lastAnnouncedRollSeq = 0;
+
+  /**
+   * Forwards a concise tactical readout to `window.speakOverwatchLine` when Overwatch Auspex audio is loaded.
+   *
+   * @param {string} line - Spoken Auspex sentence.
+   */
+  function announceAuspex(line) {
+    if (line && typeof window !== 'undefined' && typeof window.speakOverwatchLine === 'function') {
+      window.speakOverwatchLine(line);
+    }
+  }
+
+  function formatCompletedRollAnnouncement(seqOrCharge) {
+    if (!seqOrCharge) return '';
+    if (seqOrCharge.kind === 'AUTO_DEFENDER') {
+      const slain = seqOrCharge.outcome?.modelsSlain ?? 0;
+      const rem = seqOrCharge.outcome?.remainingModels ?? 0;
+      return `${seqOrCharge.unitName} defense complete: ${slain} slain, ${rem} remaining.`;
+    }
+    if (seqOrCharge.kind === 'HORDE_ATTACK') {
+      const nw = seqOrCharge.normalWounds ?? 0;
+      const mw = seqOrCharge.devastatingMortalWounds ?? 0;
+      return `${seqOrCharge.attackerName} into ${seqOrCharge.targetName}: ${nw} wounds${mw > 0 ? ` and ${mw} mortal wounds` : ''}.`;
+    }
+    if (seqOrCharge.succeeded !== undefined) {
+      return `${seqOrCharge.attackerName} charge into ${seqOrCharge.targetName} ${seqOrCharge.succeeded ? 'succeeded' : 'failed'} with ${seqOrCharge.modifiedTotal} inches.`;
+    }
+    return '';
+  }
 
   /**
    * Switches between the 3 progressive Tactica panels (`'horde'`, `'player'`, `'export'`).
@@ -338,10 +369,33 @@
 
   async function refreshDaemonState() {
     try {
+      const wasAwaitingRoll = Boolean(clientState.pendingDiceSequence || clientState.pendingChargeDecl);
       const data = await daemonRequest('/state', 'GET');
       daemonOnline = true;
+      const nextChronicle = data.chronicle || [];
+      const maxNextSeq = nextChronicle.reduce((mx, e) => Math.max(mx, Number(e?.seq) || 0), 0);
+
+      if (!hasHydratedChronicleSeq && !wasAwaitingRoll) {
+        hasHydratedChronicleSeq = true;
+        lastAnnouncedRollSeq = maxNextSeq;
+      } else {
+        hasHydratedChronicleSeq = true;
+        const settledRolls = nextChronicle.filter(e =>
+          (Number(e?.seq) || 0) > lastAnnouncedRollSeq &&
+          (
+            e.type === 'AUTO_DEFENDER' ||
+            e.type === 'HORDE_ATTACK' ||
+            (e.type === 'HORDE_CHARGE' && /LCT 2D6|CHARGE SUCCEEDED|Charge Failed/i.test(String(e.summary || '')))
+          )
+        );
+        lastAnnouncedRollSeq = Math.max(lastAnnouncedRollSeq, maxNextSeq);
+        if (settledRolls.length > 0) {
+          announceAuspex(settledRolls[settledRolls.length - 1].summary);
+        }
+      }
+
       clientState = data.state;
-      localChronicle = data.chronicle || [];
+      localChronicle = nextChronicle;
       const qEl = document.getElementById('tacticaQueueLabel');
       if (qEl) qEl.textContent = `${data.ttsQueueLength || 0} Queued`;
     } catch (e) {
@@ -488,12 +542,21 @@
       const res = await daemonRequest('/combat/defend-request', 'POST', payload);
       daemonOnline = true;
       clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
-      if (res.sequence.stage === 'COMPLETE') renderCompletedDefenseSummary(res.sequence);
+      if (res.entry) {
+        localChronicle.push(res.entry);
+        lastAnnouncedRollSeq = Math.max(lastAnnouncedRollSeq, Number(res.entry.seq) || 0);
+      }
+      if (res.sequence.stage === 'COMPLETE') {
+        renderCompletedDefenseSummary(res.sequence);
+        announceAuspex(formatCompletedRollAnnouncement(res.sequence));
+      }
     } catch (e) {
       const seq = createDefenseRollSequence(payload, clientState);
       clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
-      if (seq.stage === 'COMPLETE') renderCompletedDefenseSummary(seq);
+      if (seq.stage === 'COMPLETE') {
+        renderCompletedDefenseSummary(seq);
+        announceAuspex(formatCompletedRollAnnouncement(seq));
+      }
     }
     renderTacticaConsole();
     return clientState.pendingDiceSequence;
@@ -514,7 +577,11 @@
       try {
         const res = await daemonRequest('/tts/dice-result', 'POST', { sequenceId: decl.sequenceId, dice });
         clientState.pendingChargeDecl = null;
-        if (res.entry) localChronicle.push(res.entry);
+        if (res.entry) {
+          localChronicle.push(res.entry);
+          lastAnnouncedRollSeq = Math.max(lastAnnouncedRollSeq, Number(res.entry.seq) || 0);
+        }
+        announceAuspex(res.chargeResult ? formatCompletedRollAnnouncement(res.chargeResult) : res.entry?.summary);
       } catch (e) {
         const resolved = resolveHordeChargeRoll(decl, dice);
         clientState.pendingChargeDecl = null;
@@ -522,6 +589,7 @@
           type: 'HORDE_CHARGE',
           summary: `${resolved.attackerName} -> ${resolved.targetName} [LCT 2D6 = ${resolved.modifiedTotal}"]: ${resolved.succeeded ? 'CHARGE SUCCEEDED!' : 'Charge Failed.'}`
         }, clientState));
+        announceAuspex(formatCompletedRollAnnouncement(resolved));
       }
       renderTacticaConsole();
       return null;
@@ -535,8 +603,14 @@
         dice
       });
       clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
-      if (res.sequence.stage === 'COMPLETE') renderCompletedDefenseSummary(res.sequence);
+      if (res.entry) {
+        localChronicle.push(res.entry);
+        lastAnnouncedRollSeq = Math.max(lastAnnouncedRollSeq, Number(res.entry.seq) || 0);
+      }
+      if (res.sequence.stage === 'COMPLETE') {
+        renderCompletedDefenseSummary(res.sequence);
+        announceAuspex(formatCompletedRollAnnouncement(res.sequence));
+      }
     } catch (e) {
       const updated = activeSeq.kind === 'AUTO_DEFENDER'
         ? advanceDefenseRollSequence(activeSeq, dice)
@@ -548,6 +622,7 @@
           type: updated.kind,
           summary: `${updated.unitName || updated.attackerName} [LCT Mat Settled] -> Slain: ${updated.outcome?.modelsSlain ?? 0}.`
         }, clientState));
+        announceAuspex(formatCompletedRollAnnouncement(updated));
       } else {
         clientState.pendingDiceSequence = updated;
       }
@@ -745,6 +820,7 @@
     }
     setAutopilotHtml(`<strong>🧟 Wave Spawn Queue:</strong> ${plan.summary}`);
     renderTacticaConsole();
+    announceAuspex(plan.summary);
     return plan;
   }
 
@@ -923,6 +999,7 @@
     clientState.lastMovementSightlines = sightlines;
     renderAutopilotMovementAndIngress(plans, ingressDrops, sightlines);
     renderTacticaConsole();
+    announceAuspex('Horde movement complete. Verify sightlines before Overwatch.');
     return plans;
   }
 
@@ -1146,6 +1223,7 @@
     clientState.lastShootingAssignments = assignments;
     renderAutopilotShootingAssignments(assignments);
     renderTacticaConsole();
+    announceAuspex(`${assignments.length} shooting targets locked.`);
     return assignments;
   }
 
@@ -1185,10 +1263,19 @@
       const res = await daemonRequest('/combat/attack-request', 'POST', payload);
       daemonOnline = true;
       clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
+      if (res.entry) {
+        localChronicle.push(res.entry);
+        lastAnnouncedRollSeq = Math.max(lastAnnouncedRollSeq, Number(res.entry.seq) || 0);
+      }
+      if (res.sequence.stage === 'COMPLETE') {
+        announceAuspex(formatCompletedRollAnnouncement(res.sequence));
+      }
     } catch (e) {
       const seq = createHordeAttackRollSequence(payload, clientState);
       clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
+      if (seq.stage === 'COMPLETE') {
+        announceAuspex(formatCompletedRollAnnouncement(seq));
+      }
     }
     renderTacticaConsole();
     return clientState.pendingDiceSequence;
@@ -1268,6 +1355,7 @@
     Object.assign(window, {
       getTacticaClientState: () => clientState,
       getTacticaChronicle: () => localChronicle,
+      announceAuspex,
       switchTacticaMode,
       setHordeTurnStep,
       stepHordeTurn,
@@ -1324,6 +1412,7 @@
   return {
     getTacticaClientState: () => clientState,
     getTacticaChronicle: () => localChronicle,
+    announceAuspex,
     switchTacticaMode,
     setHordeTurnStep,
     stepHordeTurn,

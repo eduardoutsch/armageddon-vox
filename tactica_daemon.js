@@ -459,25 +459,37 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'POST' && urlPath === '/audio/speak') {
       const body = await readJsonBody(req);
-      const text = String(body.text || '').trim().slice(0, 320);
-      if (!text) return sendJson(res, 400, { ok: false, error: 'Empty text' });
+      const rawText = String(body.text || '').trim().slice(0, 320);
+      if (!rawText) return sendJson(res, 400, { ok: false, error: 'Empty text' });
+
+      const safeText = rawText
+        .replace(/&/g, ' and ')
+        .replace(/>=/g, ' at least ')
+        .replace(/<=/g, ' at most ')
+        .replace(/>/g, ' over ')
+        .replace(/</g, ' under ');
 
       const preset = resolveTacticalAuspexVoice(body.theme);
       const cacheDir = path.join(logDir, 'audio_cache');
       fs.mkdirSync(cacheDir, { recursive: true });
-      const hash = crypto.createHash('sha256').update(`${preset.voice}|${preset.rate}|${preset.pitch}|${text}`).digest('hex').slice(0, 24);
+      const hash = crypto.createHash('sha256')
+        .update(`${preset.voice}|${preset.rate}|${preset.pitch}|${safeText}`)
+        .digest('hex').slice(0, 24);
       const mp3Path = path.join(cacheDir, `${hash}.mp3`);
 
       if (fs.existsSync(mp3Path)) {
-        const b64 = fs.readFileSync(mp3Path).toString('base64');
-        return sendJson(res, 200, { ok: true, cached: true, voice: preset.voice, mimeType: 'audio/mpeg', audioBase64: b64 });
+        if (fs.statSync(mp3Path).size > 0) {
+          const b64 = fs.readFileSync(mp3Path).toString('base64');
+          return sendJson(res, 200, { ok: true, cached: true, voice: preset.voice, mimeType: 'audio/mpeg', audioBase64: b64 });
+        }
+        fs.unlinkSync(mp3Path);
       }
 
       const synthFn = options.ttsSynthesizeFn || (async (t, p, destFile) => {
         const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
         const tts = new MsEdgeTTS();
         await tts.setMetadata(p.voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-        const { audioStream } = tts.toStream(t, { rate: p.rate, pitch: p.pitch });
+        const { audioStream } = await tts.toStream(t, { rate: p.rate, pitch: p.pitch });
         const chunks = [];
         await new Promise((resolve, reject) => {
           audioStream.on('data', d => chunks.push(Buffer.from(d)));
@@ -485,16 +497,19 @@ function createTacticaDaemon(options = {}) {
           audioStream.on('end', resolve);
           audioStream.on('error', reject);
         });
+        if (typeof tts.close === 'function') tts.close();
         const buf = Buffer.concat(chunks);
-        fs.writeFileSync(destFile, buf);
+        if (buf.length > 0) fs.writeFileSync(destFile, buf);
         return buf;
       });
 
       try {
-        const audioBuf = Buffer.from(await synthFn(text, preset, mp3Path));
+        const audioBuf = Buffer.from(await synthFn(safeText, preset, mp3Path));
+        if (audioBuf.length === 0) throw new Error('Empty audio stream from msedge-tts');
         if (!fs.existsSync(mp3Path)) fs.writeFileSync(mp3Path, audioBuf);
         return sendJson(res, 200, { ok: true, cached: false, voice: preset.voice, mimeType: 'audio/mpeg', audioBase64: audioBuf.toString('base64') });
       } catch (err) {
+        console.warn(`[AUSPEX TTS WARNING] /audio/speak failed: ${err.message}`);
         return sendJson(res, 200, { ok: false, fallbackChimeOnly: true, error: err.message });
       }
     }

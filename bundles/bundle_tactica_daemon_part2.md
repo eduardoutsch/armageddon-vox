@@ -21,6 +21,21 @@ HTTP endpoints for LCT dice-mat sequences, TTS board telemetry, Horde Autopilot 
       return sendJson(res, 200, { ok: true, sequence: seq, queueLength: ttsCommandQueue.length });
     }
 
+    if (req.method === 'POST' && urlPath === '/combat/attack-request') {
+      const body = await readJsonBody(req);
+      cmdCounter += 1;
+      const seq = createHordeAttackRollSequence({ ...body, sequenceId: `atk_${Date.now()}_${cmdCounter}` }, liveState);
+      if (seq.stage === 'COMPLETE') {
+        liveState.pendingDiceSequence = null;
+        const entry = logCompletedSequence(seq);
+        return sendJson(res, 200, { ok: true, sequence: seq, entry });
+      }
+      liveState.pendingDiceSequence = seq;
+      queueNextSequenceCommand(seq);
+      savePersistedState();
+      return sendJson(res, 200, { ok: true, sequence: seq, queueLength: ttsCommandQueue.length });
+    }
+
     if (req.method === 'POST' && urlPath === '/tts/dice-result') {
       const body = await readJsonBody(req);
       const dice = Array.isArray(body.dice) ? body.dice.map(Number) : [];

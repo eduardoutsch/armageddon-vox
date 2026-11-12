@@ -10,6 +10,81 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
 ## File: `js/tactica.js (Part 2: Horde Autopilot, Sightlines, Undo & SPA Lifecycle, Lines 681-1500)` <a id="file-jstacticajspart2hordeautopilotsightlinesundospalifecyclelines6811500"></a>
 
 ````javascript
+    }
+    renderTacticaConsole();
+  }
+
+  /**
+   * Populates the Horde Auto-Defender form inputs directly from a scanned Yellowscribe squad on the LCT table.
+   */
+  function selectTelemetryUnitForDefense(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || typeof document === 'undefined') return null;
+
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = String(v);
+    };
+    setVal('defUnitName', u.name || 'Horde Unit');
+    setVal('defSaveInput', u.save || 4);
+    setVal('defInvulnInput', u.invuln || 0);
+    setVal('defWpmInput', u.woundsPerModel || 1);
+    setVal('defKeywordsInput', Array.isArray(u.keywords) && u.keywords.length > 0 ? u.keywords.join(', ') : 'INFANTRY');
+    setVal('defModelsInput', u.modelCount || 1);
+    const spCheck = document.getElementById('defInSpawnCheck');
+    if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
+    renderTacticaConsole();
+    return u;
+  }
+
+  /**
+   * Flips a scanned squad's allegiance (`PLAYER` <-> `HORDE`) in both browser telemetry state and TTS tags
+   * via `POST /tts/set-side`, falling back cleanly to local state updates when offline.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Updated squad entry or `null` when out of bounds.
+   */
+  async function toggleTelemetryUnitSide(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u) return null;
+    const nextSide = u.side === 'PLAYER' ? 'HORDE' : 'PLAYER';
+    const payload = {
+      squadKey: u.squadKey,
+      guids: Array.isArray(u.guids) ? u.guids : (u.guid ? [u.guid] : []),
+      side: nextSide
+    };
+    try {
+      const res = await daemonRequest('/tts/set-side', 'POST', payload);
+      daemonOnline = true;
+      if (Array.isArray(res.units) && clientState.boardTelemetry) {
+        clientState.boardTelemetry.units = res.units;
+      } else {
+        u.side = nextSide;
+      }
+    } catch (e) {
+      daemonOnline = false;
+      u.side = nextSide;
+    }
+    renderTacticaConsole();
+    return (clientState.boardTelemetry?.units || [])[idx] || u;
+  }
+
+  /**
+   * Forwards user intent to disembark all passenger units (`[10 Kasrkin]` or `[5 + Leader]`)
+   * wholly within `3"` of a Transport miniature via `POST /autopilot/disembark` with offline fallback.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Disembark command descriptor or `null` when invalid.
+   */
+  async function disembarkTelemetryTransport(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || !Array.isArray(u.embarkedCargo) || u.embarkedCargo.length === 0) return null;
+
+    let cmd = null;
+    try {
       const res = await daemonRequest('/autopilot/disembark', 'POST', {
         squadKey: u.squadKey,
         transportGuid: u.guid,
@@ -77,6 +152,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     }
     setAutopilotHtml(`<strong>🧟 Wave Spawn Queue:</strong> ${plan.summary}`);
     renderTacticaConsole();
+    announceAuspex(plan.summary);
     return plan;
   }
 
@@ -255,6 +331,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     clientState.lastMovementSightlines = sightlines;
     renderAutopilotMovementAndIngress(plans, ingressDrops, sightlines);
     renderTacticaConsole();
+    announceAuspex('Horde movement complete. Verify sightlines before Overwatch.');
     return plans;
   }
 
@@ -478,6 +555,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     clientState.lastShootingAssignments = assignments;
     renderAutopilotShootingAssignments(assignments);
     renderTacticaConsole();
+    announceAuspex(`${assignments.length} shooting targets locked.`);
     return assignments;
   }
 
@@ -517,10 +595,19 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
       const res = await daemonRequest('/combat/attack-request', 'POST', payload);
       daemonOnline = true;
       clientState.pendingDiceSequence = res.sequence.stage === 'COMPLETE' ? null : res.sequence;
-      if (res.entry) localChronicle.push(res.entry);
+      if (res.entry) {
+        localChronicle.push(res.entry);
+        lastAnnouncedRollSeq = Math.max(lastAnnouncedRollSeq, Number(res.entry.seq) || 0);
+      }
+      if (res.sequence.stage === 'COMPLETE') {
+        announceAuspex(formatCompletedRollAnnouncement(res.sequence));
+      }
     } catch (e) {
       const seq = createHordeAttackRollSequence(payload, clientState);
       clientState.pendingDiceSequence = seq.stage === 'COMPLETE' ? null : seq;
+      if (seq.stage === 'COMPLETE') {
+        announceAuspex(formatCompletedRollAnnouncement(seq));
+      }
     }
     renderTacticaConsole();
     return clientState.pendingDiceSequence;
@@ -600,6 +687,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
     Object.assign(window, {
       getTacticaClientState: () => clientState,
       getTacticaChronicle: () => localChronicle,
+      announceAuspex,
       switchTacticaMode,
       setHordeTurnStep,
       stepHordeTurn,
@@ -656,6 +744,7 @@ Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move
   return {
     getTacticaClientState: () => clientState,
     getTacticaChronicle: () => localChronicle,
+    announceAuspex,
     switchTacticaMode,
     setHordeTurnStep,
     stepHordeTurn,

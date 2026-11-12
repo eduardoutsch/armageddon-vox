@@ -52,8 +52,23 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
   }
 
   /**
+   * Synchronously instantiates and resumes `overwatchAudioCtx` on the first browser click or keypress
+   * so subsequent asynchronous neural Auspex `/audio/speak` responses are never blocked by autoplay policy.
+   */
+  function unlockOverwatchAudio() {
+    const w = typeof window !== 'undefined' ? window : globalThis;
+    const Ctx = w.AudioContext || w.webkitAudioContext;
+    if (!Ctx) return;
+    if (!overwatchAudioCtx) overwatchAudioCtx = new Ctx();
+    if (overwatchAudioCtx.state === 'suspended' && typeof overwatchAudioCtx.resume === 'function') {
+      overwatchAudioCtx.resume().catch(() => {});
+    }
+  }
+
+  /**
    * Plays a neural Auspex voice line via `POST /audio/speak`, passing decoded audio through a
-   * gentle 260Hz–4200Hz visor comm-filter at 0.55 gain, or falling back silently to an auspex chime.
+   * gentle 260Hz–4200Hz visor comm-filter at 0.55 gain, falling back to an HTML5 `Audio` Data-URI
+   * if `AudioContext` remains suspended, or to an auspex chime when offline.
    *
    * @param {string} text - Tactical callout sentence.
    * @returns {Promise<boolean>} True if neural audio played, false when muted or offline.
@@ -75,11 +90,21 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
       if (!data || !data.ok || !data.audioBase64) throw new Error('Fallback chime');
 
       const Ctx = w.AudioContext || w.webkitAudioContext;
-      if (!Ctx) throw new Error('No AudioContext');
-      if (!overwatchAudioCtx) overwatchAudioCtx = new Ctx();
-      if (overwatchAudioCtx.state === 'suspended' && typeof overwatchAudioCtx.resume === 'function') {
-        await overwatchAudioCtx.resume().catch(() => {});
+      const AudioCtor = typeof Audio === 'function' ? Audio : (typeof w.Audio === 'function' ? w.Audio : null);
+      if (Ctx) {
+        if (!overwatchAudioCtx) overwatchAudioCtx = new Ctx();
+        if (overwatchAudioCtx.state === 'suspended' && typeof overwatchAudioCtx.resume === 'function') {
+          await overwatchAudioCtx.resume().catch(() => {});
+        }
       }
+      if ((!overwatchAudioCtx || overwatchAudioCtx.state === 'suspended') && AudioCtor) {
+        const a = new AudioCtor('data:audio/mpeg;base64,' + data.audioBase64);
+        a.volume = 0.6;
+        await a.play();
+        return true;
+      }
+      if (!overwatchAudioCtx) throw new Error('No AudioContext');
+      if (overwatchAudioCtx.state === 'suspended') throw new Error('AudioContext suspended');
 
       const rawBuf = base64ToArrayBuffer(data.audioBase64);
       const audioBuffer = await overwatchAudioCtx.decodeAudioData(rawBuf.slice(0));
@@ -464,6 +489,7 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
 
   if (typeof window !== 'undefined') {
     Object.assign(window, {
+      unlockOverwatchAudio,
       speakOverwatchLine,
       toggleTtsScreenCapture,
       toggleOverwatchVoiceOutput,
@@ -480,6 +506,14 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
       exportTacticaToCrusade
     });
     if (typeof window.addEventListener === 'function') {
+      if (window._foaUnlockAudio && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('pointerdown', window._foaUnlockAudio);
+        window.removeEventListener('keydown', window._foaUnlockAudio);
+      }
+      window._foaUnlockAudio = unlockOverwatchAudio;
+      window.addEventListener('pointerdown', unlockOverwatchAudio);
+      window.addEventListener('keydown', unlockOverwatchAudio);
+
       if (window._foaPttKeyDown && typeof window.removeEventListener === 'function') {
         window.removeEventListener('keydown', window._foaPttKeyDown);
       }
@@ -502,6 +536,7 @@ Browser getDisplayMedia frame capture, Web Audio neural Auspex visor filter, Hol
   }
 
   return {
+    unlockOverwatchAudio,
     speakOverwatchLine,
     toggleTtsScreenCapture,
     toggleOverwatchVoiceOutput,

@@ -29,6 +29,8 @@ if not exist "%~dp0.env" (
     )
 )
 
+if not exist "%~dp0node_modules\msedge-tts" call npm install
+
 echo Launching In-Match LCT Tactical Daemon...
 call npm run tactica:daemon
 pause

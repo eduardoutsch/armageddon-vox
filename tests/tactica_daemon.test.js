@@ -389,11 +389,15 @@ test('tactica_daemon: orchestrates multi-stage LCT dice-mat rolls via /tts/poll 
   }
 });
 
-test('tactica_daemon.bat: Windows launcher script switches to repo directory and invokes npm run tactica:daemon', () => {
+test('tactica_daemon.bat: Windows launcher script auto-installs missing msedge-tts and invokes npm run tactica:daemon', () => {
   const batPath = path.resolve(__dirname, '../tactica_daemon.bat');
   assert.equal(fs.existsSync(batPath), true, 'tactica_daemon.bat must exist in /dealer root');
   const content = fs.readFileSync(batPath, 'utf8');
   assert.ok(content.includes('cd /d "%~dp0"'), 'Must switch working directory to script folder');
+  assert.ok(
+    content.includes('if not exist "%~dp0node_modules\\msedge-tts" call npm install'),
+    'Must auto-install dependencies if node_modules\\msedge-tts is missing'
+  );
   assert.ok(content.includes('npm run tactica:daemon'), 'Must execute npm run tactica:daemon');
   assert.ok(content.includes('pause'), 'Must pause on exit so terminal diagnostics remain readable');
 });
@@ -551,13 +555,21 @@ test('resolveTacticaProfileDir & launchTacticaBrowserSession: strictly isolates 
   await session.close();
 });
 
-test('POST /audio/speak & Clipboard LOS paste: caches SHA-256 neural Auspex MP3s in audio_cache/ and pastes TTS LOS frames via ClipboardEvent', async () => {
+test('POST /audio/speak & Clipboard LOS paste: escapes SSML symbols, purges 0-byte cache files, logs empty-stream warnings, and caches valid MP3s', async () => {
+  const crypto = require('node:crypto');
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tactica-audio-test-'));
   let synthCallCount = 0;
+  let lastSynthesizedText = '';
+  let returnEmptyStream = false;
+
   const daemon = createTacticaDaemon({
     logDir: tmpDir,
     ttsSynthesizeFn: async (text, preset, destFile) => {
       synthCallCount += 1;
+      lastSynthesizedText = text;
+      if (returnEmptyStream) {
+        return Buffer.alloc(0);
+      }
       const fakeMp3 = Buffer.from(`MP3:${preset.voice}:${text}`);
       fs.writeFileSync(destFile, fakeMp3);
       return fakeMp3;
@@ -565,6 +577,10 @@ test('POST /audio/speak & Clipboard LOS paste: caches SHA-256 neural Auspex MP3s
   });
   const port = await daemon.start(0);
   const baseUrl = `http://127.0.0.1:${port}`;
+
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => { warnings.push(args.join(' ')); };
 
   try {
     const emptyRes = await fetch(`${baseUrl}/audio/speak`, {
@@ -574,28 +590,76 @@ test('POST /audio/speak & Clipboard LOS paste: caches SHA-256 neural Auspex MP3s
     });
     assert.equal(emptyRes.status, 400);
 
-    const call1 = await postJson(baseUrl, '/audio/speak', {
-      text: 'Void Armour active. One Command Point deducted.',
+    // 1. SSML escaping (<, >, <=, >=, &) must sanitize rawText before synthesis & hashing
+    const ssmlCall = await postJson(baseUrl, '/audio/speak', {
+      text: 'Lock & Load: Charges <= 12", Range >= 3", > 8" Deep Strike, < 2" Engaged',
       theme: 'votann'
     });
-    assert.equal(call1.ok, true);
-    assert.equal(call1.cached, false, 'First call must synthesize fresh MP3');
-    assert.equal(call1.voice, 'en-GB-RyanNeural');
-    assert.equal(call1.mimeType, 'audio/mpeg');
+    assert.equal(ssmlCall.ok, true);
+    assert.equal(ssmlCall.cached, false, 'First call must synthesize fresh MP3');
+    assert.equal(ssmlCall.voice, 'en-GB-RyanNeural');
+    assert.equal(ssmlCall.mimeType, 'audio/mpeg');
     assert.equal(synthCallCount, 1);
+    assert.equal(lastSynthesizedText.includes('&'), false, 'Must escape & to " and "');
+    assert.equal(lastSynthesizedText.includes('<'), false, 'Must escape < / <= so XML SSML never breaks');
+    assert.equal(lastSynthesizedText.includes('>'), false, 'Must escape > / >= so XML SSML never breaks');
+    assert.ok(
+      lastSynthesizedText.includes(' and ') &&
+      lastSynthesizedText.includes(' at most ') &&
+      lastSynthesizedText.includes(' at least ') &&
+      lastSynthesizedText.includes(' over ') &&
+      lastSynthesizedText.includes(' under '),
+      'Must replace &, <=, >=, >, < with spoken English equivalents'
+    );
 
     const call2 = await postJson(baseUrl, '/audio/speak', {
-      text: 'Void Armour active. One Command Point deducted.',
+      text: 'Lock & Load: Charges <= 12", Range >= 3", > 8" Deep Strike, < 2" Engaged',
       theme: 'votann'
     });
     assert.equal(call2.ok, true);
     assert.equal(call2.cached, true, 'Second identical call must hit SHA-256 disk audio_cache/');
-    assert.equal(call2.audioBase64, call1.audioBase64);
+    assert.equal(call2.audioBase64, ssmlCall.audioBase64);
     assert.equal(synthCallCount, 1, 'Cached hit must not invoke ttsSynthesizeFn again');
+
+    // 2. Pre-existing 0-byte cached file must be unlinked and re-synthesized cleanly
+    const cacheDir = path.join(tmpDir, 'audio_cache');
+    const zeroText = 'Zero byte recovery check';
+    const zeroHash = crypto.createHash('sha256')
+      .update(`en-GB-RyanNeural|+4%|-2Hz|${zeroText}`)
+      .digest('hex').slice(0, 24);
+    const zeroMp3Path = path.join(cacheDir, `${zeroHash}.mp3`);
+    fs.writeFileSync(zeroMp3Path, Buffer.alloc(0));
+    assert.equal(fs.statSync(zeroMp3Path).size, 0);
+
+    const recoveredCall = await postJson(baseUrl, '/audio/speak', {
+      text: zeroText,
+      theme: 'votann'
+    });
+    assert.equal(recoveredCall.ok, true);
+    assert.equal(recoveredCall.cached, false, '0-byte MP3 must be purged and re-synthesized');
+    assert.ok(recoveredCall.audioBase64.length > 0);
+    assert.ok(fs.statSync(zeroMp3Path).size > 0);
+    assert.equal(synthCallCount, 2);
+
+    // 3. Empty 0-byte synthesis stream must throw, log [AUSPEX TTS WARNING], and return fallbackChimeOnly without caching 0-byte MP3
+    returnEmptyStream = true;
+    const emptyStreamCall = await postJson(baseUrl, '/audio/speak', {
+      text: 'Simulated empty TTS stream',
+      theme: 'votann'
+    });
+    assert.equal(emptyStreamCall.ok, false);
+    assert.equal(emptyStreamCall.fallbackChimeOnly, true);
+    assert.ok(emptyStreamCall.error.includes('Empty audio stream'));
+    assert.ok(
+      warnings.some(w => w.includes('[AUSPEX TTS WARNING]')),
+      'Daemon must log [AUSPEX TTS WARNING] when /audio/speak fails'
+    );
 
     const daemonSrc = fs.readFileSync(path.resolve(__dirname, '../tactica_daemon.js'), 'utf8');
     assert.ok(daemonSrc.includes("new ClipboardEvent('paste'"), 'launchTacticaBrowserSession must paste LOS frames via ClipboardEvent');
+    assert.ok(daemonSrc.includes('await tts.toStream('), 'Default msedge-tts synthesizer must await tts.toStream');
   } finally {
+    console.warn = origWarn;
     await daemon.stop();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

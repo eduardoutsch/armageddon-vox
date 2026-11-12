@@ -635,13 +635,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Unit Tests (TTS Telemetry & Tactica Controller)',
-  'Unit tests for LCT playmat bounds filtering, prop/camera rejection, spatial >6" squad clustering, deployed PLAYER army keyword detection, and 1-click side flipping (`tests/js/tts-telemetry-core.test.js`, `tests/js/tactica.test.js`).',
-  [
-    'tests/js/tts-telemetry-core.test.js',
-    'tests/js/tactica.test.js'
-  ],
+  '📦 Fires of Armageddon // Bundle: Unit Tests (TTS Telemetry & Spatial Squad Core)',
+  'Unit tests for LCT playmat bounds filtering, prop/camera rejection, spatial >6" squad clustering, 3D raycast LOS pairs, and deployed PLAYER army keyword detection (`tests/js/tts-telemetry-core.test.js`).',
+  ['tests/js/tts-telemetry-core.test.js'],
   path.join(BUNDLES_DIR, 'bundle_tests_tts_tactica.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Unit Tests (Tactica Controller, Auto-Poller & Auspex Readouts)',
+  'Unit tests for 1-click side flipping, 1-retry daemon client, SPA-safe 2.5s auto-poller, and Auspex voice readouts on Autopilot phases and settled LCT Dice Mat rolls (`tests/js/tactica.test.js`).',
+  ['tests/js/tactica.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tests_js_tactica.md')
 );
 
 compileBundle(
@@ -791,7 +795,8 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_tests_bridge_part2.md\`](bundle_tests_bridge_part2.md) | **Courier Bridge Tests (Part 2)** | \`tests/vox_bridge.test.js\` (Lines 523-end) |
 | [\`bundle_tests_js_spawner.md\`](bundle_tests_js_spawner.md) | **Unit Tests (Spawner Subsystems)** | \`tests/js/spawner*.test.js\` |
 | [\`bundle_tests_ui_spawner.md\`](bundle_tests_ui_spawner.md) | **Tests (Mode 1 Spawner UI & Combat Mods)** | \`tests/ui/spawner.test.js\`, \`tests/js/horde-combat-modifiers.test.js\` |
-| [\`bundle_tests_tts_tactica.md\`](bundle_tests_tts_tactica.md) | **Unit Tests (TTS Telemetry & Tactica)** | \`tests/js/tts-telemetry-core.test.js\`, \`tests/js/tactica.test.js\` |
+| [\`bundle_tests_tts_tactica.md\`](bundle_tests_tts_tactica.md) | **Unit Tests (TTS Telemetry Core)** | \`tests/js/tts-telemetry-core.test.js\` |
+| [\`bundle_tests_js_tactica.md\`](bundle_tests_js_tactica.md) | **Unit Tests (Tactica Controller & Auspex Readouts)** | \`tests/js/tactica.test.js\` |
 | [\`bundle_tests_tactica_overwatch.md\`](bundle_tests_tactica_overwatch.md) | **Unit Tests (Overwatch & Neural Auspex)** | \`tests/js/tactica-overwatch-core.test.js\`, \`tests/js/tactica-overwatch.test.js\` |
 | [\`bundle_tests_horde_autopilot.md\`](bundle_tests_horde_autopilot.md) | **Unit Tests (Horde Autopilot Core)** | \`tests/js/horde-autopilot-core.test.js\` |
 | [\`bundle_tests_js_core.md\`](bundle_tests_js_core.md) | **Unit Tests (Data, RNG & Audio)** | \`tests/js/data.test.js\`, \`tests/js/rng.test.js\`, \`tests/js/vox-audio.test.js\` |
