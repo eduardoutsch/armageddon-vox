@@ -92,3 +92,63 @@ test('toggleTelemetryUnitSide: posts { squadKey, guids, side } to /tts/set-side 
     delete globalThis.fetch;
   }
 });
+
+test('Part 4 Client Stability: daemonRequest retries once on transient failure and maintains SPA-safe 2.5s _foaTacticaPollTimer', async () => {
+  const spawner = require(path.join(ROOT_DIR, 'js/spawner.js'));
+  const combat = require(path.join(ROOT_DIR, 'js/horde-combat-modifiers.js'));
+  const telemetry = require(path.join(ROOT_DIR, 'js/tts-telemetry-core.js'));
+  const autopilot = require(path.join(ROOT_DIR, 'js/horde-autopilot-core.js'));
+  const overwatchCore = require(path.join(ROOT_DIR, 'js/tactica-overwatch-core.js'));
+  const core = require(path.join(ROOT_DIR, 'js/tactica-core.js'));
+  Object.assign(globalThis, spawner, combat, telemetry, autopilot, overwatchCore, core);
+
+  const els = {
+    tacticaDaemonBadge: { textContent: '', style: {} },
+    tacticaRoomLabel: { textContent: '' }
+  };
+  let fetchAttempts = 0;
+
+  globalThis.document = { getElementById: (id) => els[id] || null };
+  globalThis.window = { addEventListener: () => {} };
+  globalThis.fetch = async () => {
+    fetchAttempts++;
+    if (fetchAttempts === 1) {
+      throw new Error('Transient socket reset');
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        ok: true,
+        state: { roomCode: 'RETRY-OK', battleRound: 1, phase: 'COMMAND_SPAWN' },
+        chronicle: [],
+        ttsQueueDepth: 0
+      })
+    };
+  };
+
+  try {
+    delete require.cache[require.resolve(path.join(ROOT_DIR, 'js/tactica.js'))];
+    const tactica = require(path.join(ROOT_DIR, 'js/tactica.js'));
+
+    await tactica.refreshDaemonState();
+    assert.equal(fetchAttempts, 2, 'daemonRequest must retry 1 time after transient failure');
+    assert.equal(tactica.getTacticaClientState().roomCode, 'RETRY-OK');
+    assert.ok(els.tacticaDaemonBadge.textContent.includes('ONLINE'));
+
+    assert.equal(typeof tactica.startTacticaAutoPoller, 'function');
+    assert.equal(typeof tactica.stopTacticaAutoPoller, 'function');
+    const timer1 = tactica.startTacticaAutoPoller(2500);
+    assert.ok(timer1 && globalThis.window._foaTacticaPollTimer === timer1);
+    const timer2 = tactica.startTacticaAutoPoller(2500);
+    assert.ok(globalThis.window._foaTacticaPollTimer === timer2, 'Re-starting poller must replace old SPA timer cleanly');
+    tactica.stopTacticaAutoPoller();
+    assert.equal(globalThis.window._foaTacticaPollTimer, null);
+  } finally {
+    if (globalThis.window && globalThis.window._foaTacticaPollTimer) {
+      clearInterval(globalThis.window._foaTacticaPollTimer);
+    }
+    delete globalThis.document;
+    delete globalThis.window;
+    delete globalThis.fetch;
+  }
+});

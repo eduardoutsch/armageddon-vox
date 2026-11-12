@@ -1,13 +1,13 @@
-# 📦 Fires of Armageddon // Bundle: Deterministic Horde Autopilot Core
+# 📦 Fires of Armageddon // Bundle: Deterministic Horde Autopilot Core (Part 1: Spawning, Liang-Barsky & Movement)
 
-Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transport cargo disembarkation, obstacle-aware Movement/Advance vectors, pre-Overwatch LOS revert snapshots, keyword-driven shooting priority, LCT 2D6 charges, and 11th Ed 3-tier consolidation (`js/horde-autopilot-core.js`).
+Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, exact 2D Liang-Barsky wall checks, and obstacle-aware Movement/Advance vectors (`js/horde-autopilot-core.js` lines 1 to 510).
 
 ## 📑 Table of Contents
-- [js/horde-autopilot-core.js](#file-jshordeautopilotcorejs)
+- [js/horde-autopilot-core.js (Part 1: Wave Spawning & Movement Solver, Lines 1-510)](#file-jshordeautopilotcorejspart1wavespawningmovementsolverlines1510)
 
 ---
 
-## File: `js/horde-autopilot-core.js` <a id="file-jshordeautopilotcorejs"></a>
+## File: `js/horde-autopilot-core.js (Part 1: Wave Spawning & Movement Solver, Lines 1-510)` <a id="file-jshordeautopilotcorejspart1wavespawningmovementsolverlines1510"></a>
 
 ````javascript
 /**
@@ -132,24 +132,67 @@ Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transpor
   }
 
   /**
-   * Samples a straight 2D movement vector against an axis-aligned solid obstacle footprint.
+   * Exact 2D Liang-Barsky segment-vs-AABB intersection check against a solid/obscuring obstacle footprint.
+   * Catches even thin (`0.15"–0.2"`) LCT ruin walls that discrete point sampling could step across.
    *
    * @param {{x: number, z: number}} p1 - Segment start.
    * @param {{x: number, z: number}} p2 - Segment end.
    * @param {{minX: number, maxX: number, minZ: number, maxZ: number}} rect - Obstacle AABB.
-   * @returns {boolean} True when the segment crosses inside the solid footprint.
+   * @returns {boolean} True when the segment crosses inside the obstacle footprint.
    */
   function segmentIntersectsRect(p1, p2, rect) {
-    const steps = 16;
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const x = p1.x + (p2.x - p1.x) * t;
-      const z = p1.z + (p2.z - p1.z) * t;
-      if (x >= rect.minX && x <= rect.maxX && z >= rect.minZ && z <= rect.maxZ) {
-        return true;
+    if (!p1 || !p2 || !rect) return false;
+    const x1 = Number(p1.x) || 0;
+    const z1 = Number(p1.z) || 0;
+    const x2 = Number(p2.x) || 0;
+    const z2 = Number(p2.z) || 0;
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    let t0 = 0;
+    let t1 = 1;
+    const p = [-dx, dx, -dz, dz];
+    const q = [x1 - rect.minX, rect.maxX - x1, z1 - rect.minZ, rect.maxZ - z1];
+    for (let i = 0; i < 4; i++) {
+      if (Math.abs(p[i]) < 1e-9) {
+        if (q[i] < 0) return false;
+      } else {
+        const t = q[i] / p[i];
+        if (p[i] < 0) {
+          if (t > t1) return false;
+          if (t > t0) t0 = t;
+        } else {
+          if (t < t0) return false;
+          if (t < t1) t1 = t;
+        }
       }
     }
-    return false;
+    return t0 <= t1 && t1 > 0.001 && t0 < 0.999;
+  }
+
+  /**
+   * Squad-level 2D obstacle LOS check: returns true only when EVERY model in `attacker` has its
+   * horizontal sightline to EVERY model in `target` intersected by at least one solid/obscuring obstacle.
+   */
+  function isSquadBlockedByObstacles(attacker, target, obstacles) {
+    const blocking = (Array.isArray(obstacles) ? obstacles : []).filter(
+      o => o && (o.solid !== false || o.obscuring)
+    );
+    if (blocking.length === 0) return false;
+
+    const aPoints = Array.isArray(attacker.models) && attacker.models.length > 0
+      ? attacker.models.map(m => m.pos || attacker.pos || { x: 0, z: 0 })
+      : [attacker.pos || { x: 0, z: 0 }];
+    const tPoints = Array.isArray(target.models) && target.models.length > 0
+      ? target.models.map(m => m.pos || target.pos || { x: 0, z: 0 })
+      : [target.pos || { x: 0, z: 0 }];
+
+    for (const pa of aPoints) {
+      for (const pt of tPoints) {
+        const pairBlocked = blocking.some(obs => segmentIntersectsRect(pa, pt, obs));
+        if (!pairBlocked) return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -283,7 +326,9 @@ Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transpor
   function planHordeMovementPhase(boardTelemetry = {}, matchState = {}, options = {}) {
     const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
     const objectives = Array.isArray(boardTelemetry.objectives) ? boardTelemetry.objectives : [];
-    const obstacles = Array.isArray(options.obstacles) ? options.obstacles : [];
+    const obstacles = Array.isArray(options.obstacles)
+      ? options.obstacles
+      : (Array.isArray(boardTelemetry.obstacles) ? boardTelemetry.obstacles : []);
     const razorWireSet = new Set(options.withinRazorWireKeys || []);
     const spawnedSet = new Set(options.spawnedSquadKeys || []);
 
@@ -294,6 +339,11 @@ Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transpor
     const commands = [];
 
     for (const u of hordeUnits) {
+      const originPos = {
+        x: Number(u.pos?.x) || 0,
+        y: Number(u.pos?.y) || 1.1,
+        z: Number(u.pos?.z) || 0
+      };
       const originModels = (u.models || []).map(m => ({
         guid: m.guid,
         x: Number(m.pos?.x) || 0,
@@ -425,6 +475,7 @@ Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transpor
         facingY: step.facingY,
         detouredAroundObstacle,
         requiresGhostRing,
+        originPos,
         originModels
       });
     }
@@ -468,326 +519,5 @@ Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transpor
   }
 
   /**
-   * 3. Selects legal ranged targets per weapon using Mode 3 Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`)
-   * and enforces 11th Edition Hidden (`15"`) / Gone to Ground (`12"`) visibility caps.
-   *
-   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`, `objectives`).
-   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`).
-   * @param {object} [options={}] - Optional `{ losBlockedPairs }` array of `'attackerKey->targetKey'` strings.
-   * @returns {Array<object>} Prioritized weapon-to-target firing assignments.
-   */
-  function selectHordeShootingTargets(boardTelemetry = {}, matchState = {}, options = {}) {
-    const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
-    const blockedSet = new Set(options.losBlockedPairs || []);
-    const miseryIds = Array.isArray(matchState.activeMiseryIds) ? matchState.activeMiseryIds.map(Number) : [];
-    const ignoreTerrainVis = miseryIds.includes(28);
-
-    const hordeUnits = allUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
-    const playerUnits = allUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
-    const assignments = [];
-
-    for (const attacker of hordeUnits) {
-      for (const baseWeapon of (attacker.weapons || [])) {
-        if (String(baseWeapon.type || '').toLowerCase() === 'melee') continue;
-        const range = Number(baseWeapon.rangeInches) || 0;
-        if (range <= 0) continue;
-
-        const candidates = [];
-        for (const target of playerUnits) {
-          const pairKey = `${attacker.squadKey || attacker.name}->${target.squadKey || target.name}`;
-          if (blockedSet.has(pairKey)) continue;
-
-          const dist = squadEdgeDistance(attacker, target);
-          if (dist > range) continue;
-
-          // 11th Edition Hidden (15") & Gone to Ground (12") visibility caps
-          if (!ignoreTerrainVis) {
-            if (target.isGoneToGround && dist > 12.0) continue;
-            if (target.isHidden && dist > 15.0) continue;
-          }
-
-          const mods = combatCore.resolveHordeAttackModifiers(attacker, target, baseWeapon, matchState);
-          if (attacker.advancedThisTurn && !miseryIds.includes(1) && matchState.factionName !== "Emperor's Children") {
-            if (!mods.keywords.includes('ASSAULT')) continue;
-          }
-
-          candidates.push({ target, dist, mods });
-        }
-
-        if (candidates.length === 0) continue;
-        candidates.sort((a, b) => a.dist - b.dist);
-
-        const effectiveKws = candidates[0].mods.keywords || normalizeKwList(baseWeapon.keywords);
-        const antiTargetKw = extractAntiKeyword(effectiveKws);
-        const hasPrecision = effectiveKws.includes('PRECISION');
-        const hasMelta = effectiveKws.some(k => k.startsWith('MELTA'));
-
-        let chosen = null;
-        if (antiTargetKw) {
-          chosen = candidates.find(c => normalizeKwList(c.target.keywords).includes(antiTargetKw));
-        }
-        if (!chosen && hasPrecision) {
-          chosen = candidates.find(c => {
-            const tk = normalizeKwList(c.target.keywords);
-            return tk.includes('CHARACTER') || tk.includes('LEADER') || Boolean(c.target.hasLeader);
-          });
-        }
-        if (!chosen && hasMelta) {
-          chosen = candidates.find(c => {
-            const tk = normalizeKwList(c.target.keywords);
-            return !tk.includes('INFANTRY') && !tk.includes('SWARM');
-          });
-        }
-        if (!chosen) chosen = candidates[0];
-
-        assignments.push({
-          attackerKey: attacker.squadKey || attacker.name,
-          attackerName: attacker.name,
-          targetKey: chosen.target.squadKey || chosen.target.name,
-          targetName: chosen.target.name,
-          distanceInches: chosen.dist,
-          target: chosen.target,
-          weapon: baseWeapon
-        });
-      }
-    }
-
-    return assignments;
-  }
-
-  /**
-   * 4. Evaluates eligible Horde Charges (`<= 12"`) and builds `2D6` LCT mat roll jobs (or Misery #4 auto-12" moves).
-   *
-   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`).
-   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`).
-   * @param {object} [options={}] - Optional `{ withinRazorWireKeys }` applying `-2` Charge roll modifier.
-   * @returns {{declarations: Array<object>}}
-   */
-  function planHordeCharges(boardTelemetry = {}, matchState = {}, options = {}) {
-    const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
-    const razorWireSet = new Set(options.withinRazorWireKeys || []);
-    const hordeUnits = allUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
-    const playerUnits = allUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
-
-    const declarations = [];
-    for (const h of hordeUnits) {
-      let closestEnemy = null;
-      let minD = Infinity;
-      for (const p of playerUnits) {
-        const d = squadEdgeDistance(h, p);
-        if (d < minD) {
-          minD = d;
-          closestEnemy = p;
-        }
-      }
-      if (!closestEnemy || minD <= 2.0 || minD > 12.0) continue;
-
-      const moveProf = combatCore.resolveHordeMovementProfile(h, matchState, {
-        withinRazorWire: razorWireSet.has(h.squadKey)
-      });
-      if (h.advancedThisTurn && !moveProf.canChargeAfterAdvance) continue;
-
-      const uRadius = h.models?.[0]?.radiusInches || 0.63;
-      const eRadius = closestEnemy.models?.[0]?.radiusInches || 0.63;
-      const destStep = stepTowardPoint(h.pos || { x: 0, z: 0 }, closestEnemy.pos || { x: 0, z: 0 }, 24, uRadius + eRadius + 0.25);
-      const minEdgeRollNeeded = Math.max(2, Math.ceil(minD - 2.0));
-      const seqId = `chg_${h.squadKey || h.name}`;
-
-      const decl = {
-        sequenceId: seqId,
-        squadKey: h.squadKey || h.name,
-        attackerName: h.name,
-        guids: h.guids || (h.models || []).map(m => m.guid),
-        targetName: closestEnemy.name,
-        distanceInches: minD,
-        neededEdgeReachInches: Number(Math.max(0, minD - 2.0).toFixed(2)),
-        chargeRollMod: moveProf.chargeRollMod,
-        destX: destStep.x,
-        destZ: destStep.z,
-        facingY: destStep.facingY,
-        autoSucceeded: typeof moveProf.autoCharge === 'number',
-        lctCommand: null,
-        moveCommand: null
-      };
-
-      if (decl.autoSucceeded) {
-        decl.moveCommand = {
-          action: 'MOVE_UNIT',
-          squadKey: decl.squadKey,
-          guids: decl.guids,
-          targetX: decl.destX,
-          targetZ: decl.destZ,
-          facingY: decl.facingY
-        };
-      } else {
-        decl.lctCommand = {
-          action: 'LCT_MAT_ROLL',
-          rollId: `${seqId}:CHARGE_ROLL`,
-          sequenceId: seqId,
-          stage: 'CHARGE_ROLL',
-          matSide: 'RED',
-          count: 2,
-          threshold: minEdgeRollNeeded,
-          clearFirst: true,
-          label: `${h.name} -> ${closestEnemy.name} — 2D6 Charge (Need ${minEdgeRollNeeded}" after ${moveProf.chargeRollMod >= 0 ? '+' : ''}${moveProf.chargeRollMod} mod)`
-        };
-      }
-
-      declarations.push(decl);
-    }
-
-    return { declarations };
-  }
-
-  /**
-   * Resolves a settled `2D6` LCT mat Charge roll and emits `MOVE_UNIT` if Engagement Range (`<= 2.0"`) is reached.
-   *
-   * @param {object} chargeDecl - Charge declaration built by `planHordeCharges`.
-   * @param {number[]} [dice=[]] - Settled `2D6` pips from the LCT TTS Dice Mat.
-   * @returns {object} Resolved charge result with `succeeded` flag and optional `moveCommand`.
-   */
-  function resolveHordeChargeRoll(chargeDecl, dice = []) {
-    const d1 = Number(dice[0]) || 1;
-    const d2 = Number(dice[1]) || 1;
-    const modifiedTotal = Math.max(1, d1 + d2 + (Number(chargeDecl.chargeRollMod) || 0));
-    const succeeded = modifiedTotal >= chargeDecl.neededEdgeReachInches;
-
-    return {
-      ...chargeDecl,
-      diceRolled: [d1, d2],
-      modifiedTotal,
-      succeeded,
-      moveCommand: succeeded
-        ? {
-            action: 'MOVE_UNIT',
-            squadKey: chargeDecl.squadKey,
-            guids: chargeDecl.guids,
-            targetX: chargeDecl.destX,
-            targetZ: chargeDecl.destZ,
-            facingY: chargeDecl.facingY
-          }
-        : null
-    };
-  }
-
-  /**
-   * 5. Implements 11th Edition Core Rule 12.08 `3"` Consolidation Priority (`ONGOING` -> `ENGAGING` -> `OBJECTIVE` -> `HOLD`).
-   *
-   * @param {object} unit - Fighting Horde unit.
-   * @param {Array<object>} [enemyUnits=[]] - Active Player units on the board.
-   * @param {Array<object>} [objectives=[]] - Active Objective markers on the board.
-   * @returns {{mode: string, targetName: string|null, moveCommand: object|null}}
-   */
-  function planConsolidationMove(unit, enemyUnits = [], objectives = []) {
-    const guids = unit.guids || (unit.models || []).map(m => m.guid);
-    const uRadius = unit.models?.[0]?.radiusInches || 0.63;
-
-    let closestEnemy = null;
-    let minEnemyD = Infinity;
-    for (const e of enemyUnits) {
-      const d = squadEdgeDistance(unit, e);
-      if (d < minEnemyD) {
-        minEnemyD = d;
-        closestEnemy = e;
-      }
-    }
-
-    // Mode 1: Ongoing Consolidation (already Engaged <= 2.0")
-    if (closestEnemy && minEnemyD <= 2.0) {
-      const eRadius = closestEnemy.models?.[0]?.radiusInches || 0.63;
-      const step = stepTowardPoint(unit.pos || { x: 0, z: 0 }, closestEnemy.pos || { x: 0, z: 0 }, 3.0, uRadius + eRadius + 0.1);
-      return {
-        mode: 'ONGOING',
-        targetName: closestEnemy.name,
-        moveCommand: { action: 'MOVE_UNIT', guids, targetX: step.x, targetZ: step.z, facingY: step.facingY }
-      };
-    }
-
-    // Mode 2: Engaging Consolidation (unengaged, but 3" move reaches <= 2.0" Engagement Range -> dist <= 5.0")
-    if (closestEnemy && minEnemyD <= 5.0) {
-      const eRadius = closestEnemy.models?.[0]?.radiusInches || 0.63;
-      const step = stepTowardPoint(unit.pos || { x: 0, z: 0 }, closestEnemy.pos || { x: 0, z: 0 }, 3.0, uRadius + eRadius + 0.25);
-      return {
-        mode: 'ENGAGING',
-        targetName: closestEnemy.name,
-        moveCommand: { action: 'MOVE_UNIT', guids, targetX: step.x, targetZ: step.z, facingY: step.facingY }
-      };
-    }
-
-    // Mode 3: Objective Consolidation (within 6.0" edge-to-edge so 3" move reaches <= 3.0" Objective range)
-    let closestObj = null;
-    let minObjD = Infinity;
-    for (const o of objectives) {
-      const d = squadEdgeDistance(unit, o);
-      if (d < minObjD) {
-        minObjD = d;
-        closestObj = o;
-      }
-    }
-    if (closestObj && minObjD <= 6.0) {
-      const step = stepTowardPoint(unit.pos || { x: 0, z: 0 }, closestObj.pos || { x: 0, z: 0 }, 3.0, 0);
-      return {
-        mode: 'OBJECTIVE',
-        targetName: closestObj.name,
-        moveCommand: { action: 'MOVE_UNIT', guids, targetX: step.x, targetZ: step.z, facingY: step.facingY }
-      };
-    }
-
-    return { mode: 'HOLD', targetName: null, moveCommand: null };
-  }
-
-  /**
-   * Builds a deterministic `DISEMBARK_CARGO` TTS command placing all embarked passenger units
-   * (`[10 Kasrkin]` or `[5 Kill Team + 1 Watch Master]`) wholly within `3"` of the Transport hull
-   * under a shared `SQUAD:DISEMBARK_<guid>` tag so `Bodyguard + Leader` cargo emerges as 1 Attached Unit.
-   *
-   * @param {object|null} transportUnit - Scanned tabletop Transport record carrying `embarkedCargo`.
-   * @param {object} [options={}] - Optional `{ towardPos, facingY }` overrides.
-   * @returns {object|null} Deterministic `DISEMBARK_CARGO` command or `null` when empty.
-   */
-  function buildDisembarkWaveCommand(transportUnit, options = {}) {
-    if (!transportUnit || typeof transportUnit !== 'object') return null;
-    const cargo = normalizeCargoList(transportUnit.embarkedCargo || transportUnit.embarkedUnits || transportUnit.embarked);
-    if (cargo.length === 0) return null;
-
-    const tx = Number(transportUnit.pos?.x) || 0;
-    const tz = Number(transportUnit.pos?.z) || 0;
-    const hullRadius = Number(transportUnit.models?.[0]?.radiusInches) || 1.5;
-    const isPlayer = String(transportUnit.side || 'HORDE').toUpperCase() === 'PLAYER';
-    const goalPos = options.towardPos || { x: 0, z: isPlayer ? 4 : -4 };
-    const dropDist = Number((hullRadius + 1.45).toFixed(2));
-    const step = stepTowardPoint({ x: tx, z: tz }, goalPos, dropDist, 0);
-    const hasMoved = Math.hypot(step.x - tx, step.z - tz) > 0.1;
-    const targetX = hasMoved ? step.x : tx;
-    const targetZ = hasMoved ? step.z : Number((tz + (isPlayer ? dropDist : -dropDist)).toFixed(2));
-    const safeGuid = String(transportUnit.guid || transportUnit.name || 'T1').replace(/\s+/g, '_');
-    const cargoSummary = cargo.map(c => `${c.count}x ${c.templateName}`).join(' + ');
-
-    return {
-      action: 'DISEMBARK_CARGO',
-      transportGuid: transportUnit.guid || null,
-      transportSquadKey: transportUnit.squadKey || null,
-      transportName: transportUnit.name || 'Transport',
-      side: isPlayer ? 'PLAYER' : 'HORDE',
-      squadTag: `SQUAD:DISEMBARK_${safeGuid}`,
-      targetX,
-      targetZ,
-      facingY: options.facingY ?? (isPlayer ? 0 : 180),
-      units: cargo,
-      summary: `Disembarked ${cargoSummary} within 3" of ${transportUnit.name || 'Transport'}.`
-    };
-  }
-
-  return {
-    planWaveSpawnCommands,
-    buildDisembarkWaveCommand,
-    planHordeMovementPhase,
-    buildMoveRevertCommand,
-    selectHordeShootingTargets,
-    planHordeCharges,
-    resolveHordeChargeRoll,
-    planConsolidationMove
-  };
-});
-
+   * Evaluates whether a `HORDE->PLAYER` squad pair is blocked by manual LOS overrides, 3D TTS wall raycasts,
 ````

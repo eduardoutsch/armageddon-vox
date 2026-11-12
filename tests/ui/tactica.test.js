@@ -45,6 +45,11 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(luaSrc.includes('DISEMBARK_CARGO') && luaSrc.includes('EMBARKED:'), 'Lua beacon must support EMBARKED cargo tags and DISEMBARK_CARGO 3" drop');
   assert.ok(luaSrc.includes('DEEP_STRIKE_DROP') && luaSrc.includes('shelfTemplates'), 'Lua beacon must export shelfTemplates and execute DEEP_STRIKE_DROP');
   assert.ok(luaSrc.includes('FALLBACK_INGRESS_TO_SPAWN') && luaSrc.includes('executeFallbackIngressToSpawn'), 'Lua beacon must support FALLBACK_INGRESS_TO_SPAWN ruin-block fallback');
+  assert.ok(luaSrc.includes('detectDiceMatBounds') && luaSrc.includes('LCT_MAT_BOUNDS'), 'Lua beacon must dynamically detect Red/Blue LCT Dice Mat bounds with accurate ±24.2..±28.8 fallback');
+  assert.equal(luaSrc.includes('matObj.call'), false, 'Lua beacon must NEVER invoke matObj.call cross-script button callbacks');
+  assert.equal(luaSrc.includes('clickMatButtonMatching'), false, 'Lua beacon must remove clickMatButtonMatching');
+  assert.ok(luaSrc.includes('isDestroyed()') && luaSrc.includes('raycastBlockedGuidPairs') && luaSrc.includes('obstacles'), 'Lua beacon must guard isDestroyed() and export 3D raycastBlockedGuidPairs + obstacles');
+  assert.ok(html.includes('id="hordePrevStepBtn"') && html.includes('id="hordeNextStepBtn"'), 'Step bar must include ← Prev Step and Next Step → navigation buttons');
 
   const spawnerHtml = fs.readFileSync(path.join(ROOT_DIR, 'pages/spawner.html'), 'utf8');
   assert.ok(spawnerHtml.includes('tactica.html'), 'spawner.html must link to pages/tactica.html');
@@ -98,6 +103,7 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     'btnTacticaModeHorde', 'btnTacticaModePlayer', 'btnTacticaModeExport',
     'hordeStepPanel1', 'hordeStepPanel2', 'hordeStepPanel3', 'hordeStepPanel4',
     'hordeStepBtn1', 'hordeStepBtn2', 'hordeStepBtn3', 'hordeStepBtn4',
+    'hordePrevStepBtn', 'hordeNextStepBtn',
     'tacticaLosBar', 'tacticaHordeTargetChips', 'tacticaUnitCountSummary',
     'tacticaLatestLogSummary', 'tacticaPendingRollStrip', 'tacticaReservesStrip', 'quickStratTargetSelect',
     'quickStratNameInput', 'quickStratCategorySelect', 'quickStratCoreSelect', 'quickStratDurationSelect'
@@ -222,7 +228,7 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
   assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Queued 1 Spawn Zone wave drop'));
 
   await tactica.triggerAutopilotMovement();
-  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Revert Move (No LOS)'));
+  assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Undo Move'));
   await tactica.revertAutopilotSquadMove(0);
   assert.ok(els.tacticaAutopilotBox.innerHTML.includes('Reverted'));
 
@@ -499,6 +505,114 @@ test('UI Boundary: pages/tactica.html shares suite navigation and steps LCT mat 
     '#tacticaTelemetryBox must render purple 🪂 Deep Struck badge for units with didIngressThisTurn'
   );
 
+  // Step Navigation (← Prev Step / Next Step →) + Multi-Squad Step 2 Sightlines, In-Place Undo Move, and Step 3 🚫 No LOS Re-Pick
+  tactica.setHordeTurnStep(2);
+  assert.equal(typeof tactica.stepHordeTurn, 'function');
+  assert.equal(tactica.stepHordeTurn(-1), 1, 'stepHordeTurn(-1) must step back from 2 to 1');
+  assert.equal(tactica.stepHordeTurn(1), 2, 'stepHordeTurn(1) must step forward from 1 to 2');
+
+  tactica.getTacticaClientState().losBlockedPairs = [];
+  tactica.getTacticaClientState().losAllowedPairs = [];
+  tactica.getTacticaClientState().phaseOriginSnapshots = {};
+  tactica.getTacticaClientState().boardTelemetry = {
+    playmatBounds: { minX: -22, maxX: 22, minZ: -30, maxZ: 30 },
+    obstacles: [{ name: 'Shipping Container', minX: -4, maxX: 4, minZ: 1.5, maxZ: 3.5, heightY: 3.0, solid: true }],
+    autoBlockedLosPairs: ['HORDE::Armiger Warglaive->PLAYER::Kapricus Defender'],
+    objectives: [],
+    units: [
+      {
+        squadKey: 'HORDE::Armiger Warglaive',
+        name: 'Armiger Warglaive',
+        side: 'HORDE',
+        modelCount: 1,
+        move: 12,
+        save: 3,
+        pos: { x: 0, z: 14 },
+        keywords: ['VEHICLE', 'WALKER'],
+        models: [{ guid: 'wg-1', pos: { x: 0, y: 1.5, z: 14 }, radiusInches: 1.97 }],
+        weapons: [{ name: 'Thermal spear', type: 'ranged', rangeInches: 24, attacks: 2, skill: 3, strength: 12, ap: -4, damage: 'D6', keywords: ['MELTA 4'] }]
+      },
+      {
+        squadKey: 'HORDE::Armiger Helverin',
+        name: 'Armiger Helverin',
+        side: 'HORDE',
+        modelCount: 1,
+        move: 12,
+        save: 3,
+        pos: { x: 10, z: 14 },
+        keywords: ['VEHICLE', 'WALKER'],
+        models: [{ guid: 'hv-1', pos: { x: 10, y: 1.5, z: 14 }, radiusInches: 1.97 }],
+        weapons: [{ name: 'Armiger autocannon', type: 'ranged', rangeInches: 48, attacks: 4, skill: 3, strength: 9, ap: -1, damage: 3, keywords: [] }]
+      },
+      {
+        squadKey: 'PLAYER::Kapricus Defender',
+        name: 'Kapricus Defender',
+        side: 'PLAYER',
+        modelCount: 1,
+        toughness: 9,
+        save: 3,
+        pos: { x: 0, z: -4 },
+        keywords: ['VEHICLE'],
+        models: [{ guid: 'kp-1', pos: { x: 0, y: 1.5, z: -4 }, radiusInches: 1.8 }]
+      },
+      {
+        squadKey: 'PLAYER::Hernkyn Yaegirs',
+        name: 'Hernkyn Yaegirs',
+        side: 'PLAYER',
+        modelCount: 10,
+        toughness: 4,
+        save: 5,
+        pos: { x: 12, z: 4 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'yg-1', pos: { x: 12, y: 1.1, z: 4 }, radiusInches: 0.55 }]
+      }
+    ]
+  };
+
+  await tactica.triggerAutopilotMovement();
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('Armiger Warglaive') &&
+    els.tacticaAutopilotBox.innerHTML.includes('Armiger Helverin'),
+    'Step 2 must render both moved Horde squads'
+  );
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('blockShootingSightline(') &&
+    els.tacticaAutopilotBox.innerHTML.includes('allowShootingSightline('),
+    'Step 2 must render clear sightline [🚫 No LOS] and blocked wall sightline [👁️ Allow LOS] buttons right under move rows'
+  );
+  assert.ok(
+    els.tacticaTelemetryBox.innerHTML.includes('undoSquadMoveByKey('),
+    'Bottom Scanned Board Units drawer must render [↩️ Undo Move] for Horde squads with a stored round origin snapshot'
+  );
+
+  // Clicking Undo Move on Squad #1 marks Squad #1 REVERTED in-place while keeping Squad #2 and its buttons visible!
+  await tactica.revertAutopilotSquadMove(0);
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('Armiger Warglaive') &&
+    els.tacticaAutopilotBox.innerHTML.includes('REVERTED') &&
+    els.tacticaAutopilotBox.innerHTML.includes('Armiger Helverin') &&
+    els.tacticaAutopilotBox.innerHTML.includes('revertAutopilotSquadMove(1)'),
+    'revertAutopilotSquadMove(0) must keep Squad #2 row and Undo button visible in #tacticaAutopilotBox'
+  );
+
+  // Step 3 renders [🚫 No LOS (Re-pick)] + [↩️ Undo Move] alongside [🎲 Roll Attack on LCT Mat]
+  await tactica.triggerAutopilotShooting();
+  assert.ok(
+    els.tacticaAutopilotBox.innerHTML.includes('blockShootingSightline(') &&
+    els.tacticaAutopilotBox.innerHTML.includes('No LOS (Re-pick)') &&
+    els.tacticaAutopilotBox.innerHTML.includes('undoSquadMoveByKey('),
+    'Step 3 must render [🚫 No LOS (Re-pick)] and [↩️ Undo Move] beside [🎲 Roll Attack on LCT Mat]'
+  );
+
+  // Clicking [🚫 No LOS (Re-pick)] on Armiger Helverin -> Hernkyn Yaegirs immediately re-picks Kapricus Defender (since Helverin at X=10 has clear diagonal LOS around X=-4..4 container!)
+  await tactica.blockShootingSightline('HORDE::Armiger Helverin->PLAYER::Hernkyn Yaegirs');
+  const helvAfterBlock = (tactica.getTacticaClientState().lastShootingAssignments || []).find(
+    a => a.attackerKey === 'HORDE::Armiger Helverin'
+  );
+  assert.ok(helvAfterBlock, 'Armiger Helverin must re-pick its next visible target after blocking Yaegirs');
+  assert.equal(helvAfterBlock.targetKey, 'PLAYER::Kapricus Defender');
+
+  if (typeof tactica.stopTacticaAutoPoller === 'function') tactica.stopTacticaAutoPoller();
   delete globalThis.localStorage;
   delete globalThis.document;
   delete globalThis.window;

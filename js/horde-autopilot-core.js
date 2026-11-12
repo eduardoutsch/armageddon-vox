@@ -120,24 +120,67 @@
   }
 
   /**
-   * Samples a straight 2D movement vector against an axis-aligned solid obstacle footprint.
+   * Exact 2D Liang-Barsky segment-vs-AABB intersection check against a solid/obscuring obstacle footprint.
+   * Catches even thin (`0.15"–0.2"`) LCT ruin walls that discrete point sampling could step across.
    *
    * @param {{x: number, z: number}} p1 - Segment start.
    * @param {{x: number, z: number}} p2 - Segment end.
    * @param {{minX: number, maxX: number, minZ: number, maxZ: number}} rect - Obstacle AABB.
-   * @returns {boolean} True when the segment crosses inside the solid footprint.
+   * @returns {boolean} True when the segment crosses inside the obstacle footprint.
    */
   function segmentIntersectsRect(p1, p2, rect) {
-    const steps = 16;
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const x = p1.x + (p2.x - p1.x) * t;
-      const z = p1.z + (p2.z - p1.z) * t;
-      if (x >= rect.minX && x <= rect.maxX && z >= rect.minZ && z <= rect.maxZ) {
-        return true;
+    if (!p1 || !p2 || !rect) return false;
+    const x1 = Number(p1.x) || 0;
+    const z1 = Number(p1.z) || 0;
+    const x2 = Number(p2.x) || 0;
+    const z2 = Number(p2.z) || 0;
+    const dx = x2 - x1;
+    const dz = z2 - z1;
+    let t0 = 0;
+    let t1 = 1;
+    const p = [-dx, dx, -dz, dz];
+    const q = [x1 - rect.minX, rect.maxX - x1, z1 - rect.minZ, rect.maxZ - z1];
+    for (let i = 0; i < 4; i++) {
+      if (Math.abs(p[i]) < 1e-9) {
+        if (q[i] < 0) return false;
+      } else {
+        const t = q[i] / p[i];
+        if (p[i] < 0) {
+          if (t > t1) return false;
+          if (t > t0) t0 = t;
+        } else {
+          if (t < t0) return false;
+          if (t < t1) t1 = t;
+        }
       }
     }
-    return false;
+    return t0 <= t1 && t1 > 0.001 && t0 < 0.999;
+  }
+
+  /**
+   * Squad-level 2D obstacle LOS check: returns true only when EVERY model in `attacker` has its
+   * horizontal sightline to EVERY model in `target` intersected by at least one solid/obscuring obstacle.
+   */
+  function isSquadBlockedByObstacles(attacker, target, obstacles) {
+    const blocking = (Array.isArray(obstacles) ? obstacles : []).filter(
+      o => o && (o.solid !== false || o.obscuring)
+    );
+    if (blocking.length === 0) return false;
+
+    const aPoints = Array.isArray(attacker.models) && attacker.models.length > 0
+      ? attacker.models.map(m => m.pos || attacker.pos || { x: 0, z: 0 })
+      : [attacker.pos || { x: 0, z: 0 }];
+    const tPoints = Array.isArray(target.models) && target.models.length > 0
+      ? target.models.map(m => m.pos || target.pos || { x: 0, z: 0 })
+      : [target.pos || { x: 0, z: 0 }];
+
+    for (const pa of aPoints) {
+      for (const pt of tPoints) {
+        const pairBlocked = blocking.some(obs => segmentIntersectsRect(pa, pt, obs));
+        if (!pairBlocked) return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -271,7 +314,9 @@
   function planHordeMovementPhase(boardTelemetry = {}, matchState = {}, options = {}) {
     const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
     const objectives = Array.isArray(boardTelemetry.objectives) ? boardTelemetry.objectives : [];
-    const obstacles = Array.isArray(options.obstacles) ? options.obstacles : [];
+    const obstacles = Array.isArray(options.obstacles)
+      ? options.obstacles
+      : (Array.isArray(boardTelemetry.obstacles) ? boardTelemetry.obstacles : []);
     const razorWireSet = new Set(options.withinRazorWireKeys || []);
     const spawnedSet = new Set(options.spawnedSquadKeys || []);
 
@@ -282,6 +327,11 @@
     const commands = [];
 
     for (const u of hordeUnits) {
+      const originPos = {
+        x: Number(u.pos?.x) || 0,
+        y: Number(u.pos?.y) || 1.1,
+        z: Number(u.pos?.z) || 0
+      };
       const originModels = (u.models || []).map(m => ({
         guid: m.guid,
         x: Number(m.pos?.x) || 0,
@@ -413,6 +463,7 @@
         facingY: step.facingY,
         detouredAroundObstacle,
         requiresGhostRing,
+        originPos,
         originModels
       });
     }
@@ -456,19 +507,60 @@
   }
 
   /**
-   * 3. Selects legal ranged targets per weapon using Mode 3 Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`)
-   * and enforces 11th Edition Hidden (`15"`) / Gone to Ground (`12"`) visibility caps.
+   * Evaluates whether a `HORDE->PLAYER` squad pair is blocked by manual LOS overrides, 3D TTS wall raycasts,
+   * 2D solid/obscuring terrain footprints, or 11th Ed Hidden (`15"`) / Gone to Ground (`12"`) caps.
+   */
+  function evaluatePairVisibility(attacker, target, dist, boardTelemetry = {}, matchState = {}, options = {}) {
+    const pairKey = `${attacker.squadKey || attacker.name}->${target.squadKey || target.name}`;
+    const allowedSet = new Set([
+      ...(boardTelemetry.losAllowedPairs || []),
+      ...(matchState.losAllowedPairs || []),
+      ...(options.losAllowedPairs || [])
+    ]);
+    const manualBlockedSet = new Set([
+      ...(matchState.losBlockedPairs || []),
+      ...(options.losBlockedPairs || [])
+    ]);
+    const autoBlockedSet = new Set(boardTelemetry.autoBlockedLosPairs || []);
+    const obstacles = Array.isArray(options.obstacles)
+      ? options.obstacles
+      : (Array.isArray(boardTelemetry.obstacles) ? boardTelemetry.obstacles : []);
+    const miseryIds = Array.isArray(matchState.activeMiseryIds) ? matchState.activeMiseryIds.map(Number) : [];
+    const ignoreTerrainVis = miseryIds.includes(28);
+
+    if (manualBlockedSet.has(pairKey)) {
+      return { blocked: true, pairKey, reason: 'MANUAL_NO_LOS' };
+    }
+    if (!allowedSet.has(pairKey) && !ignoreTerrainVis) {
+      if (autoBlockedSet.has(pairKey)) {
+        return { blocked: true, pairKey, reason: 'RAYCAST_WALL' };
+      }
+      if (isSquadBlockedByObstacles(attacker, target, obstacles)) {
+        return { blocked: true, pairKey, reason: 'SOLID_OBSTACLE' };
+      }
+      if (target.isGoneToGround && dist > 12.0) {
+        return { blocked: true, pairKey, reason: 'GONE_TO_GROUND_12' };
+      }
+      if (target.isHidden && dist > 15.0) {
+        return { blocked: true, pairKey, reason: 'HIDDEN_15' };
+      }
+    }
+    return { blocked: false, pairKey, reason: null };
+  }
+
+  /**
+   * 3. Selects legal ranged targets per weapon using Mode 3 Priority (`[ANTI-X]`, `[PRECISION]`, `[MELTA]`),
+   * merging 3D TTS raycast blocks, 2D solid obstacle footprints, manual `losBlockedPairs` / `losAllowedPairs`,
+   * and 11th Edition Hidden (`15"`) / Gone to Ground (`12"`) visibility caps.
    *
-   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`, `objectives`).
-   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`).
-   * @param {object} [options={}] - Optional `{ losBlockedPairs }` array of `'attackerKey->targetKey'` strings.
+   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan (`units`, `objectives`, `obstacles`, `autoBlockedLosPairs`).
+   * @param {object} [matchState={}] - Active match state (`factionName`, `activeMiseryIds`, `losBlockedPairs`, `losAllowedPairs`).
+   * @param {object} [options={}] - Optional `{ losBlockedPairs, losAllowedPairs, obstacles }` overrides.
    * @returns {Array<object>} Prioritized weapon-to-target firing assignments.
    */
   function selectHordeShootingTargets(boardTelemetry = {}, matchState = {}, options = {}) {
     const allUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
-    const blockedSet = new Set(options.losBlockedPairs || []);
     const miseryIds = Array.isArray(matchState.activeMiseryIds) ? matchState.activeMiseryIds.map(Number) : [];
-    const ignoreTerrainVis = miseryIds.includes(28);
 
     const hordeUnits = allUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
     const playerUnits = allUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
@@ -482,24 +574,18 @@
 
         const candidates = [];
         for (const target of playerUnits) {
-          const pairKey = `${attacker.squadKey || attacker.name}->${target.squadKey || target.name}`;
-          if (blockedSet.has(pairKey)) continue;
-
           const dist = squadEdgeDistance(attacker, target);
           if (dist > range) continue;
 
-          // 11th Edition Hidden (15") & Gone to Ground (12") visibility caps
-          if (!ignoreTerrainVis) {
-            if (target.isGoneToGround && dist > 12.0) continue;
-            if (target.isHidden && dist > 15.0) continue;
-          }
+          const vis = evaluatePairVisibility(attacker, target, dist, boardTelemetry, matchState, options);
+          if (vis.blocked) continue;
 
           const mods = combatCore.resolveHordeAttackModifiers(attacker, target, baseWeapon, matchState);
           if (attacker.advancedThisTurn && !miseryIds.includes(1) && matchState.factionName !== "Emperor's Children") {
             if (!mods.keywords.includes('ASSAULT')) continue;
           }
 
-          candidates.push({ target, dist, mods });
+          candidates.push({ target, dist, mods, pairKey: vis.pairKey });
         }
 
         if (candidates.length === 0) continue;
@@ -529,6 +615,7 @@
         if (!chosen) chosen = candidates[0];
 
         assignments.push({
+          pairKey: chosen.pairKey,
           attackerKey: attacker.squadKey || attacker.name,
           attackerName: attacker.name,
           targetKey: chosen.target.squadKey || chosen.target.name,
@@ -541,6 +628,131 @@
     }
 
     return assignments;
+  }
+
+  /**
+   * Projects every moved Horde squad's shooting sightlines (`clearTargets` & `blockedTargets`) during Step 2
+   * (Move & Sightlines) so the player can inspect LOS, toggle `🚫 No LOS` / `👁️ Allow LOS`, or `↩️ Undo Move`
+   * before locking the Movement Phase.
+   *
+   * @param {object} [boardTelemetry={}] - Normalized LCT tabletop scan.
+   * @param {object} [matchState={}] - Active match state.
+   * @param {Array<object>} [plans=[]] - Planned or reverted movement entries from `planHordeMovementPhase`.
+   * @param {object} [options={}] - Optional `{ losBlockedPairs, losAllowedPairs, obstacles }` overrides.
+   * @returns {{bySquad: Object<string, {squadKey: string, unitName: string, clearTargets: Array<object>, blockedTargets: Array<object>}>, assignments: Array<object>}}
+   */
+  function previewMovementSightlines(boardTelemetry = {}, matchState = {}, plans = [], options = {}) {
+    const rawUnits = Array.isArray(boardTelemetry.units) ? boardTelemetry.units : [];
+    const planMap = new Map((Array.isArray(plans) ? plans : []).map(p => [p.squadKey || p.unitName, p]));
+    const miseryIds = Array.isArray(matchState.activeMiseryIds) ? matchState.activeMiseryIds.map(Number) : [];
+
+    const projectedUnits = rawUnits.map(u => {
+      if (String(u.side || 'HORDE').toUpperCase() === 'PLAYER') return u;
+      const key = u.squadKey || u.name;
+      const plan = planMap.get(key);
+      if (!plan) return u;
+
+      const curX = Number(u.pos?.x) || 0;
+      const curZ = Number(u.pos?.z) || 0;
+      let nextX = curX;
+      let nextZ = curZ;
+      if (plan.status === 'REVERTED') {
+        if (plan.originPos && Number.isFinite(Number(plan.originPos.x))) {
+          nextX = Number(plan.originPos.x);
+          nextZ = Number(plan.originPos.z) || 0;
+        } else if (Array.isArray(plan.originModels) && plan.originModels.length > 0) {
+          nextX = plan.originModels.reduce((s, m) => s + (Number(m.x) || 0), 0) / plan.originModels.length;
+          nextZ = plan.originModels.reduce((s, m) => s + (Number(m.z) || 0), 0) / plan.originModels.length;
+        }
+      } else if (Number.isFinite(Number(plan.targetX)) && Number.isFinite(Number(plan.targetZ))) {
+        nextX = Number(plan.targetX);
+        nextZ = Number(plan.targetZ);
+      }
+
+      const dx = nextX - curX;
+      const dz = nextZ - curZ;
+      const projectedModels = Array.isArray(u.models)
+        ? u.models.map((m, idx) => {
+            if (plan.status === 'REVERTED' && Array.isArray(plan.originModels) && plan.originModels[idx]) {
+              const om = plan.originModels[idx];
+              return { ...m, pos: { x: Number(om.x) || 0, y: Number(om.y) || 1.1, z: Number(om.z) || 0 } };
+            }
+            return {
+              ...m,
+              pos: {
+                x: Number(((Number(m.pos?.x) || 0) + dx).toFixed(2)),
+                y: Number(m.pos?.y) || 1.1,
+                z: Number(((Number(m.pos?.z) || 0) + dz).toFixed(2))
+              }
+            };
+          })
+        : [];
+
+      return {
+        ...u,
+        pos: { x: Number(nextX.toFixed(2)), y: Number(u.pos?.y) || 1.1, z: Number(nextZ.toFixed(2)) },
+        models: projectedModels,
+        advancedThisTurn: plan.status === 'REVERTED' ? false : Boolean(plan.advanced || u.advancedThisTurn)
+      };
+    });
+
+    const projectedTelemetry = { ...boardTelemetry, units: projectedUnits };
+    const hordeUnits = projectedUnits.filter(u => String(u.side || 'HORDE').toUpperCase() !== 'PLAYER');
+    const playerUnits = projectedUnits.filter(u => String(u.side || '').toUpperCase() === 'PLAYER');
+    const bySquad = {};
+
+    for (const attacker of hordeUnits) {
+      const attackerKey = attacker.squadKey || attacker.name;
+      const rangedWeapons = (attacker.weapons || []).filter(
+        w => String(w.type || '').toLowerCase() !== 'melee' && (Number(w.rangeInches) || 0) > 0
+      );
+      const maxRange = rangedWeapons.reduce((mx, w) => Math.max(mx, Number(w.rangeInches) || 0), 0);
+      const clearTargets = [];
+      const blockedTargets = [];
+
+      if (maxRange > 0) {
+        for (const target of playerUnits) {
+          const dist = squadEdgeDistance(attacker, target);
+          if (dist > maxRange) continue;
+
+          const canAnyGunFire = rangedWeapons.some(w => {
+            if (dist > (Number(w.rangeInches) || 0)) return false;
+            if (attacker.advancedThisTurn && !miseryIds.includes(1) && matchState.factionName !== "Emperor's Children") {
+              const mods = combatCore.resolveHordeAttackModifiers(attacker, target, w, matchState);
+              return mods.keywords.includes('ASSAULT');
+            }
+            return true;
+          });
+          if (!canAnyGunFire) continue;
+
+          const vis = evaluatePairVisibility(attacker, target, dist, projectedTelemetry, matchState, options);
+          const entry = {
+            pairKey: vis.pairKey,
+            targetKey: target.squadKey || target.name,
+            targetName: target.name,
+            distanceInches: Number(dist.toFixed(1)),
+            reason: vis.reason
+          };
+          if (vis.blocked) {
+            blockedTargets.push(entry);
+          } else {
+            clearTargets.push(entry);
+          }
+        }
+      }
+
+      clearTargets.sort((a, b) => a.distanceInches - b.distanceInches);
+      blockedTargets.sort((a, b) => a.distanceInches - b.distanceInches);
+      bySquad[attackerKey] = {
+        squadKey: attackerKey,
+        unitName: attacker.name,
+        clearTargets,
+        blockedTargets
+      };
+    }
+
+    const assignments = selectHordeShootingTargets(projectedTelemetry, matchState, options);
+    return { bySquad, assignments };
   }
 
   /**
@@ -772,6 +984,7 @@
     planHordeMovementPhase,
     buildMoveRevertCommand,
     selectHordeShootingTargets,
+    previewMovementSightlines,
     planHordeCharges,
     resolveHordeChargeRoll,
     planConsolidationMove

@@ -1,13 +1,13 @@
 # 📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Scribe Server (Part 1: Browser Referee, Audio & Persistence)
 
-Zero-dependency local HTTP LCT daemon setup, isolated TACTICA_THREAD_URL Playwright referee session, SHA-256 neural Auspex cache, and JSONL disk persistence (`tactica_daemon.js` lines 1 to 510).
+Zero-dependency local HTTP LCT daemon setup, Private Network CORS, isolated TACTICA_THREAD_URL Playwright referee session, SHA-256 neural Auspex cache, and JSONL disk persistence (`tactica_daemon.js` lines 1 to 610).
 
 ## 📑 Table of Contents
-- [tactica_daemon.js (Part 1: Referee Session, Audio Cache & Persistence, Lines 1-510)](#file-tacticadaemonjspart1refereesessionaudiocachepersistencelines1510)
+- [tactica_daemon.js (Part 1: Referee Session, Audio Cache & Persistence, Lines 1-610)](#file-tacticadaemonjspart1refereesessionaudiocachepersistencelines1610)
 
 ---
 
-## File: `tactica_daemon.js (Part 1: Referee Session, Audio Cache & Persistence, Lines 1-510)` <a id="file-tacticadaemonjspart1refereesessionaudiocachepersistencelines1510"></a>
+## File: `tactica_daemon.js (Part 1: Referee Session, Audio Cache & Persistence, Lines 1-610)` <a id="file-tacticadaemonjspart1refereesessionaudiocachepersistencelines1610"></a>
 
 ````javascript
 /**
@@ -48,6 +48,7 @@ const {
   planHordeMovementPhase,
   buildMoveRevertCommand,
   selectHordeShootingTargets,
+  previewMovementSightlines,
   planHordeCharges,
   resolveHordeChargeRoll,
   planConsolidationMove
@@ -388,34 +389,62 @@ function createTacticaDaemon(options = {}) {
 
   loadPersistedState();
 
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Access-Control-Request-Private-Network',
+    'Access-Control-Allow-Private-Network': 'true'
+  };
+
   function sendJson(res, status, payload) {
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      ...CORS_HEADERS
     });
     res.end(JSON.stringify(payload));
   }
 
   function readJsonBody(req) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let buf = '';
       req.on('data', c => { buf += c; });
+      req.on('error', reject);
       req.on('end', () => {
-        if (!buf) return resolve({});
-        try { resolve(JSON.parse(buf)); } catch (e) { resolve({}); }
+        if (!buf || !buf.trim()) return resolve({});
+        try {
+          resolve(JSON.parse(buf));
+        } catch (e) {
+          reject(new Error(`Invalid JSON body: ${e.message}`));
+        }
       });
     });
   }
 
-  const server = http.createServer(async (req, res) => {
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+  function restoreUnitOriginInTelemetry(squadKey, snapshot) {
+    if (!snapshot || !Array.isArray(liveState.boardTelemetry?.units)) return;
+    const unit = liveState.boardTelemetry.units.find(u => (u.squadKey || u.name) === squadKey);
+    if (!unit) return;
+    if (snapshot.originPos) {
+      unit.pos = {
+        x: Number(snapshot.originPos.x) || 0,
+        y: Number(snapshot.originPos.y) || 1.1,
+        z: Number(snapshot.originPos.z) || 0
+      };
+    }
+    if (Array.isArray(unit.models) && Array.isArray(snapshot.originModels)) {
+      const byGuid = new Map(snapshot.originModels.map(m => [m.guid, m]));
+      unit.models = unit.models.map((m, idx) => {
+        const om = (m.guid && byGuid.get(m.guid)) || snapshot.originModels[idx];
+        return om ? { ...m, pos: { x: Number(om.x) || 0, y: Number(om.y) || 1.1, z: Number(om.z) || 0 } } : m;
       });
+    }
+    unit.advancedThisTurn = false;
+  }
+
+  const server = http.createServer(async (req, res) => {
+    try {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
       return res.end();
     }
 
@@ -434,7 +463,7 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'GET' && urlPath === '/tts/poll') {
       if (ttsCommandQueue.length === 0) {
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', ...CORS_HEADERS });
         return res.end('IDLE');
       }
       return sendJson(res, 200, ttsCommandQueue.shift());
@@ -488,21 +517,33 @@ function createTacticaDaemon(options = {}) {
       if (body.roomCode !== undefined) {
         const nextRoom = String(body.roomCode).trim().toUpperCase();
         if (nextRoom && nextRoom !== liveState.roomCode) {
-          liveState.boardTelemetry = { updatedAt: null, units: [], objectives: [] };
+          liveState.boardTelemetry = { updatedAt: null, units: [], objectives: [], obstacles: [], autoBlockedLosPairs: [] };
           liveState.squadGuidRegistry = {};
           liveState.hordeReserves = [];
           liveState.shelfTemplates = [];
+          liveState.losBlockedPairs = [];
+          liveState.losAllowedPairs = [];
+          liveState.phaseOriginSnapshots = {};
+          liveState.lastMovementPlans = [];
+          liveState.lastMovementSightlines = [];
         }
         liveState.roomCode = nextRoom;
       }
       if (body.battleRound !== undefined) {
         const nextRnd = Number(body.battleRound);
-        if (nextRnd !== liveState.battleRound && Array.isArray(liveState.boardTelemetry?.units)) {
-          if (liveState.boardTelemetry.units.some(u => u.didIngressThisTurn)) {
-            cmdCounter += 1;
-            ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'CLEAR_DEEP_STRUCK' });
+        if (nextRnd !== liveState.battleRound) {
+          if (Array.isArray(liveState.boardTelemetry?.units)) {
+            if (liveState.boardTelemetry.units.some(u => u.didIngressThisTurn)) {
+              cmdCounter += 1;
+              ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'CLEAR_DEEP_STRUCK' });
+            }
+            liveState.boardTelemetry.units.forEach(u => { u.didIngressThisTurn = false; });
           }
-          liveState.boardTelemetry.units.forEach(u => { u.didIngressThisTurn = false; });
+          liveState.losBlockedPairs = [];
+          liveState.losAllowedPairs = [];
+          liveState.phaseOriginSnapshots = {};
+          liveState.lastMovementPlans = [];
+          liveState.lastMovementSightlines = [];
         }
         liveState.battleRound = nextRnd;
       }
@@ -520,4 +561,63 @@ function createTacticaDaemon(options = {}) {
       if (Array.isArray(body.activeMiseryIds)) liveState.activeMiseryIds = body.activeMiseryIds;
       if (Array.isArray(body.activeFortifications)) liveState.activeFortifications = body.activeFortifications;
       if (Array.isArray(body.zoneSpawns)) liveState.zoneSpawns = body.zoneSpawns;
+      if (Array.isArray(body.hordeReserves)) liveState.hordeReserves = body.hordeReserves;
+      if (Array.isArray(body.shelfTemplates)) liveState.shelfTemplates = body.shelfTemplates;
+      if (Array.isArray(body.activePlayerBuffs)) liveState.activePlayerBuffs = body.activePlayerBuffs;
+      savePersistedState();
+      return sendJson(res, 200, { ok: true, state: liveState });
+    }
+
+    if (req.method === 'POST' && urlPath === '/chronicle/append') {
+      const body = await readJsonBody(req);
+      const roundOrPhaseChanged = body.battleRound !== undefined || Boolean(body.phase);
+      if (body.battleRound !== undefined) liveState.battleRound = Number(body.battleRound);
+      if (body.phase) liveState.phase = body.phase;
+      if (roundOrPhaseChanged) {
+        liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(
+          liveState.activePlayerBuffs,
+          liveState.battleRound,
+          liveState.phase
+        );
+      }
+      const entry = appendEvent(body);
+      if (body.reactionTrigger) {
+        const win = detectPlayerReactionWindow(body.reactionTrigger, liveState);
+        liveState.pendingReactionWindow = win.open ? win : null;
+        savePersistedState();
+      }
+      return sendJson(res, 200, { ok: true, entry, pendingReactionWindow: liveState.pendingReactionWindow });
+    }
+
+    if (req.method === 'POST' && urlPath === '/reaction/resolve') {
+      const body = await readJsonBody(req);
+      const cpSpent = Math.max(0, Number(body.cpSpent) || 0);
+      liveState.playerCp = Math.max(0, (Number(liveState.playerCp) || 0) - cpSpent);
+      liveState.pendingReactionWindow = null;
+      const entry = appendEvent({
+        type: 'REACTION',
+        summary: body.summary || `Player resolved reaction: ${body.choice || 'PASS'} (-${cpSpent} CP).`
+      });
+      return sendJson(res, 200, { ok: true, state: liveState, entry });
+    }
+
+    if (req.method === 'POST' && urlPath === '/combat/defend-request') {
+      const body = await readJsonBody(req);
+      cmdCounter += 1;
+      const seq = createDefenseRollSequence({ ...body, sequenceId: `def_${Date.now()}_${cmdCounter}` }, liveState);
+      if (seq.stage === 'COMPLETE') {
+        liveState.pendingDiceSequence = null;
+        const entry = logCompletedSequence(seq);
+        return sendJson(res, 200, { ok: true, sequence: seq, entry });
+      }
+      liveState.pendingDiceSequence = seq;
+      queueNextSequenceCommand(seq);
+      savePersistedState();
+      return sendJson(res, 200, { ok: true, sequence: seq, queueLength: ttsCommandQueue.length });
+    }
+
+    if (req.method === 'POST' && urlPath === '/combat/attack-request') {
+      const body = await readJsonBody(req);
+      cmdCounter += 1;
+      const seq = createHordeAttackRollSequence({ ...body, sequenceId: `atk_${Date.now()}_${cmdCounter}` }, liveState);
 ````

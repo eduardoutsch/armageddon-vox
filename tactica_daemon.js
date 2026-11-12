@@ -36,6 +36,7 @@ const {
   planHordeMovementPhase,
   buildMoveRevertCommand,
   selectHordeShootingTargets,
+  previewMovementSightlines,
   planHordeCharges,
   resolveHordeChargeRoll,
   planConsolidationMove
@@ -376,34 +377,62 @@ function createTacticaDaemon(options = {}) {
 
   loadPersistedState();
 
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Access-Control-Request-Private-Network',
+    'Access-Control-Allow-Private-Network': 'true'
+  };
+
   function sendJson(res, status, payload) {
     res.writeHead(status, {
       'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
+      ...CORS_HEADERS
     });
     res.end(JSON.stringify(payload));
   }
 
   function readJsonBody(req) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let buf = '';
       req.on('data', c => { buf += c; });
+      req.on('error', reject);
       req.on('end', () => {
-        if (!buf) return resolve({});
-        try { resolve(JSON.parse(buf)); } catch (e) { resolve({}); }
+        if (!buf || !buf.trim()) return resolve({});
+        try {
+          resolve(JSON.parse(buf));
+        } catch (e) {
+          reject(new Error(`Invalid JSON body: ${e.message}`));
+        }
       });
     });
   }
 
-  const server = http.createServer(async (req, res) => {
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type'
+  function restoreUnitOriginInTelemetry(squadKey, snapshot) {
+    if (!snapshot || !Array.isArray(liveState.boardTelemetry?.units)) return;
+    const unit = liveState.boardTelemetry.units.find(u => (u.squadKey || u.name) === squadKey);
+    if (!unit) return;
+    if (snapshot.originPos) {
+      unit.pos = {
+        x: Number(snapshot.originPos.x) || 0,
+        y: Number(snapshot.originPos.y) || 1.1,
+        z: Number(snapshot.originPos.z) || 0
+      };
+    }
+    if (Array.isArray(unit.models) && Array.isArray(snapshot.originModels)) {
+      const byGuid = new Map(snapshot.originModels.map(m => [m.guid, m]));
+      unit.models = unit.models.map((m, idx) => {
+        const om = (m.guid && byGuid.get(m.guid)) || snapshot.originModels[idx];
+        return om ? { ...m, pos: { x: Number(om.x) || 0, y: Number(om.y) || 1.1, z: Number(om.z) || 0 } } : m;
       });
+    }
+    unit.advancedThisTurn = false;
+  }
+
+  const server = http.createServer(async (req, res) => {
+    try {
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
       return res.end();
     }
 
@@ -422,7 +451,7 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'GET' && urlPath === '/tts/poll') {
       if (ttsCommandQueue.length === 0) {
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Access-Control-Allow-Origin': '*' });
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', ...CORS_HEADERS });
         return res.end('IDLE');
       }
       return sendJson(res, 200, ttsCommandQueue.shift());
@@ -476,21 +505,33 @@ function createTacticaDaemon(options = {}) {
       if (body.roomCode !== undefined) {
         const nextRoom = String(body.roomCode).trim().toUpperCase();
         if (nextRoom && nextRoom !== liveState.roomCode) {
-          liveState.boardTelemetry = { updatedAt: null, units: [], objectives: [] };
+          liveState.boardTelemetry = { updatedAt: null, units: [], objectives: [], obstacles: [], autoBlockedLosPairs: [] };
           liveState.squadGuidRegistry = {};
           liveState.hordeReserves = [];
           liveState.shelfTemplates = [];
+          liveState.losBlockedPairs = [];
+          liveState.losAllowedPairs = [];
+          liveState.phaseOriginSnapshots = {};
+          liveState.lastMovementPlans = [];
+          liveState.lastMovementSightlines = [];
         }
         liveState.roomCode = nextRoom;
       }
       if (body.battleRound !== undefined) {
         const nextRnd = Number(body.battleRound);
-        if (nextRnd !== liveState.battleRound && Array.isArray(liveState.boardTelemetry?.units)) {
-          if (liveState.boardTelemetry.units.some(u => u.didIngressThisTurn)) {
-            cmdCounter += 1;
-            ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'CLEAR_DEEP_STRUCK' });
+        if (nextRnd !== liveState.battleRound) {
+          if (Array.isArray(liveState.boardTelemetry?.units)) {
+            if (liveState.boardTelemetry.units.some(u => u.didIngressThisTurn)) {
+              cmdCounter += 1;
+              ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, action: 'CLEAR_DEEP_STRUCK' });
+            }
+            liveState.boardTelemetry.units.forEach(u => { u.didIngressThisTurn = false; });
           }
-          liveState.boardTelemetry.units.forEach(u => { u.didIngressThisTurn = false; });
+          liveState.losBlockedPairs = [];
+          liveState.losAllowedPairs = [];
+          liveState.phaseOriginSnapshots = {};
+          liveState.lastMovementPlans = [];
+          liveState.lastMovementSightlines = [];
         }
         liveState.battleRound = nextRnd;
       }
@@ -658,6 +699,10 @@ function createTacticaDaemon(options = {}) {
       const body = await readJsonBody(req);
       let units = Array.isArray(body.units) ? body.units : [];
       let objectives = Array.isArray(body.objectives) ? body.objectives : [];
+      let obstacles = Array.isArray(body.obstacles) ? body.obstacles : (liveState.boardTelemetry?.obstacles || []);
+      let autoBlockedLosPairs = Array.isArray(body.autoBlockedLosPairs)
+        ? body.autoBlockedLosPairs
+        : (liveState.boardTelemetry?.autoBlockedLosPairs || []);
 
       if (Array.isArray(body.objects)) {
         const normalized = normalizeTtsBoardScan(body, {
@@ -667,6 +712,8 @@ function createTacticaDaemon(options = {}) {
         });
         units = normalized.units;
         objectives = normalized.objectives;
+        obstacles = normalized.obstacles || [];
+        autoBlockedLosPairs = normalized.autoBlockedLosPairs || [];
         liveState.squadGuidRegistry = normalized.guidRegistry || {};
         if (Array.isArray(normalized.shelfTemplates) && normalized.shelfTemplates.length > 0) {
           liveState.shelfTemplates = normalized.shelfTemplates;
@@ -675,7 +722,7 @@ function createTacticaDaemon(options = {}) {
         liveState.shelfTemplates = body.shelfTemplates;
       }
 
-      liveState.boardTelemetry = { updatedAt: Date.now(), units, objectives };
+      liveState.boardTelemetry = { updatedAt: Date.now(), units, objectives, obstacles, autoBlockedLosPairs };
 
       const wlCheck = assignHordeWarlordIfEligible(liveState.hordeWarlord, units, liveState.battleRound);
       if (wlCheck.newlyAssigned) {
@@ -738,8 +785,48 @@ function createTacticaDaemon(options = {}) {
       const body = await readJsonBody(req);
       liveState.phase = 'HORDE_MOVEMENT';
       liveState.activePlayerBuffs = pruneExpiredPlayerBuffs(liveState.activePlayerBuffs, liveState.battleRound, liveState.phase);
+      const preMoveTelemetry = JSON.parse(JSON.stringify(liveState.boardTelemetry || { units: [], objectives: [], obstacles: [], autoBlockedLosPairs: [] }));
       const moveRes = planHordeMovementPhase(liveState.boardTelemetry, liveState, body);
+      if (!liveState.phaseOriginSnapshots || typeof liveState.phaseOriginSnapshots !== 'object') {
+        liveState.phaseOriginSnapshots = {};
+      }
+      moveRes.plans.forEach(p => {
+        if (p.squadKey && !liveState.phaseOriginSnapshots[p.squadKey]) {
+          liveState.phaseOriginSnapshots[p.squadKey] = {
+            squadKey: p.squadKey,
+            unitName: p.unitName,
+            guids: p.guids || [],
+            originPos: p.originPos || null,
+            originModels: p.originModels || []
+          };
+        }
+        if (Number.isFinite(Number(p.targetX)) && Number.isFinite(Number(p.targetZ)) && Array.isArray(liveState.boardTelemetry?.units)) {
+          const unit = liveState.boardTelemetry.units.find(u => (u.squadKey || u.name) === p.squadKey);
+          if (unit) {
+            const dx = Number(p.targetX) - (Number(unit.pos?.x) || 0);
+            const dz = Number(p.targetZ) - (Number(unit.pos?.z) || 0);
+            unit.pos = { x: Number(p.targetX), y: Number(unit.pos?.y) || 1.1, z: Number(p.targetZ) };
+            if (Array.isArray(unit.models)) {
+              unit.models = unit.models.map(m => ({
+                ...m,
+                pos: {
+                  x: Number(((Number(m.pos?.x) || 0) + dx).toFixed(2)),
+                  y: Number(m.pos?.y) || 1.1,
+                  z: Number(((Number(m.pos?.z) || 0) + dz).toFixed(2))
+                }
+              }));
+            }
+            unit.advancedThisTurn = Boolean(p.advanced);
+          }
+        }
+      });
+
+      const sightlines = previewMovementSightlines(preMoveTelemetry, liveState, moveRes.plans, {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || []
+      });
       liveState.lastMovementPlans = moveRes.plans;
+      liveState.lastMovementSightlines = sightlines;
       liveState.hordeReserves = [];
       moveRes.commands.forEach(c => {
         cmdCounter += 1;
@@ -752,7 +839,15 @@ function createTacticaDaemon(options = {}) {
         type: 'HORDE_MOVE',
         summary: `Moved ${moveRes.plans.length} Horde squad(s)${ingressNote} — awaiting Pre-Overwatch LOS check.`
       });
-      return sendJson(res, 200, { ok: true, plans: moveRes.plans, ingressDrops, entry, queueLength: ttsCommandQueue.length });
+      return sendJson(res, 200, {
+        ok: true,
+        plans: moveRes.plans,
+        sightlines,
+        phaseOriginSnapshots: liveState.phaseOriginSnapshots,
+        ingressDrops,
+        entry,
+        queueLength: ttsCommandQueue.length
+      });
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/fallback-ingress') {
@@ -782,14 +877,84 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'POST' && urlPath === '/autopilot/revert-move') {
       const body = await readJsonBody(req);
-      const plans = liveState.lastMovementPlans || [];
-      const targetPlan = plans.find(p => p.squadKey === body.squadKey) || plans[Number(body.planIndex) || 0];
-      const cmd = buildMoveRevertCommand(targetPlan);
+      const plans = Array.isArray(liveState.lastMovementPlans) ? liveState.lastMovementPlans : [];
+      const snapshots = liveState.phaseOriginSnapshots || {};
+      const targetPlan = body.squadKey
+        ? plans.find(p => p.squadKey === body.squadKey)
+        : plans[Number(body.planIndex) || 0];
+      const resolvedKey = body.squadKey || targetPlan?.squadKey;
+      const originSource = (resolvedKey && snapshots[resolvedKey]) || targetPlan;
+      const cmd = buildMoveRevertCommand(originSource);
       if (!cmd) return sendJson(res, 400, { ok: false, error: 'No stored origin snapshot' });
+
+      if (targetPlan) {
+        targetPlan.status = 'REVERTED';
+      }
+      restoreUnitOriginInTelemetry(resolvedKey, originSource);
+
+      const sightlines = previewMovementSightlines(liveState.boardTelemetry, liveState, plans, {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || []
+      });
+      const assignments = selectHordeShootingTargets(liveState.boardTelemetry, liveState, {
+        losBlockedPairs: liveState.losBlockedPairs || [],
+        losAllowedPairs: liveState.losAllowedPairs || []
+      });
+      liveState.lastMovementSightlines = sightlines;
+      liveState.lastShootingAssignments = assignments;
+
       cmdCounter += 1;
       ttsCommandQueue.push({ id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...cmd });
-      const entry = appendEvent({ type: 'MOVE_REVERT', summary: `Reverted ${cmd.unitName} to pre-move origin (No LOS).` });
-      return sendJson(res, 200, { ok: true, command: cmd, entry });
+      const entry = appendEvent({ type: 'MOVE_REVERT', summary: `Reverted ${cmd.unitName} to pre-move origin.` });
+      return sendJson(res, 200, {
+        ok: true,
+        command: cmd,
+        plans,
+        sightlines,
+        assignments,
+        entry
+      });
+    }
+
+    if (req.method === 'POST' && urlPath === '/autopilot/toggle-los') {
+      const body = await readJsonBody(req);
+      const pairKey = String(body.pairKey || '').trim();
+      if (!pairKey) return sendJson(res, 400, { ok: false, error: 'Missing pairKey' });
+      const isBlocked = body.blocked !== false;
+
+      const blockedSet = new Set(liveState.losBlockedPairs || []);
+      const allowedSet = new Set(liveState.losAllowedPairs || []);
+      if (isBlocked) {
+        blockedSet.add(pairKey);
+        allowedSet.delete(pairKey);
+      } else {
+        blockedSet.delete(pairKey);
+        allowedSet.add(pairKey);
+      }
+      liveState.losBlockedPairs = Array.from(blockedSet);
+      liveState.losAllowedPairs = Array.from(allowedSet);
+
+      const sightlines = previewMovementSightlines(liveState.boardTelemetry, liveState, liveState.lastMovementPlans || [], {
+        losBlockedPairs: liveState.losBlockedPairs,
+        losAllowedPairs: liveState.losAllowedPairs
+      });
+      const assignments = selectHordeShootingTargets(liveState.boardTelemetry, liveState, {
+        losBlockedPairs: liveState.losBlockedPairs,
+        losAllowedPairs: liveState.losAllowedPairs
+      });
+      liveState.lastMovementSightlines = sightlines;
+      liveState.lastShootingAssignments = assignments;
+      savePersistedState();
+
+      return sendJson(res, 200, {
+        ok: true,
+        pairKey,
+        blocked: isBlocked,
+        losBlockedPairs: liveState.losBlockedPairs,
+        losAllowedPairs: liveState.losAllowedPairs,
+        sightlines,
+        assignments
+      });
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/select-shooting') {
@@ -800,12 +965,17 @@ function createTacticaDaemon(options = {}) {
         ...(liveState.losBlockedPairs || []),
         ...(body.losBlockedPairs || [])
       ]));
+      const mergedAllowed = Array.from(new Set([
+        ...(liveState.losAllowedPairs || []),
+        ...(body.losAllowedPairs || [])
+      ]));
       const assignments = selectHordeShootingTargets(liveState.boardTelemetry, liveState, {
         ...body,
-        losBlockedPairs: mergedBlocked
+        losBlockedPairs: mergedBlocked,
+        losAllowedPairs: mergedAllowed
       });
       liveState.lastShootingAssignments = assignments;
-      return sendJson(res, 200, { ok: true, assignments, losBlockedPairs: mergedBlocked });
+      return sendJson(res, 200, { ok: true, assignments, losBlockedPairs: mergedBlocked, losAllowedPairs: mergedAllowed });
     }
 
     if (req.method === 'POST' && urlPath === '/autopilot/declare-charges') {
@@ -854,7 +1024,7 @@ function createTacticaDaemon(options = {}) {
 
     if (req.method === 'POST' && urlPath === '/overwatch/los-check') {
       const body = await readJsonBody(req);
-      const prompt = buildLosVerificationPrompt(liveState, body.transcript || '');
+      const prompt = buildLosVerificationPrompt(liveState, body.transcript || body.query || '');
       const apiKey = options.geminiApiKey ?? env.GEMINI_API_KEY ?? '';
       const model = options.geminiModel || env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
       const fetchImpl = options.visionFetchFn || (apiKey && typeof fetch === 'function' ? fetch : null);
@@ -863,20 +1033,30 @@ function createTacticaDaemon(options = {}) {
         losBlocked: false,
         revertSquadKey: null,
         blockedPairs: [],
-        spokenReply: 'Offline LOS mode: configure TACTICA_THREAD_URL (or GEMINI_API_KEY) in .env for automatic TTS screen vision, or click Revert Move manually.'
+        spokenReply: 'Local Auspex LOS mode: using 3D TTS wall raycasts & 2D terrain footprints (configure TACTICA_THREAD_URL or GEMINI_API_KEY in .env for live screen vision).'
       };
-      let mode = 'offline';
+      let mode = 'local-auspex';
 
+      if (typeof activeThreadQueryFn !== 'function' && typeof options.ensureThreadSession === 'function') {
+        const ensured = await options.ensureThreadSession();
+        if (typeof ensured === 'function') {
+          activeThreadQueryFn = ensured;
+        } else if (ensured && typeof ensured.queryThread === 'function') {
+          activeThreadQueryFn = ensured.queryThread;
+        }
+      }
+
+      const frameData = body.imageBase64 || body.imageDataUrl || '';
       if (typeof activeThreadQueryFn === 'function') {
-        const rawText = await activeThreadQueryFn(prompt, body.imageBase64 || '');
+        const rawText = await activeThreadQueryFn(prompt, frameData);
         if (rawText) {
           verdict = parseOverwatchVerdict(rawText);
           mode = 'gemini-thread';
         }
       } else if (fetchImpl) {
         const parts = [{ text: prompt }];
-        if (body.imageBase64) {
-          const cleanB64 = String(body.imageBase64).replace(/^data:image\/\w+;base64,/, '');
+        if (frameData) {
+          const cleanB64 = String(frameData).replace(/^data:image\/\w+;base64,/, '');
           parts.push({ inline_data: { mime_type: body.mimeType || 'image/jpeg', data: cleanB64 } });
         }
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -900,8 +1080,11 @@ function createTacticaDaemon(options = {}) {
       let revertedCommand = null;
       if (verdict.losBlocked && verdict.revertSquadKey && body.autoRevert !== false) {
         const targetPlan = (liveState.lastMovementPlans || []).find(p => p.squadKey === verdict.revertSquadKey);
-        const revCmd = buildMoveRevertCommand(targetPlan);
+        const originSource = (liveState.phaseOriginSnapshots || {})[verdict.revertSquadKey] || targetPlan;
+        const revCmd = buildMoveRevertCommand(originSource);
         if (revCmd) {
+          if (targetPlan) targetPlan.status = 'REVERTED';
+          restoreUnitOriginInTelemetry(verdict.revertSquadKey, originSource);
           cmdCounter += 1;
           revertedCommand = { id: `lct_cmd_${Date.now()}_${cmdCounter}`, ...revCmd };
           ttsCommandQueue.push(revertedCommand);
@@ -923,6 +1106,12 @@ function createTacticaDaemon(options = {}) {
     }
 
     return sendJson(res, 404, { ok: false, error: 'Not found' });
+    } catch (err) {
+      if (!res.headersSent) {
+        return sendJson(res, 500, { ok: false, error: err?.message || 'Internal daemon error' });
+      }
+      res.end();
+    }
   });
 
   return {
@@ -931,7 +1120,7 @@ function createTacticaDaemon(options = {}) {
     setThreadQueryFn(fn) {
       activeThreadQueryFn = fn;
     },
-    start(port = DEFAULT_PORT) {
+    start(port = (options.port !== undefined ? options.port : DEFAULT_PORT)) {
       return new Promise((resolve, reject) => {
         server.once('error', reject);
         server.listen(port, '127.0.0.1', () => resolve(server.address().port));
@@ -944,9 +1133,40 @@ function createTacticaDaemon(options = {}) {
 }
 
 if (require.main === module) {
-  const daemon = createTacticaDaemon();
   let activeSession = null;
+  let launchingPromise = null;
+  let daemon = null;
   const profileDir = resolveTacticaProfileDir();
+  const configuredUrl = resolveTacticaThreadUrl();
+
+  const ensureThreadSession = async () => {
+    if (activeSession) return activeSession;
+    if (!isUsableGeminiThreadUrl(configuredUrl)) return null;
+    if (launchingPromise) return launchingPromise;
+
+    launchingPromise = launchTacticaBrowserSession(configuredUrl, {
+      onClose: () => {
+        activeSession = null;
+        if (daemon) daemon.setThreadQueryFn(null);
+        console.log('[TACTICA BROWSER] Chrome window closed — LCT HTTP Scribe remains online (will auto-relaunch on next LOS check).');
+      }
+    }).then((sess) => {
+      activeSession = sess;
+      if (sess && daemon) {
+        daemon.setThreadQueryFn(sess.queryThread);
+        console.log('++ TACTICA GEMINI REFEREE THREAD LOCKED & READY (Sign into Google once if prompted) ++');
+      }
+      return sess;
+    }).catch((err) => {
+      console.warn(`[TACTICA THREAD WARNING] Could not open chrome_tactica_profile window: ${err.message}`);
+      return null;
+    }).finally(() => {
+      launchingPromise = null;
+    });
+    return launchingPromise;
+  };
+
+  daemon = createTacticaDaemon({ ensureThreadSession });
 
   const shutdownDaemon = async () => {
     if (activeSession) {
@@ -976,20 +1196,7 @@ if (require.main === module) {
     console.log('----------------------------------------------------------------');
 
     if (isUsableGeminiThreadUrl(daemon.tacticaThreadUrl)) {
-      activeSession = await launchTacticaBrowserSession(daemon.tacticaThreadUrl, {
-        onClose: () => {
-          activeSession = null;
-          daemon.setThreadQueryFn(null);
-          console.log('[TACTICA BROWSER] Chrome window closed — LCT HTTP Scribe remains online.');
-        }
-      }).catch((err) => {
-        console.warn(`[TACTICA THREAD WARNING] Could not open chrome_tactica_profile window: ${err.message}`);
-        return null;
-      });
-      if (activeSession) {
-        daemon.setThreadQueryFn(activeSession.queryThread);
-        console.log('++ TACTICA GEMINI REFEREE THREAD LOCKED & READY (Sign into Google once if prompted) ++');
-      }
+      await ensureThreadSession();
     }
     console.log(`+++ LCT TACTICA DAEMON & SCRIBE ONLINE [http://127.0.0.1:${port}] +++`);
   }).catch((err) => {

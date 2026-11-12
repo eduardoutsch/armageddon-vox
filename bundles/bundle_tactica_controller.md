@@ -1,13 +1,13 @@
-# 📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 1: HUD, Reaction & Telemetry)
+# 📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 1: HUD, Poller & Telemetry)
 
-Imperative Humble View controller bridging Mode 1 session storage, 3-mode progressive panel switching, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 520).
+Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemon client, SPA-safe 2.5s auto-poller, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 680).
 
 ## 📑 Table of Contents
-- [js/tactica.js (Part 1: HUD, Session Sync & Telemetry View, Lines 1-520)](#file-jstacticajspart1hudsessionsynctelemetryviewlines1520)
+- [js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-680)](#file-jstacticajspart1hudsessionsyncautopollertelemetryviewlines1680)
 
 ---
 
-## File: `js/tactica.js (Part 1: HUD, Session Sync & Telemetry View, Lines 1-520)` <a id="file-jstacticajspart1hudsessionsynctelemetryviewlines1520"></a>
+## File: `js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-680)` <a id="file-jstacticajspart1hudsessionsyncautopollertelemetryviewlines1680"></a>
 
 ````javascript
 /**
@@ -60,9 +60,14 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
     return m;
   }
 
+  function escapeJsStr(val) {
+    return String(val || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
+
   /**
    * Selects the active Horde Turn sub-step (1: Spawn, 2: Move & LOS, 3: Shoot, 4: Charge & Consolidate),
-   * revealing `#tacticaLosBar` strictly inside Step 2 and Step 3 where 3D LOS applies.
+   * revealing `#tacticaLosBar` strictly inside Step 2 and Step 3 where 3D LOS applies, and restoring
+   * active Step 2 / Step 3 Autopilot cards when navigating with `← Prev Step` / `Next Step →`.
    *
    * @param {number} [step=1] - Sub-step index (1–4).
    * @returns {number} Clamped active step.
@@ -78,9 +83,30 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
       if (p) p.classList.toggle('hidden', i !== s);
       if (b) b.classList.toggle('active', i === s);
     }
+    const prevBtn = document.getElementById('hordePrevStepBtn');
+    const nextBtn = document.getElementById('hordeNextStepBtn');
+    if (prevBtn) prevBtn.disabled = s <= 1;
+    if (nextBtn) nextBtn.disabled = s >= 4;
+
     const losBar = document.getElementById('tacticaLosBar');
     if (losBar) losBar.classList.toggle('hidden', s !== 2 && s !== 3);
+
+    if (s === 2 && ((clientState.lastMovementPlans || []).length > 0 || (clientState.lastIngressDrops || []).length > 0)) {
+      renderAutopilotMovementAndIngress(clientState.lastMovementPlans || [], clientState.lastIngressDrops || [], clientState.lastMovementSightlines);
+    } else if (s === 3 && (clientState.lastShootingAssignments || []).length > 0) {
+      renderAutopilotShootingAssignments(clientState.lastShootingAssignments || []);
+    }
     return s;
+  }
+
+  /**
+   * Steps backward (`-1`) or forward (`+1`) between Horde Turn steps 1..4.
+   *
+   * @param {number} [delta=1] - Step delta (`-1` or `+1`).
+   * @returns {number} Updated active step.
+   */
+  function stepHordeTurn(delta = 1) {
+    return setHordeTurnStep(activeHordeStep + (Number(delta) || 0));
   }
 
   /**
@@ -116,9 +142,47 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
     }
-    const res = await fetch(`${DAEMON_URL}${route}`, opts);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    let lastErr = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch(`${DAEMON_URL}${route}`, opts);
+        if (!res.ok) {
+          const httpErr = new Error(`HTTP ${res.status}`);
+          httpErr.status = res.status;
+          if (res.status >= 400 && res.status < 500) throw httpErr;
+          lastErr = httpErr;
+          continue;
+        }
+        return res.json();
+      } catch (err) {
+        lastErr = err;
+        if (err && err.status >= 400 && err.status < 500) throw err;
+      }
+    }
+    throw lastErr || new Error('Daemon unreachable');
+  }
+
+  function stopTacticaAutoPoller() {
+    if (typeof window !== 'undefined' && window._foaTacticaPollTimer) {
+      clearInterval(window._foaTacticaPollTimer);
+      window._foaTacticaPollTimer = null;
+    }
+  }
+
+  function startTacticaAutoPoller(intervalMs = 2500) {
+    stopTacticaAutoPoller();
+    if (typeof setInterval !== 'function') return null;
+    const ms = Math.max(500, Number(intervalMs) || 2500);
+    const timer = setInterval(() => {
+      if (typeof document !== 'undefined' && (document.getElementById('tacticaChronicleBox') || document.getElementById('tacticaDaemonBadge'))) {
+        refreshDaemonState();
+      }
+    }, ms);
+    if (timer && typeof timer.unref === 'function') timer.unref();
+    if (typeof window !== 'undefined') {
+      window._foaTacticaPollTimer = timer;
+    }
+    return timer;
   }
 
   function renderCompletedDefenseSummary(seq) {
@@ -241,7 +305,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
     const telBox = document.getElementById('tacticaTelemetryBox');
     if (telBox) {
       const rowVms = typeof selectTelemetryRowViewModels === 'function'
-        ? selectTelemetryRowViewModels(units)
+        ? selectTelemetryRowViewModels(units, clientState.phaseOriginSnapshots || {})
         : [];
       if (rowVms.length === 0) {
         telBox.innerHTML = '<div style="color:var(--muted); font-style:italic;">No LCT tabletop scan received yet. Click [📡 Scan LCT Board] on your TTS Beacon token or request a scan above.</div>';
@@ -256,6 +320,7 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button type="button" class="btn-ghost btn-sm" onclick="toggleTelemetryUnitSide(${vm.index})">⇄ Flip Side</button>
+              ${vm.canUndoMove ? `<button type="button" class="btn-ghost btn-sm" onclick="undoSquadMoveByKey('${escapeJsStr(vm.squadKey)}')">↩️ Undo Move</button>` : ''}
               ${vm.canDisembark ? `<button type="button" class="btn-gold btn-sm" onclick="disembarkTelemetryTransport(${vm.index})">⏏️ Disembark (3")</button>` : ''}
               ${vm.canLoadAutoDefender ? `<button type="button" class="btn-ghost btn-sm" onclick="selectTelemetryUnitForDefense(${vm.index})">🎯 Load into Auto-Defender</button>` : ''}
             </div>
@@ -333,6 +398,11 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
         pruneClientBuffs();
         if (roundChanged) {
           patch.activePlayerBuffs = clientState.activePlayerBuffs;
+          clientState.losBlockedPairs = [];
+          clientState.losAllowedPairs = [];
+          clientState.phaseOriginSnapshots = {};
+          clientState.lastMovementPlans = [];
+          clientState.lastMovementSightlines = [];
         }
         try {
           const res = await daemonRequest('/session/sync', 'POST', patch);
@@ -349,7 +419,17 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
 
   async function setConsolePhaseAndTrigger(phase, reactionTrigger = null) {
     const rndEl = typeof document !== 'undefined' ? document.getElementById('tacticaRoundSelect') : null;
-    if (rndEl && rndEl.value) clientState.battleRound = Number(rndEl.value) || clientState.battleRound;
+    if (rndEl && rndEl.value) {
+      const nextRnd = Number(rndEl.value) || clientState.battleRound;
+      if (nextRnd !== clientState.battleRound) {
+        clientState.losBlockedPairs = [];
+        clientState.losAllowedPairs = [];
+        clientState.phaseOriginSnapshots = {};
+        clientState.lastMovementPlans = [];
+        clientState.lastMovementSightlines = [];
+      }
+      clientState.battleRound = nextRnd;
+    }
     clientState.phase = phase;
     pruneClientBuffs();
     const summary = `Entered ${phase} (Round ${clientState.battleRound}).`;
@@ -530,4 +610,84 @@ Imperative Humble View controller bridging Mode 1 session storage, 3-mode progre
    * Enqueues a `SCAN_BOARD` request onto the LCT daemon poll queue for the TTS Beacon token.
    */
   async function requestTtsBoardScan() {
+    try {
+      await daemonRequest('/tts/enqueue', 'POST', { action: 'SCAN_BOARD' });
+      daemonOnline = true;
+    } catch (e) {
+      daemonOnline = false;
+    }
+    renderTacticaConsole();
+  }
+
+  /**
+   * Populates the Horde Auto-Defender form inputs directly from a scanned Yellowscribe squad on the LCT table.
+   */
+  function selectTelemetryUnitForDefense(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || typeof document === 'undefined') return null;
+
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = String(v);
+    };
+    setVal('defUnitName', u.name || 'Horde Unit');
+    setVal('defSaveInput', u.save || 4);
+    setVal('defInvulnInput', u.invuln || 0);
+    setVal('defWpmInput', u.woundsPerModel || 1);
+    setVal('defKeywordsInput', Array.isArray(u.keywords) && u.keywords.length > 0 ? u.keywords.join(', ') : 'INFANTRY');
+    setVal('defModelsInput', u.modelCount || 1);
+    const spCheck = document.getElementById('defInSpawnCheck');
+    if (spCheck) spCheck.checked = Boolean(u.inSpawnZone);
+    renderTacticaConsole();
+    return u;
+  }
+
+  /**
+   * Flips a scanned squad's allegiance (`PLAYER` <-> `HORDE`) in both browser telemetry state and TTS tags
+   * via `POST /tts/set-side`, falling back cleanly to local state updates when offline.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Updated squad entry or `null` when out of bounds.
+   */
+  async function toggleTelemetryUnitSide(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u) return null;
+    const nextSide = u.side === 'PLAYER' ? 'HORDE' : 'PLAYER';
+    const payload = {
+      squadKey: u.squadKey,
+      guids: Array.isArray(u.guids) ? u.guids : (u.guid ? [u.guid] : []),
+      side: nextSide
+    };
+    try {
+      const res = await daemonRequest('/tts/set-side', 'POST', payload);
+      daemonOnline = true;
+      if (Array.isArray(res.units) && clientState.boardTelemetry) {
+        clientState.boardTelemetry.units = res.units;
+      } else {
+        u.side = nextSide;
+      }
+    } catch (e) {
+      daemonOnline = false;
+      u.side = nextSide;
+    }
+    renderTacticaConsole();
+    return (clientState.boardTelemetry?.units || [])[idx] || u;
+  }
+
+  /**
+   * Forwards user intent to disembark all passenger units (`[10 Kasrkin]` or `[5 + Leader]`)
+   * wholly within `3"` of a Transport miniature via `POST /autopilot/disembark` with offline fallback.
+   *
+   * @param {number} idx - Squad index inside `clientState.boardTelemetry.units`.
+   * @returns {Promise<object|null>} Disembark command descriptor or `null` when invalid.
+   */
+  async function disembarkTelemetryTransport(idx) {
+    const units = clientState.boardTelemetry?.units || [];
+    const u = units[idx];
+    if (!u || !Array.isArray(u.embarkedCargo) || u.embarkedCargo.length === 0) return null;
+
+    let cmd = null;
+    try {
 ````

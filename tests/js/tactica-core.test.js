@@ -395,4 +395,26 @@ test('selectTelemetryRowViewModels: pure MVVM selector projects unit badges, sav
   assert.equal(initSt.hordeReserves.length, 1);
   assert.equal(initSt.shelfTemplates.length, 1);
   assert.deepEqual(initSt.lastIngressDrops, []);
+  assert.deepEqual(initSt.losAllowedPairs, []);
+  assert.deepEqual(initSt.phaseOriginSnapshots, {});
+  assert.deepEqual(initSt.lastMovementSightlines, []);
+
+  // Verify selectTelemetryRowViewModels sets canUndoMove when phaseOriginSnapshots holds a stored round origin for a HORDE squad
+  const undoVms = selectTelemetryRowViewModels(
+    [
+      { squadKey: 'HORDE::Armiger Warglaive', name: 'Armiger Warglaive', side: 'HORDE', modelCount: 1, save: 3 },
+      { squadKey: 'HORDE::Unmoved Helverin', name: 'Unmoved Helverin', side: 'HORDE', modelCount: 1, save: 3 },
+      { squadKey: 'PLAYER::Kapricus Defender', name: 'Kapricus Defender', side: 'PLAYER', modelCount: 1, save: 3 }
+    ],
+    {
+      'HORDE::Armiger Warglaive': {
+        squadKey: 'HORDE::Armiger Warglaive',
+        unitName: 'Armiger Warglaive',
+        originModels: [{ guid: 'arm-1', x: 0, y: 1.1, z: 16 }]
+      }
+    }
+  );
+  assert.equal(undoVms[0].canUndoMove, true, 'Horde squad with stored round origin snapshot must set canUndoMove = true');
+  assert.equal(undoVms[1].canUndoMove, false, 'Horde squad without stored round origin snapshot must set canUndoMove = false');
+  assert.equal(undoVms[2].canUndoMove, false, 'Player squad must never set canUndoMove = true');
 });

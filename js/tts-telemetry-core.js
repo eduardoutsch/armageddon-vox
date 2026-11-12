@@ -950,7 +950,51 @@
       };
     });
 
-    return { units, objectives, guidRegistry: updatedGuidRegistry, shelfTemplates };
+    const obstacles = (Array.isArray(rawScan.obstacles) ? rawScan.obstacles : [])
+      .filter(o => o && Number.isFinite(Number(o.minX)) && Number.isFinite(Number(o.maxX)) && Number.isFinite(Number(o.minZ)) && Number.isFinite(Number(o.maxZ)))
+      .map(o => ({
+        name: String(o.name || 'Terrain Wall'),
+        minX: Number(o.minX),
+        maxX: Number(o.maxX),
+        minZ: Number(o.minZ),
+        maxZ: Number(o.maxZ),
+        heightY: Number(o.heightY) || 2.0,
+        solid: o.solid !== false,
+        obscuring: Boolean(o.obscuring)
+      }));
+
+    // Squad-Level 40k LOS Rule: mark HORDE->PLAYER pair blocked only when EVERY model-to-model 3D raycast is blocked
+    const blockedGuidSet = new Set(
+      (Array.isArray(rawScan.raycastBlockedGuidPairs) ? rawScan.raycastBlockedGuidPairs : []).map(String)
+    );
+    const autoBlockedLosPairs = [];
+    if (blockedGuidSet.size > 0) {
+      const hordeUnits = units.filter(u => u.side !== 'PLAYER');
+      const playerUnits = units.filter(u => u.side === 'PLAYER');
+      for (const h of hordeUnits) {
+        const hModels = Array.isArray(h.models) && h.models.length > 0 ? h.models : (h.guid ? [{ guid: h.guid }] : []);
+        if (hModels.length === 0) continue;
+        for (const p of playerUnits) {
+          const pModels = Array.isArray(p.models) && p.models.length > 0 ? p.models : (p.guid ? [{ guid: p.guid }] : []);
+          if (pModels.length === 0) continue;
+          let allPairsBlocked = true;
+          for (const hm of hModels) {
+            for (const pm of pModels) {
+              if (!hm.guid || !pm.guid || (!blockedGuidSet.has(`${hm.guid}->${pm.guid}`) && !blockedGuidSet.has(`${pm.guid}->${hm.guid}`))) {
+                allPairsBlocked = false;
+                break;
+              }
+            }
+            if (!allPairsBlocked) break;
+          }
+          if (allPairsBlocked) {
+            autoBlockedLosPairs.push(`${h.squadKey || h.name}->${p.squadKey || p.name}`);
+          }
+        }
+      }
+    }
+
+    return { units, objectives, guidRegistry: updatedGuidRegistry, shelfTemplates, obstacles, autoBlockedLosPairs };
   }
 
   return {

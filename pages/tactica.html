@@ -184,11 +184,13 @@
 
     <!-- PANEL 1: HORDE TURN (DEFAULT VISIBLE) -->
     <div id="tacticaModeHorde" class="card" style="margin-bottom:14px;">
-      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+        <button type="button" id="hordePrevStepBtn" class="btn-ghost btn-sm" onclick="stepHordeTurn(-1)">&larr; Prev Step</button>
         <button type="button" id="hordeStepBtn1" class="btn-ghost btn-sm horde-step-btn active" onclick="setHordeTurnStep(1)">1. Spawn</button>
         <button type="button" id="hordeStepBtn2" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(2)">2. Move &amp; LOS</button>
         <button type="button" id="hordeStepBtn3" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(3)">3. Shoot</button>
         <button type="button" id="hordeStepBtn4" class="btn-ghost btn-sm horde-step-btn" onclick="setHordeTurnStep(4)">4. Charge &amp; Consolidate</button>
+        <button type="button" id="hordeNextStepBtn" class="btn-ghost btn-sm" onclick="stepHordeTurn(1)">Next Step &rarr;</button>
       </div>
 
       <div id="hordeStepPanel1" style="margin-bottom:10px;">

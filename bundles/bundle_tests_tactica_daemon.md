@@ -613,6 +613,176 @@ test('POST /audio/speak & Clipboard LOS paste: caches SHA-256 neural Auspex MP3s
   }
 });
 
+test('Part 3 & 4 Daemon: Private Network CORS, toggle-los target re-pick, persistent phaseOriginSnapshots revert-move, and lazy ensureThreadSession reconnect', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tactica-los-revert-'));
+
+  let lazyConnectCount = 0;
+  const daemon = createTacticaDaemon({
+    logDir: tmpDir,
+    ensureThreadSession: async () => {
+      lazyConnectCount++;
+      return {
+        queryThread: async (prompt) => JSON.stringify({
+          losBlocked: false,
+          revertSquadKey: null,
+          blockedPairs: [],
+          spokenReply: `CLEAR LOS confirmed lazily (${prompt.length} chars)`
+        })
+      };
+    }
+  });
+  const port = await daemon.start(0);
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    // 1. OPTIONS preflight includes Access-Control-Allow-Private-Network: true
+    const optRes = await fetch(`${baseUrl}/state`, { method: 'OPTIONS' });
+    assert.equal(optRes.status, 204);
+    assert.equal(optRes.headers.get('access-control-allow-private-network'), 'true');
+
+    // 2. Sync Round 1 and push board scan with 2 Horde squads + 2 Player squads
+    await postJson(baseUrl, '/session/sync', { battleRound: 1, roomCode: 'VOTANN-9' });
+    await postJson(baseUrl, '/tts/telemetry', {
+      playmatBounds: { minX: -22, maxX: 22, minZ: -30, maxZ: 30 },
+      obstacles: [{ name: 'Shipping Container', minX: -4, maxX: 4, minZ: 1.5, maxZ: 3.5, heightY: 3.0, solid: true }],
+      raycastBlockedGuidPairs: ['arm-g1->kap-g1'],
+      objectives: [],
+      objects: [
+        {
+          guid: 'arm-g1',
+          name: 'Armiger Warglaive',
+          tags: ['HORDE'],
+          pos: { x: 0, y: 1.5, z: 14 },
+          boundsSize: { x: 3.9, y: 4.5, z: 3.9 },
+          description: 'M 12" T 10 SV 3+ W 12\nThermal spear | 24" | 2 | 3+ | 12 | -4 | D6 | MELTA 4\nKeywords: Vehicle, Walker'
+        },
+        {
+          guid: 'helv-g1',
+          name: 'Armiger Helverin',
+          tags: ['HORDE'],
+          pos: { x: 10, y: 1.5, z: 14 },
+          boundsSize: { x: 3.9, y: 4.5, z: 3.9 },
+          description: 'M 12" T 10 SV 3+ W 12\nArmiger autocannon | 48" | 4 | 3+ | 9 | -1 | 3\nKeywords: Vehicle, Walker'
+        },
+        {
+          guid: 'kap-g1',
+          name: 'Kapricus Defender',
+          tags: ['PLAYER'],
+          pos: { x: 0, y: 1.5, z: -4 },
+          boundsSize: { x: 3.5, y: 3.0, z: 4.5 },
+          description: 'M 12" T 9 SV 3+ W 10\nKeywords: Vehicle'
+        },
+        {
+          guid: 'yae-g1',
+          name: 'Hernkyn Yaegirs',
+          tags: ['PLAYER'],
+          pos: { x: 12, y: 1.1, z: 4 },
+          boundsSize: { x: 1.1, y: 1.4, z: 1.1 },
+          description: 'M 6" T 4 SV 5+ W 1\nKeywords: Infantry'
+        }
+      ]
+    });
+
+    // 3. Plan Movement captures phaseOriginSnapshots and returns projected sightlines
+    const moveRes = await postJson(baseUrl, '/autopilot/plan-movement', {});
+    assert.equal(moveRes.ok, true);
+    assert.equal(moveRes.plans.length, 2);
+    assert.ok(moveRes.sightlines && moveRes.sightlines.bySquad, 'plan-movement must return projected Step 2 sightlines');
+    assert.ok(moveRes.phaseOriginSnapshots['HORDE::Armiger Warglaive'], 'Must capture phaseOriginSnapshots before first move of round');
+
+    // 4. Select Shooting: Armiger Warglaive skips raycast-blocked Kapricus Defender and picks Hernkyn Yaegirs;
+    //    then toggle-los blocks Hernkyn Yaegirs too -> Armiger Warglaive has 0 valid targets, while allowing Kapricus re-picks Kapricus!
+    const shoot1 = await postJson(baseUrl, '/autopilot/select-shooting', {});
+    const warglaiveShot1 = shoot1.assignments.find(a => a.attackerKey === 'HORDE::Armiger Warglaive');
+    assert.ok(warglaiveShot1);
+    assert.equal(warglaiveShot1.targetKey, 'PLAYER::Hernkyn Yaegirs');
+
+    const toggleBlock = await postJson(baseUrl, '/autopilot/toggle-los', {
+      pairKey: 'HORDE::Armiger Warglaive->PLAYER::Hernkyn Yaegirs',
+      blocked: true
+    });
+    assert.equal(toggleBlock.ok, true);
+    assert.equal(
+      toggleBlock.assignments.some(a => a.attackerKey === 'HORDE::Armiger Warglaive'),
+      false,
+      'Blocking remaining visible target must remove Armiger Warglaive shooting assignment'
+    );
+
+    const toggleAllow = await postJson(baseUrl, '/autopilot/toggle-los', {
+      pairKey: 'HORDE::Armiger Warglaive->PLAYER::Kapricus Defender',
+      blocked: false
+    });
+    assert.equal(toggleAllow.ok, true);
+    const warglaiveShot2 = toggleAllow.assignments.find(a => a.attackerKey === 'HORDE::Armiger Warglaive');
+    assert.ok(warglaiveShot2, 'Allowing LOS override on Kapricus Defender must re-pick Kapricus');
+    assert.equal(warglaiveShot2.targetKey, 'PLAYER::Kapricus Defender');
+
+    // 5. Revert Move during Shooting phase by squadKey preserves lastMovementPlans (Squad #2 remains MOVED)
+    const revRes = await postJson(baseUrl, '/autopilot/revert-move', {
+      squadKey: 'HORDE::Armiger Warglaive'
+    });
+    assert.equal(revRes.ok, true);
+    const curState = await (await fetch(`${baseUrl}/state`)).json();
+    assert.equal(curState.state.lastMovementPlans.length, 2, 'revert-move must NOT erase other units in lastMovementPlans');
+    assert.equal(
+      curState.state.lastMovementPlans.find(p => p.squadKey === 'HORDE::Armiger Warglaive').status,
+      'REVERTED'
+    );
+    assert.notEqual(
+      curState.state.lastMovementPlans.find(p => p.squadKey === 'HORDE::Armiger Helverin').status,
+      'REVERTED'
+    );
+
+    // 6. Advancing battleRound clears round-scoped LOS overrides & phaseOriginSnapshots
+    await postJson(baseUrl, '/session/sync', { battleRound: 2 });
+    const r2State = await (await fetch(`${baseUrl}/state`)).json();
+    assert.deepEqual(r2State.state.losBlockedPairs, []);
+    assert.deepEqual(r2State.state.losAllowedPairs, []);
+    assert.deepEqual(r2State.state.phaseOriginSnapshots, {});
+
+    // 7. Lazy reconnect on /overwatch/los-check invokes ensureThreadSession() instead of returning offline
+    const losRes = await postJson(baseUrl, '/overwatch/los-check', {
+      transcript: 'Can Helverin see Yaegirs?',
+      imageBase64: 'data:image/jpeg;base64,ZmFrZQ=='
+    });
+    assert.equal(losRes.ok, true);
+    assert.equal(losRes.mode, 'gemini-thread');
+    assert.equal(lazyConnectCount, 1);
+    assert.ok(losRes.verdict.spokenReply.includes('CLEAR LOS confirmed lazily'));
+  } finally {
+    await daemon.stop();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+
+  // Verify non-vision HTTP 200 mode is renamed from 'offline' to 'local-auspex' and top-level error recovery returns 500 JSON
+  const tmpDir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'tactica-local-auspex-'));
+  const daemonNoVision = createTacticaDaemon({
+    logDir: tmpDir2
+  });
+  const port2 = await daemonNoVision.start(0);
+  const baseUrl2 = `http://127.0.0.1:${port2}`;
+  try {
+    const localLos = await postJson(baseUrl2, '/overwatch/los-check', {
+      query: 'Check local auspex LOS'
+    });
+    assert.equal(localLos.ok, true);
+    assert.equal(localLos.mode, 'local-auspex', 'Non-vision HTTP 200 reply must return mode: local-auspex rather than offline');
+
+    const badJsonRes = await fetch(`${baseUrl2}/session/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{invalid-json'
+    });
+    assert.equal(badJsonRes.status, 500, 'Malformed JSON or handler error must return clean HTTP 500 JSON instead of hanging');
+    const badJsonPayload = await badJsonRes.json();
+    assert.equal(badJsonPayload.ok, false);
+  } finally {
+    await daemonNoVision.stop();
+    fs.rmSync(tmpDir2, { recursive: true, force: true });
+  }
+});
+
+
 
 
 ````

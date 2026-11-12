@@ -142,23 +142,30 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (3-Mode Progressive View & UI Tests)',
-  'Sticky Command Bar, 3-mode progressive panels (Horde Turn, Attack Horde, End Match), collapsed bottom drawers, and boundary UI tests (`pages/tactica.html`, `tests/ui/tactica.test.js`).',
-  ['pages/tactica.html', 'tests/ui/tactica.test.js'],
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console (3-Mode Progressive View)',
+  'Sticky Command Bar, 3-mode progressive panels (Horde Turn with Prev/Next step controls, Attack Horde, End Match), and collapsed bottom drawers (`pages/tactica.html`).',
+  ['pages/tactica.html'],
   path.join(BUNDLES_DIR, 'bundle_tactica.md')
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 1: HUD, Reaction & Telemetry)',
-  'Imperative Humble View controller bridging Mode 1 session storage, 3-mode progressive panel switching, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 520).',
-  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 1: HUD, Session Sync & Telemetry View, Lines 1-520)', startLine: 1, endLine: 520 }],
+  '📦 Fires of Armageddon // Bundle: UI Tests (In-Match LCT Tactical Console)',
+  'Boundary, MVVM Humble View, Step 2 Projected Sightlines, In-Place Undo Move, and Step 3 LOS Re-Pick UI tests (`tests/ui/tactica.test.js`).',
+  ['tests/ui/tactica.test.js'],
+  path.join(BUNDLES_DIR, 'bundle_tests_ui_tactica.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 1: HUD, Poller & Telemetry)',
+  'Imperative Humble View controller bridging Mode 1 session storage, 1-retry daemon client, SPA-safe 2.5s auto-poller, reaction banners, and telemetry ViewModel rendering (`js/tactica.js` lines 1 to 680).',
+  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 1: HUD, Session Sync, Auto-Poller & Telemetry View, Lines 1-680)', startLine: 1, endLine: 680 }],
   path.join(BUNDLES_DIR, 'bundle_tactica_controller.md')
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 2: Horde Autopilot &Ingress)',
-  'Horde Autopilot wave spawning, Deep Strike ingress & ruin-fallback actions, LOS revert, LCT dice-mat attack triggers, and SPA lifecycle (`js/tactica.js` lines 521 to end).',
-  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 2: Horde Autopilot, Ingress & SPA Lifecycle, Lines 521-1100)', startLine: 521, endLine: 1100 }],
+  '📦 Fires of Armageddon // Bundle: In-Match LCT Tactical Console Controller (Part 2: Horde Autopilot, Sightlines & Undo)',
+  'Horde Autopilot wave spawning, Step 2 Projected Sightlines, persistent Undo Move, Step 3 LOS Re-Pick, LCT dice-mat attack triggers, and SPA lifecycle (`js/tactica.js` lines 681 to end).',
+  [{ file: 'js/tactica.js', label: 'js/tactica.js (Part 2: Horde Autopilot, Sightlines, Undo & SPA Lifecycle, Lines 681-1500)', startLine: 681, endLine: 1500 }],
   path.join(BUNDLES_DIR, 'bundle_tactica_controller_part2.md')
 );
 
@@ -178,28 +185,35 @@ compileBundle(
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Scribe Server (Part 1: Browser Referee, Audio & Persistence)',
-  'Zero-dependency local HTTP LCT daemon setup, isolated TACTICA_THREAD_URL Playwright referee session, SHA-256 neural Auspex cache, and JSONL disk persistence (`tactica_daemon.js` lines 1 to 510).',
-  [{ file: 'tactica_daemon.js', label: 'tactica_daemon.js (Part 1: Referee Session, Audio Cache & Persistence, Lines 1-510)', startLine: 1, endLine: 510 }],
+  'Zero-dependency local HTTP LCT daemon setup, Private Network CORS, isolated TACTICA_THREAD_URL Playwright referee session, SHA-256 neural Auspex cache, and JSONL disk persistence (`tactica_daemon.js` lines 1 to 610).',
+  [{ file: 'tactica_daemon.js', label: 'tactica_daemon.js (Part 1: Referee Session, Audio Cache & Persistence, Lines 1-610)', startLine: 1, endLine: 610 }],
   path.join(BUNDLES_DIR, 'bundle_tactica_daemon.md')
 );
 
 compileBundle(
   '📦 Fires of Armageddon // Bundle: LCT Tactica Daemon & Scribe Server (Part 2: LCT Mat, Autopilot & Overwatch Routes)',
-  'HTTP endpoints for LCT dice-mat sequences, TTS board telemetry, Horde Autopilot wave/ingress/fallback/revert commands, and 3D Vision LOS verification (`tactica_daemon.js` lines 511 to end).',
-  [{ file: 'tactica_daemon.js', label: 'tactica_daemon.js (Part 2: LCT Mat, Autopilot & Vision LOS Routes, Lines 511-1100)', startLine: 511, endLine: 1100 }],
+  'HTTP endpoints for LCT dice-mat sequences, TTS board telemetry, Horde Autopilot wave/ingress/revert/toggle-los commands, and lazy-reconnecting 3D Vision LOS verification (`tactica_daemon.js` lines 611 to end).',
+  [{ file: 'tactica_daemon.js', label: 'tactica_daemon.js (Part 2: LCT Mat, Autopilot, LOS Toggle & Vision Routes, Lines 611-1500)', startLine: 611, endLine: 1500 }],
   path.join(BUNDLES_DIR, 'bundle_tactica_daemon_part2.md')
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: LCT TTS Telemetry & Spatial Squad Core',
-  'Pure Yellowscribe/ForceOrg BBCode datasheet parser, prop/terrain blacklist, spatial >6" squad coherency clustering, deployed PLAYER army auto-detection, and 2D edge-to-edge tabletop inch geometry (`js/tts-telemetry-core.js`).',
-  ['js/tts-telemetry-core.js'],
+  '📦 Fires of Armageddon // Bundle: LCT TTS Telemetry & Spatial Squad Core (Part 1: Datasheet & Coherency Parser)',
+  'Pure Yellowscribe/ForceOrg BBCode datasheet parser, prop/terrain blacklist, and 11th Ed dual coherency clustering (`js/tts-telemetry-core.js` lines 1 to 520).',
+  [{ file: 'js/tts-telemetry-core.js', label: 'js/tts-telemetry-core.js (Part 1: Datasheet Parser & Dual Coherency, Lines 1-520)', startLine: 1, endLine: 520 }],
   path.join(BUNDLES_DIR, 'bundle_tts_bridge.md')
 );
 
 compileBundle(
+  '📦 Fires of Armageddon // Bundle: LCT TTS Telemetry & Spatial Squad Core (Part 2: Squad Normalization & 3D LOS)',
+  'Persistent squad identity, Attached Units, Embarked cargo, solid obstacles, and squad-level 3D raycast LOS (`js/tts-telemetry-core.js` lines 521 to end).',
+  [{ file: 'js/tts-telemetry-core.js', label: 'js/tts-telemetry-core.js (Part 2: Squad Normalization, Obstacles & 3D LOS, Lines 521-1200)', startLine: 521, endLine: 1200 }],
+  path.join(BUNDLES_DIR, 'bundle_tts_bridge_part2.md')
+);
+
+compileBundle(
   '📦 Fires of Armageddon // Bundle: LCT TTS Orbital Auspex Lua Beacon',
-  'Non-invasive Tabletop Simulator Checker/Token Lua script providing 3D & context-menu board scanning, playmat bounds detection, off-board wave cloning, and LCT dice-mat orchestration (`tts/lct_horde_bridge.lua`).',
+  'Non-invasive Tabletop Simulator Checker/Token Lua script providing 3D & context-menu board scanning, 65%-hull 3D wall raycasts, playmat & Dice Mat bounds detection, and destroyed-safe dice rolling (`tts/lct_horde_bridge.lua`).',
   ['tts/lct_horde_bridge.lua'],
   path.join(BUNDLES_DIR, 'bundle_tts_lua_beacon.md')
 );
@@ -212,10 +226,17 @@ compileBundle(
 );
 
 compileBundle(
-  '📦 Fires of Armageddon // Bundle: Deterministic Horde Autopilot Core',
-  'Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, 3" Transport cargo disembarkation, obstacle-aware Movement/Advance vectors, pre-Overwatch LOS revert snapshots, keyword-driven shooting priority, LCT 2D6 charges, and 11th Ed 3-tier consolidation (`js/horde-autopilot-core.js`).',
-  ['js/horde-autopilot-core.js'],
+  '📦 Fires of Armageddon // Bundle: Deterministic Horde Autopilot Core (Part 1: Spawning, Liang-Barsky & Movement)',
+  'Pure Horde Autopilot wave spawning, Bodyguard + Leader wave linking, exact 2D Liang-Barsky wall checks, and obstacle-aware Movement/Advance vectors (`js/horde-autopilot-core.js` lines 1 to 510).',
+  [{ file: 'js/horde-autopilot-core.js', label: 'js/horde-autopilot-core.js (Part 1: Wave Spawning & Movement Solver, Lines 1-510)', startLine: 1, endLine: 510 }],
   path.join(BUNDLES_DIR, 'bundle_horde_autopilot.md')
+);
+
+compileBundle(
+  '📦 Fires of Armageddon // Bundle: Deterministic Horde Autopilot Core (Part 2: Sightlines, Shooting, Charges & Consolidation)',
+  'Pure Step 2 Projected Sightlines, keyword-driven shooting priority with 3D/2D LOS overrides, LCT 2D6 charges, 11th Ed 3-tier consolidation, and 3" Transport disembarkation (`js/horde-autopilot-core.js` lines 511 to end).',
+  [{ file: 'js/horde-autopilot-core.js', label: 'js/horde-autopilot-core.js (Part 2: Sightlines, Shooting, Charges & Consolidation, Lines 511-1200)', startLine: 511, endLine: 1200 }],
+  path.join(BUNDLES_DIR, 'bundle_horde_autopilot_part2.md')
 );
 
 compileBundle(
@@ -708,17 +729,20 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [\`bundle_spawner_cockpit.md\`](bundle_spawner_cockpit.md) | **Spawner Cockpit & Telemetry** | \`js/spawner-cockpit.js\` |
 | [\`bundle_spawner_engine.md\`](bundle_spawner_engine.md) | **Spawner Engine & Resupply** | \`js/spawner.js\`, \`js/spawner-resupply.js\` |
 | [\`bundle_horde_combat.md\`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | \`js/horde-combat-modifiers.js\` |
-| [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View & UI Tests)** | \`pages/tactica.html\`, \`tests/ui/tactica.test.js\` |
-| [\`bundle_tactica_controller.md\`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | \`js/tactica.js\` (Lines 1-520) |
-| [\`bundle_tactica_controller_part2.md\`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | \`js/tactica.js\` (Lines 521-end) |
+| [\`bundle_tactica.md\`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View)** | \`pages/tactica.html\` |
+| [\`bundle_tests_ui_tactica.md\`](bundle_tests_ui_tactica.md) | **UI Tests (In-Match LCT Tactical Console)** | \`tests/ui/tactica.test.js\` |
+| [\`bundle_tactica_controller.md\`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | \`js/tactica.js\` (Lines 1-680) |
+| [\`bundle_tactica_controller_part2.md\`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | \`js/tactica.js\` (Lines 681-end) |
 | [\`bundle_tactica_core.md\`](bundle_tactica_core.md) | **In-Match LCT Tactical Core (Part 1)** | \`js/tactica-core.js\` (Lines 1-500) |
 | [\`bundle_tactica_core_part2.md\`](bundle_tactica_core_part2.md) | **In-Match LCT Tactical Core (Part 2)** | \`js/tactica-core.js\` (Lines 501-end) |
-| [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe (Part 1)** | \`tactica_daemon.js\` (Lines 1-510) |
-| [\`bundle_tactica_daemon_part2.md\`](bundle_tactica_daemon_part2.md) | **LCT Tactica Daemon & Scribe (Part 2)** | \`tactica_daemon.js\` (Lines 511-end) |
-| [\`bundle_tts_bridge.md\`](bundle_tts_bridge.md) | **LCT TTS Telemetry & Spatial Squad Core** | \`js/tts-telemetry-core.js\` |
+| [\`bundle_tactica_daemon.md\`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe (Part 1)** | \`tactica_daemon.js\` (Lines 1-610) |
+| [\`bundle_tactica_daemon_part2.md\`](bundle_tactica_daemon_part2.md) | **LCT Tactica Daemon & Scribe (Part 2)** | \`tactica_daemon.js\` (Lines 611-end) |
+| [\`bundle_tts_bridge.md\`](bundle_tts_bridge.md) | **LCT TTS Telemetry & Spatial Squad Core (Part 1)** | \`js/tts-telemetry-core.js\` (Lines 1-520) |
+| [\`bundle_tts_bridge_part2.md\`](bundle_tts_bridge_part2.md) | **LCT TTS Telemetry & Spatial Squad Core (Part 2)** | \`js/tts-telemetry-core.js\` (Lines 521-end) |
 | [\`bundle_tts_lua_beacon.md\`](bundle_tts_lua_beacon.md) | **LCT TTS Orbital Auspex Lua Beacon** | \`tts/lct_horde_bridge.lua\` |
 | [\`bundle_horde_deepstrike.md\`](bundle_horde_deepstrike.md) | **Deterministic Horde Deep Strike & Pincer Solver** | \`js/horde-deepstrike-core.js\`, \`tests/js/horde-deepstrike-core.test.js\` |
-| [\`bundle_horde_autopilot.md\`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | \`js/horde-autopilot-core.js\` |
+| [\`bundle_horde_autopilot.md\`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core (Part 1)** | \`js/horde-autopilot-core.js\` (Lines 1-510) |
+| [\`bundle_horde_autopilot_part2.md\`](bundle_horde_autopilot_part2.md) | **Deterministic Horde Autopilot Core (Part 2)** | \`js/horde-autopilot-core.js\` (Lines 511-end) |
 | [\`bundle_tactica_overwatch.md\`](bundle_tactica_overwatch.md) | **Live Overwatch & Vocal Stratagem Core** | \`js/tactica-overwatch-core.js\` |
 | [\`bundle_tactica_overwatch_shell.md\`](bundle_tactica_overwatch_shell.md) | **Live Screen, Neural Auspex & Push-to-Talk Shell** | \`js/tactica-overwatch.js\` |
 | [\`bundle_data_rng.md\`](bundle_data_rng.md) | **Data Schemas & Seeded RNG** | \`js/data.js\`, \`js/rng.js\` |

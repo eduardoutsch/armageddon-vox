@@ -12,6 +12,7 @@ const {
   planWaveSpawnCommands,
   buildDisembarkWaveCommand,
   planHordeMovementPhase,
+  previewMovementSightlines,
   buildMoveRevertCommand,
   selectHordeShootingTargets,
   planHordeCharges,
@@ -397,5 +398,96 @@ test('planWaveSpawnCommands & buildDisembarkWaveCommand: links Bodyguard + Leade
   assert.equal(ingressMove.ingressDrops.length, 1);
   assert.equal(ingressMove.commands.some(c => c.action === 'DEEP_STRIKE_DROP'), true);
 });
+
+test('3D Wall Raycasts + 2D Solid Obstacles + previewMovementSightlines: blocks Armiger behind wall, supports losAllowedPairs override, and projects Step 2 sightlines', () => {
+  const telemetry = {
+    playmatBounds: { minX: -22, maxX: 22, minZ: -30, maxZ: 30 },
+    // Thin 0.2" LCT ruin wall between X=0,Z=10 and X=0,Z=-4 that discrete 16-step sampling could skip
+    obstacles: [
+      { name: 'Central LCT Ruin Wall', minX: -6, maxX: 6, minZ: 1.9, maxZ: 2.1, heightY: 5.0, solid: true }
+    ],
+    autoBlockedLosPairs: [
+      'HORDE::Armiger Warglaive->PLAYER::Kapricus Defender'
+    ],
+    objectives: [],
+    units: [
+      {
+        squadKey: 'HORDE::Armiger Warglaive',
+        name: 'Armiger Warglaive',
+        side: 'HORDE',
+        move: 12,
+        pos: { x: 0, z: 14 },
+        keywords: ['VEHICLE', 'WALKER'],
+        models: [{ guid: 'arm-1', pos: { x: 0, y: 1.5, z: 14 }, radiusInches: 1.97 }],
+        weapons: [
+          { name: 'Thermal spear', type: 'ranged', rangeInches: 24, attacks: 2, skill: 3, strength: 12, ap: -4, damage: 'D6', keywords: ['MELTA 4'] }
+        ]
+      },
+      {
+        squadKey: 'PLAYER::Kapricus Defender',
+        name: 'Kapricus Defender',
+        side: 'PLAYER',
+        toughness: 9,
+        woundsPerModel: 10,
+        pos: { x: 0, z: -4 },
+        keywords: ['VEHICLE'],
+        models: [{ guid: 'kap-1', pos: { x: 0, y: 1.5, z: -4 }, radiusInches: 1.8 }]
+      },
+      {
+        squadKey: 'PLAYER::Hernkyn Yaegirs',
+        name: 'Hernkyn Yaegirs',
+        side: 'PLAYER',
+        toughness: 4,
+        woundsPerModel: 1,
+        pos: { x: 12, z: 8 },
+        keywords: ['INFANTRY'],
+        models: [{ guid: 'yae-1', pos: { x: 12, y: 1.1, z: 8 }, radiusInches: 0.55 }]
+      }
+    ]
+  };
+
+  // 1. Default: Kapricus Defender is blocked by both autoBlockedLosPairs and the thin solid wall -> Armiger re-picks Hernkyn Yaegirs
+  const defaultShots = selectHordeShootingTargets(telemetry, { activeMiseryIds: [] });
+  assert.equal(defaultShots.length, 1);
+  assert.equal(defaultShots[0].targetKey, 'PLAYER::Hernkyn Yaegirs', 'Armiger must skip wall-blocked Kapricus Defender and pick visible Hernkyn Yaegirs');
+
+  // 2. Manual losAllowedPairs override ('👁️ Allow LOS') unblocks both autoBlockedLosPairs and obstacle segment for that pair
+  const allowedShots = selectHordeShootingTargets(
+    telemetry,
+    { activeMiseryIds: [] },
+    { losAllowedPairs: ['HORDE::Armiger Warglaive->PLAYER::Kapricus Defender'] }
+  );
+  assert.equal(allowedShots.length, 1);
+  assert.equal(allowedShots[0].targetKey, 'PLAYER::Kapricus Defender', 'losAllowedPairs override must restore visibility to Kapricus Defender (higher MELTA/VEHICLE priority)');
+
+  // 3. Thin 0.2" obstacle alone (without autoBlockedLosPairs) still blocks unless Misery #28 (They Fly Now) is active
+  const obstacleOnlyTelemetry = { ...telemetry, autoBlockedLosPairs: [] };
+  const blockedByWallShots = selectHordeShootingTargets(obstacleOnlyTelemetry, { activeMiseryIds: [] });
+  assert.equal(blockedByWallShots[0].targetKey, 'PLAYER::Hernkyn Yaegirs', 'Exact Liang-Barsky 2D segment-AABB check must catch 0.2" thin wall');
+
+  const flyMiseryShots = selectHordeShootingTargets(obstacleOnlyTelemetry, { activeMiseryIds: [28] });
+  assert.equal(flyMiseryShots[0].targetKey, 'PLAYER::Kapricus Defender', 'Misery #28 (They Fly Now) ignores terrain obstacles');
+
+  // 4. previewMovementSightlines projects Step 2 targets after movement (and respects REVERTED status)
+  const preview = previewMovementSightlines(
+    telemetry,
+    { activeMiseryIds: [] },
+    [
+      {
+        squadKey: 'HORDE::Armiger Warglaive',
+        unitName: 'Armiger Warglaive',
+        status: 'MOVED',
+        originPos: { x: 0, y: 1.5, z: 14 },
+        targetX: 10,
+        targetZ: 10
+      }
+    ]
+  );
+  assert.ok(preview && preview.bySquad && preview.bySquad['HORDE::Armiger Warglaive']);
+  const armSight = preview.bySquad['HORDE::Armiger Warglaive'];
+  assert.equal(armSight.clearTargets.some(t => t.targetKey === 'PLAYER::Hernkyn Yaegirs'), true, 'Step 2 preview must list visible Hernkyn Yaegirs');
+  assert.equal(armSight.blockedTargets.some(t => t.targetKey === 'PLAYER::Kapricus Defender'), true, 'Step 2 preview must list wall-blocked Kapricus Defender');
+});
+
 
 

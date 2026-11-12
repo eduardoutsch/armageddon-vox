@@ -711,4 +711,83 @@ test('normalizeTtsBoardScan: manages 5-man vs 10-man same-type squads, [5 + Lead
   assert.equal(shelfScan.shelfTemplates[0].hasDeepStrike, true);
 });
 
+test('normalizeTtsBoardScan: preserves 3D solid obstacles and computes squad-level autoBlockedLosPairs only when every model-to-model raycast is blocked', () => {
+  const dsArmiger = 'M: 12" T: 10 Sv: 3+ W: 12 Ld: 7+ OC: 8\nThermal spear | 24" | 2 | 3+ | 12 | -4 | D6 [MELTA 4]\nKeywords: Vehicle, Walker, Armiger';
+  const dsInfantry = 'M: 6" T: 4 Sv: 4+ W: 1 Ld: 7+ OC: 2\nAutogun | 24" | 2 | 4+ | 3 | 0 | 1\nKeywords: Infantry';
+  const dsKapricus = 'M: 12" T: 9 Sv: 3+ W: 10 Ld: 7+ OC: 3\nKeywords: Vehicle, Leagues of Votann';
+
+  const scan = normalizeTtsBoardScan({
+    obstacles: [
+      { name: 'Central Munitorum Container', minX: -4, maxX: 4, minZ: 1, maxZ: 3, heightY: 2.5, solid: true }
+    ],
+    raycastBlockedGuidPairs: [
+      'arm-1->kap-1',
+      'cult-1->kap-1' // cult-2 is peeking around the wall, so cultist squad is NOT fully blocked!
+    ],
+    objects: [
+      {
+        guid: 'arm-1',
+        name: '12/12 Armiger Warglaive',
+        tags: ['HORDE'],
+        pos: { x: 0, y: 1, z: 10 },
+        bounds: { x: 3.9, y: 4.5, z: 3.9 },
+        description: dsArmiger
+      },
+      {
+        guid: 'cult-1',
+        name: '1/1 Chaos Cultists',
+        tags: ['HORDE', 'SQUAD:CULT_A'],
+        pos: { x: -2, y: 1, z: 8 },
+        bounds: { x: 1.0, y: 1.4, z: 1.0 },
+        description: dsInfantry
+      },
+      {
+        guid: 'cult-2',
+        name: '1/1 Chaos Cultists',
+        tags: ['HORDE', 'SQUAD:CULT_A'],
+        pos: { x: -5.2, y: 1, z: 8 },
+        bounds: { x: 1.0, y: 1.4, z: 1.0 },
+        description: dsInfantry
+      },
+      {
+        guid: 'kap-1',
+        name: '10/10 Kapricus Defender',
+        tags: ['PLAYER'],
+        pos: { x: 0, y: 1, z: -4 },
+        bounds: { x: 3.5, y: 2.8, z: 4.5 },
+        description: dsKapricus
+      }
+    ]
+  });
+
+  assert.ok(Array.isArray(scan.obstacles), 'Must preserve obstacles array on normalized board telemetry');
+  assert.equal(scan.obstacles.length, 1);
+  assert.equal(scan.obstacles[0].name, 'Central Munitorum Container');
+  assert.equal(scan.obstacles[0].solid, true);
+  assert.equal(scan.obstacles[0].heightY, 2.5);
+
+  assert.ok(Array.isArray(scan.autoBlockedLosPairs), 'Must compute squad-level autoBlockedLosPairs');
+  assert.ok(
+    scan.autoBlockedLosPairs.includes('HORDE::Armiger Warglaive->PLAYER::Kapricus Defender'),
+    '1-model Armiger Warglaive fully raycast-blocked behind container must be in autoBlockedLosPairs'
+  );
+  assert.equal(
+    scan.autoBlockedLosPairs.includes('HORDE::Chaos Cultists->PLAYER::Kapricus Defender'),
+    false,
+    'Multi-model squad with 1 peeking model (cult-2 unblocked) has 11th Ed visibility and must NOT be auto-blocked'
+  );
+
+  // When ALL models in Chaos Cultists are raycast-blocked, the squad pair becomes auto-blocked
+  const allBlockedScan = normalizeTtsBoardScan({
+    raycastBlockedGuidPairs: ['cult-1->kap-1', 'cult-2->kap-1'],
+    objects: [
+      { guid: 'cult-1', name: '1/1 Chaos Cultists', tags: ['HORDE', 'SQUAD:CULT_A'], pos: { x: -2, y: 1, z: 8 }, bounds: { x: 1.0, y: 1.4, z: 1.0 }, description: dsInfantry },
+      { guid: 'cult-2', name: '1/1 Chaos Cultists', tags: ['HORDE', 'SQUAD:CULT_A'], pos: { x: -1, y: 1, z: 8 }, bounds: { x: 1.0, y: 1.4, z: 1.0 }, description: dsInfantry },
+      { guid: 'kap-1', name: '10/10 Kapricus Defender', tags: ['PLAYER'], pos: { x: 0, y: 1, z: -4 }, bounds: { x: 3.5, y: 2.8, z: 4.5 }, description: dsKapricus }
+    ]
+  });
+  assert.ok(allBlockedScan.autoBlockedLosPairs.includes('HORDE::Chaos Cultists->PLAYER::Kapricus Defender'));
+});
+
+
 

@@ -8,10 +8,10 @@ local BRIDGE_URL = "http://127.0.0.1:3030"
 local pollEnabled = true
 local isRollingMat = false
 
--- Standard LCT Red/Blue Dice Mat Scripting Zone fallback bounds if zone GUID is not set in GMNotes
+-- Accurate LCT Red/Blue Dice Mat fallback bounds (±24.2..±28.8 on X, -12..+12 on Z)
 local LCT_MAT_BOUNDS = {
-    RED  = { minX = -38, maxX = -18, minZ = -32, maxZ = -16, spawnY = 3.2 },
-    BLUE = { minX =  18, maxX =  38, minZ =  16, maxZ =  32, spawnY = 3.2 }
+    RED  = { minX = -28.8, maxX = -24.2, minZ = -12.0, maxZ = 12.0, spawnY = 3.2 },
+    BLUE = { minX =  24.2, maxX =  28.8, minZ = -12.0, maxZ = 12.0, spawnY = 3.2 }
 }
 
 function onLoad()
@@ -134,72 +134,165 @@ function executeSetUnitSide(cmd)
     pushBoardTelemetry()
 end
 
--- Scans all miniatures and objectives inside LCT's playmat bounds (plus off-board shelf templates) and posts raw metadata to /tts/telemetry
+-- Scans all miniatures, locked 3D terrain obstacles, and 65%-hull Physics.cast LOS blocks inside LCT's playmat bounds
 function pushBoardTelemetry()
     local matBounds = detectPlaymatBounds()
     local objectsPayload = {}
     local shelfTemplates = {}
+    local obstacles = {}
+    local onMatMinis = {}
+    local raycastBlockedGuidPairs = {}
 
     for _, obj in ipairs(getAllObjects()) do
-        if obj ~= self and obj.interactable ~= false and not obj.isSmoothMoving() then
+        if obj ~= self and not obj.isSmoothMoving() then
             local pos = obj.getPosition()
+            local bnd = obj.getBoundsNormalized()
+            local size = bnd and bnd.size or { x = 0, y = 0, z = 0 }
+            local center = bnd and bnd.center or pos
             local inMat = pos.x >= matBounds.minX and pos.x <= matBounds.maxX
                       and pos.z >= matBounds.minZ and pos.z <= matBounds.maxZ
+            local centerInMat = center.x >= matBounds.minX and center.x <= matBounds.maxX
+                            and center.z >= matBounds.minZ and center.z <= matBounds.maxZ
             local name = obj.getName() or ""
             local lname = string.lower(name)
-            local size = obj.getBoundsNormalized().size
             local isSecChip = string.find(lname, "secured") or string.find(lname, "camera") or string.find(lname, "dice cam")
-            local isMini = not isSecChip and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or obj.hasTag("HORDE_TEMPLATE"))
-                           and size.x > 0.3 and size.x < 12 and size.z < 12
+            local isMini = obj.interactable ~= false and not isSecChip
+                           and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or obj.hasTag("HORDE_TEMPLATE"))
+                           and size.x > 0.3 and size.x < 12 and size.z < 12 and not obj.getLock()
+            local isObjMarker = obj.interactable ~= false and not isSecChip
+                           and (obj.hasTag("OBJECTIVE") or string.match(lname, "^objective%s*%d*$") or string.match(lname, "^obj%s*%d+$"))
 
-            if (not inMat or obj.hasTag("HORDE_TEMPLATE")) and isMini and name ~= "" then
-                table.insert(shelfTemplates, {
-                    name = name,
-                    description = obj.getDescription() or "",
-                    gmNotes = obj.getGMNotes() or "",
-                    bounds = { x = size.x, y = size.y, z = size.z }
+            -- Collect locked 3D terrain colliders (ruins, containers, solid walls >= 1.8" tall) inside playmat
+            if centerInMat and obj.getLock() and not isSecChip and not isObjMarker
+               and obj.tag ~= "Figurine" and obj.tag ~= "Dice"
+               and not obj.hasTag("HORDE") and not obj.hasTag("PLAYER") and not obj.hasTag("HORDE_TEMPLATE")
+               and size.y >= 1.8 and size.x >= 0.15 and size.z >= 0.15 and size.x < 36 and size.z < 36 then
+                table.insert(obstacles, {
+                    name = (name ~= "" and name) or "Terrain Wall",
+                    minX = center.x - size.x * 0.5,
+                    maxX = center.x + size.x * 0.5,
+                    minZ = center.z - size.z * 0.5,
+                    maxZ = center.z + size.z * 0.5,
+                    heightY = size.y,
+                    solid = true
                 })
-            elseif inMat and not obj.hasTag("HORDE_TEMPLATE") then
-                local isObjMarker = not isSecChip and (obj.hasTag("OBJECTIVE") or string.match(lname, "^objective%s*%d*$") or string.match(lname, "^obj%s*%d+$"))
+            end
 
-                if isObjMarker or isMini then
-                    local tags = obj.getTags()
-                    if isObjMarker then table.insert(tags, "OBJECTIVE") end
-                    local c = obj.getColorTint() or { r = 1, g = 1, b = 1 }
-                    local tintHex = string.format("#%02x%02x%02x",
-                        math.min(255, math.max(0, math.floor((c.r or 1) * 255 + 0.5))),
-                        math.min(255, math.max(0, math.floor((c.g or 1) * 255 + 0.5))),
-                        math.min(255, math.max(0, math.floor((c.b or 1) * 255 + 0.5)))
-                    )
-                    local ysUnitId = nil
-                    pcall(function()
-                        ysUnitId = obj.getVar("unitID") or obj.getVar("squadID")
-                        if not ysUnitId then
-                            local ud = obj.getVar("unitData")
-                            if type(ud) == "table" then ysUnitId = ud.unitID or ud.id or ud.uuid end
-                        end
-                    end)
-                    table.insert(objectsPayload, {
-                        guid = obj.getGUID(),
+            if obj.interactable ~= false then
+                local isAnyMini = not isSecChip and (obj.tag == "Figurine" or obj.tag == "Custom_Model" or obj.hasTag("HORDE") or obj.hasTag("PLAYER") or obj.hasTag("HORDE_TEMPLATE"))
+                                  and size.x > 0.3 and size.x < 12 and size.z < 12
+                if (not inMat or obj.hasTag("HORDE_TEMPLATE")) and isAnyMini and name ~= "" then
+                    table.insert(shelfTemplates, {
                         name = name,
-                        locked = obj.getLock(),
                         description = obj.getDescription() or "",
                         gmNotes = obj.getGMNotes() or "",
-                        tags = tags,
-                        colorTint = tintHex,
-                        squadId = ysUnitId and tostring(ysUnitId) or nil,
-                        pos = { x = pos.x, y = pos.y, z = pos.z },
                         bounds = { x = size.x, y = size.y, z = size.z }
                     })
+                elseif inMat and not obj.hasTag("HORDE_TEMPLATE") then
+                    if isObjMarker or isAnyMini then
+                        local guid = obj.getGUID()
+                        local tags = obj.getTags()
+                        if isObjMarker then table.insert(tags, "OBJECTIVE") end
+                        local c = obj.getColorTint() or { r = 1, g = 1, b = 1 }
+                        local tintHex = string.format("#%02x%02x%02x",
+                            math.min(255, math.max(0, math.floor((c.r or 1) * 255 + 0.5))),
+                            math.min(255, math.max(0, math.floor((c.g or 1) * 255 + 0.5))),
+                            math.min(255, math.max(0, math.floor((c.b or 1) * 255 + 0.5)))
+                        )
+                        local ysUnitId = nil
+                        pcall(function()
+                            ysUnitId = obj.getVar("unitID") or obj.getVar("squadID")
+                            if not ysUnitId then
+                                local ud = obj.getVar("unitData")
+                                if type(ud) == "table" then ysUnitId = ud.unitID or ud.id or ud.uuid end
+                            end
+                        end)
+                        table.insert(objectsPayload, {
+                            guid = guid,
+                            name = name,
+                            locked = obj.getLock(),
+                            description = obj.getDescription() or "",
+                            gmNotes = obj.getGMNotes() or "",
+                            tags = tags,
+                            colorTint = tintHex,
+                            squadId = ysUnitId and tostring(ysUnitId) or nil,
+                            pos = { x = pos.x, y = pos.y, z = pos.z },
+                            bounds = { x = size.x, y = size.y, z = size.z }
+                        })
+                        if isMini and not isObjMarker then
+                            local baseY = center.y - size.y * 0.5
+                            local rayY = baseY + math.max(0.6, size.y) * 0.65
+                            local expSide = obj.hasTag("HORDE") and "HORDE" or (obj.hasTag("PLAYER") and "PLAYER" or nil)
+                            table.insert(onMatMinis, {
+                                guid = guid,
+                                obj = obj,
+                                explicitSide = expSide,
+                                rayOrigin = { x = center.x, y = rayY, z = center.z }
+                            })
+                        end
+                    end
                 end
             end
         end
     end
 
-    local body = JSON.encode({ playmatBounds = matBounds, objects = objectsPayload, shelfTemplates = shelfTemplates })
+    -- Fast 3D Physics.cast from 65% hull height of each Horde model to 65% hull height of each Player model
+    for i = 1, #onMatMinis do
+        local a = onMatMinis[i]
+        for j = i + 1, #onMatMinis do
+            local b = onMatMinis[j]
+            local sameExplicitSide = (a.explicitSide ~= nil and a.explicitSide == b.explicitSide)
+            if not sameExplicitSide then
+                local dx = b.rayOrigin.x - a.rayOrigin.x
+                local dy = b.rayOrigin.y - a.rayOrigin.y
+                local dz = b.rayOrigin.z - a.rayOrigin.z
+                local dist = math.sqrt(dx * dx + dy * dy + dz * dz)
+                if dist > 0.5 and dist <= 60.0 then
+                    local hits = Physics.cast({
+                        origin = a.rayOrigin,
+                        direction = { x = dx / dist, y = dy / dist, z = dz / dist },
+                        type = 1,
+                        max_distance = dist
+                    })
+                    local wallBlocked = false
+                    for _, hit in ipairs(hits or {}) do
+                        local hObj = hit.hit_object
+                        if hObj and hObj ~= self and hObj ~= a.obj and hObj ~= b.obj
+                           and hit.distance and hit.distance > 0.12 and hit.distance < (dist - 0.12)
+                           and hObj.getLock() and hObj.tag ~= "Figurine" and hObj.tag ~= "Dice"
+                           and not hObj.hasTag("HORDE") and not hObj.hasTag("PLAYER") and not hObj.hasTag("OBJECTIVE") then
+                            local hb = hObj.getBoundsNormalized()
+                            if hb and hb.size.y >= 1.8 and hb.size.x < 36 and hb.size.z < 36 then
+                                wallBlocked = true
+                                break
+                            end
+                        end
+                    end
+                    if wallBlocked then
+                        if a.explicitSide == "HORDE" and b.explicitSide == "PLAYER" then
+                            table.insert(raycastBlockedGuidPairs, a.guid .. "->" .. b.guid)
+                        elseif b.explicitSide == "HORDE" and a.explicitSide == "PLAYER" then
+                            table.insert(raycastBlockedGuidPairs, b.guid .. "->" .. a.guid)
+                        else
+                            table.insert(raycastBlockedGuidPairs, a.guid .. "->" .. b.guid)
+                            table.insert(raycastBlockedGuidPairs, b.guid .. "->" .. a.guid)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local body = JSON.encode({
+        playmatBounds = matBounds,
+        objects = objectsPayload,
+        shelfTemplates = shelfTemplates,
+        obstacles = obstacles,
+        raycastBlockedGuidPairs = raycastBlockedGuidPairs
+    })
     WebRequest.custom(BRIDGE_URL .. "/tts/telemetry", "POST", true, body, { ["Content-Type"] = "application/json" }, function(res)
         if not res.is_error then
-            printToAll("📡 LCT Playmat Synced (" .. #objectsPayload .. " on-board objects).", {0.4, 0.95, 0.7})
+            printToAll("📡 LCT Playmat Synced (" .. #objectsPayload .. " objects, " .. #obstacles .. " walls).", {0.4, 0.95, 0.7})
         end
     end)
 end
@@ -238,40 +331,46 @@ function pollTacticaDaemon()
     end)
 end
 
--- Discovers LCT's native Red/Blue Dice Mat controller object and clicks matching buttons if present
-function findLctDiceMatController(matSide)
-    local sideLower = string.lower(matSide or "RED")
+-- Dynamically measures the 3D bounding box of LCT's Red (x < 0) or Blue (x > 0) Dice Mat starfield zone
+function detectDiceMatBounds(matSide)
+    local wantBlue = (string.upper(matSide or "RED") == "BLUE")
+    local playmat = detectPlaymatBounds()
     for _, obj in ipairs(getAllObjects()) do
-        local n = string.lower(obj.getName() or "")
-        local btns = obj.getButtons()
-        if btns and #btns >= 4 and (string.find(n, "dice") or string.find(n, "roller")) then
-            if string.find(n, sideLower) or sideLower == "red" then
-                return obj, btns
+        local p = obj.getPosition()
+        local outOfPlaymat = p.x < playmat.minX or p.x > playmat.maxX
+        local rightSide = (wantBlue and p.x > 10) or (not wantBlue and p.x < -10)
+        if outOfPlaymat and rightSide then
+            local btns = obj.getButtons()
+            if btns and #btns >= 5 then
+                for _, b in ipairs(btns) do
+                    local lbl = string.lower(b.label or "")
+                    if string.find(lbl, "roll all") or string.find(lbl, "%+%s*1d6") or string.find(lbl, "ordered roll") then
+                        local bnd = obj.getBoundsNormalized()
+                        if bnd and bnd.size.x > 3 and bnd.size.z > 3 then
+                            local halfX = math.max(1.8, bnd.size.x * 0.5 - 1.2)
+                            local halfZ = math.max(2.5, bnd.size.z * 0.5 - 2.2)
+                            return {
+                                minX = bnd.center.x - halfX, maxX = bnd.center.x + halfX,
+                                minZ = bnd.center.z - halfZ, maxZ = bnd.center.z + halfZ,
+                                spawnY = bnd.center.y + 2.2
+                            }
+                        end
+                    end
+                end
             end
         end
     end
-    return nil, nil
-end
-
-function clickMatButtonMatching(matObj, btns, pattern, playerColor)
-    if not matObj or not btns then return false end
-    for _, b in ipairs(btns) do
-        local lbl = string.lower(b.label or "")
-        local fn = string.lower(b.click_function or "")
-        if string.find(lbl, pattern) or string.find(fn, pattern) then
-            pcall(function() matObj.call(b.click_function, { matObj, playerColor, false }) end)
-            return true
-        end
-    end
-    return false
+    return wantBlue and LCT_MAT_BOUNDS.BLUE or LCT_MAT_BOUNDS.RED
 end
 
 function getDiceInMatBounds(bounds)
     local found = {}
+    local pad = 1.2
     for _, obj in ipairs(getAllObjects()) do
-        if obj.tag == "Dice" then
+        if obj and not obj.isDestroyed() and obj.tag == "Dice" then
             local p = obj.getPosition()
-            if p.x >= bounds.minX and p.x <= bounds.maxX and p.z >= bounds.minZ and p.z <= bounds.maxZ then
+            if p.x >= (bounds.minX - pad) and p.x <= (bounds.maxX + pad)
+               and p.z >= (bounds.minZ - pad) and p.z <= (bounds.maxZ + pad) then
                 table.insert(found, obj)
             end
         end
@@ -279,60 +378,63 @@ function getDiceInMatBounds(bounds)
     return found
 end
 
--- Triggers LCT's Red/Blue Dice Mat, waits for settled physics, and posts pip values to /tts/dice-result
+-- Spawns physical Die_6_Rounded directly inside LCT's Dice Mat Scripting Zone (zero cross-script button calls)
 function executeLctMatRoll(cmd)
     isRollingMat = true
     local side = string.upper(cmd.matSide or "RED")
-    local playerColor = (side == "BLUE") and "Blue" or "Red"
-    local bounds = LCT_MAT_BOUNDS[side] or LCT_MAT_BOUNDS.RED
+    local bounds = detectDiceMatBounds(side)
     local count = math.max(1, tonumber(cmd.count) or 1)
 
     printToAll("🎲 [LCT MAT • " .. (cmd.stage or "ROLL") .. "] " .. (cmd.label or (count .. "D6")), {1, 0.8, 0.25})
 
-    local matObj, btns = findLctDiceMatController(side)
     if cmd.clearFirst ~= false then
-        if not clickMatButtonMatching(matObj, btns, "clear", playerColor) then
-            for _, oldDie in ipairs(getDiceInMatBounds(bounds)) do destroyObject(oldDie) end
+        for _, d in ipairs(getDiceInMatBounds(bounds)) do
+            if d and not d.isDestroyed() then
+                destroyObject(d)
+            end
         end
     end
 
     Wait.time(function()
-        local spawnedViaButtons = false
-        if matObj and btns then
-            local rem = count
-            for _, denom in ipairs({25, 10, 5, 2, 1}) do
-                while rem >= denom do
-                    if clickMatButtonMatching(matObj, btns, "^%+?" .. tostring(denom) .. "$", playerColor) then
-                        rem = rem - denom
-                        spawnedViaButtons = true
-                    else
-                        break
-                    end
-                end
-            end
-            clickMatButtonMatching(matObj, btns, "roll", playerColor)
-        end
+        local spanX = math.max(2.0, bounds.maxX - bounds.minX)
+        local centerX = (bounds.minX + bounds.maxX) * 0.5
+        local centerZ = (bounds.minZ + bounds.maxZ) * 0.5
+        local step = 0.95
+        local maxCols = math.max(1, math.min(count, math.floor((spanX - 0.6) / step) + 1))
+        local totalRows = math.ceil(count / maxCols)
+        local spawnedDice = {}
 
-        -- Guaranteed fallback inside LCT's Dice Mat zone so LCT's zone counter still tallies them
-        if not spawnedViaButtons then
-            for i = 1, count do
-                local col = (i - 1) % 8
-                local row = math.floor((i - 1) / 8)
-                local die = spawnObject({
-                    type = "Die_6_Rounded",
-                    position = { bounds.minX + 2.0 + col * 1.1, bounds.spawnY, bounds.minZ + 2.0 + row * 1.1 }
-                })
-                die.setColorTint(side == "BLUE" and {0.2, 0.5, 1} or {0.9, 0.2, 0.2})
-                die.roll()
-            end
+        for i = 1, count do
+            local col = (i - 1) % maxCols
+            local row = math.floor((i - 1) / maxCols)
+            local px = centerX + (col - (maxCols - 1) * 0.5) * step
+            local pz = centerZ + (row - (totalRows - 1) * 0.5) * step
+            local die = spawnObject({
+                type = "Die_6_Rounded",
+                position = { px, bounds.spawnY, pz }
+            })
+            die.setColorTint(side == "BLUE" and {0.2, 0.5, 1} or {0.9, 0.2, 0.2})
+            die.roll()
+            table.insert(spawnedDice, die)
         end
 
         Wait.time(function()
             Wait.condition(function()
-                local settledDice = getDiceInMatBounds(bounds)
                 local pips = {}
-                for i = 1, math.min(count, #settledDice) do
-                    table.insert(pips, settledDice[i].getValue())
+                for _, d in ipairs(spawnedDice) do
+                    if d and not d.isDestroyed() and d.resting then
+                        table.insert(pips, d.getValue())
+                    end
+                end
+                if #pips < count then
+                    local zoneDice = getDiceInMatBounds(bounds)
+                    pips = {}
+                    for i = 1, math.min(count, #zoneDice) do
+                        local d = zoneDice[i]
+                        if d and not d.isDestroyed() and d.resting then
+                            table.insert(pips, d.getValue())
+                        end
+                    end
                 end
                 local payload = JSON.encode({
                     rollId = cmd.rollId,
@@ -344,10 +446,21 @@ function executeLctMatRoll(cmd)
                     isRollingMat = false
                 end)
             end, function()
+                local aliveSpawned = 0
+                local restingSpawned = 0
+                for _, d in ipairs(spawnedDice) do
+                    if d and not d.isDestroyed() then
+                        aliveSpawned = aliveSpawned + 1
+                        if d.resting then restingSpawned = restingSpawned + 1 end
+                    end
+                end
+                if aliveSpawned >= count then
+                    return restingSpawned >= count
+                end
                 local active = getDiceInMatBounds(bounds)
                 if #active < count then return false end
                 for _, d in ipairs(active) do
-                    if not d.resting then return false end
+                    if d.isDestroyed() or not d.resting then return false end
                 end
                 return true
             end, 7.0, function()

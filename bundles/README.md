@@ -25,17 +25,20 @@ This directory contains standalone, subsystem-focused Markdown artifacts compile
 | [`bundle_spawner_cockpit.md`](bundle_spawner_cockpit.md) | **Spawner Cockpit & Telemetry** | `js/spawner-cockpit.js` |
 | [`bundle_spawner_engine.md`](bundle_spawner_engine.md) | **Spawner Engine & Resupply** | `js/spawner.js`, `js/spawner-resupply.js` |
 | [`bundle_horde_combat.md`](bundle_horde_combat.md) | **Horde Combat Modifiers & Auto-Defender** | `js/horde-combat-modifiers.js` |
-| [`bundle_tactica.md`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View & UI Tests)** | `pages/tactica.html`, `tests/ui/tactica.test.js` |
-| [`bundle_tactica_controller.md`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | `js/tactica.js` (Lines 1-520) |
-| [`bundle_tactica_controller_part2.md`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | `js/tactica.js` (Lines 521-end) |
+| [`bundle_tactica.md`](bundle_tactica.md) | **In-Match LCT Tactical Console (3-Mode View)** | `pages/tactica.html` |
+| [`bundle_tests_ui_tactica.md`](bundle_tests_ui_tactica.md) | **UI Tests (In-Match LCT Tactical Console)** | `tests/ui/tactica.test.js` |
+| [`bundle_tactica_controller.md`](bundle_tactica_controller.md) | **In-Match LCT Tactical Controller (Part 1)** | `js/tactica.js` (Lines 1-680) |
+| [`bundle_tactica_controller_part2.md`](bundle_tactica_controller_part2.md) | **In-Match LCT Tactical Controller (Part 2)** | `js/tactica.js` (Lines 681-end) |
 | [`bundle_tactica_core.md`](bundle_tactica_core.md) | **In-Match LCT Tactical Core (Part 1)** | `js/tactica-core.js` (Lines 1-500) |
 | [`bundle_tactica_core_part2.md`](bundle_tactica_core_part2.md) | **In-Match LCT Tactical Core (Part 2)** | `js/tactica-core.js` (Lines 501-end) |
-| [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe (Part 1)** | `tactica_daemon.js` (Lines 1-510) |
-| [`bundle_tactica_daemon_part2.md`](bundle_tactica_daemon_part2.md) | **LCT Tactica Daemon & Scribe (Part 2)** | `tactica_daemon.js` (Lines 511-end) |
-| [`bundle_tts_bridge.md`](bundle_tts_bridge.md) | **LCT TTS Telemetry & Spatial Squad Core** | `js/tts-telemetry-core.js` |
+| [`bundle_tactica_daemon.md`](bundle_tactica_daemon.md) | **LCT Tactica Daemon & Scribe (Part 1)** | `tactica_daemon.js` (Lines 1-610) |
+| [`bundle_tactica_daemon_part2.md`](bundle_tactica_daemon_part2.md) | **LCT Tactica Daemon & Scribe (Part 2)** | `tactica_daemon.js` (Lines 611-end) |
+| [`bundle_tts_bridge.md`](bundle_tts_bridge.md) | **LCT TTS Telemetry & Spatial Squad Core (Part 1)** | `js/tts-telemetry-core.js` (Lines 1-520) |
+| [`bundle_tts_bridge_part2.md`](bundle_tts_bridge_part2.md) | **LCT TTS Telemetry & Spatial Squad Core (Part 2)** | `js/tts-telemetry-core.js` (Lines 521-end) |
 | [`bundle_tts_lua_beacon.md`](bundle_tts_lua_beacon.md) | **LCT TTS Orbital Auspex Lua Beacon** | `tts/lct_horde_bridge.lua` |
 | [`bundle_horde_deepstrike.md`](bundle_horde_deepstrike.md) | **Deterministic Horde Deep Strike & Pincer Solver** | `js/horde-deepstrike-core.js`, `tests/js/horde-deepstrike-core.test.js` |
-| [`bundle_horde_autopilot.md`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core** | `js/horde-autopilot-core.js` |
+| [`bundle_horde_autopilot.md`](bundle_horde_autopilot.md) | **Deterministic Horde Autopilot Core (Part 1)** | `js/horde-autopilot-core.js` (Lines 1-510) |
+| [`bundle_horde_autopilot_part2.md`](bundle_horde_autopilot_part2.md) | **Deterministic Horde Autopilot Core (Part 2)** | `js/horde-autopilot-core.js` (Lines 511-end) |
 | [`bundle_tactica_overwatch.md`](bundle_tactica_overwatch.md) | **Live Overwatch & Vocal Stratagem Core** | `js/tactica-overwatch-core.js` |
 | [`bundle_tactica_overwatch_shell.md`](bundle_tactica_overwatch_shell.md) | **Live Screen, Neural Auspex & Push-to-Talk Shell** | `js/tactica-overwatch.js` |
 | [`bundle_data_rng.md`](bundle_data_rng.md) | **Data Schemas & Seeded RNG** | `js/data.js`, `js/rng.js` |

@@ -10,6 +10,9 @@ Pure Horde Attack LCT dice-mat sequence, Round 1–6 post-match chronicle compil
 ## File: `js/tactica-core.js (Part 2: Horde Attacks, Chronicle & MVVM Selectors, Lines 501-1100)` <a id="file-jstacticacorejspart2hordeattackschroniclemvvmselectorslines5011100"></a>
 
 ````javascript
+    }
+
+    let activePhase = curPhase;
     if (parsedStrat.stratKey === 'SMOKESCREEN' || parsedStrat.stratKey === 'GO_TO_GROUND') {
       activePhase = 'HORDE_SHOOTING';
     } else if (curPhase === 'COMMAND_SPAWN' || curPhase === 'HORDE_MOVEMENT' || curPhase === 'HORDE_SHOOTING') {
@@ -407,10 +410,12 @@ Pure Horde Attack LCT dice-mat sequence, Round 1–6 post-match chronicle compil
    * @param {Array<object>} [units=[]] - Scanned tabletop units from `state.boardTelemetry.units`.
    * @returns {Array<object>} Declarative row ViewModels.
    */
-  function selectTelemetryRowViewModels(units = []) {
+  function selectTelemetryRowViewModels(units = [], phaseOriginSnapshots = {}) {
     if (!Array.isArray(units)) return [];
+    const snapshots = (phaseOriginSnapshots && typeof phaseOriginSnapshots === 'object') ? phaseOriginSnapshots : {};
     return units.map((u, index) => {
       const isPlayer = String(u?.side || '').toUpperCase() === 'PLAYER';
+      const squadKey = u?.squadKey || `${isPlayer ? 'PLAYER' : 'HORDE'}::${u?.name || 'Unit'}`;
       const savePart = `Sv ${u?.save || 4}+${u?.invuln ? `/${u.invuln}++` : ''}${u?.fnp ? `/FNP ${u.fnp}+` : ''}`;
       const modelCount = Number(u?.modelCount) || 1;
       const cargo = Array.isArray(u?.embarkedCargo) ? u.embarkedCargo : [];
@@ -430,7 +435,7 @@ Pure Horde Attack LCT dice-mat sequence, Round 1–6 post-match chronicle compil
 
       return {
         index,
-        squadKey: u?.squadKey || `${isPlayer ? 'PLAYER' : 'HORDE'}::${u?.name || 'Unit'}`,
+        squadKey,
         side: isPlayer ? 'PLAYER' : 'HORDE',
         sideBadgeClass: isPlayer ? 'blue' : 'red',
         name: u?.name || 'Unknown Unit',
@@ -441,6 +446,7 @@ Pure Horde Attack LCT dice-mat sequence, Round 1–6 post-match chronicle compil
         hasEmbarkedCargo: Boolean(embarkedSummary),
         embarkedBadgeText: embarkedSummary ? `🚌 Embarked: ${embarkedSummary}` : '',
         canDisembark: cargo.length > 0,
+        canUndoMove: !isPlayer && Boolean(snapshots[squadKey]),
         canLoadAutoDefender: !isPlayer
       };
     });

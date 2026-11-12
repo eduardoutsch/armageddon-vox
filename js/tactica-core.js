@@ -121,10 +121,13 @@
       pendingDiceSequence: overrides.pendingDiceSequence || null,
       pendingChargeDecl: overrides.pendingChargeDecl || null,
       lastMovementPlans: Array.isArray(overrides.lastMovementPlans) ? [...overrides.lastMovementPlans] : [],
+      lastMovementSightlines: overrides.lastMovementSightlines !== undefined ? overrides.lastMovementSightlines : [],
       lastIngressDrops: Array.isArray(overrides.lastIngressDrops) ? [...overrides.lastIngressDrops] : [],
       lastShootingAssignments: Array.isArray(overrides.lastShootingAssignments) ? [...overrides.lastShootingAssignments] : [],
       losBlockedPairs: Array.isArray(overrides.losBlockedPairs) ? [...overrides.losBlockedPairs] : [],
-      boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [] },
+      losAllowedPairs: Array.isArray(overrides.losAllowedPairs) ? [...overrides.losAllowedPairs] : [],
+      phaseOriginSnapshots: (overrides.phaseOriginSnapshots && typeof overrides.phaseOriginSnapshots === 'object') ? { ...overrides.phaseOriginSnapshots } : {},
+      boardTelemetry: overrides.boardTelemetry || { updatedAt: null, units: [], objectives: [], obstacles: [], autoBlockedLosPairs: [] },
       squadGuidRegistry: (overrides.squadGuidRegistry && typeof overrides.squadGuidRegistry === 'object') ? { ...overrides.squadGuidRegistry } : {},
       lastDiceResult: overrides.lastDiceResult || null,
       seqCounter: Number(overrides.seqCounter) || 0
@@ -895,10 +898,12 @@
    * @param {Array<object>} [units=[]] - Scanned tabletop units from `state.boardTelemetry.units`.
    * @returns {Array<object>} Declarative row ViewModels.
    */
-  function selectTelemetryRowViewModels(units = []) {
+  function selectTelemetryRowViewModels(units = [], phaseOriginSnapshots = {}) {
     if (!Array.isArray(units)) return [];
+    const snapshots = (phaseOriginSnapshots && typeof phaseOriginSnapshots === 'object') ? phaseOriginSnapshots : {};
     return units.map((u, index) => {
       const isPlayer = String(u?.side || '').toUpperCase() === 'PLAYER';
+      const squadKey = u?.squadKey || `${isPlayer ? 'PLAYER' : 'HORDE'}::${u?.name || 'Unit'}`;
       const savePart = `Sv ${u?.save || 4}+${u?.invuln ? `/${u.invuln}++` : ''}${u?.fnp ? `/FNP ${u.fnp}+` : ''}`;
       const modelCount = Number(u?.modelCount) || 1;
       const cargo = Array.isArray(u?.embarkedCargo) ? u.embarkedCargo : [];
@@ -918,7 +923,7 @@
 
       return {
         index,
-        squadKey: u?.squadKey || `${isPlayer ? 'PLAYER' : 'HORDE'}::${u?.name || 'Unit'}`,
+        squadKey,
         side: isPlayer ? 'PLAYER' : 'HORDE',
         sideBadgeClass: isPlayer ? 'blue' : 'red',
         name: u?.name || 'Unknown Unit',
@@ -929,6 +934,7 @@
         hasEmbarkedCargo: Boolean(embarkedSummary),
         embarkedBadgeText: embarkedSummary ? `🚌 Embarked: ${embarkedSummary}` : '',
         canDisembark: cargo.length > 0,
+        canUndoMove: !isPlayer && Boolean(snapshots[squadKey]),
         canLoadAutoDefender: !isPlayer
       };
     });
